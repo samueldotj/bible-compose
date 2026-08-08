@@ -23,7 +23,7 @@ Open a project folder. BibleCompose discovers the books, validates them, merges 
 | **M5** | Hardening | Full corpus, fonts, cancellation, packaging. |
 | **M6** | Version 1.0 | Installers, presets, documentation. |
 
-See [ROADMAP](docs/ROADMAP.md).
+68 work items sized S to XL — see [ROADMAP](docs/ROADMAP.md).
 
 ## Documents
 

@@ -12,16 +12,16 @@ Related: [SRS-REVIEW](SRS-REVIEW.md) · [ARCHITECTURE](ARCHITECTURE.md)
 
 # Part 1 — Milestones
 
-| | Milestone | For | What it means |
-|---|---|---|---|
-| **S0** | Typesetting spike | nobody | We know SILE can set a Bible page. No Rust. |
-| **M0** | Skeleton and contract | nobody | The pipeline exists end to end on one book. Ugly, deterministic, tested. |
-| **M1** | USFM to PDF | us | Real Scripture through the real parser, in two columns. |
-| **M2** | Configuration | us | Page, typography, and output settings, from file and from the GUI. |
-| **M3** | Styles | first outside testers | The visual layer, editable without TOML. First build worth showing. |
-| **M4** | Publishing structures | wider testers | Footnotes, cross-references, figures, running heads. A real Bible. |
-| **M5** | Hardening | wider testers | Full corpus, fonts, cancellation, caches, packaging. |
-| **M6** | Version 1.0 | everyone | Installers, presets, documentation, the ten acceptance scenarios. |
+| | Milestone | For | What it means | Items |
+|---|---|---|---|---|
+| **S0** | Typesetting spike | nobody | We know SILE can set a Bible page. No Rust. | 8 |
+| **M0** | Skeleton and contract | nobody | The pipeline exists end to end on one book. Ugly, deterministic, tested. | 10 |
+| **M1** | USFM to PDF | us | Real Scripture through the real parser, in two columns. | 9 |
+| **M2** | Configuration | us | Page, typography, and output settings, from file and from the GUI. | 10 |
+| **M3** | Styles | first outside testers | The visual layer, editable without TOML. First build worth showing. | 8 |
+| **M4** | Publishing structures | wider testers | Footnotes, cross-references, figures, running heads. A real Bible. | 8 |
+| **M5** | Hardening | wider testers | Full corpus, fonts, cancellation, caches, packaging. | 9 |
+| **M6** | Version 1.0 | everyone | Installers, presets, documentation, the ten acceptance scenarios. | 6 |
 
 ### S0 — Typesetting spike
 
@@ -39,7 +39,7 @@ It also settles smaller unknowns at no extra cost: how SILE's XML input maps ele
 
 *No user-facing output.* The Rust workspace, the diagnostic model, the build state machine, the `Backend` trait, the XML emitter, and the CLI — driven by a **hand-built `ScriptureDocument`**, with no parser involved.
 
-Hand-built is the point. It decouples M0 from `usfm-core`'s readiness (§3 below), and it proves the second half of the pipeline before the first half exists. At the end of M0 a fixture document becomes a PDF through the real emitter, the real class, and the real process invocation.
+Hand-built is the point. It decouples M0 from `usfm-core`'s readiness (Part 2 §4), and it proves the second half of the pipeline before the first half exists. At the end of M0 a fixture document becomes a PDF through the real emitter, the real class, and the real process invocation.
 
 **Guarantees established here, and never allowed to regress:** golden XML byte-comparison across platforms; ordered maps only on the emission path; build in a temporary directory with atomic publish; process-tree cancellation. Each is cheap now and expensive later ([SRS-REVIEW F4, F11, F12](SRS-REVIEW.md#f4--reproducible-is-two-different-claims-and-must-be-split)).
 
@@ -101,7 +101,46 @@ Signed installers, default presets, documentation, performance and reliability w
 
 **The GUI arrives at M2, after the CLI.** Not because the GUI is unimportant, but because a headless build is what tests everything beneath it, and building the GUI first means the core is only ever exercised through a window.
 
-## 2. What each milestone deliberately leaves broken
+## 2. Sizing
+
+Sizes are relative effort, not schedule. They exist to signal where the risk sits, not to support a Gantt chart.
+
+| | Meaning |
+|---|---|
+| **S** | A focused session. Well understood before it starts. |
+| **M** | A few sessions. The common case. |
+| **L** | Wide surface or genuinely intricate. Expect a second pass. |
+| **XL** | Where the project can go wrong. A poor approach here costs weeks, not days. |
+| **⏳** | Lead-time-bound. Little effort, unpredictable calendar. Orthogonal to size. |
+
+68 items: 18 S, 43 M, 5 L, 2 XL. Roughly comparable in scale to `easy-usfm`, which is not a coincidence — most of the difference is that BibleCompose does not build a parser ([ADR-001](adr/001-usfm-core.md)) and does not build an editor.
+
+**The two XL items are worth knowing by name.** S0.2, the two-column Scripture page, is the item that decides whether the product is buildable as designed; it is XL despite being days of work, because a wrong answer there invalidates the emitter. P1.5, USJ-to-`ScriptureDocument` normalization, is the semantic heart — a bad model there is felt in styles, emission, and every diagnostic for the life of the project. Both deserve a design pass before code.
+
+## 3. Items with lead time
+
+Four items are gated by something outside the work itself. Their calendar is not their effort, so they benefit from being started well before their phase.
+
+| ID | Gated by | Typical wait |
+|---|---|---|
+| **P1.1** | `usfm-core` extraction depends on `easy-usfm` reaching its own M0 | weeks, and see §4 |
+| **P5.7** | Packaging SILE's native dependencies may need upstream fixes on at least one platform | unpredictable |
+| **P6.1** | Code-signing certificates must be purchased and issued | 3–10 business days |
+| **P6.2** | Default fonts need redistribution terms confirmed with rights holders | days to weeks |
+
+## 4. The dependency on easy-usfm
+
+BibleCompose's M1 needs `usfm-core`, which is `easy-usfm`'s M0 and does not exist yet ([ADR-001](adr/001-usfm-core.md)). This is the largest scheduling risk in the plan and it is managed rather than avoided.
+
+**BibleCompose needs a subset.** Batch whole-file parse, source spans, diagnostics, verse index. It does not need the incremental chapter-chunked session, which is the larger and harder half of that milestone. So the extraction can be useful to BibleCompose well before `easy-usfm`'s own M0 is complete.
+
+**S0 and M0 do not need it at all.** Eighteen items, between them, that touch no parser. That runway is a further reason for the ordering above.
+
+**One straightening-out belongs to the extraction itself.** `easy-usfm-core` treats UTF-16 offsets as its boundary type because it crosses into JavaScript. BibleCompose has no such boundary and must not pay the conversion. `usfm-core` should expose byte and line/column offsets natively, with UTF-16 as the WASM layer's concern — arguably better for `easy-usfm` too, and cheapest to do at the moment the crate is extracted.
+
+**If it slips**, the fallback is that BibleCompose depends on `usfm3` directly behind its own thin facade, and converges on `usfm-core` later. That is [ADR-001](adr/001-usfm-core.md)'s rejected option B, taken as a schedule mitigation rather than as a design; the facade is what makes the retreat cheap and it is the reason the facade exists in either project.
+
+## 5. What each milestone deliberately leaves broken
 
 | | Leaves broken |
 |---|---|
@@ -113,20 +152,203 @@ Signed installers, default presets, documentation, performance and reliability w
 | M4 | Slow, unpackaged, no font checking, cancel is best-effort |
 | M5 | Unsigned, undocumented, no presets |
 
-## 3. The dependency on easy-usfm
+## 6. Reading the item tables
 
-BibleCompose's M1 needs `usfm-core`, which is `easy-usfm`'s M0 and does not exist yet ([ADR-001](adr/001-usfm-core.md)). This is the largest scheduling risk in the plan and it is managed rather than avoided.
+Each item is one coherent deliverable. **Done includes tests and green CI**, not code that runs locally. The *Done when* column is the acceptance test — it is written to be checkable by someone who did not do the work, and where it restates an SRS requirement the ID is named so the trace is visible.
 
-**BibleCompose needs a subset.** Batch whole-file parse, source spans, diagnostics, verse index. It does not need the incremental chapter-chunked session, which is the larger and harder half of that milestone. So the extraction can be useful to BibleCompose well before `easy-usfm`'s own M0 is complete.
+---
 
-**S0 and M0 do not need it at all.** Between them that is a meaningful runway during which the parser layer can land, which is a further reason for the ordering above.
+# Part 3 — Work items
 
-**One straightening-out belongs to the extraction itself.** `easy-usfm-core` treats UTF-16 offsets as its boundary type because it crosses into JavaScript. BibleCompose has no such boundary and must not pay the conversion. `usfm-core` should expose byte and line/column offsets natively, with UTF-16 as the WASM layer's concern — arguably better for `easy-usfm` too, and cheapest to do at the moment the crate is extracted.
+## S0 · Typesetting spike
 
-**If it slips**, the fallback is that BibleCompose depends on `usfm3` directly behind its own thin facade, and converges on `usfm-core` later. That is [ADR-001](adr/001-usfm-core.md)'s rejected option B, taken as a schedule mitigation rather than as a design; the facade is what makes the retreat cheap and it is the reason the facade exists in either project.
+*8 items · 4 S, 3 M, 1 XL. No Rust in this phase.*
 
-## 4. What is not in the plan at all
+| ID | | Deliverable | Done when |
+|---|---|---|---|
+| **S0.1** | S | SILE 0.15 pinned; toolchain and native dependency versions recorded | A one-line document produces a PDF; SILE, HarfBuzz, ICU, and libtexpdf versions are written down and reproducible on a second machine |
+| **S0.2** | **XL** | Two-column Scripture page: frames, column balancing, body typography, break behaviour | A page of real Scripture sets in two balanced columns with acceptable justification; no verse number is stranded at the foot of a column; the SILE source is checked in |
+| **S0.3** | M | Footnotes and cross-references in the note area | Notes land on the page carrying their caller; a note too long for its page splits or migrates without orphaning the caller; cross-references are visually distinguishable from footnotes |
+| **S0.4** | M | Running head with a live verse range, folio, chapter opening | The head shows book name and the first and last reference actually present on the page, correct across a column break and on a page whose first verse began on the previous one |
+| **S0.5** | M | The same page in Tamil, from a font file that is not installed | Renders with no missing glyphs from `assets/fonts/`; line breaking and conjunct shaping are acceptable to a reader of the script |
+| **S0.6** | S | XML input path: the same page driven from XML rather than `.sil` | Element names resolve to class commands; a backslash, a brace, and a percent sign in text pass through as literal characters; namespace-prefix behaviour is recorded either way ([ADR-002](adr/002-sile-interface.md)) |
+| **S0.7** | S | Figures: raster and vector artwork | A JPG places with configured sizing; PDF artwork either places or is recorded as unsupported with a decision on what BibleCompose does instead ([SRS-REVIEW F14a](SRS-REVIEW.md#f14--smaller-gaps-and-conflicts)) |
+| **S0.8** | S | Findings written up; the spike source becomes the seed class | `sile/classes/biblecompose.lua` exists; [ADR-002](adr/002-sile-interface.md) is amended with what the spike proved and what it disproved |
 
-SRS §17.2's deferrals, unchanged: centre-column references, diglot, interlinear, float and wraparound images, thumb indexing, cover generation, PDF/X and CMYK, page-level micro-adjustment, study-Bible sidebars, generated TOC and indexes, a plugin system, a visual page editor.
+## Phase 0 → M0 · Skeleton and contract
 
-Two additions to that list from this design. **A second typesetting backend** is not planned, and [ADR-004](adr/004-no-layout-crate.md) accepts that adding one later costs a second emitter. **In-process SILE** is not planned; the child process is what gives BLD-006 cancellation and NFR-007 its failure boundary ([ADR-002](adr/002-sile-interface.md)).
+*10 items · 3 S, 6 M, 1 L*
+
+| ID | | Deliverable | Done when |
+|---|---|---|---|
+| **P0.1** | S | Workspace scaffold, seven crates, CI matrix on three platforms | `cargo test` green on Windows, macOS, and Linux from an empty workspace; a CI assertion fails the build if any crate other than `biblecompose-app` depends on `biblecompose-sile` ([ADR-004](adr/004-no-layout-crate.md)) |
+| **P0.2** | S | `biblecompose-diagnostics`: `Diagnostic`, `Severity`, `Stage`, codes, `SourceLoc` | Every code carries its stage as a prefix; a test asserts a code cannot be constructed with a mismatched stage (DIA-001) |
+| **P0.3** | M | `ScriptureDocument` and its fixtures, hand-built | Fixtures covering paragraph, poetry, heading, list, table, chapter and verse anchors, note, cross-reference, figure, and `Unsupported` compile and serialize ([ARCHITECTURE §5](ARCHITECTURE.md#5-the-three-models)) |
+| **P0.4** | L | The XML emitter and the `Backend` trait | A fixture document emits XML that the seed class accepts and SILE turns into a PDF; the emitter's input type cannot carry provenance ([ADR-005](adr/005-provenance.md)) |
+| **P0.5** | M | Determinism harness: golden XML, ordered-maps lint | Byte-identical output over 100 runs on all three platforms; a `HashMap` introduced anywhere on the emission path fails CI (SILE-005, DET-001) |
+| **P0.6** | M | Process invocation, version detection, output capture | Backend version appears in the build log; every line of SILE stdout and stderr reaches the log with nothing dropped (SILE-002, SILE-006) |
+| **P0.7** | M | Build directory, atomic publish, locked-destination diagnostic | Killing the process mid-build leaves the previous PDF byte-identical and no partial file at the output path; a destination locked by another process produces BLD-011's actionable message (BLD-009, BLD-010) |
+| **P0.8** | M | Process-tree cancellation — Job Object on Windows, process group on Unix | Cancel during typesetting leaves no SILE process on any platform, verified by process enumeration rather than by exit code; UI-equivalent state is operable within 1 s (BLD-006) |
+| **P0.9** | M | `biblecompose-cli`: `build`, `emit`, `validate`, `version` | The full fixture-to-PDF pipeline runs headless with no GUI crate compiled into the binary (NFR-009) |
+| **P0.10** | S | Build state machine and event stream | All eight states of GUI-006 are observable in order from the CLI event log, including the cancelled and blocked paths |
+
+## Phase 1 → M1 · USFM to PDF
+
+*9 items · 2 S, 6 M, 1 XL*
+
+| ID | | Deliverable | Done when |
+|---|---|---|---|
+| **P1.1** | M ⏳ | `usfm-core` extracted from `easy-usfm`; byte and line/column offsets native; both repositories consume it | Both projects build against the shared crate; no UTF-16 conversion occurs on BibleCompose's path; no `usfm3` type appears in the crate's public API ([ADR-001](adr/001-usfm-core.md)) |
+| **P1.2** | S | Composition corpus: whole-book fixtures on top of `usfm-core`'s | At least one complete book per feature class and per script in the coverage list; pinned by checksum; verify harness passes |
+| **P1.3** | M | Project discovery: recursive scan, `\id` identification, duplicates, generated-directory exclusion | A renamed `MAT` file loads as MAT; two files declaring `\id MAT` block the build; `output/` and `.biblecompose/` never produce duplicate inputs; no code path opens a `.usfm` file for writing (PRJ-002 – PRJ-006, BLD-004) |
+| **P1.4** | M | Canon table as data, including deuterocanonical books; ordering and inclusion | GEN precedes EXO regardless of filename; configured order and configured exclusions are both reflected; adding a deuterocanonical book is a row, not a schema change (BOOK-001 – BOOK-003) |
+| **P1.5** | **XL** | USJ → `ScriptureDocument` normalization | Paragraphs, poetry, headings, lists, chapter and verse anchors, character styles, and notes normalize across the corpus; unknown markers survive as `Unsupported` with a location rather than being dropped (FUN-001, FUN-003, USFM-004) |
+| **P1.6** | M | Text-loss and ordering assertion over the corpus | Concatenated Scripture text of the normalized model equals that of the source, book by book, on every corpus file; no reordering across book or chapter boundaries (FUN-002, USFM-005) |
+| **P1.7** | M | Emitter coverage for the M1 construct set; two-column body from the class | A real Gospel emits and typesets end to end; golden XML for every M1 construct |
+| **P1.8** | M | Parallel parse across files; the NFR-002 budget | A 66-book project parses and validates in under 5 s cold on reference hardware; the benchmark runs in CI and a 20 % regression fails the build |
+| **P1.9** | S | Emitted-line → Scripture-reference map | A forced SILE error deep in a book reports a Scripture reference, not an XML line number (SILE-007) |
+
+## Phase 2 → M2 · Configuration
+
+*10 items · 3 S, 6 M, 1 L*
+
+| ID | | Deliverable | Done when |
+|---|---|---|---|
+| **P2.1** | M | Tauri 2 + Svelte + Vite + TypeScript scaffold; platform service interfaces; CI matrix | An empty window builds and runs on three platforms; a lint fails the build if a Svelte component imports a Tauri API directly ([ADR-003](adr/003-gui.md)) |
+| **P2.2** | M | `toml_edit` layer: one parse, typed view derived from it, spans retained | Syntax errors report file, line, and column; the typed view and the format-preserving document cannot disagree because there is one parse (CFG-003) |
+| **P2.3** | M | Settings schema, embedded defaults, field-by-field merge, `schema_version` | A USFM-only folder builds from embedded defaults; changing only `page.width` leaves unrelated defaults intact; an unknown schema version is one clear diagnostic (CFG-001, CFG-002, CFG-008) |
+| **P2.4** | M | Unit and value parsing — lengths, page sizes, enums, ranges | `"0.55in"`, `"11.5pt"`, `"6x9in"` become typed values at the configuration boundary; an invalid unit is diagnosed by BibleCompose with a location, never by SILE |
+| **P2.5** | S | Unknown-key detection with spans; strict mode | `page.wdith` is reported at its own line; strict mode promotes it to an error (CFG-004) |
+| **P2.6** | M | Provenance — `Sourced<T>` and `Origin` — threaded through resolution | Every resolved settings value reports Builtin or File-with-location; a merge that fails to set an origin does not compile ([ADR-005](adr/005-provenance.md)) |
+| **P2.7** | M | Write-back preserving comments and ordering; reset to default | A GUI edit to one key leaves every comment, blank line, and key order in the file untouched; removing an override restores the built-in value (CFG-005 – CFG-007) |
+| **P2.8** | L | GUI: project pane with per-book status, settings forms, Build and Cancel, build log | Page size, margins, columns, font, body size, numbering, notes, and output path are all editable without touching TOML; the book list shows validation status; the log is copyable (GUI-001 – GUI-003, GUI-007) |
+| **P2.9** | S | Background execution and the event bridge | The window stays interactive and Cancel stays usable throughout a multi-minute build; no long work runs on the UI thread (GUI-012, NFR-003) |
+| **P2.10** | S | Diagnostics panel: severity and file filtering, click to book | Clicking a diagnostic selects the related book and shows its detail; filtering to errors in one book works; a blocked build lists every blocking issue at once, before any backend process starts (GUI-005, DIA-002, DIA-004) |
+
+## Phase 3 → M3 · Styles
+
+*8 items · 3 S, 4 M, 1 L*
+
+| ID | | Deliverable | Done when |
+|---|---|---|---|
+| **P3.1** | M | Style schema, typed selectors, and a built-in style for every supported marker | Every marker BibleCompose claims to support renders without a project override; `paragraph.q1` and a same-named selector in another class cannot collide (STY-001, STY-003) |
+| **P3.2** | M | Cascade, single-parent inheritance flattening, cycle detection | A `styles.toml` override changes only what it names; `q2` inherits poetry properties from `q1`; a cycle is one diagnostic naming the cycle, not a stack overflow (STY-002, STY-007) |
+| **P3.3** | S | Unsupported selector and property diagnostics with a location | A misspelled property is reported at its line rather than silently ignored (STY-004) |
+| **P3.4** | M | Resolved style map emitted as data; the class applies it | Style values reach SILE as data, never as command fragments; golden XML covers the full property set ([ADR-002](adr/002-sile-interface.md)) |
+| **P3.5** | L | Style editor GUI | Body font and size, paragraph spacing, heading size, poetry indent, chapter and verse appearance, footnote style, and common character styles are all editable and persist (GUI-004, STY-005) |
+| **P3.6** | S | Resolved-style inspector | For any element, the inspector shows each property's value and whether it came from the built-in set, a project file with a location, or inheritance from a named selector (STY-008) |
+| **P3.7** | M | External edit and reload; changed-file detection | An external `styles.toml` edit is reflected after reload; an externally edited USFM file raises a changed-file indication (STY-006, FUN-006, FUN-007) |
+| **P3.8** | S | Golden XML across the style matrix | Every selector class and every supported property has a golden case; a style change that should affect one selector is proven not to affect others |
+
+## Phase 4 → M4 · Publishing structures
+
+*8 items · 2 S, 6 M*
+
+| ID | | Deliverable | Done when |
+|---|---|---|---|
+| **P4.1** | M | Footnotes: structured model, callers, class rendering, splitting | A `\f` note renders at its intended location with its caller intact, including a note that must split across pages; submarkers `fr`, `ft`, `fq`, `fqa`, `fk`, `fl`, `fv` are structural, not flattened (SCR-003, USFM-002) |
+| **P4.2** | M | Cross-references as a distinct type, in the note area | An `\x` reference renders in the configured placement and is styled independently of footnotes; `xo`, `xt`, `xk`, `xq` are represented separately (SCR-004, SCR-005) |
+| **P4.3** | M | Figures: asset resolution, containment, sizing, missing-image policy | A figure renders from a relative project path with `src`, `alt`, `size`, `loc`, `copy`, and `ref` preserved; a path escaping the project directory after canonicalization is a diagnostic; a missing image follows the configured policy (SCR-006, USFM-003) |
+| **P4.4** | M | Running heads and folios with live verse ranges | Book name, reference range, and page number appear per the settings; the range is correct on a page whose first verse started earlier and across a column break |
+| **P4.5** | S | Independent visibility switches | Chapter numbers, verse numbers, section headings, footnotes, and cross-references can each be hidden without altering USFM, and hiding a number does not remove its anchor (SCR-001, SCR-007) |
+| **P4.6** | M | Section headings `s1`–`s4`, `\d`, `\sp`, `\r`; chapter openings | Each renders with its own resolved style; a heading keeps with the text that follows it rather than sitting alone at a column foot |
+| **P4.7** | M | Lists and tables | `li1`–`li4`, `lim1`–`lim4`, and `tr`/`th#`/`tc#` render with correct indentation and column alignment |
+| **P4.8** | S | PDF metadata and reference anchors | Title, language, author, and subject appear in PDF properties; verse anchors are carried far enough that destinations and bookmarks are a later minor release rather than a model redesign (PDF-005, SCR-008) |
+
+## Phase 5 → M5 · Hardening
+
+*9 items · 1 S, 7 M, 1 L*
+
+| ID | | Deliverable | Done when |
+|---|---|---|---|
+| **P5.1** | M | Font resolution: project fonts first, system second, unresolved is blocking | A font absent from the system and from `assets/fonts/` blocks the build with a diagnostic naming the setting that requested it; a project-local `.ttf` renders on a machine where it is not installed (FONT-001, FONT-003) |
+| **P5.2** | M | Coverage pre-flight from the font's character map | A Latin-only font configured for Tamil Scripture produces a coverage error with an example reference, before SILE runs; a font used only for footnotes is checked only against footnote text (FONT-002, PDF-004) |
+| **P5.3** | M | Full 66-book corpus build; PDF structural assertions; vendored pinned test fonts | Page count, page geometry, embedded font list, per-page extracted text, and image presence asserted; the suite does not fail when a system font is updated (PDF-001 – PDF-003, DET-002) |
+| **P5.4** | M | Draft builds and selected-book UI | A one-book draft after a single style change completes in a small fraction of a full-Bible build and is visibly marked as a draft (BLD-012, BOOK-004) |
+| **P5.5** | M | Discovery and parse caches with the five-part invalidation key | Reopening a 66-book project lists books in under 500 ms warm; a change to configuration, styles, marker table, backend version, or application version invalidates the cache ([SRS-REVIEW F14d](SRS-REVIEW.md#f14--smaller-gaps-and-conflicts)) |
+| **P5.6** | M | Integrated pdf.js preview, page-windowed | A 2,000-page PDF opens without rasterizing the whole document; the viewer runs with script execution and external links disabled (GUI-008, GUI-009) |
+| **P5.7** | L ⏳ | Packaging SILE, HarfBuzz, fontconfig, ICU, and libtexpdf for three platforms | A fresh machine with no SILE installed builds a PDF from the installer artefact; the advanced executable override still works for development (SILE-003, SILE-004, SILE-009) |
+| **P5.8** | M | SILE error mapping table; raw log collapsed behind it | Each known backend failure class becomes a BibleCompose diagnostic with the raw text available but collapsed; an unmapped failure still surfaces rather than being swallowed (SILE-007, DIA-005) |
+| **P5.9** | S | Offline end-to-end test; log hygiene review | A full open-edit-build-preview session succeeds with the network disabled and issues zero requests; the build log contains no Scripture by default (NFR-004, NFR-010) |
+
+## Phase 6 → M6 · Version 1.0
+
+*6 items · 5 M, 1 L*
+
+| ID | | Deliverable | Done when |
+|---|---|---|---|
+| **P6.1** | M ⏳ | Installers and code signing, three platforms | Signed artefacts install cleanly on a fresh machine each, with no security warning on first launch |
+| **P6.2** | M ⏳ | Default presets and default fonts | Reader, standard two-column, and large-print presets each produce an acceptable PDF from a bare USFM folder; every bundled font's redistribution terms are confirmed |
+| **P6.3** | L | Accessibility audit and fixes | The whole application is operable by keyboard; the audit passes at the agreed level; complex-script text entry works in every settings field (NFR-011) |
+| **P6.4** | M | Localization scaffolding; English strings extracted | No user-facing string is hard-coded in business logic; a second locale can be added without touching Rust (NFR-012) |
+| **P6.5** | M | The ten acceptance scenarios, scripted end to end | Scenarios A through J of SRS §16.2 all pass in CI, including the forced-backend-failure and cancel cases; source USFM checksums are unchanged after every one |
+| **P6.6** | M | Documentation, release notes, v1.0 sign-off | A new user gets from a USFM folder to a PDF using the documentation alone; every MUST in the SRS is traced to a passing test or a recorded exception |
+
+---
+
+# Part 4 — Where each guarantee is established
+
+This table records the mechanism behind each promise and the point in the build where it first holds — useful long after the work is done, because it says which test protects which guarantee.
+
+| Guarantee | Mechanism | Established at |
+|---|---|---|
+| SILE can set a Bible page at all | a PDF a typesetter accepts | S0.2 |
+| Scripture cannot inject Lua or SILE commands | XML text nodes; fixture carrying `\`, `{`, `%` | S0.6, held by P0.4 |
+| No crate but the app reaches the backend | CI dependency assertion | P0.1 |
+| Backend input is byte-identical everywhere | golden XML, three platforms, 100 runs | P0.5 |
+| A failed build never replaces the last good PDF | kill mid-build, byte-compare the previous output | P0.7 |
+| Cancel leaves no backend process behind | process enumeration after cancel, three platforms | P0.8 |
+| The core is testable without a GUI | full pipeline through the CLI, no GUI crate linked | P0.9 |
+| BibleCompose never writes USFM | no write path in any crate; checksums before and after | P1.3, held by P6.5 |
+| No Scripture text is lost or reordered | corpus-wide concatenation comparison | P1.6 |
+| A 66-book project parses within budget | CI benchmark, 20 % regression fails the build | P1.8 |
+| A backend error names a Scripture reference | emitted-line → reference map | P1.9 |
+| A GUI write does not disturb the rest of the TOML | round-trip test over commented fixtures | P2.7 |
+| Why a value looks the way it does is answerable | origin on every resolved value | P2.6, surfaced at P3.6 |
+| Style inheritance terminates | cycle detection with a naming diagnostic | P3.2 |
+| Hiding a number does not lose its anchor | anchors asserted present with numbering disabled | P4.5 |
+| No silent font substitution | resolution failure is blocking, before SILE runs | P5.1 |
+| No missing-glyph boxes in output | cmap coverage pre-flight per style | P5.2 |
+| PDF geometry and fonts match the settings | structural assertions against vendored pinned fonts | P5.3 |
+| Nothing leaves the machine | full session captured with the network disabled | P5.9 |
+| Logs carry no Scripture by default | log review against the corpus | P5.9 |
+| Keyboard-only operation | accessibility audit | P6.3 |
+| Every MVP acceptance scenario | SRS §16.2 A–J scripted in CI | P6.5 |
+
+---
+
+# Part 5 — Decisions deferred
+
+Left open because answering them well needs either a rights holder or a thing that is not built yet.
+
+1. **Default fonts.** A licensing question, not an architecture one. Gates P6.2, and S0.5 should use a candidate so the choice is informed by how it sets.
+2. **USFM 2.x tolerance.** Belongs to `usfm-core` and its marker table; shapes P1.5's diagnostics but not its model.
+3. **PDF artwork as a figure source.** S0.7 answers it; if unsupported, P4.3 needs a documented conversion or rejection path.
+4. **Whether the deuterocanon appears in shipped presets.** The canon table carries those books from P1.4 regardless; whether a preset selects them is a product choice for P6.2.
+5. **Cross-reference placement beyond the note area.** Centre-column is explicitly post-MVP; whether an inline or end-of-paragraph mode joins the footnote-area mode in v1 is a P4.2 decision once the note area is working.
+
+---
+
+# Part 6 — Deliberately excluded
+
+Recorded so the boundary is defensible when the request arrives, and so a future reader can see these were considered rather than overlooked.
+
+| Request | Answer |
+|---|---|
+| Centre-column or gutter references, diglot, interlinear | SRS §17.2. Post-MVP; the verse anchors in P4.8 are what keep them possible |
+| Float and wraparound images, thumb indexing, cover generation | SRS §17.2 |
+| PDF/X, CMYK, prepress profiles | SRS §17.2. The base PDF workflow has to be stable first |
+| Page-level micro-adjustment, a visual page editor | SRS §2.3. Not what this product is |
+| Study-Bible sidebars, multiple synchronized note streams | SRS §17.2 |
+| Generated TOC, glossary, indexes | SRS §17.2, beyond basic peripheral content |
+| A plugin system or project-provided Lua | SRS §17.2, and it would undo [ADR-002](adr/002-sile-interface.md)'s security property |
+| Translation, editing, or Paratext-style collaboration | SRS §2.3. `easy-usfm` edits files; this composes them |
+| A second typesetting backend | Not planned. [ADR-004](adr/004-no-layout-crate.md) accepts that adding one later costs a second emitter |
+| In-process SILE instead of a child process | Not planned. The child process is what gives BLD-006 cancellation and NFR-007 its failure boundary |
+| Telemetry on by default | Never. SRS §15 |
+
+---
+
+## Keeping this document true
+
+The item tables will drift as the work reveals itself — items split, merge, and get reordered, and that is expected. The parts meant to outlast them are **Part 1** (what each milestone delivers), **Part 2's ordering rationale**, and **Part 4** (which test protects which guarantee). If an item changes, update the table. If one of those three stops being true, something more significant has changed and it deserves a note in the relevant [ADR](adr/).

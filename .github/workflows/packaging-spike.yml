@@ -1,0 +1,185 @@
+name: S1 packaging spike
+
+# Not part of normal CI. This exists to answer S1.1–S1.3 — can SILE be built
+# from source on each platform, and does --enable-embedded-resources produce a
+# binary that needs nothing installed alongside it.
+#
+# Run it from the Actions tab, or push to a branch named spike/s1*.
+#
+# Findings go to spike/S1-NOTES.md. A red run here is a result, not a
+# regression: S1.2 failing IS the Windows answer, and it lands on NFR-001
+# rather than on the schedule.
+on:
+  workflow_dispatch:
+  push:
+    branches: ["spike/s1**"]
+
+env:
+  SILE_REF: v0.15.13
+
+jobs:
+  linux:
+    name: S1.1 · Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: check out SILE
+        run: git clone --depth 1 --branch "$SILE_REF" --recurse-submodules
+             https://github.com/sile-typesetter/sile.git sile-src
+
+      - name: build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            autoconf automake libtool pkg-config \
+            libharfbuzz-dev libfontconfig1-dev libicu-dev \
+            libfreetype-dev libpng-dev \
+            lua5.1 liblua5.1-0-dev luarocks
+
+      # The flag that decides whether the Lua tree and the vendored rocks end
+      # up inside the binary (S1-NOTES P-2). If this configure path has
+      # bit-rotted upstream, this is where we find out.
+      - name: bootstrap, configure, make
+        working-directory: sile-src
+        run: |
+          ./bootstrap.sh
+          ./configure --enable-embedded-resources
+          make -j"$(nproc)"
+
+      - name: what did we get
+        working-directory: sile-src
+        run: |
+          BIN=$(find . -name sile -type f -perm -u+x | grep -E 'target/(debug|release)/sile$' | head -1)
+          echo "binary: $BIN"
+          ls -l "$BIN"
+          echo "size: $(du -h "$BIN" | cut -f1)"
+          ldd "$BIN" || true
+
+      # The question that matters: does it run with nothing else installed?
+      # The rock tree is deleted first so a stray system copy cannot mask a
+      # binary that is not actually self-contained.
+      - name: does it typeset with no Lua rocks present
+        working-directory: sile-src
+        run: |
+          BIN=$(find . -name sile -type f -perm -u+x | grep -E 'target/(debug|release)/sile$' | head -1)
+          sudo rm -rf /usr/local/share/lua /usr/local/lib/lua ~/.luarocks lua_modules || true
+          env -u LUA_PATH -u LUA_CPATH "$BIN" --version
+          cd "$GITHUB_WORKSPACE"
+          env -u LUA_PATH -u LUA_CPATH SILE_PATH="$GITHUB_WORKSPACE/sile" \
+            "$GITHUB_WORKSPACE/sile-src/$BIN" tests/golden/john_1_1_5.xml \
+            --class biblecompose -o /tmp/s1-linux.pdf
+          test -s /tmp/s1-linux.pdf && echo "SELF-CONTAINED: yes"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: s1-linux
+          path: /tmp/s1-linux.pdf
+          if-no-files-found: ignore
+
+  macos:
+    name: S1.3 · macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: check out SILE
+        run: git clone --depth 1 --branch "$SILE_REF" --recurse-submodules
+             https://github.com/sile-typesetter/sile.git sile-src
+
+      - name: build dependencies
+        run: brew install autoconf automake libtool pkg-config harfbuzz fontconfig icu4c freetype libpng luarocks
+
+      - name: bootstrap, configure, make
+        working-directory: sile-src
+        env:
+          # Homebrew keeps icu4c keg-only, so pkg-config cannot see it without
+          # being told. A likely first failure point.
+          PKG_CONFIG_PATH: /opt/homebrew/opt/icu4c/lib/pkgconfig:/usr/local/opt/icu4c/lib/pkgconfig
+        run: |
+          ./bootstrap.sh
+          ./configure --enable-embedded-resources
+          make -j"$(sysctl -n hw.ncpu)"
+
+      - name: what did we get
+        working-directory: sile-src
+        run: |
+          BIN=$(find . -name sile -type f -perm +111 | grep -E 'target/(debug|release)/sile$' | head -1)
+          ls -l "$BIN"; otool -L "$BIN" || true
+          "$BIN" --version
+
+  windows:
+    name: S1.2 · Windows
+    runs-on: windows-latest
+    # The one most likely to fail, and a failure is the finding. Do not let it
+    # mark the whole run red and hide a green Linux result.
+    continue-on-error: true
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            base-devel
+            git
+            autoconf
+            automake
+            libtool
+            pkg-config
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-rust
+            mingw-w64-x86_64-harfbuzz
+            mingw-w64-x86_64-fontconfig
+            mingw-w64-x86_64-icu
+            mingw-w64-x86_64-freetype
+            mingw-w64-x86_64-libpng
+            mingw-w64-x86_64-lua51
+            mingw-w64-x86_64-luarocks
+
+      - name: check out SILE
+        run: git clone --depth 1 --branch "$SILE_REF" --recurse-submodules
+             https://github.com/sile-typesetter/sile.git sile-src
+
+      - name: bootstrap, configure, make
+        working-directory: sile-src
+        run: |
+          ./bootstrap.sh
+          ./configure --enable-embedded-resources
+          make -j"$(nproc)"
+
+      - name: what did we get
+        working-directory: sile-src
+        run: |
+          BIN=$(find . -name 'sile.exe' | head -1)
+          ls -l "$BIN"
+          ldd "$BIN" || true
+          "$BIN" --version
+
+  report:
+    name: report
+    needs: [linux, macos, windows]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: summarise
+        run: |
+          {
+            echo "## S1 packaging spike"
+            echo
+            echo "| Item | Platform | Result |"
+            echo "|---|---|---|"
+            echo "| S1.1 | Linux   | ${{ needs.linux.result }} |"
+            echo "| S1.3 | macOS   | ${{ needs.macos.result }} |"
+            echo "| S1.2 | Windows | ${{ needs.windows.result }} |"
+            echo
+            echo "A Windows failure is a **finding**, not a regression — it lands on"
+            echo "NFR-001's Tier-1 claim. Record it in \`spike/S1-NOTES.md\`."
+          } >> "$GITHUB_STEP_SUMMARY"

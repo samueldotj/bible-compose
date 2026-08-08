@@ -67,7 +67,51 @@ It also means **`--features static` is not usable as shipped** for option B. Emb
 
 ---
 
-## P-2 — Neither machine here can complete a source build yet
+## P-2 — SILE can already embed everything Lua. The release chooses not to.
+
+This is the good news, and it changes the size of [S1.4](../docs/ROADMAP.md#s1--packaging-spike).
+
+`configure` has the flag:
+
+```
+--enable-embedded-resources
+        Compile resources such as Lua module files directly into the Rust CLI binary
+```
+
+and when it is on, `Makefile.am` switches what happens to the Lua tree:
+
+```make
+if !EMBEDDED_RESOURCES
+nobase_dist_pkgdata_DATA    = $(SILEDATA) $(LUALIBRARIES)
+nobase_nodist_pkgdata_DATA  = $(BUILT_SOURCES_LUA) $(LUAMODULES)
+endif !EMBEDDED_RESOURCES
+```
+
+Off, those become installed data files. On, the same three variables — `SILEDATA`, `LUALIBRARIES`, **`LUAMODULES`** — are what `src/embed-includes.rs` is generated from. `LUAMODULES` is the vendored luarocks tree.
+
+**So a build configured that way embeds the rocks, not just SILE's own Lua.**
+
+### Which explains [F-2](NOTES.md), and it was not a flaw
+
+S0 found the released binary failing on `module 'lua-utf8' not found` and concluded it "is not self-contained". Correct as observed, but the cause is a deliberate step in their release process:
+
+```make
+dist-hook-devendor-luarocks: dist-hook-decore-automake
+        cd $(distdir)
+        $(SED) -i -e '/^LUAMODULES/d;/^\tlua_modules/d' Makefile.in
+```
+
+The distribution tarball has luarocks **removed** from its Makefile, so anything built from a release expects the rocks to come from the system. A build from git does not have that done to it.
+
+### What this means for ADR-006
+
+[ADR-006](../docs/adr/006-single-binary.md) assumed option B's extra work over option C was "embedding the Lua tree and the rocks via `rust-embed` and injecting loaders through `inject_paths`". **That may be almost none of it** — upstream already does it, given the right flag and a git checkout rather than a tarball.
+
+If S1.4 confirms it, option B costs little more than option C and keeps the process boundary for free, which is the outcome the ADR wanted and did not expect to get cheaply. Not yet confirmed: a build has not been run (P-3), and whether `--enable-embedded-resources` is exercised by upstream CI is unknown — an unused configure path is exactly where bit-rot lives.
+
+---
+
+## P-3 — Neither machine here can complete a source build yet
 
 Recorded so the gap is visible rather than implied. Everything above came from reading the source; the build itself has not been run.
 

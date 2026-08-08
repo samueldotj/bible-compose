@@ -109,23 +109,15 @@ Reading the build files, this looked like most of option B's work being already 
 
 ---
 
-## P-3 — Neither machine here can complete a source build yet
+## P-3 — Where each platform stands
 
-Recorded so the gap is visible rather than implied. Everything above came from reading the source; the build itself has not been run.
+**Linux — done.** WSL Ubuntu 22.04 builds it (P-6). The prerequisites were installed as P-4 records; `sudo` was not available for most of it, which turned out not to matter.
 
-**WSL Ubuntu 22.04** — has `gcc`, `g++`, `make`, `pkg-config`, and the runtime libraries S0 proved present. Missing:
+**Windows — not attempted locally.** No MSVC on `PATH`, no `cmake`, no `perl`, no MSYS2. Cargo finds a linker for pure-Rust crates, so the MSVC toolchain is installed somewhere, but none of what an autotools build needs is. Queued on the CI runner instead, which is both faster to try and closer to how P5.7 will really build it.
 
-| | |
-|---|---|
-| Build system | `autoconf`, `automake`, `libtool` |
-| Rust | no `cargo`, no `rustc` |
-| Headers | harfbuzz, fontconfig, ICU, freetype, libpng, lua5.1 |
+**macOS — not available here at all.** Only answerable on a runner.
 
-All of it is one `apt-get` away, but `sudo` is not passwordless here, so it needs the user.
-
-**Windows** — no MSVC on `PATH`, no `cmake`, no `perl`, no MSYS2. Cargo finds a linker for pure-Rust crates, so the MSVC toolchain is installed somewhere, but nothing else of what an autotools build needs is present. S1.2 needs MSYS2 and its toolchain.
-
-**macOS** — not available. S1.3 cannot be attempted from here at all and needs either a machine or a CI runner.
+Both remaining legs are in [packaging-spike.yml](../.github/workflows/packaging-spike.yml). The workflow predates P-6 and its Linux job still asserts self-containment, which will now fail; that assertion needs relaxing to "builds and reports a version", with the rock question tracked separately.
 
 ---
 

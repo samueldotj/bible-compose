@@ -1,14 +1,17 @@
 name: S1 packaging spike
 
-# Not part of normal CI. This exists to answer S1.1–S1.3 — can SILE be built
-# from source on each platform, and does --enable-embedded-resources produce a
-# binary that needs nothing installed alongside it.
+# Not part of normal CI. This answers S1.2 and S1.3 — can SILE be built from
+# source on Windows and macOS — and keeps the Linux build honest now that S1.1
+# has answered it locally.
 #
 # Run it from the Actions tab, or push to a branch named spike/s1*.
 #
 # Findings go to spike/S1-NOTES.md. A red run here is a result, not a
 # regression: S1.2 failing IS the Windows answer, and it lands on NFR-001
 # rather than on the schedule.
+#
+# The prerequisite list and the configure flags below are not guesses — they
+# are what S1.1 discovered one refusal at a time (S1-NOTES P-4, P-5).
 on:
   workflow_dispatch:
   push:
@@ -29,48 +32,71 @@ jobs:
         run: git clone --depth 1 --branch "$SILE_REF" --recurse-submodules
              https://github.com/sile-typesetter/sile.git sile-src
 
+      # jq: configure hard-fails without it.
+      # luajit: SILE searches for LuaJIT, not plain Lua — a working lua5.1 is
+      #   not enough, it is not in the list configure looks at.
+      # fonts-sil-gentiumplus: configure hard-requires this family to resolve
+      #   through fc-match. Installed here rather than skipped with
+      #   FCMATCH=true, so the resulting SILE has a working default font.
       - name: build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            autoconf automake libtool pkg-config \
+            autoconf automake libtool pkg-config jq \
             libharfbuzz-dev libfontconfig1-dev libicu-dev \
             libfreetype-dev libpng-dev \
-            lua5.1 liblua5.1-0-dev luarocks
+            luajit libluajit-5.1-dev luarocks \
+            fonts-sil-gentiumplus
+          echo "harfbuzz $(pkg-config --modversion harfbuzz)"
 
-      # The flag that decides whether the Lua tree and the vendored rocks end
-      # up inside the binary (S1-NOTES P-2). If this configure path has
-      # bit-rotted upstream, this is where we find out.
       - name: bootstrap, configure, make
         working-directory: sile-src
         run: |
           ./bootstrap.sh
-          ./configure --enable-embedded-resources
+          # --disable-font-variations is needed where harfbuzz predates the
+          # 6.0 subsetter. If this runner has a newer one the flag can go —
+          # and that matters, because it decides whether the shipped product
+          # supports variable fonts at all (S1-NOTES P-5).
+          if pkg-config --atleast-version=6.0.0 harfbuzz-subset 2>/dev/null; then
+            echo "harfbuzz subsetter present — building WITH font variations"
+            ./configure --enable-embedded-resources
+          else
+            echo "::warning::harfbuzz subsetter < 6.0 — building without variable-font support"
+            ./configure --enable-embedded-resources --disable-font-variations
+          fi
           make -j"$(nproc)"
 
       - name: what did we get
         working-directory: sile-src
         run: |
-          BIN=$(find . -name sile -type f -perm -u+x | grep -E 'target/(debug|release)/sile$' | head -1)
-          echo "binary: $BIN"
-          ls -l "$BIN"
-          echo "size: $(du -h "$BIN" | cut -f1)"
+          BIN=$(find target -name sile -type f -perm -u+x | head -1)
+          echo "binary: $BIN  ($(stat -c%s "$BIN") bytes)"
           ldd "$BIN" || true
 
-      # The question that matters: does it run with nothing else installed?
-      # The rock tree is deleted first so a stray system copy cannot mask a
-      # binary that is not actually self-contained.
-      - name: does it typeset with no Lua rocks present
+      - name: typeset a golden file
         working-directory: sile-src
         run: |
-          BIN=$(find . -name sile -type f -perm -u+x | grep -E 'target/(debug|release)/sile$' | head -1)
-          sudo rm -rf /usr/local/share/lua /usr/local/lib/lua ~/.luarocks lua_modules || true
-          env -u LUA_PATH -u LUA_CPATH "$BIN" --version
+          BIN=$(find target -name sile -type f -perm -u+x | head -1)
           cd "$GITHUB_WORKSPACE"
-          env -u LUA_PATH -u LUA_CPATH SILE_PATH="$GITHUB_WORKSPACE/sile" \
+          SILE_PATH="$GITHUB_WORKSPACE/sile" \
             "$GITHUB_WORKSPACE/sile-src/$BIN" tests/golden/john_1_1_5.xml \
             --class biblecompose -o /tmp/s1-linux.pdf
-          test -s /tmp/s1-linux.pdf && echo "SELF-CONTAINED: yes"
+          test -s /tmp/s1-linux.pdf
+
+      # Reported, not asserted. S1-NOTES P-6 established the binary is NOT
+      # self-contained even with --enable-embedded-resources: the ten
+      # third-party C rocks are embedded as bytes no loader can dlopen. If
+      # that ever changes upstream, this is where we would notice.
+      - name: is it self-contained yet?
+        working-directory: sile-src
+        continue-on-error: true
+        run: |
+          BIN=$(find target -name sile -type f -perm -u+x | head -1)
+          if env -i HOME="$HOME" "./$BIN" --version 2>&1 | grep -q "not found"; then
+            echo "still needs external Lua rocks — S1-NOTES P-6 unchanged"
+          else
+            echo "::warning::SELF-CONTAINED NOW WORKS — revisit S1-NOTES P-6 and ADR-006"
+          fi
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -82,6 +108,7 @@ jobs:
   macos:
     name: S1.3 · macOS
     runs-on: macos-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -91,25 +118,28 @@ jobs:
              https://github.com/sile-typesetter/sile.git sile-src
 
       - name: build dependencies
-        run: brew install autoconf automake libtool pkg-config harfbuzz fontconfig icu4c freetype libpng luarocks
+        run: |
+          brew install autoconf automake libtool pkg-config jq \
+            harfbuzz fontconfig icu4c freetype libpng luajit luarocks
+          brew install --cask font-gentium-plus || echo "font cask unavailable; will skip the check"
 
       - name: bootstrap, configure, make
         working-directory: sile-src
         env:
-          # Homebrew keeps icu4c keg-only, so pkg-config cannot see it without
-          # being told. A likely first failure point.
+          # Homebrew keeps icu4c keg-only, so pkg-config cannot see it unless
+          # told. A likely first failure point on this leg.
           PKG_CONFIG_PATH: /opt/homebrew/opt/icu4c/lib/pkgconfig:/usr/local/opt/icu4c/lib/pkgconfig
         run: |
           ./bootstrap.sh
-          ./configure --enable-embedded-resources
+          ./configure --enable-embedded-resources FCMATCH=true \
+            || ./configure --enable-embedded-resources --disable-font-variations FCMATCH=true
           make -j"$(sysctl -n hw.ncpu)"
 
       - name: what did we get
         working-directory: sile-src
         run: |
-          BIN=$(find . -name sile -type f -perm +111 | grep -E 'target/(debug|release)/sile$' | head -1)
+          BIN=$(find target -name sile -type f -perm +111 | head -1)
           ls -l "$BIN"; otool -L "$BIN" || true
-          "$BIN" --version
 
   windows:
     name: S1.2 · Windows
@@ -130,6 +160,7 @@ jobs:
           install: >-
             base-devel
             git
+            jq
             autoconf
             automake
             libtool
@@ -141,7 +172,7 @@ jobs:
             mingw-w64-x86_64-icu
             mingw-w64-x86_64-freetype
             mingw-w64-x86_64-libpng
-            mingw-w64-x86_64-lua51
+            mingw-w64-x86_64-luajit
             mingw-w64-x86_64-luarocks
 
       - name: check out SILE
@@ -152,16 +183,17 @@ jobs:
         working-directory: sile-src
         run: |
           ./bootstrap.sh
-          ./configure --enable-embedded-resources
+          # FCMATCH=true: no Gentium Plus on the runner and no simple way to
+          # install one, and BibleCompose sets its own font regardless.
+          ./configure --enable-embedded-resources --disable-font-variations FCMATCH=true
           make -j"$(nproc)"
 
       - name: what did we get
         working-directory: sile-src
         run: |
-          BIN=$(find . -name 'sile.exe' | head -1)
+          BIN=$(find target -name 'sile.exe' | head -1)
           ls -l "$BIN"
           ldd "$BIN" || true
-          "$BIN" --version
 
   report:
     name: report
@@ -180,6 +212,9 @@ jobs:
             echo "| S1.3 | macOS   | ${{ needs.macos.result }} |"
             echo "| S1.2 | Windows | ${{ needs.windows.result }} |"
             echo
-            echo "A Windows failure is a **finding**, not a regression — it lands on"
-            echo "NFR-001's Tier-1 claim. Record it in \`spike/S1-NOTES.md\`."
+            echo "S1.1 already passes locally (S1-NOTES P-6), so a red Linux leg means"
+            echo "the runner differs from Ubuntu 22.04 — worth knowing either way."
+            echo
+            echo "A Windows or macOS failure is a **finding**, not a regression. Windows"
+            echo "lands on NFR-001's Tier-1 claim. Record it in \`spike/S1-NOTES.md\`."
           } >> "$GITHUB_STEP_SUMMARY"

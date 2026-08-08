@@ -36,7 +36,7 @@ BibleCompose is the second consumer that makes the extraction pay for itself. Th
 
 It is not free, and three qualifications matter:
 
-- **It is not built yet.** `easy-usfm` is design-complete with no implementation; its M0 is the parser layer. BibleCompose's first real milestone therefore depends on another project's first milestone. That is a scheduling dependency to manage deliberately, not a detail — see [ROADMAP §3](ROADMAP.md#3-the-dependency-on-easy-usfm).
+- **It is not built yet.** `easy-usfm` is design-complete with no implementation; its M0 is the parser layer. BibleCompose's first real milestone therefore depends on another project's first milestone. That is a scheduling dependency to manage deliberately, not a detail — see [ROADMAP §4](ROADMAP.md#4-the-dependency-on-easy-usfm).
 - **It is tuned for editing, not batch composition.** Incremental chapter-chunked reparse and UTF-16 offsets exist for a keystroke loop that BibleCompose does not have. The chunking is simply unused here; the offset space is not — BibleCompose wants byte and line/column offsets natively and must not pay a UTF-16 conversion it has no use for.
 - **USJ is source-faithful, and SRS FUN-001 wants normalized.** These are different models and both are wanted. The seam between them is exactly where BibleCompose's own work starts.
 
@@ -67,7 +67,9 @@ SILE accepts XML as a first-class input, detected by a leading angle bracket. Em
 SILE-005 and NFR-006 are stated as one idea. They are not.
 
 - **The generated backend input is byte-reproducible.** Same normalized model plus same resolved configuration must give the identical file, every time, on every machine. This is achievable and is what golden tests should assert.
-- **The PDF is not byte-reproducible.** PDFs carry a creation timestamp and a document ID, and line breaking depends on the exact font binary and on the HarfBuzz and ICU versions underneath SILE. The SRS's own wording — *"materially equivalent"* — is the right standard, but the tests must match it: assert page count, page geometry, the embedded font list, extracted text per page, and image presence. Not bytes.
+- **The PDF is not byte-reproducible.** Line breaking depends on the exact font binary and on the HarfBuzz and ICU versions underneath SILE. The SRS's own wording — *"materially equivalent"* — is the right standard, but the tests must match it: assert page count, page geometry, the embedded font list, extracted text per page, and image presence. Not bytes.
+
+  **S0.8 measured why, and it is not the usual reason.** SILE writes an all-zero document `/ID` and no creation date at all — the obvious sources are already eliminated. What varies is the **font subset tag**, generated randomly per run: four builds of identical input produced four different hashes and two different file sizes, differing only in prefixes like `AYABNL+DejaVuSerif` against `HQTCEM+DejaVuSerif` ([spike/NOTES.md](../spike/NOTES.md) F-15). So the embedded-font assertion must strip that six-letter prefix, and the test should say why, or someone will go looking for a `SOURCE_DATE_EPOCH` that does not exist.
 
 Two concrete consequences the SRS does not state:
 
@@ -86,6 +88,10 @@ BibleCompose must pre-flight, in Rust, before SILE is invoked:
 2. Check the resolved font's character map against the codepoint set the text actually uses, per style and per script, and report the gap with an example reference.
 
 This is cheap to do and is the difference between catching the problem in the application and catching it at the printer. It is a **missing requirement**; see §4.
+
+**Confirmed by S0.5, and worse than stated.** A Tamil page set in a font with no Tamil coverage produced exit code 0, no warning of any kind, and a valid PDF with fonts correctly subset and embedded — every glyph a `.notdef` box ([spike/NOTES.md](../spike/NOTES.md) F-12). The part that changes the design: **every structural assertion in DET-002 passes on that page.** Page count, geometry, embedded font list, and even extracted text all come out right, because the codepoints are present even where no glyph is. FONT-002 is therefore not defence in depth — it is the only thing standing between a project and a printed run of empty boxes, and both requirements now say so.
+
+S0.5 also found a second silent-language failure of the same family: SILE has no Tamil hyphenation patterns, and setting the language to Tamil does not disable hyphenation — it applies another language's, producing `ந-கரம்` in running text with no diagnostic. That is FONT-004.
 
 ### F6 — The layout crate is speculative abstraction
 
@@ -147,7 +153,7 @@ Identifying books from the `\id` marker rather than the filename means opening e
 
 | | Issue | Resolution |
 |---|---|---|
-| a | §4.2 lists `creation-map.pdf` as a figure asset; no requirement says whether PDF artwork is supported | Confirm in Spike 0. Vector versus raster artwork is a print-quality decision |
+| a | §4.2 lists `creation-map.pdf` as a figure asset; no requirement says whether PDF artwork is supported | **Resolved by S0.7: supported, as true vector.** No conversion path needed. Two caveats for P4.3 — an included PDF brings its whole page box including whitespace, and its own font subsets |
 | b | GUI-008 has no behaviour for a 2,000-page preview | Preview renders on demand, page-windowed; never rasterizes the whole document |
 | c | §14.2 lists cyclic style inheritance as an error class, but STY-007 does not define the inheritance mechanism | Single-parent `inherits` key, flattened at resolution; cycle detected there |
 | d | No requirement covers what the build cache invalidates on | Config hash, style hash, marker-table version, backend version, application version — all five, or a stale-cache bug will be blamed on the emitter |
@@ -180,13 +186,14 @@ Proposed for v0.2 of the specification, in its own format.
 | ID | Requirement | Priority | Acceptance / Verification |
 |---|---|---|---|
 | FONT-001 | Every font named by resolved configuration or styles shall be resolved to a specific font file before the backend is invoked; an unresolved font shall be a blocking diagnostic naming the font and the setting that requested it. | MUST | A project naming a font absent from the system and from `assets/fonts/` fails to build, with a diagnostic; no PDF is produced with a substituted font. |
-| FONT-002 | Before invoking the backend, the application shall verify that each resolved font covers the codepoints used by the text it will set, and report gaps with severity Error and at least one example Scripture reference. | MUST | A Latin-only font configured for Tamil Scripture produces a coverage diagnostic rather than a PDF of missing-glyph boxes. |
+| FONT-002 | Before invoking the backend, the application shall verify that each resolved font covers the codepoints used by the text it will set, and report gaps with severity Error and at least one example Scripture reference. **This check is the only defence against missing glyphs; no downstream assertion detects them** (see DET-002). | MUST | A Latin-only font configured for Tamil Scripture produces a coverage diagnostic rather than a PDF of missing-glyph boxes. |
 | FONT-003 | Fonts placed under the project's asset font directory shall be usable without installing them into the operating system. | MUST | A project-local `.ttf` renders on a machine where that font is not installed. |
+| FONT-004 | The application shall determine whether the backend has hyphenation patterns for the configured language, and where it does not, shall disable hyphenation rather than allow another language's patterns to be applied; where the project requested hyphenation, the reason it is inactive shall be reported. | MUST | A Tamil project with `hyphenation = true` produces output containing no hyphens and one informational diagnostic, rather than Latin-style hyphens inserted into Tamil words. |
 | BLD-010 | A build shall never write to the resolved output path; output shall be produced in a temporary location and moved into place atomically after success. | MUST | Killing the process mid-build leaves the previous PDF byte-identical, and leaves no partial file at the output path. |
 | BLD-011 | If the output path cannot be replaced because it is locked by another process, the application shall report which file is locked and what to do. | MUST | Building while the previous PDF is open in a locking viewer produces an actionable diagnostic, not a generic I/O error. |
 | BLD-012 | The application shall support a draft build restricted to a chosen subset of books, visibly marked as a draft. | SHOULD | Changing one style value and rebuilding a single book completes in a small fraction of a full-Bible build. |
 | DET-001 | Generated backend input shall be byte-identical across runs, machines, and operating systems for identical normalized input and resolved configuration. | MUST | Golden-file tests over the corpus pass on all supported platforms in CI. |
-| DET-002 | PDF equivalence shall be asserted structurally — page count, page geometry, embedded fonts, per-page extracted text, image presence — not by byte comparison; fonts used in these tests shall be vendored and version-pinned. | MUST | Golden PDF tests do not fail when a system font is updated. |
+| DET-002 | PDF equivalence shall be asserted structurally — page count, page geometry, embedded fonts, per-page extracted text, image presence — not by byte comparison; fonts used in these tests shall be vendored and version-pinned; font names shall be compared with the subset prefix stripped. **These assertions do not detect missing glyphs and must not be relied on for that** — a page rendered entirely as `.notdef` boxes passes every one of them. | MUST | Golden PDF tests do not fail when a system font is updated, nor when the backend assigns a different random font-subset tag; a deliberately uncovered-script fixture is caught by FONT-002 rather than here. |
 | CFG-008 | Configuration and style files shall carry an explicit schema version from the first release. | MUST | A file with an unknown schema version produces a clear, actionable diagnostic rather than a field-level parse failure. |
 
 ---
@@ -196,7 +203,7 @@ Proposed for v0.2 of the specification, in its own format.
 | | Risk | Severity | Control |
 |---|---|---|---|
 | R1 | SILE cannot produce acceptable two-column Scripture with notes without substantial custom Lua | High | Spike 0, before any Rust is written (F2) |
-| R2 | `easy-usfm-core` is not ready when BibleCompose needs it | High | Shared crate extracted early; BibleCompose's needs shape its M0; a thin subset unblocks M1 ([ROADMAP §3](ROADMAP.md#3-the-dependency-on-easy-usfm)) |
+| R2 | `easy-usfm-core` is not ready when BibleCompose needs it | High | Shared crate extracted early; BibleCompose's needs shape its M0; a thin subset unblocks M1 ([ROADMAP §4](ROADMAP.md#4-the-dependency-on-easy-usfm)) |
 | R3 | `usfm3` is young, single-maintainer, pre-1.0 | Medium | Inherited unchanged from `easy-usfm` ADR-001: facade, exact pin, cheap fork, upstream engagement |
 | R4 | Silent font substitution ships unreadable output | High | FONT-001–003 pre-flight in Rust; never trust the backend to complain (F5) |
 | R5 | Full-Bible build times make the iterate-and-rebuild workflow unusable | Medium | Draft builds and a parse cache, from the milestone where builds first get long (F10) |

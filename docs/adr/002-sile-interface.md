@@ -1,7 +1,8 @@
 # ADR-002 — Generate XML for SILE, not TeX-like `.sil`
 
-**Status:** Proposed
+**Status:** Accepted — confirmed by the S0 spike
 **Relates to:** SRS §10 (SILE integration), §15 (security), SILE-005, SILE-009
+**Evidence:** [spike/NOTES.md](../../spike/NOTES.md) F-13, and the renders in [spike/out/render/](../../spike/out/render/)
 
 ## Context
 
@@ -65,11 +66,40 @@ Rejected on two counts. It requires a JSON decoder inside the class, which is a 
 
 **The class is where Bible typesetting lives.** Two-column frames, note placement, cross-reference placement, running heads carrying a verse range, chapter-opening treatment. The Rust side decides *what* and the class decides *how*, which is the boundary that lets layout improve without recompiling and lets Spike 0 explore it before any Rust exists.
 
+That class now exists: [`sile/classes/biblecompose.lua`](../../sile/classes/biblecompose.lua), 298 lines out of S0. It is not a subclass of SILE's bundled `bible` class and deliberately so — that class typesets only when passed no options at all, and its two-column mode has never run ([spike/NOTES.md](../../spike/NOTES.md) F-5, F-6). Ours keeps upstream's architecture (`masters`, `twoside`, `infonode` + `chapterverse`, `footnotes`, `balanced-frames`) and none of its hardcoding.
+
+## What the spike proved
+
+S0.6 ran the identical characters through both formats. The result is stronger than the argument above, and it changes why this decision matters.
+
+**XML.** `Backslash \bd is not a command. Braces {literal}. Percent 100% off. Amp & lt < gt >.` rendered exactly as written. `\bd` is a real SILE command name; it came out as text.
+
+**SIL, same characters.** `! Unknown command bd` — hard failure, no PDF.
+
+**SIL, using command names that exist.** Text reading `The word became flesh \par and dwelt among us, full of \skip[height=40pt] grace and truth.` reported **zero errors, exited zero, and produced a valid PDF** — with the verse silently torn into three pieces and a 40-point gap driven through the middle of it.
+
+This ADR argued that templating `.sil` would make safety depend on a perfect escaping function. That understated it. **A missed escape does not fail — it succeeds.** No exception, no non-zero exit, no diagnostic; Scripture reflowed by its own content, in a build that every check would call good. BLD-004, FUN-002, and NFR-007 would all hold at the source and be violated in the output, and nothing in the pipeline would notice.
+
+USFM contains backslashes by construction. This is not a hypothetical input, and no amount of care would have made Option A safe.
+
+## What the spike disproved
+
+**Nothing about the decision — but one assumption behind SILE-005 was wrong.** The ADR assumed the emitted input is the only thing needing determinism because the PDF is hopeless for the usual reasons (timestamps, document IDs). SILE is better than that: it zeroes `/ID` and writes no `CreationDate` at all.
+
+The PDF is nonetheless not byte-reproducible. Four builds of identical input gave four different hashes, because **the font subset tag is randomly generated per run** — `AYABNL+DejaVuSerif`, then `HQTCEM+`, then `RJMIKL+`. File size fluctuates by a byte as the tag compresses differently.
+
+Two consequences, both narrow and both easy to get wrong later:
+
+- DET-002's structural assertions must compare font names **with the six-letter subset prefix stripped**, or every run fails on a difference that means nothing.
+- The reason the PDF cannot be byte-compared is worth stating precisely in the test, because "timestamps" is the wrong explanation and would send someone hunting for a `SOURCE_DATE_EPOCH` that does not exist.
+
 ## Consequences
 
 **The intermediate is more verbose than `.sil` and less pleasant to read by hand.** This is the real cost. It is paid by `keep_intermediates` producing something structured enough to diff meaningfully, which is what debugging a layout regression actually needs, and by the golden tests being diffable line by line.
 
-**Two unknowns land on Spike 0** ([SRS-REVIEW F2](../SRS-REVIEW.md#f2--the-riskiest-unknown-is-scheduled-last)): exactly how SILE's XML input maps element names and attributes to command arguments, and whether an XML namespace prefix survives that mapping. If prefixes are awkward, the vocabulary uses plain distinctive element names — nothing else in the design depends on it.
+**No namespace prefixes.** S0.6 measured it: `<em>` resolves to the `\em` command, but `<bc:em>` fails outright. The vocabulary therefore uses plain distinctive element names, which was the stated fallback. Nothing else in the design depended on it.
+
+**Unknown elements are a hard error, and that is a gift.** `<nosuchthing>` stops the build rather than being skipped. It means the `version` attribute is enforceable by construction: a class that does not know an element cannot silently drop Scripture, so SILE-009 gets a real mechanism instead of a convention.
 
 **Mapping SILE's errors back to source is harder from XML than it would be from a hand-built emitter that tracked its own line numbers.** SILE-007 requires backend failures to become understandable diagnostics. The answer is that the emitter records a map from output line to Scripture reference as it writes, so a SILE error at line 40,112 becomes "Matthew 3:1" before the user sees it. Cheap to build during emission, impossible to reconstruct afterwards, so it goes in from the first emitted element.
 

@@ -215,9 +215,23 @@ pub enum StyleSelector {
 
 `schema_version = 1` is required from the first release. An unknown version is one clear diagnostic instead of a cascade of unknown-field errors.
 
-## 7. Fonts and scripts
+## 7. Pre-flight
 
-This layer exists because the backend will not complain. SILE substitutes a missing font silently ([SRS-REVIEW F5](SRS-REVIEW.md#f5--sile-substitutes-missing-fonts-silently-so-pdf-003-and-pdf-004-cannot-be-delegated)), so PDF-003 and PDF-004 are BibleCompose's obligations, checked before a single page is set.
+This layer exists because the backend will not complain, and the S0 spike established that as a category rather than a quirk. Five separate times SILE did the wrong thing without saying so, and **four of those were clean builds with a zero exit code**:
+
+| What | What SILE does | Evidence |
+|---|---|---|
+| A font that cannot render the text | substitutes; emits a page of `.notdef` boxes, exit 0 | F-12 |
+| A language it has no hyphenation patterns for | applies another language's patterns | F-11 |
+| Frame geometry with negative height | warns once per page and carries on | F-7 |
+| An asset path outside the project | embeds it | F-14 |
+| Command syntax arriving inside Scripture | executes it *(SIL input only; not reachable via [ADR-002](adr/002-sile-interface.md))* | F-13 |
+
+The lesson is not that SILE is careless. **A typesetter's job is to set what it is given; refusing bad input is the application's job**, and none of it can be delegated. Everything below runs in Rust, before the backend is invoked, and each check exists because the spike watched the alternative succeed.
+
+### 7.1 Fonts and scripts
+
+PDF-003 and PDF-004 are BibleCompose's obligations, checked before a single page is set.
 
 ```text
 resolved styles → set of (font family, weight, style) requested
@@ -229,7 +243,19 @@ resolved font files
 coverage report → Error with an example reference for each gap
 ```
 
-Two details make it work in practice. Project-local fonts must be usable without installing them into the operating system (FONT-003), so the emitter refers to fonts by file path for anything under `assets/fonts/`, and only by family name for system fonts. And the codepoint set is computed from the normalized model, per style, so a font used only for footnotes is checked only against footnote text — otherwise a project with a Latin-only note font and Tamil body text reports a false failure.
+Two details make it work in practice. Project-local fonts must be usable without installing them into the operating system (FONT-003), so the emitter refers to fonts by file path for anything under `assets/fonts/`, and only by family name for system fonts — S0.5 confirmed SILE loads a face by path that fontconfig has never heard of, and subsets and embeds it correctly. And the codepoint set is computed from the normalized model, per style, so a font used only for footnotes is checked only against footnote text — otherwise a project with a Latin-only note font and Tamil body text reports a false failure.
+
+### 7.2 Hyphenation
+
+Asking the backend for a language it has no patterns for does not get you "no hyphenation" — it gets you *another language's* hyphenation, applied silently. A Tamil Bible set that way carries hyphens in the middle of Tamil words throughout, and nothing reports it (FONT-004).
+
+So BibleCompose ships a table of the languages the pinned backend actually has patterns for, versioned with the class (SILE-009). A configured language with patterns is passed through; one without is passed as undefined, and if the project asked for hyphenation the resolver says why it is off. The table is data for the same reason the canon table is.
+
+### 7.3 Geometry and assets
+
+Resolved frame geometry is validated before emission — a frame whose computed height is zero or negative is a blocking diagnostic naming the margin settings that produced it, because user-supplied margins make that a reachable state and the backend only warns.
+
+Asset paths are checked for containment after canonicalization, so `..` and symlinks are both covered. This is the only such check anywhere in the pipeline: SILE validates an image's *format* and never its *provenance*, and will embed a file from anywhere on disk without comment.
 
 ## 8. The backend contract
 
@@ -264,7 +290,9 @@ One trait, one implementation, no second model behind it ([ADR-004](adr/004-no-l
 
 A backslash in Scripture is a backslash. A brace is a brace. The serializer escapes `<`, `>`, and `&`; there is no other escaping to get right, and no way for a verse, a book name, or a font name typed into a settings field to become a command.
 
-**Determinism has two different standards** ([SRS-REVIEW F4](SRS-REVIEW.md#f4--reproducible-is-two-different-claims-and-must-be-split)). The XML is byte-reproducible and asserted as such by golden files. The PDF is asserted structurally — page count, geometry, embedded fonts, per-page extracted text, image presence — because PDFs carry timestamps and line breaking depends on the font binary and the HarfBuzz and ICU versions beneath SILE.
+**Determinism has two different standards** ([SRS-REVIEW F4](SRS-REVIEW.md#f4--reproducible-is-two-different-claims-and-must-be-split)). The XML is byte-reproducible and asserted as such by golden files. The PDF is asserted structurally — page count, geometry, embedded fonts, per-page extracted text, image presence.
+
+The reason the PDF cannot be byte-compared is worth recording exactly, because the obvious explanation is the wrong one. SILE already zeroes the document `/ID` and writes no creation date. What varies is the **font subset tag**, which is randomly generated per run: four builds of identical input gave four different hashes and two different file sizes, differing only in tags like `AYABNL+DejaVuSerif` versus `HQTCEM+DejaVuSerif`. So the structural comparison strips the six-letter prefix before comparing font names, and nobody wastes an afternoon looking for a `SOURCE_DATE_EPOCH` that does not exist.
 
 One rule enforces the first: **no `HashMap` on the emission path**. Rust randomizes its iteration order per process, so a single `HashMap` in configuration resolution, style resolution, or emission makes the golden tests fail intermittently and unreproducibly. `BTreeMap` or `IndexMap`, lint-enforced.
 

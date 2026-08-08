@@ -10,11 +10,13 @@ Open a project folder. BibleCompose discovers the books, validates them, merges 
 
 ## Status
 
-**Requirements analysed, design proposed, no implementation.** Work starts at S0 — a typesetting spike in SILE, before any Rust.
+**Requirements analysed, design proposed, S0 complete. No Rust yet.**
+
+The typesetting spike is done and the answer is yes: SILE sets a Bible page in Latin and in Tamil — balanced two columns, footnotes, running heads carrying the live verse range, vector artwork. Its bundled `bible` class turned out to be unusable, so [`sile/classes/biblecompose.lua`](sile/classes/biblecompose.lua) is ours. Findings and evidence in [spike/NOTES.md](spike/NOTES.md). Work now starts at M0.
 
 | | Milestone | What it means |
 |---|---|---|
-| **S0** | Typesetting spike | We know SILE can set a Bible page. No Rust. |
+| **S0** | Typesetting spike ✓ | SILE can set a Bible page. No Rust. |
 | **M0** | Skeleton and contract | The pipeline exists end to end on one book. |
 | **M1** | USFM to PDF | Real Scripture through the real parser, in two columns. |
 | **M2** | Configuration | Page, typography, and output settings, from file and GUI. |

@@ -1,9 +1,13 @@
---- biblecompose document class — S0 spike seed.
+--- biblecompose document class.
+--
+-- The rendering half of the contract in ADR-002: BibleCompose emits XML in a
+-- semantic vocabulary, and this class decides how that vocabulary looks. It is
+-- versioned and released with the application (SILE-009).
 --
 -- Written because SILE's bundled `bible` class cannot do the job: its
 -- two-column path is unreachable (any value of `twocolumns`, including
 -- "false", is truthy in Lua), and that path never loads `twoside`, so
--- `endPage` calls a nil `oddPage`. See ../NOTES.md F-5 and F-6.
+-- `endPage` calls a nil `oddPage`. Measured in spike/NOTES.md F-5 and F-6.
 --
 -- What this keeps from upstream is the architecture, which is sound: masters
 -- for mirrored page geometry, `twoside`, `infonode` + `chapterverse` for
@@ -11,6 +15,12 @@
 -- `balanced-frames` for column balancing. What it does not keep is any of the
 -- hardcoding — geometry, the English word "Chapter", and the Gentium font are
 -- all options here, because SRS CFG-002 requires them to come from settings.
+--
+-- Origin: the S0 typesetting spike. It sets a real Bible page in Latin and in
+-- Tamil (spike/out/render/), and it carries one known defect — page 1 does not
+-- follow the frame chain, so column B is empty on the first page of a document
+-- while every later page is correct. Diagnosed in spike/NOTES.md F-8 and owned
+-- by P0.4. Do not build on this class without reading that note.
 
 local plain = require("classes.plain")
 

@@ -13,13 +13,15 @@ Running log of what the spike establishes. Findings that survive get promoted in
 | S0.5 Tamil, uninstalled font | **Done** — works, and found F-11 |
 | S0.6 XML input path | **Done** — [ADR-002](../docs/adr/002-sile-interface.md) confirmed decisively |
 | S0.7 Figures, raster and vector | **Done** — PNG, JPG and vector PDF all place |
-| S0.8 Write-up, seed class | Not started |
+| S0.8 Write-up, seed class | **Done** — class promoted, four documents amended |
 
-**The headline.** SILE can set a Bible page, in Latin and in Tamil, with footnotes, live running heads, and vector artwork. Every mechanism needed is present and working. **But its bundled `bible` class cannot be used** and is not a starting point — it fails to typeset anything the moment you pass it an option (F-5, F-6). BibleCompose writes its own class; the spike's replacement is [`sil/biblecompose.lua`](sil/biblecompose.lua), 298 lines, which produces the pages in [`out/render/`](out/render/).
+**S0 is complete.**
+
+**The headline.** SILE can set a Bible page, in Latin and in Tamil, with footnotes, live running heads, and vector artwork. Every mechanism needed is present and working. **But its bundled `bible` class cannot be used** and is not a starting point — it fails to typeset anything the moment you pass it an option (F-5, F-6). BibleCompose writes its own class; the spike's replacement is [`sile/classes/biblecompose.lua`](../sile/classes/biblecompose.lua), 298 lines, which produces the pages in [`out/render/`](out/render/).
 
 **The pattern worth carrying out of S0.** Five separate times, SILE did the wrong thing without saying so: it substitutes a font that cannot render the text (F-12), applies another language's hyphenation (F-11), accepts inverted frame geometry (F-7), embeds artwork from outside the project (F-14), and — through SIL syntax — executes commands that arrive inside Scripture text (F-13). None of these produces a non-zero exit. Four produce a *clean, successful build*.
 
-The design already anticipated one of these ([SRS-REVIEW F5](../docs/SRS-REVIEW.md#f5--sile-substitutes-missing-fonts-silently-so-pdf-003-and-pdf-004-cannot-be-delegated)). The spike's contribution is that it is not one, it is a category: **SILE is a typesetter, and a typesetter's job is to set what it is given. Refusing bad input is the application's job, and there is no part of it BibleCompose can delegate.** That is the argument for the pre-flight layer in [ARCHITECTURE §7](../docs/ARCHITECTURE.md#7-fonts-and-scripts), and it should be widened beyond fonts.
+The design already anticipated one of these ([SRS-REVIEW F5](../docs/SRS-REVIEW.md#f5--sile-substitutes-missing-fonts-silently-so-pdf-003-and-pdf-004-cannot-be-delegated)). The spike's contribution is that it is not one, it is a category: **SILE is a typesetter, and a typesetter's job is to set what it is given. Refusing bad input is the application's job, and there is no part of it BibleCompose can delegate.** That is the argument for the pre-flight layer in [ARCHITECTURE §7](../docs/ARCHITECTURE.md#7-pre-flight), and it should be widened beyond fonts.
 
 ---
 
@@ -75,7 +77,7 @@ Two wrinkles worth keeping:
 
 ## S0.2–S0.4 — The page
 
-Artifacts: [`sil/john1-text.sil`](sil/john1-text.sil) (content), [`sil/biblecompose.lua`](sil/biblecompose.lua) (the class), [`sil/john1-bc-2col.sil`](sil/john1-bc-2col.sil) (appearance), [`out/john1-bc-2col.pdf`](out/john1-bc-2col.pdf), renders in [`out/render/`](out/render/).
+Artifacts: [`sil/john1-text.sil`](sil/john1-text.sil) (content), [`sile/classes/biblecompose.lua`](../sile/classes/biblecompose.lua) (the class), [`sil/john1-bc-2col.sil`](sil/john1-bc-2col.sil) (appearance), [`out/john1-bc-2col.pdf`](out/john1-bc-2col.pdf), renders in [`out/render/`](out/render/).
 
 Measured: 5 pages, 6.00 × 9.00 in exactly as configured, 2 fonts, both subset and **embedded** — PDF-003 satisfied by default rather than by effort.
 
@@ -277,6 +279,58 @@ SRS §15 already requires relative asset references to resolve inside the projec
 
 ---
 
+## S0.8 — Write-up
+
+### F-15 — The PDF is not byte-reproducible, and the reason is not timestamps
+
+[SRS-REVIEW F4](../docs/SRS-REVIEW.md#f4--reproducible-is-two-different-claims-and-must-be-split) split determinism into a byte-reproducible backend input and a structurally-equivalent PDF, assuming the usual culprits. Measured, SILE is better than assumed and still not reproducible.
+
+**What SILE already does right:** the document `/ID` is written as all zeros, and there is no `CreationDate` or `ModDate` anywhere in the output. Someone upstream cared.
+
+**What still varies.** Four builds of identical input:
+
+| run | bytes | sha256 | subset tags |
+|---|---|---|---|
+| 1 | 41,984 | `7a90abf7…` | `AYABNL`, `EPZXXP` |
+| 2 | 41,985 | `221e5e81…` | `HQTCEM`, `SZXXQG` |
+| 3 | 41,984 | `994ed084…` | `RJMIKL`, `WWGYZR` |
+| 4 | 41,985 | `d7332606…` | `QTJNYA`, `TVLZQI` |
+
+**The font subset tag is randomly generated per run.** The six-letter prefix on every subset font name changes each time, and the file size fluctuates by a byte as the tag compresses differently.
+
+Two consequences, both narrow and both easy to discover the hard way:
+
+- DET-002's embedded-font comparison must **strip the six-letter prefix**, or every run fails on a difference that carries no information.
+- The reason belongs in the test as a comment. "PDFs contain timestamps" is the wrong explanation here and would send someone hunting for a `SOURCE_DATE_EPOCH` that does not exist.
+
+### F-16 — The bundle can omit the networking rocks
+
+F-2 flagged `luasec` and `luasocket` as an oddity in the dependency set, given NFR-004. Tested by moving both rocks and their C modules out of the tree and rebuilding the spike document: **the build succeeds unchanged.**
+
+So P5.7 bundles **17 rocks, not 19**, and the shipped runtime contains no TLS and no socket code whatsoever. That turns NFR-004's "no internet connection required" from a behavioural claim into a structural one for the backend half of the pipeline — the code that could open a connection is not present. Cheaper to defend and easier to explain than a captured-traffic test, though P5.9 should still run one for the application half.
+
+### What was amended
+
+| Document | Change |
+|---|---|
+| [`sile/classes/biblecompose.lua`](../sile/classes/biblecompose.lua) | promoted from `spike/sil/`; both spike documents rebuild from the new location unchanged |
+| [ADR-002](../docs/adr/002-sile-interface.md) | status Accepted; what the spike proved (F-13) and disproved (F-15); namespace and unknown-element behaviour; the class now exists |
+| [SRS-REVIEW](../docs/SRS-REVIEW.md) | FONT-004 added; FONT-002 and DET-002 sharpened; F5 confirmed and extended; F14a resolved |
+| [ARCHITECTURE §7](../docs/ARCHITECTURE.md#7-pre-flight) | "Fonts and scripts" widened to "Pre-flight" — fonts, hyphenation, geometry, assets; §8 gains the real determinism reason |
+| [ROADMAP](../docs/ROADMAP.md) | S0 outcome recorded; F-8/F-9 to P0.4, F-15 to P0.5, F-10 to P4.1, F-14 to P4.3, FONT-004 to P5.2, F-2/F-16 to P5.7 |
+
+### What S0 did not settle
+
+Carried forward honestly rather than quietly closed:
+
+- **F-8**, page 1 does not follow the frame chain. Three approaches tried. **P0.4.**
+- **F-10**, notes overlap a long column, and numbering runs continuously through the document. **P4.1.**
+- **Verse stranding at a column foot** was never stress-tested — the spike's text was too short to force the case. It is the one question from [SRS-REVIEW F2](../docs/SRS-REVIEW.md#f2--the-riskiest-unknown-is-scheduled-last) that remains genuinely open, and it belongs to the first milestone that sets a whole book. **P1.7.**
+
+None of the three changes the verdict; all three would change a printed page.
+
+---
+
 ## Source text
 
 Both passages are from the `easy-usfm` corpus, which has already cleared redistribution terms. Copied into [`source/`](source/) so the spike is self-contained and a later change to that corpus cannot silently alter what it was judged against.
@@ -309,6 +363,8 @@ Carried from [SRS-REVIEW F2](../docs/SRS-REVIEW.md#f2--the-riskiest-unknown-is-s
 | 6 | Do `\`, `{`, `%` survive the XML path literally? | **Yes, exactly.** And the SIL control shows the alternative fails *silently and successfully* (F-13) |
 | 7 | PDF artwork as a figure? | **Yes, as true vector.** No conversion path needed. Watch the page box and the inherited fonts |
 | 8 | How much custom Lua? | **298 lines** for two-column mirrored masters, footnote frames, balancing, running heads with live ranges, and configurable geometry — replacing a 295-line upstream class that does less and does not run |
+
+All eight answered. The one question that arrived late and is still open is verse stranding at a column foot, which needs a whole book to provoke — P1.7.
 
 ---
 

@@ -8,7 +8,7 @@ Licensed under the [SIL Open Font License 1.1](https://openfontlicense.org/), wh
 
 These files are here to be **read from the project directory rather than installed**, which is the FONT-003 condition under test. fontconfig on the spike machine reports zero Tamil fonts, so nothing else could be supplying the glyphs.
 
-Not a recommendation for the shipped default — that is [P6.2](../../docs/ROADMAP.md#phase-6--m6--release-quality), and it needs a licensing review across the whole default set rather than one face.
+Not a recommendation for the shipped default — that is [P6.2](../../docs/ROADMAP.md#phase-6--m6--version-10), and it needs a licensing review across the whole default set rather than one face.
 
 ## images/
 

@@ -11,7 +11,8 @@ Decisions and their rejected alternatives live in the ADRs:
 [002 SILE interface](adr/002-sile-interface.md) ·
 [003 GUI and preview](adr/003-gui.md) ·
 [004 no layout crate](adr/004-no-layout-crate.md) ·
-[005 provenance](adr/005-provenance.md)
+[005 provenance](adr/005-provenance.md) ·
+[006 single binary](adr/006-single-binary.md)
 
 ---
 

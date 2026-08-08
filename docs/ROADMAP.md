@@ -16,6 +16,7 @@ Related: [SRS-REVIEW](SRS-REVIEW.md) · [ARCHITECTURE](ARCHITECTURE.md)
 |---|---|---|---|---|
 | **S0** | Typesetting spike | nobody | We know SILE can set a Bible page. No Rust. | 8 |
 | **M0** | Skeleton and contract | nobody | The pipeline exists end to end on one book. Ugly, deterministic, tested. | 10 |
+| **S1** | Packaging spike | nobody | We know what a single binary costs, and whether Windows is a wall. | 5 |
 | **M1** | USFM to PDF | us | Real Scripture through the real parser, in two columns. | 9 |
 | **M2** | Configuration | us | Page, typography, and output settings, from file and from the GUI. | 10 |
 | **M3** | Styles | first outside testers | The visual layer, editable without TOML. First build worth showing. | 8 |
@@ -46,6 +47,18 @@ Hand-built is the point. It decouples M0 from `usfm-core`'s readiness (Part 2 §
 **Guarantees established here, and never allowed to regress:** golden XML byte-comparison across platforms; ordered maps only on the emission path; build in a temporary directory with atomic publish; process-tree cancellation. Each is cheap now and expensive later ([SRS-REVIEW F4, F11, F12](SRS-REVIEW.md#f4--reproducible-is-two-different-claims-and-must-be-split)).
 
 The CLI is built here, not post-MVP: it is how everything above is tested headlessly, which NFR-009 requires ([SRS-REVIEW F9](SRS-REVIEW.md#f9--the-cli-is-in-the-post-mvp-roadmap-but-is-required-by-the-mvp)).
+
+### S1 — Packaging spike
+
+*Days, not weeks. Runs alongside M1–M4 and must finish before M5 needs it.*
+
+Build SILE from source on all three platforms and find out what a single distributable binary actually costs. [ADR-006](adr/006-single-binary.md) chose the shape — one executable that re-executes itself, keeping the process boundary — but the number that decides whether it is affordable has not been measured.
+
+**It is separate from S0 because it asks a different question.** S0 asked whether SILE can set a Bible page; the answer was yes. S1 asks whether SILE can be *shipped*, and the two have almost nothing in common: one is typography, the other is four C libraries and a Lua rock tree on three operating systems.
+
+**It comes before P5.7 rather than inside it** because a bad answer changes a requirement rather than a task. Spike F-1 established there is no prebuilt SILE for Windows or macOS, so both must be built from source. If Windows turns out to be impractical, that does not change [ADR-006](adr/006-single-binary.md) — it changes NFR-001's claim that Windows is a Tier-1 target, and that is worth knowing at M1 rather than at M5 with installers half-built.
+
+**Done when** a single binary on at least one platform typesets a fixture with no SILE installed, the artifact size is recorded, and the Windows answer is known either way.
 
 ### M1 — USFM to PDF
 
@@ -115,18 +128,19 @@ Sizes are relative effort, not schedule. They exist to signal where the risk sit
 | **XL** | Where the project can go wrong. A poor approach here costs weeks, not days. |
 | **⏳** | Lead-time-bound. Little effort, unpredictable calendar. Orthogonal to size. |
 
-68 items: 18 S, 43 M, 5 L, 2 XL. Roughly comparable in scale to `easy-usfm`, which is not a coincidence — most of the difference is that BibleCompose does not build a parser ([ADR-001](adr/001-usfm-core.md)) and does not build an editor.
+73 items: 19 S, 45 M, 7 L, 2 XL. Roughly comparable in scale to `easy-usfm`, which is not a coincidence — most of the difference is that BibleCompose does not build a parser ([ADR-001](adr/001-usfm-core.md)) and does not build an editor.
 
 **The two XL items are worth knowing by name.** S0.2, the two-column Scripture page, is the item that decides whether the product is buildable as designed; it is XL despite being days of work, because a wrong answer there invalidates the emitter. P1.5, USJ-to-`ScriptureDocument` normalization, is the semantic heart — a bad model there is felt in styles, emission, and every diagnostic for the life of the project. Both deserve a design pass before code.
 
 ## 3. Items with lead time
 
-Four items are gated by something outside the work itself. Their calendar is not their effort, so they benefit from being started well before their phase.
+Five items are gated by something outside the work itself. Their calendar is not their effort, so they benefit from being started well before their phase.
 
 | ID | Gated by | Typical wait |
 |---|---|---|
 | **P1.1** | `usfm-core` extraction depends on `easy-usfm` reaching its own M0 | weeks, and see §4 |
-| **P5.7** | Packaging SILE's native dependencies may need upstream fixes on at least one platform | unpredictable |
+| **S1.2** | Building SILE's C dependencies under MSYS2; there is no upstream Windows binary to fall back on ([spike F-1](../spike/NOTES.md)) | unpredictable |
+| **P5.7** | Packaging SILE's native dependencies may need upstream fixes on at least one platform; answered in outline by S1 | unpredictable |
 | **P6.1** | Code-signing certificates must be purchased and issued | 3–10 business days |
 | **P6.2** | Default fonts need redistribution terms confirmed with rights holders | days to weeks |
 
@@ -193,6 +207,20 @@ Each item is one coherent deliverable. **Done includes tests and green CI**, not
 | **P0.8** | M | Process-tree cancellation — Job Object on Windows, process group on Unix | Cancel during typesetting leaves no SILE process on any platform, verified by process enumeration rather than by exit code; UI-equivalent state is operable within 1 s (BLD-006) |
 | **P0.9** | M | `biblecompose-cli`: `build`, `emit`, `validate`, `version` | The full fixture-to-PDF pipeline runs headless with no GUI crate compiled into the binary (NFR-009) |
 | **P0.10** | S | Build state machine and event stream | All eight states of GUI-006 are observable in order from the CLI event log, including the cancelled and blocked paths |
+
+## S1 · Packaging spike
+
+*5 items · 1 S, 2 M, 2 L. Runs alongside M1–M4; blocks P5.7.*
+
+| ID | | Deliverable | Done when |
+|---|---|---|---|
+| **S1.1** | M | Build SILE 0.15.13 from source on Linux, and record what it actually needs | `./bootstrap.sh && ./configure && make` produces a working binary; the C libraries, their versions, and the Lua rock handling are written down; **whether `cargo build` alone can do it is answered either way**, which [ADR-006](adr/006-single-binary.md) currently infers rather than knows |
+| **S1.2** | L ⏳ | The same on Windows | Either a working build with the toolchain recorded, or a written finding that it is impractical and why. A negative answer is a result, not a failure — it lands on NFR-001, not on the schedule |
+| **S1.3** | M | The same on macOS | A working build, or the same finding |
+| **S1.4** | L | One binary that re-executes itself and typesets | `biblecompose build` produces a PDF on a machine with no SILE installed and nothing extracted to disk: the Lua tree and the 17 required rocks embedded via `rust-embed`, loaders injected, the child spawned from `current_exe()` with a reserved argument ([ADR-006](adr/006-single-binary.md) option B) |
+| **S1.5** | S | Measure and write up; settle ADR-006 | Artifact size recorded per platform; cancellation and a forced backend failure both still behave as they do today; [ADR-006](adr/006-single-binary.md) moves to Accepted, or to option C with the reason |
+
+Not an item, but the thing to watch: if S1.4 turns out to be a week rather than days, option C — embedding the executable and extracting it once — is the fallback, and it changes nothing above the `Backend` trait.
 
 ## Phase 1 → M1 · USFM to PDF
 
@@ -269,7 +297,7 @@ Each item is one coherent deliverable. **Done includes tests and green CI**, not
 | **P5.4** | M | Draft builds and selected-book UI | A one-book draft after a single style change completes in a small fraction of a full-Bible build and is visibly marked as a draft (BLD-012, BOOK-004) |
 | **P5.5** | M | Discovery and parse caches with the five-part invalidation key | Reopening a 66-book project lists books in under 500 ms warm; a change to configuration, styles, marker table, backend version, or application version invalidates the cache ([SRS-REVIEW F14d](SRS-REVIEW.md#f14--smaller-gaps-and-conflicts)) |
 | **P5.6** | M | Integrated pdf.js preview, page-windowed | A 2,000-page PDF opens without rasterizing the whole document; the viewer runs with script execution and external links disabled (GUI-008, GUI-009) |
-| **P5.7** | L ⏳ | Packaging SILE, HarfBuzz, fontconfig, ICU, libtexpdf, and the Lua rock tree for three platforms | A fresh machine with no SILE installed builds a PDF from the installer artefact; the bundle ships a runtime *tree*, not a binary, because the upstream binary carries none of its Lua dependencies ([spike F-2](../spike/NOTES.md)); `luasec` and `luasocket` are omitted, so the shipped runtime contains no TLS or socket code at all; the advanced executable override still works for development (SILE-003, SILE-004, SILE-009) |
+| **P5.7** | L ⏳ | Packaging SILE, HarfBuzz, fontconfig, ICU, libtexpdf, and the Lua rock tree for three platforms, on the shape S1 proved | A fresh machine with no SILE installed builds a PDF from the installer artefact; the application ships as one executable that re-executes itself to typeset ([ADR-006](adr/006-single-binary.md)), so cancellation and crash isolation are unchanged; `luasec` and `luasocket` are omitted, so the shipped runtime contains no TLS or socket code at all ([spike F-16](../spike/NOTES.md)); the advanced executable override still works for development (SILE-003, SILE-004, SILE-009) |
 | **P5.8** | M | SILE error mapping table; raw log collapsed behind it | Each known backend failure class becomes a BibleCompose diagnostic with the raw text available but collapsed; an unmapped failure still surfaces rather than being swallowed (SILE-007, DIA-005) |
 | **P5.9** | S | Offline end-to-end test; log hygiene review | A full open-edit-build-preview session succeeds with the network disabled and issues zero requests; the build log contains no Scripture by default (NFR-004, NFR-010) |
 
@@ -328,6 +356,7 @@ Left open because answering them well needs either a rights holder or a thing th
 3. **PDF artwork as a figure source.** S0.7 answers it; if unsupported, P4.3 needs a documented conversion or rejection path.
 4. **Whether the deuterocanon appears in shipped presets.** The canon table carries those books from P1.4 regardless; whether a preset selects them is a product choice for P6.2.
 5. **Cross-reference placement beyond the note area.** Centre-column is explicitly post-MVP; whether an inline or end-of-paragraph mode joins the footnote-area mode in v1 is a P4.2 decision once the note area is working.
+6. **Whether Windows stays a Tier-1 target.** NFR-001 claims it is. There is no upstream SILE binary for Windows and its C dependencies must be built under MSYS2, so the claim rests on S1.2. A negative answer changes the requirement rather than the plan, which is why S1 sits at M1 and not at M5.
 
 ---
 
@@ -346,7 +375,7 @@ Recorded so the boundary is defensible when the request arrives, and so a future
 | A plugin system or project-provided Lua | SRS §17.2, and it would undo [ADR-002](adr/002-sile-interface.md)'s security property |
 | Translation, editing, or Paratext-style collaboration | SRS §2.3. `easy-usfm` edits files; this composes them |
 | A second typesetting backend | Not planned. [ADR-004](adr/004-no-layout-crate.md) accepts that adding one later costs a second emitter |
-| In-process SILE instead of a child process | Not planned. The child process is what gives BLD-006 cancellation and NFR-007 its failure boundary |
+| In-process SILE instead of a child process | Rejected on evidence, not assumption — [ADR-006](adr/006-single-binary.md). The `sile` crate is linkable, but a Lua VM cannot be stopped mid-typeset (BLD-006) and a segfault in HarfBuzz would take the application with it (NFR-007). A single binary is had instead by re-executing it, which keeps both |
 | Telemetry on by default | Never. SRS §15 |
 
 ---

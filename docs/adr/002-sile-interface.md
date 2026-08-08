@@ -62,7 +62,9 @@ Rejected on two counts. It requires a JSON decoder inside the class, which is a 
 
 **The `version` attribute is the compatibility contract** (SILE-009). The class refuses a version it does not know, with one sentence, rather than failing somewhere inside Lua with a stack trace. Class and application are versioned and shipped together.
 
-**Invocation stays a child process.** SILE 0.15 is a Rust binary with an embedded Lua VM and does publish a crate, so linking it in is imaginable. It is the wrong trade for v1: a child process gives a hard failure boundary when Lua errors (NFR-007) and it gives cancellation (BLD-006), which an in-process VM does not. Arguments go through the process API as an array; nothing is concatenated into a shell string.
+**Invocation stays a child process.** SILE 0.15 is a Rust binary with an embedded Lua VM and does publish a crate, so linking it in is imaginable. It is the wrong trade: a child process gives a hard failure boundary when Lua errors (NFR-007) and it gives cancellation (BLD-006), which an in-process VM does not. Arguments go through the process API as an array; nothing is concatenated into a shell string.
+
+That aside was later examined properly, because a single-file installation is wanted. The conclusion held and the reasoning is now recorded in [ADR-006](006-single-binary.md): the crate *is* linkable, and the two guarantees above are why it is not linked. A single binary is obtained instead by re-executing the application, which keeps the boundary this paragraph depends on.
 
 **The class is where Bible typesetting lives.** Two-column frames, note placement, cross-reference placement, running heads carrying a verse range, chapter-opening treatment. The Rust side decides *what* and the class decides *how*, which is the boundary that lets layout improve without recompiling and lets Spike 0 explore it before any Rust exists.
 

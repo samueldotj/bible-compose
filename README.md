@@ -24,6 +24,7 @@ M0 built the second half of the pipeline before the first half exists: documents
 |---|---|---|
 | **S0** | Typesetting spike ✓ | SILE can set a Bible page. No Rust. |
 | **M0** | Skeleton and contract ✓ | The pipeline exists end to end on one book. |
+| **S1** | Packaging spike | What a single binary costs, and whether Windows is a wall. |
 | **M1** | USFM to PDF | Real Scripture through the real parser, in two columns. |
 | **M2** | Configuration | Page, typography, and output settings, from file and GUI. |
 | **M3** | Styles | The visual layer, editable without TOML. |
@@ -31,7 +32,7 @@ M0 built the second half of the pipeline before the first half exists: documents
 | **M5** | Hardening | Full corpus, fonts, cancellation, packaging. |
 | **M6** | Version 1.0 | Installers, presets, documentation. |
 
-68 work items sized S to XL — see [ROADMAP](docs/ROADMAP.md).
+73 work items sized S to XL — see [ROADMAP](docs/ROADMAP.md).
 
 ## Documents
 
@@ -47,7 +48,8 @@ Decisions and their rejected alternatives:
 [002 SILE interface](docs/adr/002-sile-interface.md) ·
 [003 GUI and preview](docs/adr/003-gui.md) ·
 [004 no layout crate](docs/adr/004-no-layout-crate.md) ·
-[005 provenance](docs/adr/005-provenance.md)
+[005 provenance](docs/adr/005-provenance.md) ·
+[006 single binary](docs/adr/006-single-binary.md)
 
 ## Design in one page
 
@@ -65,13 +67,14 @@ SILE + the BibleCompose class
 PDF
 ```
 
-Five choices carry the design:
+Six choices carry the design:
 
 - **The USFM engine is shared, not rewritten.** [`easy-usfm`](https://github.com/samueldotj/easy-usfm)'s core — parser facade, marker table, diagnostics, corpus, fuzzing, differential oracle — becomes a crate both products depend on.
 - **The backend input is XML.** Scripture is a text node, so it cannot become a command. The guarantee that a verse cannot inject Lua is a property of the format, not of an escaping function.
 - **Bible typesetting lives in a versioned SILE class.** Rust decides *what*, the class decides *how*.
 - **Nothing is neutral that does not need to be.** A `Backend` trait, not a backend-neutral layout model.
 - **Resolved settings and styles remember where they came from.** Which is what makes "why does this look like this" answerable.
+- **One binary, but still two processes.** The application re-executes itself to typeset, so it ships as a single file without giving up cancellation or crash isolation.
 
 ## Relationship to easy-usfm
 

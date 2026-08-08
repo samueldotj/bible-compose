@@ -6,10 +6,10 @@ The decision this measures is [ADR-006](../docs/adr/006-single-binary.md); the i
 
 | Item | Status |
 |---|---|
-| S1.1 Build from source on Linux | **Question answered** (P-1), build not yet run — needs one privileged install |
-| S1.2 The same on Windows | Not started — needs MSYS2 |
-| S1.3 The same on macOS | Not started — no macOS available here |
-| S1.4 A binary that re-executes itself | Blocked on S1.1 |
+| S1.1 Build from source on Linux | **Done** — builds in 68s (P-6); prerequisites in P-4 |
+| S1.2 The same on Windows | Queued in CI ([packaging-spike.yml](../.github/workflows/packaging-spike.yml)) |
+| S1.3 The same on macOS | Queued in CI — no macOS available locally |
+| S1.4 A binary that re-executes itself | Not started — **larger than ADR-006 estimated** (P-6) |
 | S1.5 Measure; settle ADR-006 | Blocked |
 
 ---
@@ -105,9 +105,7 @@ The distribution tarball has luarocks **removed** from its Makefile, so anything
 
 ### What this means for ADR-006
 
-[ADR-006](../docs/adr/006-single-binary.md) assumed option B's extra work over option C was "embedding the Lua tree and the rocks via `rust-embed` and injecting loaders through `inject_paths`". **That may be almost none of it** — upstream already does it, given the right flag and a git checkout rather than a tarball.
-
-If S1.4 confirms it, option B costs little more than option C and keeps the process boundary for free, which is the outcome the ADR wanted and did not expect to get cheaply. Not yet confirmed: a build has not been run (P-3), and whether `--enable-embedded-resources` is exercised by upstream CI is unknown — an unused configure path is exactly where bit-rot lives.
+Reading the build files, this looked like most of option B's work being already done upstream. **The build in P-6 disproved that.** The paragraph is kept because the mechanism above is real and correct as far as it goes — the Lua *is* embedded — but the conclusion drawn from it was wrong, and P-6 is the finding that matters.
 
 ---
 
@@ -128,6 +126,113 @@ All of it is one `apt-get` away, but `sudo` is not passwordless here, so it need
 **Windows** — no MSVC on `PATH`, no `cmake`, no `perl`, no MSYS2. Cargo finds a linker for pure-Rust crates, so the MSVC toolchain is installed somewhere, but nothing else of what an autotools build needs is present. S1.2 needs MSYS2 and its toolchain.
 
 **macOS** — not available. S1.3 cannot be attempted from here at all and needs either a machine or a CI runner.
+
+---
+
+## P-4 — What a source build actually demands, discovered one refusal at a time
+
+`configure` does not report everything it wants up front; it stops at the first
+thing it cannot find. Each of these was a separate run. Recorded in order
+because the *sequence* is the useful part — P5.7's CI needs all of them
+installed before the first attempt, not after five.
+
+| # | Refusal | Cause | Resolution |
+|---|---|---|---|
+| 1 | `jq is required` | not installed | install `jq` |
+| 2 | `--enable-font-variations was given, but harfbuzz version not new enough` | see P-5 | `--disable-font-variations` |
+| 3 | `cannot find suitable Lua interpreter` | SILE defaults to **LuaJIT**, which was absent — plain Lua 5.1 was present and passes configure's own probes, but is not in the list it searches | install `luajit` + `libluajit-5.1-dev` |
+| 4 | `font family Gentium Plus not found` | see P-5 | `FCMATCH=true`, or install the font |
+
+Everything here was installed **without root**, by `apt-get download` and
+`dpkg-deb -x` into `$HOME` — both work unprivileged, since only dpkg's
+*database* needs root and the files alone are enough. Worth knowing for locked-
+down build machines, and it is how this spike proceeded at all.
+
+Versions the build was given: HarfBuzz 2.7.4, fontconfig 2.13.1, ICU 70.1,
+LuaJIT 2.1.0-beta3, gcc 11.4, autoconf 2.71, cargo 1.91.
+
+## P-5 — Two build-time requirements that are not about Rust at all
+
+Both are the sort of thing that turns a CI job red for a reason nobody expects,
+so they are called out separately rather than buried in the table above.
+
+### HarfBuzz decides whether variable fonts work
+
+SILE's minimum is HarfBuzz 2.7.4. Ubuntu 22.04 ships **exactly** 2.7.4 — so it
+builds, but `--enable-font-variations` (the default) additionally wants
+`harfbuzz-subset >= 6.0.0` and fails.
+
+The consequence is not a flag, it is a feature: **the build platform's HarfBuzz
+version determines whether the shipped BibleCompose supports OpenType variable
+fonts.** That is not academic for this product — Noto Serif Tamil, the face S0
+used, is published as a variable font, and a publisher choosing an optical size
+or a weight axis is doing something a Bible edition plausibly wants.
+
+So P5.7 has a decision it did not know it had: build on a base new enough for
+HarfBuzz 6+, or ship without variable-font support and say so. It also lands on
+[FONT-002](../docs/SRS-REVIEW.md#4-requirements-the-srs-is-missing)'s
+neighbourhood — a variable font requested on a build that cannot do variations
+is another silent-substitution opportunity.
+
+### The build requires a font to be installed
+
+`QUE_FONT(Gentium Plus)` makes configure fail unless that family is resolvable
+through `fc-match`. Gentium Plus is SILE's own default font, not ours.
+
+`FCMATCH=true` skips the check, which is what this build does — BibleCompose
+sets its own font on every document, so SILE's default is never reached. But it
+is worth stating plainly that **a font is a build-time dependency of the
+typesetter**, and that skipping the check means the resulting SILE has no
+working default font. For us that is correct; for anyone invoking that SILE
+directly it would be a trap.
+
+## P-6 — SILE builds from source, and the result is still not self-contained. The reason is C modules.
+
+**S1.1's build works.** From a clean checkout, with the prerequisites in P-4:
+
+```
+./bootstrap.sh
+./configure --enable-embedded-resources --disable-font-variations FCMATCH=true
+make -j16
+```
+
+`make exit 0 after 68s`. A 14 MB binary at `target/x86_64-unknown-linux-gnu/release/sile`, linking the seven static libraries P-1 predicted plus system HarfBuzz, fontconfig, ICU, zlib and libpng. The Rust link line confirms `--features luajit --features vendored --features static`, so the embedding path really did run.
+
+**And it still fails exactly as the released binary did:**
+
+```
+Error: module 'lua-utf8' not found: no field package.preload['lua-utf8']
+```
+
+### Why — and it is not what P-2 hoped
+
+The vendoring worked. `lua_modules/` holds 272 Lua files and 16 shared objects, and `src/embed-includes.rs` has 904 include lines, 502 of them from the rock tree. **All 16 `.so` files are in that list**, `lua-utf8.so` included. The bytes are in the binary.
+
+They cannot be loaded. `inject_embedded_loaders` installs three searchers, and the one for native code hard-codes six names:
+
+```rust
+"fontmetrics" | "justenoughfontconfig" | "justenoughharfbuzz" |
+"justenoughicu" | "justenoughlibtexpdf" | "svg"
+    => lua.create_c_function(luaopen_…)
+_   => format!("C Module '{module}' is not linked in Rust binary")
+```
+
+Those six are **SILE's own** C modules, statically linked and registered by hand. Everything else — `lua-utf8`, `lpeg`, `lfs`, `lxp`, `zlib`, `ssl`, `socket`, `bit32`, `linenoise`, `compat53` — gets that error string. The Lua searcher below it only serves `.lua` paths.
+
+The underlying constraint is not a SILE limitation: **`dlopen` needs a real file.** A C extension embedded as a byte array cannot be loaded without first writing it to disk, or being statically linked and registered in `package.preload`. SILE does the latter for the six it owns, and embeds the other ten as dead weight.
+
+### What this costs option B
+
+[ADR-006](../docs/adr/006-single-binary.md) estimated option B's extra work over option C as "embedding the Lua tree and the rocks via `rust-embed`". The Lua half is free. **The C half is the whole job**, and it is bigger than the ADR assumed:
+
+To reach one file with nothing extracted, BibleCompose's re-executed child must build those ten rocks as **static** libraries, link them into our binary, start the Lua VM itself, register every `luaopen_*` in `package.preload`, and only then hand off to SILE's `run()`. That is real work, on ten third-party C projects, on three platforms.
+
+Two honest alternatives, both cheaper:
+
+- **Extract the `.so` files on first run** and leave everything else embedded. Ten small files to a cache directory, not a whole SILE installation. This is option C's compromise applied narrowly — and it is *much* less objectionable than extracting an executable, because a shared library is not something antivirus treats as a program.
+- **Upstream the registration.** SILE already has the mechanism for six modules; extending it to the vendored rocks is a contained change in the same file, and it would make `--enable-embedded-resources` deliver what its name promises for everyone. Worth raising regardless of what BibleCompose does.
+
+Neither changes the **decision** in ADR-006 — the process boundary is still worth keeping and option A is still rejected for the reasons given. What changes is the estimate, and S1.5 should record the corrected one rather than the original.
 
 ---
 

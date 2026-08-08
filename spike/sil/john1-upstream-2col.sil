@@ -1,0 +1,6 @@
+% SILE's bundled `bible` class, two columns — the configuration a real Bible
+% needs. Identical to john1-upstream-1col.sil apart from the option.
+\begin[class=bible, twocolumns=true, papersize=6in x 9in]{document}
+\include[src=spike/sil/upstream-bible-style.sil]
+\include[src=spike/sil/john1-text.sil]
+\end{document}

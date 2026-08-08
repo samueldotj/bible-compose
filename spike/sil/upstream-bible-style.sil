@@ -1,0 +1,37 @@
+% Appearance definitions shared by the two upstream-class wrappers.
+% Included after \begin{document}; defines the semantic vocabulary used by
+% john1-text.sil in terms of SILE's bundled `bible` class.
+
+% The bible class writes SILE.scratch.headers but never creates it, and its own
+% \verse-number writes to it on the first verse — so nothing typesets without
+% this. There is no `headers` package in 0.15.13 to supply it. NOTES.md F-5.
+\lua{SILE.scratch.headers = SILE.scratch.headers or {}}
+
+% The class calls these two but does not define them: it supplies frames and
+% reference machinery and expects the document to supply appearance.
+\define[command=bible:verse-number]{%
+  \raise[height=0.42em]{\font[size=6.4pt, weight=600]{\process}}\kern[width=0.12em]%
+}
+\define[command=bible:chapter-head]{\process}
+
+\define[command=v]{\verse-number{\process}}
+\define[command=fn]{\footnote{\font[size=7.4pt]{\process}}}
+\define[command=xref]{\footnote{\font[size=7.4pt, style=italic]{\process}}}
+
+\define[command=s1]{%
+  \goodbreak\skip[height=8pt]%
+  \font[size=10.5pt, weight=600]{\process}\par\nobreak\skip[height=2pt]%
+}
+\define[command=r]{%
+  \font[size=7.8pt, style=italic]{\process}\par\nobreak\skip[height=3pt]%
+}
+\define[command=q1]{\skip[height=1pt]\glue[width=10pt]\process\par}
+\define[command=q2]{\skip[height=1pt]\glue[width=20pt]\process\par}
+
+\define[command=booktitle]{%
+  \begin{center}\font[size=17pt, weight=600]{\process}\end{center}\skip[height=6pt]%
+}
+\define[command=chapternumber]{\noindent\font[size=22pt, weight=700]{\process}\kern[width=4pt]}
+
+\font[family=DejaVu Serif, size=9.4pt]
+\set[parameter=document.baselineskip, value=11.4pt]

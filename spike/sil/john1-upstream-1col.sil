@@ -1,0 +1,8 @@
+% Control: SILE's bundled `bible` class, single column.
+% Paired with john1-upstream-2col.sil, which is identical but for the
+% twocolumns option. Running both isolates which failures belong to the
+% two-column path rather than to the class as a whole. NOTES.md F-5, F-6.
+\begin[class=bible, twocolumns=false, papersize=6in x 9in]{document}
+\include[src=spike/sil/upstream-bible-style.sil]
+\include[src=spike/sil/john1-text.sil]
+\end{document}

@@ -1,0 +1,35 @@
+% S0.2/S0.3/S0.4 — two-column Scripture through the BibleCompose spike class.
+% Same text as the upstream-class wrappers, so the two are directly comparable.
+\begin[class=biblecompose, columns=2, papersize=6in x 9in]{document}
+
+\define[command=bc:verse-number]{%
+  \raise[height=0.42em]{\font[size=6.4pt, weight=600]{\process}}\kern[width=0.13em]%
+}
+\define[command=bc:chapter-number]{%
+  \noindent\font[size=21pt, weight=700]{\process}\kern[width=4pt]%
+}
+
+\define[command=v]{\bc:verse{\process}}
+\define[command=fn]{\footnote{\font[size=7.4pt]{\process}}}
+\define[command=xref]{\footnote{\font[size=7.4pt, style=italic]{\process}}}
+\define[command=chapternumber]{\bc:chapter{\process}}
+
+\define[command=s1]{%
+  \goodbreak\skip[height=7pt]%
+  \font[size=10.2pt, weight=600]{\process}\par\nobreak\skip[height=1pt]%
+}
+\define[command=r]{%
+  \font[size=7.6pt, style=italic]{\process}\par\nobreak\skip[height=3pt]%
+}
+\define[command=q1]{\skip[height=1pt]\glue[width=9pt]\process\par}
+\define[command=q2]{\skip[height=1pt]\glue[width=18pt]\process\par}
+\define[command=booktitle]{%
+  \bc:book{\process}%
+  \begin{center}\font[size=16pt, weight=600]{\process}\end{center}\skip[height=5pt]%
+}
+
+\font[family=DejaVu Serif, size=9.2pt]
+\set[parameter=document.baselineskip, value=11.2pt]
+
+\include[src=spike/sil/john1-text.sil]
+\end{document}

@@ -10,12 +10,16 @@ Running log of what the spike establishes. Findings that survive get promoted in
 | S0.2 Two-column Scripture page | **Substantially done** — works, with one open defect (F-8) |
 | S0.3 Footnotes and cross-references | **Partial** — placement correct, two defects open (F-10) |
 | S0.4 Running head with verse range | **Done** — works |
-| S0.5 Tamil, uninstalled font | Not started |
-| S0.6 XML input path | Not started |
-| S0.7 Figures, raster and vector | Not started |
+| S0.5 Tamil, uninstalled font | **Done** — works, and found F-11 |
+| S0.6 XML input path | **Done** — [ADR-002](../docs/adr/002-sile-interface.md) confirmed decisively |
+| S0.7 Figures, raster and vector | **Done** — PNG, JPG and vector PDF all place |
 | S0.8 Write-up, seed class | Not started |
 
-**The headline.** SILE can set a Bible page, and the mechanisms it needs are all present and working — mirrored two-column masters, column balancing, a full-measure footnote frame, and running heads carrying the live verse range of the page. **But its bundled `bible` class cannot be used**, and is not a starting point: it fails to typeset anything the moment you pass it an option (F-5, F-6). BibleCompose writes its own class. The spike's replacement is [`sil/biblecompose.lua`](sil/biblecompose.lua), 298 lines, which produces the page in [`out/render/`](out/render/).
+**The headline.** SILE can set a Bible page, in Latin and in Tamil, with footnotes, live running heads, and vector artwork. Every mechanism needed is present and working. **But its bundled `bible` class cannot be used** and is not a starting point — it fails to typeset anything the moment you pass it an option (F-5, F-6). BibleCompose writes its own class; the spike's replacement is [`sil/biblecompose.lua`](sil/biblecompose.lua), 298 lines, which produces the pages in [`out/render/`](out/render/).
+
+**The pattern worth carrying out of S0.** Five separate times, SILE did the wrong thing without saying so: it substitutes a font that cannot render the text (F-12), applies another language's hyphenation (F-11), accepts inverted frame geometry (F-7), embeds artwork from outside the project (F-14), and — through SIL syntax — executes commands that arrive inside Scripture text (F-13). None of these produces a non-zero exit. Four produce a *clean, successful build*.
+
+The design already anticipated one of these ([SRS-REVIEW F5](../docs/SRS-REVIEW.md#f5--sile-substitutes-missing-fonts-silently-so-pdf-003-and-pdf-004-cannot-be-delegated)). The spike's contribution is that it is not one, it is a category: **SILE is a typesetter, and a typesetter's job is to set what it is given. Refusing bad input is the application's job, and there is no part of it BibleCompose can delegate.** That is the argument for the pre-flight layer in [ARCHITECTURE §7](../docs/ARCHITECTURE.md#7-fonts-and-scripts), and it should be widened beyond fonts.
 
 ---
 
@@ -163,6 +167,116 @@ Both land on P4.1 and are the reason that item is `M` rather than `S`.
 
 ---
 
+## S0.5 — Complex script and an uninstalled font
+
+Artifacts: [`sil/lam1-text.sil`](sil/lam1-text.sil) plus four wrappers differing in one line each; renders in [`out/render/`](out/render/).
+
+Font: Noto Serif Tamil v2.004, Regular and Bold, in [`assets/fonts/`](assets/fonts/). **fontconfig reports zero Tamil fonts on this machine**, so the face can only come from the file — the FONT-003 condition exactly.
+
+### An uninstalled font file works, and Tamil shapes correctly
+
+`\font[filename=…]` loaded the face, and the PDF carries `ORXORM+NotoSerifTamil-Regular` **subset and embedded**. The page ([`tamil-correct-p1.png`](out/render/tamil-correct-p1.png)) shows correct conjunct formation and vowel-sign placement, two balanced columns, footnote at the foot, and a **running head in Tamil carrying the range** — `புலம்பல்கள் 1:1–1:4`. The reference machinery is script-independent, which is worth knowing: it is not quietly Latin-only.
+
+FONT-003 is satisfied by SILE without help. That is the only one of the three font requirements that is.
+
+### F-11 — SILE hyphenates Tamil with visible hyphens, and setting the language does not stop it
+
+The first Tamil page broke words as `ந-கரம்`, `வருபவர்-கள்`, `உட்கார்ந்தி-ருக்கிறாளே` — Latin-style hyphenation applied to a script that does not use it. Compare [`tamil-hyphenated-p1.png`](out/render/tamil-hyphenated-p1.png) against [`tamil-correct-p1.png`](out/render/tamil-correct-p1.png).
+
+Isolated across three variants:
+
+| Setting | Result |
+|---|---|
+| `\font[…, language=ta]` only | hyphenated — the font attribute drives OpenType shaping, not the hyphenator |
+| `document.language = ta` | **still hyphenated** — SILE has no Tamil patterns and does not say so |
+| `document.language = und` | **correct** — no hyphens, clean word-boundary wrapping |
+
+`document.hyphenate` is not a setting; the lever is the language value.
+
+**The failure mode is the important part.** Asking for Tamil does not get you "no hyphenation for Tamil", it gets you *another language's* hyphenation applied to Tamil, silently. A publisher who sets `language = "ta"` in `biblecompose.toml` — the obvious, correct thing to do — gets a Bible with wrong hyphens throughout and no diagnostic.
+
+**Consequence.** BibleCompose must know which languages the pinned backend actually has patterns for, and map its `typography.language` accordingly: pattern available → pass it through; no patterns → pass `und` and, if the project asked for hyphenation, say why it is off. This is a table that ships with the class and is versioned with it (SILE-009). Lands on P2.4 (unit and value parsing) and P3.4. **A missing requirement** — proposed as FONT-004 in §4 below.
+
+This is the third finding of the same shape, and the shape is now the point: **SILE warns or stays silent where a publishing tool must block.** Fonts ([SRS-REVIEW F5](../docs/SRS-REVIEW.md#f5--sile-substitutes-missing-fonts-silently-so-pdf-003-and-pdf-004-cannot-be-delegated)), frame geometry (F-7), hyphenation (F-11).
+
+### F-12 — A page of tofu is a clean, passing build
+
+The control that settles PDF-004. Identical document, identical text, only the font changed to DejaVu Serif, which has no Tamil coverage at all:
+
+- **Exit code 0. No warning. No error. No mention of a missing glyph.**
+- A valid 14,633-byte PDF, one page, correct 6×9in trim, both fonts subset and **embedded**.
+- Every Tamil character rendered as `.notdef` — [`tamil-no-coverage-p1.png`](out/render/tamil-no-coverage-p1.png) is a full page of empty boxes.
+
+**This changes a design decision, not just a requirement.** [SRS-REVIEW F4](../docs/SRS-REVIEW.md#f4--reproducible-is-two-different-claims-and-must-be-split) specifies DET-002's PDF assertions as structural — page count, geometry, embedded font list, extracted text, image presence. **Every one of those passes on the tofu page.** Page count 1, geometry exact, fonts embedded, and the text layer extracts fine because the codepoints are present even though no glyph is.
+
+So P5.3's structural assertions are necessary and **not sufficient**, and P5.2's codepoint-coverage pre-flight is the only thing between a project and a printed run of empty boxes. FONT-002 is not defence in depth; it is the sole defence. Worth saying plainly in the requirement.
+
+---
+
+## S0.6 — The XML input path
+
+This is the experiment [ADR-002](../docs/adr/002-sile-interface.md) rests on. **It confirms the decision, and more sharply than expected.**
+
+### How SILE maps XML
+
+| Probe | Result |
+|---|---|
+| `<sile class="plain">…</sile>` as the whole document | works |
+| `<sile>` with a `<document>` child | works |
+| Arbitrary element `<em>` | **maps to the `\em` command** — the vocabulary mechanism ADR-002 assumed |
+| Unknown element `<nosuchthing>` | **hard error, no PDF** |
+| Namespace prefix `<bc:em>` | **fails** |
+
+Two consequences for the emitter:
+
+- **No namespace prefixes.** ADR-002 flagged this as a spike question with plain distinctive element names as the fallback; take the fallback. Nothing in the design depended on it.
+- **Unknown elements fail loudly**, which is the behaviour a versioned contract wants: a class that does not know an element stops rather than dropping Scripture silently. This makes the `version` attribute enforceable — SILE-009 gets a real mechanism instead of a convention.
+
+### F-13 — The escaping claim is not merely true, it is the difference between a corrupt build and a stopped one
+
+Three runs, identical characters, differing only in input format.
+
+**XML.** `Backslash \bd is not a command. Braces {literal}. Percent 100% off. Amp & lt < gt >.` rendered **exactly as written** — see [`escaping-xml-literal.png`](out/render/escaping-xml-literal.png). `\bd` is a genuine SILE command name and came out as text; `%` begins a comment in SIL and came out as a percent sign; `&`, `<`, `>` decoded from entities to literal characters.
+
+**SIL, same characters.** `! Unknown command bd`, hard error, **no PDF**.
+
+**SIL, with command names that exist** — the case that matters. Text reading `The word became flesh \par and dwelt among us, full of \skip[height=40pt] grace and truth.`:
+
+> **0 errors reported. Build succeeded. 11,073-byte PDF.**
+>
+> And the verse is silently torn into three pieces with a 40-point gap driven through the middle of it — [`escaping-sil-injected.png`](out/render/escaping-sil-injected.png).
+
+The same bytes through XML produce one unbroken line with `\par` and `\skip[height=40pt]` visible as literal text.
+
+**Why this is stronger than the ADR argued.** ADR-002 rejected SIL templating on the grounds that safety would depend on a perfect escaping function. The spike shows the failure is worse than "an escape gets missed": a missed escape does not crash, it **succeeds**. There is no exception, no non-zero exit, no diagnostic — just Scripture silently reflowed by its own content. Every guarantee BibleCompose makes about not altering Scripture (BLD-004, FUN-002, NFR-007) would be intact at the source level and violated in the output, and nothing in the build would notice.
+
+USFM contains backslashes by construction. This is not a hypothetical input.
+
+---
+
+## S0.7 — Figures
+
+Artifacts: [`sil/figures.sil`](sil/figures.sil), [`out/figures.pdf`](out/figures.pdf), [`figures-p1.png`](out/render/figures-p1.png). Test artwork in [`assets/images/`](assets/images/).
+
+**All three formats place correctly**, with no errors: PNG at a specified width, JPG at a specified width, and **PDF as genuine vector** — the artwork's text renders as crisp outlines, not pixels, and its own fonts arrive in the output as additional subsets. Scaling by height alone preserves aspect ratio.
+
+This answers SRS §4.2's `creation-map.pdf` ([SRS-REVIEW F14a](../docs/SRS-REVIEW.md#f14--smaller-gaps-and-conflicts)): **vector artwork is supported and needs no conversion.** For maps and diagrams in print that is the difference between sharp and merely adequate, and P4.3 does not need a raster fallback path.
+
+Two things to carry to P4.3:
+
+- **An included PDF brings its whole page box, whitespace included.** The artwork's 3×2in page reserved 2.4×1.6in in the output, margins and all. BibleCompose cannot assume supplied PDFs are trimmed to their artwork, so figure sizing needs either a documented expectation or a bounding-box crop.
+- **An included PDF brings its fonts.** Relevant to PDF-003 pre-flight and to output size; a project with many PDF figures accumulates font subsets BibleCompose never chose.
+
+### F-14 — Images fail loudly, but SILE enforces no path containment
+
+Unlike fonts, bad image sources stop the build: a missing file, a wrong-format file, and a non-image all produce an error and no PDF. Good.
+
+But **location is not checked**. An absolute path to a valid image well outside the project embedded silently and produced a 16,515-byte PDF. SILE validates *format*, never *provenance*.
+
+SRS §15 already requires relative asset references to resolve inside the project directory. The spike confirms the requirement cannot be delegated: the containment check is BibleCompose's, performed after canonicalization so that `..` and symlinks are both covered, and it is the only such check in the pipeline. P4.3.
+
+---
+
 ## Source text
 
 Both passages are from the `easy-usfm` corpus, which has already cleared redistribution terms. Copied into [`source/`](source/) so the spike is self-contained and a later change to that corpus cannot silently alter what it was judged against.
@@ -189,9 +303,24 @@ Carried from [SRS-REVIEW F2](../docs/SRS-REVIEW.md#f2--the-riskiest-unknown-is-s
 |---|---|---|
 | 1 | Do two columns balance? | **Yes.** `balanced-frames` works. Verse stranding not yet stress-tested; page 1 chaining open (F-8) |
 | 2 | Do footnotes stay on the page of their caller? | **Yes**, full measure at the foot. Overlap and numbering open (F-10) |
-| 3 | Can a running head carry the page's reference range? | **Yes**, across a column break. `infonode` + `chapterverse` (F-9 fixed) |
-| 4 | Uninstalled font, Tamil shaping? | Not yet — S0.5 |
-| 5 | How does XML input map to commands? | Not yet — S0.6. `luaexpat` confirmed present (F-2) |
-| 6 | Do `\`, `{`, `%` survive the XML path literally? | Not yet — S0.6 |
-| 7 | PDF artwork as a figure? | Not yet — S0.7 |
+| 3 | Can a running head carry the page's reference range? | **Yes**, across a column break, and in Tamil as well as Latin (F-9) |
+| 4 | Uninstalled font, Tamil shaping? | **Yes** — `\font[filename=…]`, subset and embedded, correct conjuncts. But hyphenation is wrong and silent (F-11), and a font without coverage is a clean passing build (F-12) |
+| 5 | How does XML input map to commands? | **Element name → command name.** No namespace prefixes; unknown elements are a hard error, which makes the version contract enforceable |
+| 6 | Do `\`, `{`, `%` survive the XML path literally? | **Yes, exactly.** And the SIL control shows the alternative fails *silently and successfully* (F-13) |
+| 7 | PDF artwork as a figure? | **Yes, as true vector.** No conversion path needed. Watch the page box and the inherited fonts |
 | 8 | How much custom Lua? | **298 lines** for two-column mirrored masters, footnote frames, balancing, running heads with live ranges, and configurable geometry — replacing a 295-line upstream class that does less and does not run |
+
+---
+
+## Proposed requirement
+
+For v0.2 of the SRS, in its format, alongside the nine in [SRS-REVIEW §4](../docs/SRS-REVIEW.md#4-requirements-the-srs-is-missing).
+
+| ID | Requirement | Priority | Acceptance / Verification |
+|---|---|---|---|
+| FONT-004 | The application shall determine whether the backend has hyphenation patterns for the configured language, and where it does not, shall disable hyphenation rather than allow another language's patterns to be applied; if the project requested hyphenation, the reason it is inactive shall be reported. | MUST | A Tamil project with `hyphenation = true` produces output with no hyphens and one informational diagnostic, rather than Latin-style hyphens inserted into Tamil words. |
+
+Two existing requirements also need their wording sharpened by what S0.5 and S0.6 found:
+
+- **FONT-002** should say that coverage checking is the *only* defence, because DET-002's structural PDF assertions pass on a page of tofu (F-12).
+- **DET-002** should say so too, so nobody later reads the structural assertions as sufficient.

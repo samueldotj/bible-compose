@@ -1,0 +1,34 @@
+% S0.5(d) — as lam1-tamil-ok.sil, but with document.language set to Tamil.
+% ...plus hyphenation disabled outright, to confirm the hyphens are SILE's
+% hyphenator and not the shaper. NOTES.md F-11.
+% ORIGINAL HEADER: Tamil set from a font file that is NOT installed system-wide.
+% fontconfig knows of zero Tamil fonts on this machine; the face comes only
+% from spike/assets/fonts/. This is exactly the FONT-003 condition.
+\begin[class=biblecompose, columns=2, papersize=6in x 9in]{document}
+
+\define[command=bc:verse-number]{%
+  \raise[height=0.42em]{\font[size=6.4pt, weight=600]{\process}}\kern[width=0.13em]%
+}
+\define[command=bc:chapter-number]{%
+  \noindent\font[size=21pt, weight=700]{\process}\kern[width=4pt]%
+}
+\define[command=v]{\bc:verse{\process}}
+\define[command=fn]{\footnote{\font[size=7.4pt]{\process}}}
+\define[command=chapternumber]{\bc:chapter{\process}}
+\define[command=s1]{%
+  \goodbreak\skip[height=7pt]\font[size=10.2pt, weight=600]{\process}%
+  \par\nobreak\skip[height=1pt]%
+}
+\define[command=q1]{\skip[height=1pt]\glue[width=9pt]\process\par}
+\define[command=booktitle]{%
+  \bc:book{\process}%
+  \begin{center}\font[size=16pt, weight=600]{\process}\end{center}\skip[height=5pt]%
+}
+
+\font[filename=spike/assets/fonts/NotoSerifTamil-Regular.ttf, size=9.6pt, language=ta]
+\set[parameter=document.baselineskip, value=13.5pt]
+\set[parameter=document.language, value=und]
+
+
+\include[src=spike/sil/lam1-text.sil]
+\end{document}

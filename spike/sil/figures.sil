@@ -1,0 +1,29 @@
+% S0.7 — figure placement: raster and vector.
+%
+% SRS §4.2 lists `creation-map.pdf` among project assets, so whether the
+% backend can place vector artwork is a print-quality question, not a detail:
+% a map or a diagram enlarged from raster is visibly worse in print, and the
+% answer decides whether BibleCompose must convert or can pass through.
+\begin[class=plain, papersize=6in x 9in]{document}
+\use[module=packages.image]
+\font[family=DejaVu Serif, size=10pt]
+
+\font[size=13pt, weight=700]{S0.7 — figure placement}\par
+\skip[height=6pt]
+
+\font[weight=700]{1. PNG, width 2.4in}\par
+\img[src=spike/assets/images/map.png, width=2.4in]\par
+\skip[height=8pt]
+
+\font[weight=700]{2. JPG, width 2.4in}\par
+\img[src=spike/assets/images/map.jpg, width=2.4in]\par
+\skip[height=8pt]
+
+\font[weight=700]{3. PDF (vector), width 2.4in}\par
+\img[src=spike/assets/images/art.pdf, width=2.4in]\par
+\skip[height=8pt]
+
+\font[weight=700]{4. PNG scaled to height 0.7in}\par
+\img[src=spike/assets/images/map.png, height=0.7in]\par
+
+\end{document}

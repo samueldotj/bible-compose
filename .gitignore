@@ -23,3 +23,5 @@ target
 # Spike scratch: the 15-byte stubs SILE leaves when a run fails
 spike/out/*.pdf
 !spike/out/john1-bc-2col.pdf
+!spike/out/figures.pdf
+!spike/out/xml-escaping.pdf

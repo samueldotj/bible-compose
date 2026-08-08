@@ -1,0 +1,33 @@
+% S0.5(b) — the control that matters more than (a).
+%
+% Identical to lam1-tamil-ok.sil except the font is DejaVu Serif, which has no
+% Tamil coverage at all. SRS-REVIEW F5 claims SILE substitutes silently and
+% that BibleCompose therefore cannot delegate PDF-004 to the backend. This is
+% the experiment that settles it: if SILE says nothing and emits a PDF, the
+% FONT-001/002 pre-flight is required, not merely prudent.
+\begin[class=biblecompose, columns=2, papersize=6in x 9in]{document}
+
+\define[command=bc:verse-number]{%
+  \raise[height=0.42em]{\font[size=6.4pt, weight=600]{\process}}\kern[width=0.13em]%
+}
+\define[command=bc:chapter-number]{%
+  \noindent\font[size=21pt, weight=700]{\process}\kern[width=4pt]%
+}
+\define[command=v]{\bc:verse{\process}}
+\define[command=fn]{\footnote{\font[size=7.4pt]{\process}}}
+\define[command=chapternumber]{\bc:chapter{\process}}
+\define[command=s1]{%
+  \goodbreak\skip[height=7pt]\font[size=10.2pt, weight=600]{\process}%
+  \par\nobreak\skip[height=1pt]%
+}
+\define[command=q1]{\skip[height=1pt]\glue[width=9pt]\process\par}
+\define[command=booktitle]{%
+  \bc:book{\process}%
+  \begin{center}\font[size=16pt, weight=600]{\process}\end{center}\skip[height=5pt]%
+}
+
+\font[family=DejaVu Serif, size=9.6pt]
+\set[parameter=document.baselineskip, value=13.5pt]
+
+\include[src=spike/sil/lam1-text.sil]
+\end{document}

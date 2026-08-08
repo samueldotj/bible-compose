@@ -23,7 +23,7 @@ Read from `v0.15.13`:
 - **The features aimed at this already exist:** `static = ["rust-embed"]` embeds Lua resources, `vendored = ["mlua/vendored"]` builds the VM from source, and `luajit`/`lua54` choose the interpreter.
 - **But `cargo add sile` will not produce a working typesetter.** The canonical build is autotools driving cargo — `./bootstrap.sh && ./configure && make` — the build script keys off `AUTOTOOLS_DEPENDENCIES`, and `harfbuzz-sys` is an *optional* dependency. The shaping and PDF C code is built by `make` and linked in rather than by cargo.
 
-That last point is inference from the build files and the README rather than something tried, and confirming it is [S1.1](../ROADMAP.md#s1--packaging-spike)'s first job.
+**S1.1 has since confirmed that**, and it is no longer inference ([spike/S1-NOTES.md P-1](../../spike/S1-NOTES.md)). Two independent proofs: `src/embed.rs` — the file `--features static` needs — exists in neither the git checkout nor the published crate, only as an `.in` template that `make` fills in; and the binary links seven static libraries (`justenoughharfbuzz.a`, `justenoughicu.a`, `libtexpdf.a` and four more) built from C sources cargo never sees. docs.rs builds the crate cleanly because it omits `static`, which is a good reminder that documenting is not building.
 
 ### The cost that does not move
 

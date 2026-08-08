@@ -210,11 +210,11 @@ Each item is one coherent deliverable. **Done includes tests and green CI**, not
 
 ## S1 · Packaging spike
 
-*5 items · 1 S, 2 M, 2 L. Runs alongside M1–M4; blocks P5.7.*
+*5 items · 1 S, 2 M, 2 L. Runs alongside M1–M4; blocks P5.7. Findings in [S1-NOTES](../spike/S1-NOTES.md).*
 
 | ID | | Deliverable | Done when |
 |---|---|---|---|
-| **S1.1** | M | Build SILE 0.15.13 from source on Linux, and record what it actually needs | `./bootstrap.sh && ./configure && make` produces a working binary; the C libraries, their versions, and the Lua rock handling are written down; **whether `cargo build` alone can do it is answered either way**, which [ADR-006](adr/006-single-binary.md) currently infers rather than knows |
+| **S1.1** | M | Build SILE 0.15.13 from source on Linux, and record what it actually needs | `./bootstrap.sh && ./configure && make` produces a working binary; the C libraries, their versions, and the Lua rock handling are written down. **The cargo question is already answered — no** ([S1-NOTES P-1](../spike/S1-NOTES.md)): `src/embed.rs` ships only as an autotools template, and the binary links seven static libraries built from C sources cargo never sees |
 | **S1.2** | L ⏳ | The same on Windows | Either a working build with the toolchain recorded, or a written finding that it is impractical and why. A negative answer is a result, not a failure — it lands on NFR-001, not on the schedule |
 | **S1.3** | M | The same on macOS | A working build, or the same finding |
 | **S1.4** | L | One binary that re-executes itself and typesets | `biblecompose build` produces a PDF on a machine with no SILE installed and nothing extracted to disk: the Lua tree and the 17 required rocks embedded via `rust-embed`, loaders injected, the child spawned from `current_exe()` with a reserved argument ([ADR-006](adr/006-single-binary.md) option B) |

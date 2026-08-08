@@ -1,6 +1,6 @@
 # SRS Review — BibleCompose v0.1
 
-An analysis of [BibleCompose_Software_Requirements_Specification_v0.1.docx](../BibleCompose_Software_Requirements_Specification_v0.1.docx) before designing against it: what the specification gets right, where it contradicts itself, what it leaves out, and which of its open decisions can be closed now.
+An analysis of [SRS v0.1](SRS-v0.1.md) before designing against it: what the specification gets right, where it contradicts itself, what it leaves out, and which of its open decisions can be closed now.
 
 The design that follows from this review is in [ARCHITECTURE](ARCHITECTURE.md); the sequencing consequences are in [ROADMAP](ROADMAP.md); the six load-bearing choices are in the [ADRs](adr/).
 

@@ -2,7 +2,7 @@
 
 The design for BibleCompose: layering, the three document models, configuration and style resolution, font pre-flight, the backend contract, build orchestration, and testing.
 
-This is a design against [BibleCompose_Software_Requirements_Specification_v0.1.docx](../BibleCompose_Software_Requirements_Specification_v0.1.docx). Where it departs from the specification, the reason is recorded in [SRS-REVIEW](SRS-REVIEW.md).
+This is a design against [SRS v0.1](SRS-v0.1.md). Where it departs from the specification, the reason is recorded in [SRS-REVIEW](SRS-REVIEW.md).
 
 Related: [SRS-REVIEW](SRS-REVIEW.md) · [ROADMAP](ROADMAP.md)
 

@@ -38,7 +38,7 @@ M0 built the second half of the pipeline before the first half exists: documents
 
 | | |
 |---|---|
-| [SRS v0.1](BibleCompose_Software_Requirements_Specification_v0.1.docx) | The requirements this design answers |
+| [SRS v0.1](docs/SRS-v0.1.md) | The requirements this design answers — the source document, unedited |
 | [SRS-REVIEW](docs/SRS-REVIEW.md) | Analysis of those requirements: findings, gaps, risks, decisions closed |
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | The design |
 | [ROADMAP](docs/ROADMAP.md) | The sequence and why it is this one |

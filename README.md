@@ -10,14 +10,20 @@ Open a project folder. BibleCompose discovers the books, validates them, merges 
 
 ## Status
 
-**Requirements analysed, design proposed, S0 complete. No Rust yet.**
+**S0 and M0 complete.** The pipeline exists end to end: a `ScriptureDocument` becomes XML, SILE turns it into a PDF, and the PDF is published atomically. 83 tests, 8 crates, no GUI.
 
-The typesetting spike is done and the answer is yes: SILE sets a Bible page in Latin and in Tamil — balanced two columns, footnotes, running heads carrying the live verse range, vector artwork. Its bundled `bible` class turned out to be unusable, so [`sile/classes/biblecompose.lua`](sile/classes/biblecompose.lua) is ours. Findings and evidence in [spike/NOTES.md](spike/NOTES.md). Work now starts at M0.
+```bash
+cargo run -p biblecompose-cli -- build --fixture john_1_1_5 --output MyBible.pdf
+```
+
+S0 answered the feasibility question — SILE sets a Bible page in Latin and in Tamil, with balanced columns, footnotes, running heads carrying the live verse range, and vector artwork. Its bundled `bible` class turned out to be unusable, so [`sile/classes/biblecompose.lua`](sile/classes/biblecompose.lua) is ours. Findings and evidence in [spike/NOTES.md](spike/NOTES.md).
+
+M0 built the second half of the pipeline before the first half exists: documents come from hand-built [fixtures](crates/biblecompose-scripture/src/fixtures.rs), not a parser. The parser arrives at M1.
 
 | | Milestone | What it means |
 |---|---|---|
 | **S0** | Typesetting spike ✓ | SILE can set a Bible page. No Rust. |
-| **M0** | Skeleton and contract | The pipeline exists end to end on one book. |
+| **M0** | Skeleton and contract ✓ | The pipeline exists end to end on one book. |
 | **M1** | USFM to PDF | Real Scripture through the real parser, in two columns. |
 | **M2** | Configuration | Page, typography, and output settings, from file and GUI. |
 | **M3** | Styles | The visual layer, editable without TOML. |

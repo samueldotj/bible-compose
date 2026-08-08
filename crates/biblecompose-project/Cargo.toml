@@ -1,0 +1,15 @@
+[package]
+name = "biblecompose-project"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Project folder discovery, book identification and asset resolution."
+
+[dependencies]
+biblecompose-diagnostics.workspace = true
+camino.workspace = true
+
+[lints]
+workspace = true

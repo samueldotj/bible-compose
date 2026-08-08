@@ -1,0 +1,23 @@
+[package]
+name = "biblecompose-testkit"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Fixtures, golden helpers and PDF assertions."
+
+# Deliberately does NOT depend on biblecompose-sile: it is consumed by that
+# crate's own tests, and depending back would break ADR-004's rule and create
+# a cycle.
+[dependencies]
+biblecompose-diagnostics.workspace = true
+biblecompose-scripture.workspace = true
+camino.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+toml.workspace = true
+
+[lints]
+workspace = true

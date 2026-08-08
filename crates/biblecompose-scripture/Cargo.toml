@@ -1,0 +1,19 @@
+[package]
+name = "biblecompose-scripture"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The normalized Scripture document model — what the publication is."
+
+[dependencies]
+biblecompose-diagnostics.workspace = true
+camino.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true

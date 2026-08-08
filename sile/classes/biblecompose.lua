@@ -144,15 +144,22 @@ function class:_init (options)
    -- leaves the first page on plain's single full-width frame with no `next`
    -- chain, so column B is empty on page 1 and correct everywhere after.
    -- NOTES.md F-8.
+   -- A 6x9in trim rather than plain's A4: this is a Bible class, and a
+   -- default that has to be overridden on every document is not a default.
+   options = options or {}
+   if not options.papersize then
+      options.papersize = "6in x 9in"
+   end
+
    self._bcopts = {
-      columns = tonumber(options and options.columns or 2) or 2,
-      gutter = options and options.gutter or "3.5%pw",
-      margintop = options and options.margintop or "9%ph",
-      marginbottom = options and options.marginbottom or "12%ph",
-      margininner = options and options.margininner or "11%pw",
-      marginouter = options and options.marginouter or "8%pw",
-      headsep = options and options.headsep or "4%ph",
-      footsep = options and options.footsep or "3%ph",
+      columns = tonumber(options.columns or 2) or 2,
+      gutter = options.gutter or "3.5%pw",
+      margintop = options.margintop or "9%ph",
+      marginbottom = options.marginbottom or "12%ph",
+      margininner = options.margininner or "11%pw",
+      marginouter = options.marginouter or "8%pw",
+      headsep = options.headsep or "4%ph",
+      footsep = options.footsep or "3%ph",
    }
    self.defaultFrameset = self:_frameset(self._bcopts.margininner, self._bcopts.marginouter)
    self.firstContentFrame = "contentA"
@@ -161,6 +168,7 @@ function class:_init (options)
    self:loadPackage("masters")
    self:loadPackage("infonode")
    self:loadPackage("chapterverse")
+   self:loadPackage("image")
 
    self:registerPostinit(function (self_)
       local o = self_._bcopts
@@ -251,7 +259,7 @@ function class:registerCommands ()
    -- running head renders "table: 0x55f…" instead of "1:14". Flattening to
    -- text at the boundary is the fix. NOTES.md F-9.
    local function flat (content)
-      return { SU.contentToString(content) }
+      return { SU.ast.contentToString(content) }
    end
 
    self:registerCommand("bc:verse", function (options, content)
@@ -269,6 +277,260 @@ function class:registerCommands ()
    self:registerCommand("bc:book", function (options, content)
       SILE.call("save-book-title", options, flat(content))
    end)
+
+   self:registerXmlCommands()
+end
+
+-- ---------------------------------------------------------------------------
+-- The XML vocabulary — the other half of ADR-002's contract.
+--
+-- BibleCompose emits XML; SILE maps each element name to a command of the same
+-- name; these are those commands. Scripture arrives as text nodes and never as
+-- syntax, which is the whole reason the contract is XML rather than SIL.
+--
+-- Two things are deliberate here.
+--
+-- Whitespace between BLOCK elements is formatting in the emitted file, not
+-- content, so block containers process only their element children. Inside a
+-- paragraph every character is Scripture and is processed verbatim.
+--
+-- Appearance lives in `styles` below rather than in the emitted document. At
+-- M0 there is no configuration layer, so these are the built-in defaults that
+-- P3.1 will make overridable; the document says *what*, this says *how*.
+-- ---------------------------------------------------------------------------
+
+local styles = {
+   body = { family = "DejaVu Serif", size = "9.2pt", leading = "11.2pt" },
+   heading = {
+      s = { size = "10.2pt", weight = 600, above = "7pt", below = "1pt" },
+      r = { size = "7.6pt", style = "italic", above = "1pt", below = "3pt" },
+      d = { size = "9.2pt", style = "italic", above = "4pt", below = "2pt" },
+      sp = { size = "9.2pt", style = "italic", above = "4pt", below = "2pt" },
+      sr = { size = "7.6pt", style = "italic", above = "1pt", below = "3pt" },
+   },
+   chapter = { size = "21pt", weight = 700 },
+   verse = { size = "6.4pt", weight = 600, raise = "0.42em" },
+   note = { size = "7.4pt" },
+   xref = { size = "7.4pt", style = "italic" },
+   poetry_indent = 9, -- points per level
+   char = {
+      bd = { weight = 700 },
+      bdit = { weight = 700, style = "italic" },
+      em = { style = "italic" },
+      it = { style = "italic" },
+      nd = { features = "+smcp" },
+      sc = { features = "+smcp" },
+      wj = {},
+      add = { style = "italic" },
+      qt = { style = "italic" },
+      tl = { style = "italic" },
+   },
+}
+
+--- Process only element children, discarding whitespace laid out for humans.
+local function elements (content)
+   for _, item in ipairs(content) do
+      if type(item) == "table" then
+         SILE.process({ item })
+      end
+   end
+end
+
+local function skip (height)
+   if height then
+      SILE.call("skip", { height = height })
+   end
+end
+
+function class:registerXmlCommands ()
+   -- The root. The version attribute is the compatibility contract (SILE-009);
+   -- refusing an unknown one turns a mismatched install into one clear line
+   -- rather than a page of Lua stack traces.
+   self:registerCommand("biblecompose", function (options, content)
+      local want = "1"
+      if options.version and options.version ~= want then
+         SU.error(
+            "this SILE class speaks BibleCompose contract version "
+               .. want
+               .. " but the document declares "
+               .. tostring(options.version)
+               .. " — the application and the class must be released together"
+         )
+      end
+      SILE.call("font", styles.body)
+      SILE.settings:set("document.baselineskip", SILE.types.node.vglue(styles.body.leading))
+      elements(content)
+   end)
+
+   self:registerCommand("book", function (options, content)
+      -- A new book starts a new page — but the break goes at the START of the
+      -- second and later books, never at the end of one. `\supereject` after
+      -- the final book fills the balanced frames with infinite glue that can
+      -- never be balanced, and SILE spins forever rather than failing.
+      SILE.scratch.biblecompose = SILE.scratch.biblecompose or { books = 0 }
+      if SILE.scratch.biblecompose.books > 0 then
+         SILE.typesetter:leaveHmode()
+         SILE.call("eject")
+      end
+      SILE.scratch.biblecompose.books = SILE.scratch.biblecompose.books + 1
+
+      SILE.call("bc:book", {}, { options.name or options.code or "" })
+      if options.name then
+         SILE.call("center", {}, function ()
+            SILE.call("font", { size = "16pt", weight = 600 }, function ()
+               SILE.typesetter:typeset(options.name)
+            end)
+         end)
+         SILE.call("par")
+         skip("5pt")
+      end
+      elements(content)
+   end)
+
+   self:registerCommand("heading", function (options, content)
+      local s = styles.heading[options.style] or styles.heading.s
+      SILE.call("goodbreak")
+      skip(s.above)
+      SILE.call("font", { size = s.size, weight = s.weight, style = s.style }, function ()
+         SILE.process(content)
+      end)
+      SILE.call("par")
+      SILE.call("nobreak")
+      skip(s.below)
+   end)
+
+   self:registerCommand("para", function (_, content)
+      SILE.process(content)
+      SILE.call("par")
+   end)
+
+   self:registerCommand("poetry", function (options, content)
+      local level = tonumber(options.level) or 1
+      skip("1pt")
+      SILE.call("glue", { width = (level * styles.poetry_indent) .. "pt" })
+      SILE.process(content)
+      SILE.call("par")
+   end)
+
+   self:registerCommand("item", function (options, content)
+      local level = tonumber(options.level) or 1
+      SILE.call("glue", { width = (level * styles.poetry_indent) .. "pt" })
+      SILE.process(content)
+      SILE.call("par")
+   end)
+
+   -- Tables are laid out as simple tab-separated rows at M0. Real column
+   -- measurement is P4.7; emitting the structure now means the contract does
+   -- not change when the layout improves.
+   self:registerCommand("table", function (_, content)
+      skip("3pt")
+      elements(content)
+      skip("3pt")
+   end)
+
+   self:registerCommand("row", function (options, content)
+      if options.header == "true" then
+         SILE.call("font", { weight = 700 }, function ()
+            elements(content)
+         end)
+      else
+         elements(content)
+      end
+      SILE.call("par")
+   end)
+
+   self:registerCommand("cell", function (options, content)
+      SILE.process(content)
+      if options.align == "end" then
+         SILE.call("hfill")
+      else
+         SILE.call("qquad")
+      end
+   end)
+
+   self:registerCommand("break", function (_, _)
+      skip("4pt")
+   end)
+
+   self:registerCommand("chapter", function (options, _)
+      -- `n` arrives as a string and stays one all the way into chapterverse.
+      -- Spike F-9: anything SILE later stringifies must already be a string,
+      -- or the running head renders "table: 0x55f…".
+      SILE.call("bc:chapter", {}, { tostring(options.n or "") })
+   end)
+
+   self:registerCommand("bc:chapter-number", function (_, content)
+      SILE.call("noindent")
+      SILE.call("font", { size = styles.chapter.size, weight = styles.chapter.weight }, function ()
+         SILE.process(content)
+      end)
+      SILE.call("kern", { width = "4pt" })
+   end)
+
+   self:registerCommand("verse", function (options, _)
+      SILE.call("bc:verse", {}, { tostring(options.n or "") })
+   end)
+
+   self:registerCommand("bc:verse-number", function (_, content)
+      SILE.call("raise", { height = styles.verse.raise }, function ()
+         SILE.call("font", { size = styles.verse.size, weight = styles.verse.weight }, function ()
+            SILE.process(content)
+         end)
+      end)
+      SILE.call("kern", { width = "0.13em" })
+   end)
+
+   self:registerCommand("char", function (options, content)
+      local s = styles.char[options.style] or {}
+      SILE.call("font", s, function ()
+         SILE.process(content)
+      end)
+   end)
+
+   self:registerCommand("note", function (_, content)
+      SILE.call("footnote", {}, function ()
+         SILE.call("font", { size = styles.note.size }, function ()
+            elements(content)
+         end)
+      end)
+   end)
+
+   self:registerCommand("xref", function (_, content)
+      SILE.call("footnote", {}, function ()
+         SILE.call("font", { size = styles.xref.size, style = styles.xref.style }, function ()
+            SILE.process(content)
+         end)
+      end)
+   end)
+
+   self:registerCommand("figure", function (options, content)
+      SILE.call("par")
+      skip("4pt")
+      -- S0.7 established that PNG, JPG and vector PDF all place, and that an
+      -- included PDF brings its whole page box. Width is bounded to the
+      -- measure so a large asset cannot overflow the column.
+      local width = options.size == "span" and "100%fw" or "100%fw"
+      pcall(function ()
+         SILE.call("img", { src = options.src, width = width })
+      end)
+      if content and #content > 0 then
+         SILE.call("par")
+         SILE.call("font", { size = "7.6pt", style = "italic" }, function ()
+            SILE.process(content)
+         end)
+      end
+      SILE.call("par")
+      skip("4pt")
+   end)
+
+   -- Milestones are not tree-shaped and carry no appearance of their own; they
+   -- are preserved in the contract so a later release can act on them.
+   self:registerCommand("milestone", function (_, _) end)
+
+   -- Rendered inert rather than dropped. The application has already warned
+   -- about it (FUN-003); showing nothing here would make the warning look
+   -- wrong to anyone comparing the log against the page.
+   self:registerCommand("unsupported", function (_, _) end)
 end
 
 function class:_setheads ()

@@ -1,0 +1,26 @@
+[package]
+name = "biblecompose-cli"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Headless build — the test harness and the primary development tool."
+
+[[bin]]
+name = "biblecompose"
+path = "src/main.rs"
+
+# No GUI crate is linked here, which is how NFR-009 is satisfied structurally
+# rather than by discipline.
+[dependencies]
+biblecompose-app.workspace = true
+biblecompose-diagnostics.workspace = true
+biblecompose-scripture.workspace = true
+biblecompose-testkit.workspace = true
+camino.workspace = true
+clap.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,25 @@
+[package]
+name = "biblecompose-app"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Build orchestration, state machine, cancellation, project session."
+
+# The only crate permitted to depend on biblecompose-sile (ADR-004).
+[dependencies]
+biblecompose-config.workspace = true
+biblecompose-diagnostics.workspace = true
+biblecompose-project.workspace = true
+biblecompose-scripture.workspace = true
+biblecompose-sile.workspace = true
+camino.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+biblecompose-testkit.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

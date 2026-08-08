@@ -1,0 +1,17 @@
+# Golden files are byte-compared across platforms (DET-001). A checkout that
+# converted them to CRLF would fail the determinism job for a reason that has
+# nothing to do with the emitter.
+*.xml text eol=lf
+*.rs text eol=lf
+*.lua text eol=lf
+*.sil text eol=lf
+*.sh text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.yml text eol=lf
+
+*.pdf binary
+*.png binary
+*.jpg binary
+*.ttf binary
+*.docx binary

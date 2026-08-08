@@ -1,0 +1,39 @@
+[package]
+name = "biblecompose-sile"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The SILE backend: XML emission, process invocation, log mapping."
+
+# ADR-004: this is the only crate that has heard of SILE, and nothing but
+# biblecompose-app may depend on it. Enforced by tests/architecture.rs in
+# biblecompose-testkit.
+[dependencies]
+biblecompose-diagnostics.workspace = true
+biblecompose-scripture.workspace = true
+camino.workspace = true
+quick-xml.workspace = true
+serde.workspace = true
+tempfile.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    # CreateJobObjectW takes a SECURITY_ATTRIBUTES pointer, and windows-sys
+    # only emits a function when every type in its signature is enabled.
+    "Win32_Security",
+    "Win32_System_JobObjects",
+    "Win32_System_Threading",
+] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+biblecompose-testkit.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

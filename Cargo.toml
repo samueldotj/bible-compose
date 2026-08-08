@@ -1,0 +1,42 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+repository = "https://github.com/samueldotj/bible-compose"
+
+[workspace.dependencies]
+biblecompose-app = { path = "crates/biblecompose-app" }
+biblecompose-config = { path = "crates/biblecompose-config" }
+biblecompose-diagnostics = { path = "crates/biblecompose-diagnostics" }
+biblecompose-project = { path = "crates/biblecompose-project" }
+biblecompose-scripture = { path = "crates/biblecompose-scripture" }
+biblecompose-sile = { path = "crates/biblecompose-sile" }
+biblecompose-testkit = { path = "crates/biblecompose-testkit" }
+
+# Emission uses quick-xml's writer rather than string formatting, because
+# ADR-002's guarantee is that escaping is the serializer's job and not ours.
+quick-xml = "0.37"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+camino = { version = "1", features = ["serde1"] }
+clap = { version = "4", features = ["derive"] }
+tempfile = "3"
+toml = "0.8"
+
+[workspace.lints.clippy]
+# `Diagnostic` is ~200 bytes because it carries a location, a Scripture
+# reference, help text and collapsed backend detail — all of which exist so a
+# publisher can act on the message. Boxing it in every `Result` would shrink
+# the error path at the cost of the API that makes diagnostics worth having,
+# and every one of these Results sits behind a syscall or a subprocess rather
+# than in a hot loop. Taken deliberately rather than silenced.
+result_large_err = "allow"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

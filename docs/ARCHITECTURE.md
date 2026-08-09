@@ -214,7 +214,9 @@ pub enum StyleSelector {
 
 **Units are parsed, not passed through.** `"0.55in"`, `"11.5pt"`, `"6x9in"` become typed lengths at the configuration boundary. A string that reaches the emitter is a bug, because it means an invalid unit will be diagnosed by SILE, in SILE's words, at the wrong layer.
 
-`schema_version = 1` is required from the first release. An unknown version is one clear diagnostic instead of a cascade of unknown-field errors.
+**The built-in defaults are a TOML file, not a table of Rust constants.** `defaults.toml` is compiled in with `include_str!` and read by the code that reads a project file, so a default that would be rejected from a project file fails the test suite rather than shipping; it is also what CFG-007's "reset to default" shows, and a readable list of every key that exists.
+
+`schema_version = 1` is asked for from the first release, and the two ways of getting it wrong are answered differently. An **unknown** version is one clear error and the project file is closed — not read at all — because reading a file written for a schema we do not know produces a cascade of complaints about keys that are correct in their own version. A **missing** version is a warning whose help names the line to add: there is exactly one version, so assuming it is safe, and refusing every file written before the key existed would punish publishers for a problem versioning exists to prevent later.
 
 ## 7. Pre-flight
 

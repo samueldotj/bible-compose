@@ -1,0 +1,75 @@
+# BibleCompose built-in settings (CFG-001).
+#
+# Every value a build uses is here. A project's biblecompose.toml overrides
+# these field by field (CFG-002), so a file that sets only `page.width` leaves
+# everything else exactly as written below.
+#
+# This is a real TOML file compiled into the application rather than a table of
+# Rust constants, which buys three things: it is read by the same code that
+# reads a project file, so a default that would be rejected from a project fails
+# our own test suite; it is what "reset to default" shows the publisher
+# (CFG-007); and it is documentation of every key that exists.
+
+schema_version = 1
+
+[project]
+# `name` is deliberately absent. There is no default publication name that is
+# right for anybody, so an unset name means "use the project folder's name".
+language = "en"
+
+[books]
+# Empty means canonical order throughout, and every discovered book included.
+# `include` is absent rather than empty, because `include = []` is a project
+# that has deliberately selected nothing — a different thing, and one the
+# application reports rather than silently treats as "everything".
+order = []
+exclude = []
+
+[page]
+size = "6x9in"
+columns = 2
+
+# Absolute rather than percentages of the page. The SILE class falls back to
+# percentages when no option is given, so it works at any size on its own, but a
+# relative margin cannot be range-checked or shown in a form without resolving
+# it first. These are the percentage defaults evaluated at 6x9in, so the page
+# these produce is the page the class produced before there was a settings
+# layer.
+margin_top = "0.81in"    # was 9%ph
+margin_bottom = "1.08in" # was 12%ph
+margin_inner = "0.66in"  # was 11%pw
+margin_outer = "0.48in"  # was 8%pw
+column_gap = "0.21in"    # was 3.5%pw
+header_gap = "0.36in"    # was 4%ph
+footer_gap = "0.27in"    # was 3%ph
+
+[typography]
+font_family = "DejaVu Serif"
+font_size = "9.2pt"
+
+# Leading is an absolute length, not a multiple of the body size. Both are ways
+# of saying one thing, and holding both means reconciling them; a form that
+# wants to offer "1.2×" can multiply and write the length.
+leading = "11.2pt"
+
+hyphenation = true
+
+[numbering]
+show_chapter_numbers = true
+show_verse_numbers = true
+
+[notes]
+show_footnotes = true
+show_cross_references = true
+
+[headers]
+enabled = true
+show_book_name = true
+show_reference_range = true
+show_page_number = true
+
+[output]
+# Relative to the project folder. The stem is replaced with the publication
+# name when one is set.
+file = "output/bible.pdf"
+keep_intermediates = false

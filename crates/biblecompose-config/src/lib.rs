@@ -7,7 +7,11 @@
 //! parsing arrive at P2.3 onward and all read through it.
 
 pub mod document;
+pub mod provenance;
+pub mod settings;
 pub mod value;
 
 pub use document::{ConfigDocument, Located, Node, Table};
+pub use provenance::{Origin, Sourced};
+pub use settings::{resolve, Settings, SCHEMA_VERSION};
 pub use value::{Length, PageSize, Unit};

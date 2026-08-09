@@ -9,8 +9,8 @@ The decision this measures is [ADR-006](../docs/adr/006-single-binary.md); the i
 | S1.1 Build from source on Linux | **Done** — builds in 68s (P-6); prerequisites in P-4 |
 | S1.2 The same on Windows | Queued in CI ([packaging-spike.yml](../.github/workflows/packaging-spike.yml)) |
 | S1.3 The same on macOS | Queued in CI — no macOS available locally |
-| S1.4 A binary that re-executes itself | Not started — **larger than ADR-006 estimated** (P-6) |
-| S1.5 Measure; settle ADR-006 | Blocked |
+| S1.4 A binary that re-executes itself | Not built, but **costed** (P-6, P-7): a 2.1 MB tree must reach disk either way |
+| S1.5 Measure; settle ADR-006 | **Linux measured: ~15 MB** (P-7). Waiting on S1.2/S1.3 to settle |
 
 ---
 
@@ -117,7 +117,7 @@ Reading the build files, this looked like most of option B's work being already 
 
 **macOS — not available here at all.** Only answerable on a runner.
 
-Both remaining legs are in [packaging-spike.yml](../.github/workflows/packaging-spike.yml). The workflow predates P-6 and its Linux job still asserts self-containment, which will now fail; that assertion needs relaxing to "builds and reports a version", with the rock question tracked separately.
+Both remaining legs are in [packaging-spike.yml](../.github/workflows/packaging-spike.yml), which now carries the prerequisites P-4 found and the flags P-5 and P-6 settled — so the runners should not have to rediscover them. Its Linux job detects whether the runner's HarfBuzz has the 6.0 subsetter and warns if not, and reports the self-containment question rather than asserting it.
 
 ---
 
@@ -225,6 +225,78 @@ Two honest alternatives, both cheaper:
 - **Upstream the registration.** SILE already has the mechanism for six modules; extending it to the vendored rocks is a contained change in the same file, and it would make `--enable-embedded-resources` deliver what its name promises for everyone. Worth raising regardless of what BibleCompose does.
 
 Neither changes the **decision** in ADR-006 — the process boundary is still worth keeping and option A is still rejected for the reasons given. What changes is the estimate, and S1.5 should record the corrected one rather than the original.
+
+---
+
+## P-7 — What actually has to ship: 15 MB, and the embedding does not reduce it
+
+P-6 left a hypothesis: extract only the ten native modules and let the embedded
+Lua serve the rest. **Measured, and it is not enough.** But the measurement
+gives the number S1.5 wanted, so the item is largely answered anyway.
+
+### The matrix
+
+`sile --version`, same binary, varying only what is on the module paths:
+
+| what is on disk | result |
+|---|---|
+| nothing | `module 'lua-utf8' not found` |
+| the 16 `.so` only | **works** |
+| the full rock tree | works |
+
+So the embedded Lua *is* being used at startup — the native modules were the
+only gap, exactly as P-6 predicted.
+
+**Typesetting is a different answer.** With the `.so` alone, or even the whole
+`lua_modules/lib` on `LUA_CPATH`, a real document fails with
+`attempt to concatenate a nil value` inside SILE's own module cache. Adding the
+`.lua` files on `LUA_PATH` fixes it. Why the embedded copies serve `--version`
+but not a build is SILE's business; the consequence is ours and it is simple:
+**both halves have to be real files.**
+
+### The artifact
+
+Stripping luarocks' own bookkeeping — `lua_modules/lib` is 5.0 MB, of which
+4.1 MB is `rocks-5.1/` metadata, HTML documentation and rockspecs that nothing
+loads — the runtime that must accompany the binary is:
+
+| | files | size |
+|---|---|---|
+| `.lua` modules | 132 | 1.2 MB |
+| `.so` modules | 16 | 904 KB |
+| **runtime tree** | **148** | **2.1 MB** |
+| SILE binary | 1 | 14 MB |
+| **total** | | **~15 MB** |
+
+Verified: with exactly that tree and nothing else — no rock tree, no
+`LUA_PATH` inherited, `env -i` — the binary typesets
+[`tests/golden/john_1_1_5.xml`](../tests/golden/john_1_1_5.xml) to a correct
+21,428-byte PDF.
+
+15 MB is a comfortable number. It is smaller than the ADR's "tens of megabytes,
+most of it ICU" guess, because ICU is dynamically linked here rather than
+bundled — which is a Linux answer and may not survive S1.2 and S1.3.
+
+### What it means for the options
+
+**`--enable-embedded-resources` does not reduce what ships.** It embeds a
+second copy of the Lua into the binary while the same files must still be on
+disk for typesetting. For BibleCompose's purposes it is currently *worse* than
+useless: 14 MB of binary carrying resources that do not remove the 2.1 MB tree.
+A build without it would be smaller. Worth re-testing before P5.7 rather than
+assuming — but on this evidence the flag is not the lever it appears to be.
+
+**Option B and option C converge more than the ADR expected.** Both must put a
+2.1 MB tree somewhere the process can read. B can embed it in our binary and
+extract on first run; C extracts an executable plus the tree. The distinction
+narrows to *whether an executable is among the extracted files* — which still
+favours B, because that is the part antivirus objects to, but the gap is
+smaller than "nothing is written to disk" implied. **ADR-006's option B
+description overstates this and should be corrected at S1.5.**
+
+The genuinely-nothing-on-disk variant remains possible — statically link the
+ten C rocks and register them in `package.preload` — but P-6 already priced
+that as the whole job, and P-7 adds that the Lua half would need solving too.
 
 ---
 

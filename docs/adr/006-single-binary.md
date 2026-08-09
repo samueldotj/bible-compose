@@ -83,6 +83,16 @@ Meanwhile option C **has been demonstrated**: the S1 bundle typesets `john_1_1_5
 
 What does not stand is any assumption that upstream protects it: SILE's own Windows CI is disabled and its README disclaims Windows support ([P-8](../../spike/S1-NOTES.md)). Every SILE upgrade is a Windows risk we absorb, and that belongs in the risk register rather than here.
 
+**The single binary is a Windows and macOS property. On Linux it is not
+quite true**, and the reason is the shell rather than the typesetter. Tauri
+links `libwebkit2gtk` at run time; the webview is a system component on Windows
+and macOS but a distribution package on Linux, and it cannot be bundled.
+[ADR-003](003-gui.md) accepts that knowingly. Nothing about the SILE runtime
+changes — S1 made that genuinely self-contained on both platforms it measured —
+but "one file, no prerequisites" should not be claimed on Linux while the shell
+is a webview. P6.2 decides whether to state the dependency, package around it,
+or revisit the shell.
+
 **The advanced executable override stays** (SILE-004). A developer testing a newer backend should not have to rebuild the bundle, so `BIBLECOMPOSE_SILE` continues to select an external SILE and `SileBackend` continues to exist alongside the embedded one.
 
 **Version reporting gets simpler and stricter.** SILE-002 wants the backend version in every build log; with the backend inside the artifact, that version is a build-time constant rather than something discovered at runtime, and a mismatch between the application and its SILE class (SILE-009) becomes impossible rather than merely diagnosed.

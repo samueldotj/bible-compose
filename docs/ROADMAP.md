@@ -17,7 +17,6 @@ Related: [SRS-REVIEW](SRS-REVIEW.md) · [ARCHITECTURE](ARCHITECTURE.md)
 | **S0** | Typesetting spike | nobody | We know SILE can set a Bible page. No Rust. | 8 |
 | **M0** | Skeleton and contract | nobody | The pipeline exists end to end on one book. Ugly, deterministic, tested. | 10 |
 | **S1** | Packaging spike | nobody | We know what a single binary costs, and whether Windows is a wall. | 5 |
-| **S2** | GUI spike | nobody | We know whether a native Rust shell can take Tamil and Hebrew input. | 1 |
 | **M1** | USFM to PDF | us | Real Scripture through the real parser, in two columns. | 9 |
 | **M2** | Configuration | us | Page, typography, and output settings, from file and from the GUI. | 10 |
 | **M3** | Styles | first outside testers | The visual layer, editable without TOML. First build worth showing. | 8 |
@@ -60,22 +59,6 @@ Build SILE from source on all three platforms and find out what a single distrib
 **It comes before P5.7 rather than inside it** because a bad answer changes a requirement rather than a task. Spike F-1 established there is no prebuilt SILE for Windows or macOS, so both must be built from source. If Windows turns out to be impractical, that does not change [ADR-006](adr/006-single-binary.md) — it changes NFR-001's claim that Windows is a Tier-1 target, and that is worth knowing at M1 rather than at M5 with installers half-built.
 
 **Done when** a single binary on at least one platform typesets a fixture with no SILE installed, the artifact size is recorded, and the Windows answer is known either way.
-
-### S2 — GUI spike
-
-*Days, not weeks. Blocks M2, which is the milestone that builds a GUI.*
-
-One question: **can a native Rust toolkit accept Scripture-script text input on all three platforms?**
-
-[ADR-003](adr/003-gui.md) chose a webview on four arguments. Three have since expired — the integrated preview is gone, AccessKit gives a native toolkit a real accessibility tree, and cosmic-text shapes complex scripts in pure Rust. What is left is **typing**: input-method composition, candidate windows, and right-to-left caret and selection behaviour in ordinary text fields, for users who work in Tamil, Devanagari, Arabic and Hebrew.
-
-**It is worth a spike rather than an argument** for the same reason S0 and S1 were: the last three times something looked settled from the documentation — SILE's `bible` class, `--enable-embedded-resources`, PE symbol resolution — it was not.
-
-Two things ride on the answer beyond the toolchain preference. A native shell has no `libwebkit2gtk` dependency, so [ADR-006](adr/006-single-binary.md)'s single binary becomes true on Linux as well. And the whole JavaScript toolchain disappears.
-
-**Done when** a throwaway application has taken Tamil and Hindi input through a platform IME on Windows, shown Arabic and Hebrew with correct caret and selection behaviour, and been read by a screen reader — or has failed to, in writing.
-
-**If it fails**, the fallback is Tauri with a Rust/WASM frontend: no npm, no Vite, no TypeScript, at the cost of keeping the Linux dependency.
 
 ### M1 — USFM to PDF
 

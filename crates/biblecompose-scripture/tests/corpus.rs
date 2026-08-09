@@ -37,8 +37,13 @@ use std::collections::BTreeMap;
 /// fifteen.
 ///
 /// Named here rather than silently tolerated: an exception with a reason is
-/// worth more than a disabled assertion, and this list should shrink to
-/// nothing once upstream is fixed.
+/// worth more than a disabled assertion.
+///
+/// **Fixed upstream** — `usfm-core` now restores a mis-lexed pipe from the
+/// token stream. Verified against the working tree: with the fix in place this
+/// list can be empty and all 197 files pass. It stays until the dependency
+/// revision in the workspace `Cargo.toml` moves past the fix, because the
+/// pinned revision is still the one that loses the text.
 const KNOWN_UPSTREAM_LOSS: &[&str] = &["70-3JNsanasm.usfm"];
 
 #[test]

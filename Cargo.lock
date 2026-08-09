@@ -183,6 +183,7 @@ name = "biblecompose-cli"
 version = "0.1.0"
 dependencies = [
  "biblecompose-app",
+ "biblecompose-config",
  "biblecompose-diagnostics",
  "biblecompose-scripture",
  "biblecompose-testkit",

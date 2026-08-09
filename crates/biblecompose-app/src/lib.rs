@@ -5,10 +5,12 @@
 //! the only thing that orchestrates — `biblecompose-core` from SRS §12.1 is
 //! gone because its stated job had exactly one caller.
 
+pub mod class_options;
 pub mod project;
 pub mod publish;
 pub mod state;
 
+use biblecompose_config::Settings;
 use biblecompose_diagnostics::{code, Diagnostic, Diagnostics};
 use biblecompose_scripture::ScriptureDocument;
 use biblecompose_sile::{BackendJob, SileBackend, Stream};
@@ -87,6 +89,9 @@ pub struct BuildRequest {
     pub sile_path: Vec<Utf8PathBuf>,
     /// SILE-008 / BLD-008.
     pub keep_intermediates: bool,
+    /// Resolved settings. Defaults to the built-in ones, so a caller that has
+    /// not read a project file still gets a complete, valid set (CFG-001).
+    pub settings: Settings,
     /// Deterministic, so the build directory name does not vary between two
     /// otherwise identical runs.
     pub build_id: String,
@@ -99,6 +104,7 @@ impl BuildRequest {
             output: output.into(),
             sile_path: Vec::new(),
             keep_intermediates: false,
+            settings: Settings::builtin(),
             build_id: "current".to_owned(),
         }
     }
@@ -110,6 +116,11 @@ impl BuildRequest {
 
     pub fn keeping_intermediates(mut self, keep: bool) -> Self {
         self.keep_intermediates = keep;
+        self
+    }
+
+    pub fn with_settings(mut self, settings: Settings) -> Self {
+        self.settings = settings;
         self
     }
 }
@@ -201,6 +212,7 @@ pub fn build_with(
         sile_path: request.sile_path.clone(),
         project_root: request.project_root.clone(),
         class: "biblecompose".to_owned(),
+        class_options: class_options::class_options(&request.settings),
     };
 
     if cancel.is_cancelled() {

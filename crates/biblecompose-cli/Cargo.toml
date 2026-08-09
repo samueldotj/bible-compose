@@ -20,6 +20,7 @@ embedded-sile = ["biblecompose-app/embedded-sile"]
 
 [dependencies]
 biblecompose-app.workspace = true
+biblecompose-config.workspace = true
 biblecompose-diagnostics.workspace = true
 biblecompose-scripture.workspace = true
 biblecompose-testkit.workspace = true

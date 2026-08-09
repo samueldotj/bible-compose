@@ -40,6 +40,24 @@ pub struct BackendJob {
     /// Passed explicitly rather than inferred from the root element, so the
     /// contract does not depend on how SILE resolves a non-standard root.
     pub class: String,
+    /// Resolved settings, as the class options SILE takes with `-O`.
+    ///
+    /// On the command line and not on the root element, because SILE does not
+    /// read class options from an XML root — measured, not assumed: a document
+    /// whose root carried `papersize="4in x 6in"` produced a 6×9in page, and
+    /// the same value passed as `-O` produced a 4×6in one.
+    ///
+    /// An ordered `Vec` rather than a map: the argument list is part of what
+    /// makes two runs of the same build identical (DET-001), and a `HashMap`
+    /// would reorder it per process.
+    ///
+    /// Plain strings, and there is no way to pass anything else — [ADR-005]
+    /// requires that provenance cannot reach the backend, because a file path
+    /// that can influence the output is a file path that can reach a golden
+    /// file.
+    ///
+    /// [ADR-005]: ../../../docs/adr/005-provenance.md
+    pub class_options: Vec<(String, String)>,
 }
 
 impl BackendJob {
@@ -159,6 +177,7 @@ mod tests {
             sile_path: vec![],
             project_root: Utf8PathBuf::from("/project"),
             class: "biblecompose".to_owned(),
+            class_options: Vec::new(),
         };
         assert_eq!(job.xml_path(), "/tmp/build-1/document.xml");
         assert_eq!(job.pdf_path(), "/tmp/build-1/MyBible.pdf");

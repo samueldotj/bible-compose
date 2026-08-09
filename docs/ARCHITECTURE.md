@@ -200,6 +200,8 @@ pub enum Origin {
 
 STY-008's inspector is then a read of the resolved map. CFG-007's "reset to default" is deleting the key whose origin is a file. STY-004's diagnostic has somewhere to point.
 
+**Resolved settings reach the backend as class options, on the command line.** SILE does not read class options from an XML root — measured, not assumed — so they are passed with `-O key=value`, in a fixed order, as plain strings. The translation lives in `biblecompose-app`, the only crate that has heard of both the configuration layer and the backend, which is also where [ADR-005](adr/005-provenance.md)'s rule that provenance cannot reach the emitter becomes a signature rather than a convention. Hiding a verse number is a class option and not an emission change: the document says *what* and the class says *how* ([ADR-002](adr/002-sile-interface.md)), so turning numbers back on needs no re-emission.
+
 **Style selectors are typed, not strings** (STY-003):
 
 ```rust

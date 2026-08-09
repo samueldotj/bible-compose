@@ -197,15 +197,28 @@ impl Backend for SileBackend {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 
+        // Resolved settings, in the order the job listed them.
+        for (key, value) in &job.class_options {
+            cmd.arg("-O").arg(format!("{key}={value}"));
+        }
+
         // The project's class and package directories, plus — when the backend
         // was unpacked from the bundle — its own tree, which it cannot find
         // relative to itself once the working directory is the project.
-        // `command()` has already pointed SILE at its own tree; this adds the
-        // project's class and package directories in front of it.
-        let mut sile_path: Vec<&str> = job.sile_path.iter().map(|p| p.as_str()).collect();
+        //
+        // **The runtime goes first and the project's directories last, because
+        // SILE's `SILE_PATH` is a last-wins list, not a first-wins one.** Its
+        // `core/pathsetup.lua` *prepends* each entry in turn, so the entry
+        // written last ends up with the highest priority. Written the intuitive
+        // way round, the runtime's own copy of a class silently shadowed the
+        // project's — which is how this was found: a class option added to
+        // `sile/classes/biblecompose.lua` was rejected as undeclared while the
+        // unpacked copy was in force.
+        let mut sile_path: Vec<&str> = Vec::new();
         if let Some(rt) = &self.runtime {
             sile_path.push(rt.sile_path.as_str());
         }
+        sile_path.extend(job.sile_path.iter().map(|p| p.as_str()));
         if !sile_path.is_empty() {
             cmd.env("SILE_PATH", sile_path.join(path_separator()));
         }

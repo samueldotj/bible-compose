@@ -12,13 +12,13 @@
 use std::process::ExitCode;
 
 use biblecompose_app::{
-    backend_version, build, emit, BuildEvent, BuildReporter, BuildRequest, BuildState, CancelToken,
-    CONTRACT_VERSION,
+    backend_version, build, emit, project, BuildEvent, BuildReporter, BuildRequest, BuildState,
+    CancelToken, CONTRACT_VERSION,
 };
+use biblecompose_config::Settings;
 use biblecompose_diagnostics::Diagnostics;
 use biblecompose_diagnostics::Severity;
 use biblecompose_scripture::fixtures;
-use biblecompose_scripture::plan::BookPlan;
 use biblecompose_scripture::ScriptureDocument;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, Subcommand};
@@ -68,8 +68,12 @@ enum Command {
         #[arg(long, default_value = "john_1_1_5")]
         fixture: String,
         /// Where the PDF goes. Never written until the build succeeds.
-        #[arg(long, short, default_value = "output.pdf")]
-        output: Utf8PathBuf,
+        ///
+        /// Defaults to what the project's settings say (`output.file`,
+        /// relative to the project root), which is `output/bible.pdf` unless
+        /// the project changes it.
+        #[arg(long, short)]
+        output: Option<Utf8PathBuf>,
         /// Project root — relative asset paths resolve against it.
         #[arg(long, default_value = ".")]
         project: Utf8PathBuf,
@@ -100,20 +104,28 @@ enum Command {
 fn document(
     books: Option<&Utf8Path>,
     fixture: &str,
-) -> Result<(ScriptureDocument, Diagnostics), String> {
-    match books {
-        Some(root) => {
-            let loaded = biblecompose_app::project::load(root, &BookPlan::canonical());
-            if loaded.blocked() {
-                for d in loaded.diagnostics.iter() {
-                    eprintln!("{d}");
-                }
-                return Err(format!("{root} cannot be built"));
-            }
-            Ok((loaded.document, loaded.diagnostics))
+) -> Result<(ScriptureDocument, Settings, Diagnostics), String> {
+    let Some(root) = books else {
+        // The fixture path has no folder to read settings from, so it gets the
+        // built-in ones — which is also what CFG-001 promises a folder with no
+        // settings file.
+        return Ok((load(fixture)?, Settings::builtin(), Diagnostics::new()));
+    };
+
+    let (settings, mut diagnostics) = project::settings(root);
+    let (plan, plan_diagnostics) = project::plan(&settings);
+    diagnostics.extend(plan_diagnostics);
+
+    let loaded = project::load(root, &plan);
+    diagnostics.extend(loaded.diagnostics);
+
+    if diagnostics.has_blocking() {
+        for d in diagnostics.iter() {
+            eprintln!("{d}");
         }
-        None => Ok((load(fixture)?, Diagnostics::new())),
+        return Err(format!("{root} cannot be built"));
     }
+    Ok((loaded.document, settings, diagnostics))
 }
 
 fn main() -> ExitCode {
@@ -158,7 +170,7 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             fixture,
             output,
         } => {
-            let (doc, diagnostics) = document(books.as_deref(), &fixture)?;
+            let (doc, _settings, diagnostics) = document(books.as_deref(), &fixture)?;
             for d in diagnostics.iter() {
                 eprintln!("{d}");
             }
@@ -175,7 +187,7 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
         }
 
         Command::Validate { books, fixture } => {
-            let (doc, diagnostics) = document(books.as_deref(), &fixture)?;
+            let (doc, _settings, diagnostics) = document(books.as_deref(), &fixture)?;
             for d in diagnostics.iter() {
                 println!("{d}");
             }
@@ -200,13 +212,22 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             keep_intermediates,
             events,
         } => {
-            let (doc, load_diagnostics) = document(books.as_deref(), &fixture)?;
+            let (doc, settings, load_diagnostics) = document(books.as_deref(), &fixture)?;
             for d in load_diagnostics.iter() {
                 eprintln!("{d}");
             }
+
+            // `--output` wins; otherwise the project's settings say, relative
+            // to the project root (CFG-002).
+            let output = output.unwrap_or_else(|| project.join(settings.output.file.as_path()));
+            // The flag can turn keeping on but not off: a project that has
+            // asked for intermediates is debugging something.
+            let keep = keep_intermediates || *settings.output.keep_intermediates;
+
             let request = BuildRequest::new(project, output)
                 .with_sile_path(sile_path)
-                .keeping_intermediates(keep_intermediates);
+                .keeping_intermediates(keep)
+                .with_settings(settings);
 
             let (mut reporter, rx) = BuildReporter::new();
             let cancel = CancelToken::new();

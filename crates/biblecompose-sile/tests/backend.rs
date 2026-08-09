@@ -42,6 +42,7 @@ fn job_for(name: &str, work: &Utf8PathBuf) -> BackendJob {
         sile_path: vec![class_dir()],
         project_root: biblecompose_testkit::repo_root(),
         class: "biblecompose".to_owned(),
+        class_options: Vec::new(),
     }
 }
 

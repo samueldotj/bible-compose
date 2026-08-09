@@ -10,6 +10,7 @@
 //! is. [ARCHITECTURE §2](../../../docs/ARCHITECTURE.md) puts the arrow from
 //! `biblecompose-app` to both of them and nowhere else.
 
+use biblecompose_config::{ConfigDocument, Settings};
 use biblecompose_diagnostics::{Diagnostic, Diagnostics};
 use biblecompose_project::discover;
 use biblecompose_scripture::normalize::normalize;
@@ -28,6 +29,47 @@ impl Loaded {
     pub fn blocked(&self) -> bool {
         self.diagnostics.blocking().next().is_some()
     }
+}
+
+/// What a project's settings file is called, if it has one.
+pub const SETTINGS_FILE: &str = "biblecompose.toml";
+
+/// Read the project's settings.
+///
+/// CFG-001: a folder with no settings file is the common case and not an
+/// error — it gets the built-in defaults. A settings file that will not parse
+/// is a different matter: the diagnostic blocks the build, so the defaults
+/// returned alongside it are never the ones a PDF gets made from. CFG-003
+/// asks for exactly that, because a publisher whose file has a typo in it
+/// should not get a book laid out to settings they did not write.
+pub fn settings(root: &Utf8Path) -> (Settings, Diagnostics) {
+    let path = root.join(SETTINGS_FILE);
+    if !path.exists() {
+        return (Settings::builtin(), Diagnostics::new());
+    }
+
+    match ConfigDocument::read(&path) {
+        Ok(doc) => biblecompose_config::resolve(Some(&doc)),
+        Err(d) => {
+            let mut diagnostics = Diagnostics::new();
+            diagnostics.push(d);
+            (Settings::builtin(), diagnostics)
+        }
+    }
+}
+
+/// The book plan those settings describe (BOOK-002, BOOK-003).
+///
+/// Separate from [`settings`] because the canon lives in
+/// `biblecompose-scripture` and the settings layer has no business knowing
+/// it — resolving `"MAT"` into a book, and saying which codes do not exist, is
+/// that crate's job.
+pub fn plan(settings: &Settings) -> (BookPlan, Diagnostics) {
+    BookPlan::from_settings(
+        &settings.books.order,
+        settings.books.include.as_ref().map(|i| i.as_slice()),
+        &settings.books.exclude,
+    )
 }
 
 /// Read a project folder into a publication, applying `plan`.

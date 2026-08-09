@@ -27,51 +27,82 @@ local plain = require("classes.plain")
 local class = pl.class(plain)
 class._name = "biblecompose"
 
--- Option values arrive from the document as strings. `SU.boolean` is the
--- coercion upstream is missing; without it "false" selects two columns.
-local function opt (options, key, default)
-   local v = options[key]
-   if v == nil then
-      return default
+-- Every class option in one table, because the same list is needed in three
+-- places — declaring, setting, and initialising — and three hand-kept copies
+-- of a list is three chances for an option to work in one place and be
+-- ignored in another.
+--
+-- The application supplies all of these from resolved settings (CFG-002),
+-- passing them with `-O key=value`. The defaults below are what the class does
+-- on its own, so it remains usable from a bare `sile` command line; the
+-- geometry ones are percentages of the page for that reason, and are what
+-- BibleCompose's own defaults were derived from at 6x9in.
+local OPTIONS = {
+   -- Geometry.
+   { key = "columns", kind = "number", default = 2 },
+   { key = "gutter", kind = "string", default = "3.5%pw" },
+   { key = "margintop", kind = "string", default = "9%ph" },
+   { key = "marginbottom", kind = "string", default = "12%ph" },
+   { key = "margininner", kind = "string", default = "11%pw" },
+   { key = "marginouter", kind = "string", default = "8%pw" },
+   { key = "headsep", kind = "string", default = "4%ph" },
+   { key = "footsep", kind = "string", default = "3%ph" },
+   -- Typography.
+   { key = "fontfamily", kind = "string", default = "DejaVu Serif" },
+   { key = "fontsize", kind = "string", default = "9.2pt" },
+   { key = "leading", kind = "string", default = "11.2pt" },
+   { key = "language", kind = "string", default = "en" },
+   { key = "hyphenate", kind = "boolean", default = true },
+   -- What appears on the page. Each of these hides something the document
+   -- still carries: the model is unchanged and the XML is unchanged, because
+   -- ADR-002 says the document says what and the class says how. Re-running
+   -- with verse numbers back on needs no re-emission.
+   { key = "chapternumbers", kind = "boolean", default = true },
+   { key = "versenumbers", kind = "boolean", default = true },
+   { key = "footnotes", kind = "boolean", default = true },
+   { key = "crossrefs", kind = "boolean", default = true },
+   { key = "runningheads", kind = "boolean", default = true },
+   { key = "headbook", kind = "boolean", default = true },
+   { key = "headref", kind = "boolean", default = true },
+   { key = "folio", kind = "boolean", default = true },
+}
+
+-- Option values arrive as strings. `SU.boolean` is the coercion upstream is
+-- missing; without it "false" is truthy and selects two columns.
+local function coerce (spec, value)
+   if value == nil then
+      return spec.default
    end
-   return v
+   if spec.kind == "number" then
+      return tonumber(value) or spec.default
+   end
+   if spec.kind == "boolean" then
+      return SU.boolean(value, spec.default)
+   end
+   return value
 end
 
 function class:declareOptions ()
    plain.declareOptions(self)
-   for _, key in ipairs({
-      "columns",
-      "gutter",
-      "margintop",
-      "marginbottom",
-      "margininner",
-      "marginouter",
-      "headsep",
-      "footsep",
-   }) do
-      self:declareOption(key, function (_, value)
-         if value then
+   for _, spec in ipairs(OPTIONS) do
+      self:declareOption(spec.key, function (_, value)
+         if value ~= nil then
             -- Coerce here, not in setOptions: plain.setOptions runs these
             -- setters afterwards with the raw document strings, so anything
             -- converted earlier gets overwritten by a string. This is the
             -- same defect as upstream's truthy "false". NOTES.md F-6.
-            self._bcopts[key] = (key == "columns") and (tonumber(value) or 2) or value
+            self._bcopts[spec.key] = coerce(spec, value)
          end
-         return self._bcopts[key]
+         return self._bcopts[spec.key]
       end)
    end
 end
 
 function class:setOptions (options)
    self._bcopts = self._bcopts or {}
-   self._bcopts.columns = tonumber(opt(options, "columns", 2)) or 2
-   self._bcopts.gutter = opt(options, "gutter", "3.5%pw")
-   self._bcopts.margintop = opt(options, "margintop", "9%ph")
-   self._bcopts.marginbottom = opt(options, "marginbottom", "12%ph")
-   self._bcopts.margininner = opt(options, "margininner", "11%pw")
-   self._bcopts.marginouter = opt(options, "marginouter", "8%pw")
-   self._bcopts.headsep = opt(options, "headsep", "4%ph")
-   self._bcopts.footsep = opt(options, "footsep", "3%ph")
+   for _, spec in ipairs(OPTIONS) do
+      self._bcopts[spec.key] = coerce(spec, options[spec.key])
+   end
    plain.setOptions(self, options)
 end
 
@@ -151,16 +182,10 @@ function class:_init (options)
       options.papersize = "6in x 9in"
    end
 
-   self._bcopts = {
-      columns = tonumber(options.columns or 2) or 2,
-      gutter = options.gutter or "3.5%pw",
-      margintop = options.margintop or "9%ph",
-      marginbottom = options.marginbottom or "12%ph",
-      margininner = options.margininner or "11%pw",
-      marginouter = options.marginouter or "8%pw",
-      headsep = options.headsep or "4%ph",
-      footsep = options.footsep or "3%ph",
-   }
+   self._bcopts = {}
+   for _, spec in ipairs(OPTIONS) do
+      self._bcopts[spec.key] = coerce(spec, options[spec.key])
+   end
    self.defaultFrameset = self:_frameset(self._bcopts.margininner, self._bcopts.marginouter)
    self.firstContentFrame = "contentA"
 
@@ -202,6 +227,15 @@ function class:_init (options)
    if self._bcopts.columns >= 2 then
       self:loadPackage("balanced-frames")
       SILE.settings:set("linebreak.tolerance", 9000)
+   end
+
+   -- `folio` is loaded by plain, and the package's own way of being silent is
+   -- this counter flag rather than an option — so turning page numbers off is
+   -- setting it, not skipping the frame. The frame stays: the text block's
+   -- bottom is derived from it, and removing it would move type on the page
+   -- as a side effect of hiding a number.
+   if not self._bcopts.folio then
+      SILE.scratch.counters.folio.off = true
    end
 end
 
@@ -262,15 +296,22 @@ function class:registerCommands ()
       return { SU.ast.contentToString(content) }
    end
 
+   -- Saving the number and printing it are separate, and only printing is
+   -- optional: the running head's reference range is a different setting, and
+   -- a page whose verse numbers are hidden still knows which verses are on it.
    self:registerCommand("bc:verse", function (options, content)
-      SILE.call("bc:verse-number", options, content)
+      if self._bcopts.versenumbers then
+         SILE.call("bc:verse-number", options, content)
+      end
       SILE.call("save-verse-number", options, flat(content))
       self:_setheads()
    end)
 
    self:registerCommand("bc:chapter", function (options, content)
       SILE.call("save-chapter-number", options, flat(content))
-      SILE.call("bc:chapter-number", options, content)
+      if self._bcopts.chapternumbers then
+         SILE.call("bc:chapter-number", options, content)
+      end
       self:_setheads()
    end)
 
@@ -300,7 +341,9 @@ end
 -- ---------------------------------------------------------------------------
 
 local styles = {
-   body = { family = "DejaVu Serif", size = "9.2pt", leading = "11.2pt" },
+   -- The body font used to live here. It is a class option now, because it is
+   -- the first thing a publisher changes and CFG-002 requires that to come
+   -- from settings; the rest follow at P3.1.
    heading = {
       s = { size = "10.2pt", weight = 600, above = "7pt", below = "1pt" },
       r = { size = "7.6pt", style = "italic", above = "1pt", below = "3pt" },
@@ -357,8 +400,19 @@ function class:registerXmlCommands ()
                .. " — the application and the class must be released together"
          )
       end
-      SILE.call("font", styles.body)
-      SILE.settings:set("document.baselineskip", SILE.types.node.vglue(styles.body.leading))
+      local o = self._bcopts
+      -- The body font comes from settings, not from `styles`. Everything else
+      -- in `styles` is sized relative to it in spirit but not yet in code —
+      -- P3.1 makes the rest overridable and can then express them as ratios.
+      SILE.call("font", { family = o.fontfamily, size = o.fontsize })
+      SILE.settings:set("document.baselineskip", SILE.types.node.vglue(o.leading))
+
+      -- Hyphenation is per-language in SILE, and the way to have none is a
+      -- language with no patterns. "und" is that language, and saying so
+      -- here keeps the whole of it in one place rather than reaching into
+      -- the hyphenator.
+      SILE.settings:set("document.language", o.hyphenate and o.language or "und")
+
       elements(content)
    end)
 
@@ -487,7 +541,13 @@ function class:registerXmlCommands ()
       end)
    end)
 
+   -- Hidden rather than omitted from the document: a publisher who turns
+   -- footnotes back on gets them without a re-emission, and the application's
+   -- warning about an unsupported marker inside a note stays true either way.
    self:registerCommand("note", function (_, content)
+      if not self._bcopts.footnotes then
+         return
+      end
       SILE.call("footnote", {}, function ()
          SILE.call("font", { size = styles.note.size }, function ()
             elements(content)
@@ -496,6 +556,9 @@ function class:registerXmlCommands ()
    end)
 
    self:registerCommand("xref", function (_, content)
+      if not self._bcopts.crossrefs then
+         return
+      end
       SILE.call("footnote", {}, function ()
          SILE.call("font", { size = styles.xref.size, style = styles.xref.style }, function ()
             SILE.process(content)
@@ -534,14 +597,23 @@ function class:registerXmlCommands ()
 end
 
 function class:_setheads ()
-   local book = SILE.scratch.chapterverse and SILE.scratch.chapterverse.book
+   local o = self._bcopts
+   -- Nothing is registered at all when running heads are off, so `endPage`
+   -- has no content to typeset and the frame is simply never filled.
+   if not o.runningheads then
+      return
+   end
+
+   local book = o.headbook and SILE.scratch.chapterverse and SILE.scratch.chapterverse.book
    local headfont = { size = "8.2pt", style = "italic" }
    SILE.call("left-running-head", {}, function ()
       SILE.settings:temporarily(function ()
          SILE.settings:set("document.lskip", SILE.types.node.glue())
          SILE.settings:set("document.rskip", SILE.types.node.glue())
          SILE.call("font", headfont, function ()
-            SILE.call("page-reference-range")
+            if o.headref then
+               SILE.call("page-reference-range")
+            end
             SILE.call("hfill")
             if book then
                SILE.typesetter:typeset(tostring(book))
@@ -560,7 +632,9 @@ function class:_setheads ()
                SILE.typesetter:typeset(tostring(book))
             end
             SILE.call("hfill")
-            SILE.call("page-reference-range")
+            if o.headref then
+               SILE.call("page-reference-range")
+            end
          end)
          SILE.typesetter:leaveHmode()
       end)

@@ -18,7 +18,9 @@
 //!
 //! [ADR-005]: ../../../docs/adr/005-provenance.md
 
-use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, SourceLoc};
+use std::collections::BTreeSet;
+
+use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, Severity, SourceLoc};
 use camino::Utf8PathBuf;
 
 use crate::document::{ConfigDocument, Located, Node};
@@ -48,6 +50,11 @@ pub fn defaults() -> ConfigDocument {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Settings {
+    /// CFG-004: whether a key this release does not recognise stops the build
+    /// rather than warning. Off by default, because a settings file written
+    /// for a later release should degrade rather than fail; on for a publisher
+    /// who would rather find out.
+    pub strict: Sourced<bool>,
     pub project: Project,
     pub books: Books,
     pub page: Page,
@@ -153,12 +160,14 @@ pub fn resolve(project: Option<&ConfigDocument>) -> (Settings, Diagnostics) {
         defaults: &defaults,
         project: None,
         diagnostics: Diagnostics::new(),
+        asked: BTreeSet::new(),
     };
 
     // The version gate runs before anything else is read, and closes the
     // project file rather than merely warning about it. ARCHITECTURE §6: "an
     // unknown version is one clear diagnostic instead of a cascade of unknown
     // field errors" — which is only true if the cascade never happens.
+    r.asked.insert("schema_version".to_owned());
     if let Some(doc) = project {
         if check_schema_version(doc, &mut r.diagnostics) {
             r.project = Some(doc);
@@ -166,6 +175,7 @@ pub fn resolve(project: Option<&ConfigDocument>) -> (Settings, Diagnostics) {
     }
 
     let settings = Settings {
+        strict: r.value("strict", |n| n.boolean()),
         project: Project {
             name: r.optional("project.name", |n| n.string()),
             language: r.value("project.language", |n| n.string()),
@@ -216,7 +226,98 @@ pub fn resolve(project: Option<&ConfigDocument>) -> (Settings, Diagnostics) {
         },
     };
 
+    // CFG-004, last: everything the file said that nothing above asked for.
+    // After resolution rather than during, because `asked` is only complete
+    // once every field has been read.
+    if let Some(doc) = r.project {
+        let severity = if *settings.strict {
+            Severity::Error
+        } else {
+            Severity::Warning
+        };
+        report_unknown_keys(doc, &r.asked, severity, &mut r.diagnostics);
+    }
+
     (settings, r.diagnostics)
+}
+
+/// Report every key in the project file that resolution never looked for.
+///
+/// The set of legal keys is *what the resolver asked for*, not a list written
+/// out separately. A second list is a second thing to update when a setting is
+/// added, and when it is forgotten the result is a warning about a key that
+/// works — which is how a publisher learns to ignore warnings.
+fn report_unknown_keys(
+    doc: &ConfigDocument,
+    asked: &BTreeSet<String>,
+    severity: Severity,
+    diagnostics: &mut Diagnostics,
+) {
+    fn walk(
+        table: &crate::document::Table<'_>,
+        asked: &BTreeSet<String>,
+        severity: Severity,
+        diagnostics: &mut Diagnostics,
+    ) {
+        for name in table.names() {
+            let Some(node) = table.get(name) else {
+                continue;
+            };
+            let path = node.dotted_path().to_owned();
+
+            if asked.contains(&path) {
+                continue;
+            }
+
+            // A table we know part of — `[page]` with a typo in it — is
+            // descended into, so the complaint lands on the stray key. A table
+            // we know nothing about is reported once, at its header: eight
+            // warnings about the inside of `[gribble]` say less than one about
+            // `[gribble]`.
+            let prefix = format!("{path}.");
+            let known_within = asked.iter().any(|k| k.starts_with(&prefix));
+            if known_within {
+                if let Ok(inner) = node.table() {
+                    walk(&inner, asked, severity, diagnostics);
+                    continue;
+                }
+            }
+
+            diagnostics.push(
+                Diagnostic::new(
+                    severity,
+                    code::UNKNOWN_KEY,
+                    format!("`{path}` is not a setting this release recognises"),
+                )
+                .at(node.loc())
+                .help(match nearest_setting(&path, asked) {
+                    Some(near) => format!("did you mean `{near}`?"),
+                    None => "remove it, or check the spelling against the settings \
+                             documentation"
+                        .to_owned(),
+                }),
+            );
+        }
+    }
+
+    walk(
+        &doc.root().table().expect("a document root is a table"),
+        asked,
+        severity,
+        diagnostics,
+    );
+}
+
+/// The closest known key, if it is close enough to be a slip. Compared on the
+/// whole dotted path, so `page.wdith` finds `page.width` and does not offer
+/// `books.order`.
+fn nearest_setting(given: &str, asked: &BTreeSet<String>) -> Option<String> {
+    asked
+        .iter()
+        .map(|k| (value::distance(given, k), k))
+        .filter(|(d, _)| *d <= 2)
+        .min_by_key(|(d, _)| *d)
+        .map(|(_, k)| k.clone())
 }
 
 /// True if the project file may be read.
@@ -286,6 +387,14 @@ struct Resolver<'a> {
     defaults: &'a ConfigDocument,
     project: Option<&'a ConfigDocument>,
     diagnostics: Diagnostics,
+    /// Every key this resolution looked for.
+    ///
+    /// CFG-004's "unknown key" is defined against *this* rather than against a
+    /// list of legal keys written out somewhere else. A second list is a
+    /// second thing to update when a setting is added, and the failure when it
+    /// is forgotten is a warning about a key that works perfectly well —
+    /// which teaches a publisher to ignore the warnings.
+    asked: BTreeSet<String>,
 }
 
 impl Resolver<'_> {
@@ -295,6 +404,7 @@ impl Resolver<'_> {
         key: &str,
         read: impl Fn(&Node<'_>) -> Result<Located<T>, Diagnostic>,
     ) -> Sourced<T> {
+        self.asked.insert(key.to_owned());
         if let Some(located) = self.read_project(key, &read) {
             return Sourced::from_file(located);
         }
@@ -307,6 +417,7 @@ impl Resolver<'_> {
         key: &str,
         read: impl Fn(&Node<'_>) -> Result<Located<T>, Diagnostic>,
     ) -> Option<Sourced<T>> {
+        self.asked.insert(key.to_owned());
         // The defaults file may still carry one, so a future release can give
         // an optional field a value without changing this code.
         if let Some(located) = self.read_project(key, &read) {
@@ -321,6 +432,7 @@ impl Resolver<'_> {
     /// something about Matthew and John, and DIA-002 wants every bad element
     /// named rather than the first.
     fn list(&mut self, key: &str) -> Sourced<Vec<String>> {
+        self.asked.insert(key.to_owned());
         match self.project_list(key) {
             Some(sourced) => sourced,
             None => Sourced::builtin(self.read_default(key, &read_strings)),
@@ -328,6 +440,7 @@ impl Resolver<'_> {
     }
 
     fn optional_list(&mut self, key: &str) -> Option<Sourced<Vec<String>>> {
+        self.asked.insert(key.to_owned());
         if let Some(sourced) = self.project_list(key) {
             return Some(sourced);
         }

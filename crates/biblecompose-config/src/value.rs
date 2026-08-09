@@ -457,8 +457,9 @@ fn nearest<'a>(given: &str, candidates: impl Iterator<Item = &'a str>) -> Option
         .map(|(_, c)| c)
 }
 
-/// Levenshtein distance, two rows at a time.
-fn distance(a: &str, b: &str) -> usize {
+/// Levenshtein distance, two rows at a time. Shared with the unknown-key
+/// walk in `settings`, which suggests the nearest key for the same reason.
+pub(crate) fn distance(a: &str, b: &str) -> usize {
     let (a, b): (Vec<char>, Vec<char>) = (a.chars().collect(), b.chars().collect());
     let mut prev: Vec<usize> = (0..=b.len()).collect();
     let mut cur = vec![0; b.len() + 1];

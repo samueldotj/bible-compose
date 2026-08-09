@@ -12,6 +12,11 @@
 
 schema_version = 1
 
+# CFG-004: a key this release does not recognise is a warning. Turn this on to
+# make it stop the build instead — worth doing in a publishing pipeline, where
+# a silently ignored setting is a book printed wrong.
+strict = false
+
 [project]
 # `name` is deliberately absent. There is no default publication name that is
 # right for anybody, so an unset name means "use the project folder's name".

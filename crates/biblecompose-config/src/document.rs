@@ -475,16 +475,6 @@ impl<'a> Table<'a> {
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
-
-    /// Every key present that is not in `known`, as nodes positioned at their
-    /// own keys. The raw material for CFG-004 at P2.5.
-    pub fn unknown_keys(&self, known: &[&str]) -> Vec<Node<'a>> {
-        self.names()
-            .into_iter()
-            .filter(|name| !known.contains(name))
-            .filter_map(|name| self.get(name))
-            .collect()
-    }
 }
 
 fn join(prefix: &str, key: &str) -> String {

@@ -204,18 +204,20 @@ fn a_bad_element_does_not_hide_the_rest_of_the_array() {
     assert!(errors[0].message.contains("books.order[1]"));
 }
 
-/// The raw material for CFG-004 at P2.5: stray keys, each at its own key.
+/// The raw material for CFG-004: what a table actually contains, and where
+/// each of those keys is. The schema walk in P2.5 is built from these two.
 #[test]
-fn unknown_keys_come_back_with_their_positions() {
+fn a_table_reports_the_keys_it_has_and_where_they_are() {
     let doc = parse(SETTINGS);
     let page = doc.find("page").unwrap().table().unwrap();
 
-    assert_eq!(page.names(), ["size", "width", "margin"], "in file order");
+    // File order rather than sorted, because a list of complaints reads best
+    // in the order a person would scroll past them.
+    assert_eq!(page.names(), ["size", "width", "margin"]);
+    assert!(page.contains("margin") && !page.contains("wdith"));
 
-    let stray = page.unknown_keys(&["size", "margin"]);
-    assert_eq!(stray.len(), 1);
-    assert_eq!(stray[0].dotted_path(), "page.width");
-    assert_eq!(stray[0].loc().line, Some(6));
+    assert_eq!(page.get("width").unwrap().loc().line, Some(6));
+    assert_eq!(page.get("width").unwrap().dotted_path(), "page.width");
 }
 
 #[test]

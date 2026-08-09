@@ -184,7 +184,7 @@ project biblecompose.toml / styles.toml   ← parsed once, by toml_edit
 ResolvedSettings / ResolvedStyles         ← every value carries its origin
 ```
 
-**One parse, by `toml_edit`.** The format-preserving document is the only parse; the typed view is derived from it. This gives four things at once: CFG-006 upgraded from "where practical" to actual comment and ordering preservation on write; CFG-003's line and column on a syntax error; CFG-004's unknown-key detection as a walk of the document against the schema, with a span per stray key; and a single place where a GUI edit turns into a file mutation.
+**One parse, by `toml_edit`.** The format-preserving document is the only parse; the typed view is derived from it. This gives four things at once: CFG-006 upgraded from "where practical" to actual comment and ordering preservation on write; CFG-003's line and column on a syntax error; CFG-004's unknown-key detection as a walk of the document against *what resolution asked for* — not a separately written list of legal keys, which is a second thing to update when a setting is added — with a span per stray key; and a single place where a GUI edit turns into a file mutation.
 
 **Every resolved value carries its origin** ([ADR-005](adr/005-provenance.md)):
 

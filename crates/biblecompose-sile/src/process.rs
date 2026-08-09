@@ -29,12 +29,34 @@ const CANCEL_POLL: Duration = Duration::from_millis(50);
 /// SILE (SILE-004).
 pub const SILE_ENV: &str = "BIBLECOMPOSE_SILE";
 
+/// Extra class and package directories, path-separated.
+///
+/// The companion to [`SILE_ENV`], and needed for the same reason: SILE-004
+/// lets a developer swap the *executable* without rebuilding the bundle, and
+/// the class is released with the application, so swapping one without the
+/// other leaves a new class option being read by an old class — which SILE
+/// reports as "attempted to set an undeclared class option", a message about
+/// the wrong thing entirely.
+///
+/// Highest priority of everything, because that is what an override means.
+pub const SILE_PATH_ENV: &str = "BIBLECOMPOSE_SILE_PATH";
+
 #[derive(Debug, Clone)]
 pub struct SileBackend {
     exe: Utf8PathBuf,
     /// Set when the backend came from the embedded bundle. An unpacked runtime
     /// cannot be found by SILE on its own — see [`RuntimeEnv`].
     runtime: Option<RuntimeEnv>,
+}
+
+/// Whether a directory holds SILE's own Lua tree rather than just an
+/// executable.
+///
+/// `core/pathsetup.lua` is the file SILE loads before anything else, and the
+/// one whose absence produces "cannot open ./core/pathsetup.lua" — so it is
+/// both the marker and the thing being fixed.
+fn self_contained(dir: &Utf8Path) -> bool {
+    dir.join("core").join("pathsetup.lua").exists()
 }
 
 impl SileBackend {
@@ -69,7 +91,20 @@ impl SileBackend {
         if let Ok(p) = std::env::var(SILE_ENV) {
             let path = Utf8PathBuf::from(p);
             if path.exists() {
-                return Ok(SileBackend::new(path));
+                // A SILE that carries its own tree — an unpacked bundle, or a
+                // build directory — cannot find its Lua unless it is told
+                // where. Without this the override answers SILE-002's "the
+                // backend did not report a version", which is a true statement
+                // about a backend that is sitting right there and works.
+                //
+                // A system install has nothing beside it and gets no
+                // environment, which is what it wants: its paths are compiled
+                // in and inventing some would override them.
+                let dir = path.parent().unwrap_or(&path).to_owned();
+                return Ok(match self_contained(&dir) {
+                    true => SileBackend::unpacked(path, RuntimeEnv::for_root(&dir)),
+                    false => SileBackend::new(path),
+                });
             }
             return Err(Diagnostic::error(
                 code::NOT_FOUND,
@@ -219,6 +254,15 @@ impl Backend for SileBackend {
             sile_path.push(rt.sile_path.as_str());
         }
         sile_path.extend(job.sile_path.iter().map(|p| p.as_str()));
+
+        // Last, so it outranks both.
+        let override_path = std::env::var(SILE_PATH_ENV).unwrap_or_default();
+        sile_path.extend(
+            override_path
+                .split(path_separator())
+                .map(str::trim)
+                .filter(|s| !s.is_empty()),
+        );
         if !sile_path.is_empty() {
             cmd.env("SILE_PATH", sile_path.join(path_separator()));
         }

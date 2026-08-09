@@ -17,7 +17,7 @@
 //! pinned to 6×9in for ever, and the publisher who clicked "reset" did not ask
 //! for that.
 
-use biblecompose_diagnostics::{code, Diagnostic, SourceLoc};
+use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, SourceLoc};
 use camino::{Utf8Path, Utf8PathBuf};
 use toml_edit::{DocumentMut, Item, Table, Value};
 
@@ -94,6 +94,7 @@ impl SettingValue {
 /// Made from a [`ConfigDocument`], which it consumes: reading gives spans and
 /// editing destroys them, and the two are different types so a location taken
 /// before an edit cannot be used after one.
+#[derive(Clone)]
 pub struct SettingsFile {
     path: Utf8PathBuf,
     doc: DocumentMut,
@@ -208,6 +209,55 @@ impl SettingsFile {
         )
         .at(SourceLoc::file(path.to_owned()))
         .detail(e.to_string())
+    }
+}
+
+/// Set a key only if the file still resolves cleanly afterwards.
+///
+/// A form field is text, and text can say `"quarto"`. Validating it here would
+/// mean a second opinion about what a page size is; instead the edit is made
+/// on a copy, the copy is resolved by the same reader that resolves a
+/// hand-written file, and the edit is kept only if it introduced no complaint
+/// that was not there before.
+///
+/// "Not there before" rather than "no complaints at all", because a file may
+/// already have a problem elsewhere and a publisher must still be able to fix
+/// *this* field. On refusal the file is untouched and the new diagnostics are
+/// returned — they are what the field shows.
+pub fn set_validated(
+    file: &mut SettingsFile,
+    key: &str,
+    value: SettingValue,
+) -> Result<(), Diagnostics> {
+    let before = complaints(&file.to_toml(), file.path());
+
+    let mut trial = file.clone();
+    trial.set(key, value);
+    let after = complaints(&trial.to_toml(), file.path());
+
+    let mut fresh = Diagnostics::new();
+    for d in after {
+        if !before
+            .iter()
+            .any(|b| b.code == d.code && b.message == d.message)
+        {
+            fresh.push(d);
+        }
+    }
+    if !fresh.is_empty() {
+        return Err(fresh);
+    }
+
+    *file = trial;
+    Ok(())
+}
+
+/// Every diagnostic a settings text produces, including the parse error if it
+/// does not parse at all.
+fn complaints(toml: &str, path: &Utf8Path) -> Vec<Diagnostic> {
+    match ConfigDocument::parse(path.to_owned(), toml.to_owned()) {
+        Ok(doc) => crate::settings::resolve(Some(&doc)).1.into_iter().collect(),
+        Err(d) => vec![d],
     }
 }
 

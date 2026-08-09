@@ -89,6 +89,27 @@ impl Book {
         }
     }
 
+    /// How many chapters this book contains.
+    ///
+    /// Counted rather than stored, because SCR-001 makes a chapter an anchor
+    /// inside a paragraph and not a container — there is no list of chapters
+    /// to take a length of, and a second field holding the number would be a
+    /// field that can disagree with the content.
+    ///
+    /// Distinct numbers, not occurrences: a chapter marker repeated by mistake
+    /// is a parser diagnostic, not two chapters.
+    pub fn chapter_count(&self) -> usize {
+        let mut seen = std::collections::BTreeSet::new();
+        for block in &self.blocks {
+            block.each_inline(&mut |inline| {
+                if let Inline::Chapter { number, .. } = inline {
+                    seen.insert(*number);
+                }
+            });
+        }
+        seen.len()
+    }
+
     fn write_text(&self, out: &mut String) {
         for block in &self.blocks {
             block.write_text(out);
@@ -161,6 +182,31 @@ pub enum Block {
 }
 
 impl Block {
+    /// Every inline in this block, including the ones nested inside character
+    /// spans, notes and cross-references.
+    ///
+    /// The third walker over this shape, and the first one general enough to
+    /// share. `write_text` and `collect_unsupported` predate it and each want
+    /// something slightly different from the traversal; this exists because
+    /// counting chapters wanted a third slightly different thing, and three
+    /// hand-written descents is where a missed variant starts costing.
+    pub fn each_inline(&self, f: &mut impl FnMut(&Inline)) {
+        match self {
+            Block::Paragraph { content, .. }
+            | Block::Poetry { content, .. }
+            | Block::Heading { content, .. }
+            | Block::ListItem { content, .. } => each_inline(content, f),
+            Block::Table { rows } => {
+                for row in rows {
+                    for cell in &row.cells {
+                        each_inline(&cell.content, f);
+                    }
+                }
+            }
+            Block::Figure(_) | Block::Break => {}
+        }
+    }
+
     fn write_text(&self, out: &mut String) {
         match self {
             Block::Paragraph { content, .. }
@@ -244,6 +290,25 @@ pub enum Inline {
     Milestone(Milestone),
     /// Diagnosed, never silently dropped (FUN-003).
     Unsupported(Unsupported),
+}
+
+/// Depth-first, parents before children, so a caller can stop at whatever
+/// depth it cares about by ignoring the rest.
+fn each_inline(items: &[Inline], f: &mut impl FnMut(&Inline)) {
+    for item in items {
+        f(item);
+        match item {
+            Inline::Char { content, .. } => each_inline(content, f),
+            Inline::Ref(r) => each_inline(&r.content, f),
+            Inline::Note(n) => {
+                for block in &n.content {
+                    block.each_inline(f);
+                }
+            }
+            Inline::Text(_) | Inline::Chapter { .. } | Inline::Verse { .. } => {}
+            Inline::Milestone(_) | Inline::Unsupported(_) => {}
+        }
+    }
 }
 
 fn write_inlines(items: &[Inline], out: &mut String) {

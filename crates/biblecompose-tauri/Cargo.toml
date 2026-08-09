@@ -19,10 +19,15 @@ crate-type = ["lib", "cdylib", "staticlib"]
 [dependencies]
 biblecompose-scripture.workspace = true
 biblecompose-app.workspace = true
+biblecompose-config.workspace = true
 biblecompose-diagnostics.workspace = true
 camino.workspace = true
 serde.workspace = true
 tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2.7.2"
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

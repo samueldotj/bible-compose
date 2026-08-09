@@ -19,3 +19,12 @@ h1 {
   margin-block-start: 1rem;
   opacity: 0.8;
 }
+
+h2 {
+  margin-block: 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.pane {
+  min-inline-size: 0;
+}

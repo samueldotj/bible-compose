@@ -8,12 +8,14 @@
 
 pub mod document;
 pub mod edit;
+pub mod form;
 pub mod provenance;
 pub mod settings;
 pub mod value;
 
 pub use document::{ConfigDocument, Located, Node, Table};
-pub use edit::{SettingValue, SettingsFile};
+pub use edit::{set_validated, SettingValue, SettingsFile};
+pub use form::{Field, Kind};
 pub use provenance::{Origin, Provenance, Sourced};
 pub use settings::{known_keys, resolve, Settings, SCHEMA_VERSION};
 pub use value::{Length, PageSize, Unit};

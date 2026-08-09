@@ -1,7 +1,12 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "What the main window is permitted to do. Deliberately small: every addition here widens what a compromised frontend could reach, and BibleCompose's frontend renders content that arrived by email.",
-  "windows": ["main"],
-  "permissions": ["core:default"]
+  "description": "What the main window is permitted to do. Deliberately small: every addition here widens what a compromised frontend could reach, and BibleCompose's frontend renders content that arrived by email. `dialog:allow-open` is the folder picker and nothing else -- not save, not message, not ask -- because choosing a project is the one thing the window needs the filesystem for.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "dialog:allow-open"
+  ]
 }

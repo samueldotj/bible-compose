@@ -16,7 +16,7 @@ use biblecompose_project::discover;
 use biblecompose_scripture::normalize::normalize;
 use biblecompose_scripture::plan::BookPlan;
 use biblecompose_scripture::{BookSource, ScriptureDocument};
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 
 /// What a project folder holds, as a publication.
 pub struct Loaded {
@@ -70,6 +70,56 @@ pub fn plan(settings: &Settings) -> (BookPlan, Diagnostics) {
         settings.books.include.as_ref().map(|i| i.as_slice()),
         &settings.books.exclude,
     )
+}
+
+/// A project folder, opened: its settings, its books, and everything either
+/// of them had to say about it.
+///
+/// The composition the CLI and the window both need, in the one crate allowed
+/// to orchestrate. Without it each of them would call [`settings`], [`plan`]
+/// and [`load`] in the right order and merge three sets of diagnostics — the
+/// same four lines, twice, and a chance for the two to disagree about what
+/// opening a project means.
+pub struct Opened {
+    pub root: Utf8PathBuf,
+    pub settings: Settings,
+    pub document: ScriptureDocument,
+    pub diagnostics: Diagnostics,
+}
+
+impl Opened {
+    /// Whether anything found makes a build impossible.
+    pub fn blocked(&self) -> bool {
+        self.diagnostics.has_blocking()
+    }
+
+    /// Where the PDF goes unless the caller says otherwise (CFG-002).
+    pub fn output(&self) -> Utf8PathBuf {
+        self.root.join(self.settings.output.file.as_path())
+    }
+}
+
+/// Read the settings, then the books the settings select.
+///
+/// Every stage runs even when an earlier one produced errors (DIA-002) —
+/// except that a settings file which will not parse closes itself, which
+/// [`settings`] handles by returning the built-in values alongside a blocking
+/// diagnostic.
+pub fn open(root: &Utf8Path) -> Opened {
+    let (settings, mut diagnostics) = settings(root);
+
+    let (book_plan, plan_diagnostics) = plan(&settings);
+    diagnostics.extend(plan_diagnostics);
+
+    let loaded = load(root, &book_plan);
+    diagnostics.extend(loaded.diagnostics);
+
+    Opened {
+        root: root.to_owned(),
+        settings,
+        document: loaded.document,
+        diagnostics,
+    }
 }
 
 /// Read a project folder into a publication, applying `plan`.

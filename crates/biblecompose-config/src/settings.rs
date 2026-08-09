@@ -24,7 +24,7 @@ use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, Severity, SourceLo
 use camino::Utf8PathBuf;
 
 use crate::document::{ConfigDocument, Located, Node};
-use crate::provenance::Sourced;
+use crate::provenance::{Provenance, Sourced};
 use crate::value::{self, Length, PageSize};
 
 /// The settings vocabulary this release speaks.
@@ -50,6 +50,14 @@ pub fn defaults() -> ConfigDocument {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Settings {
+    /// Where every value above came from, by key ([ADR-005]).
+    ///
+    /// The typed fields carry their own origin; this is the string-keyed index
+    /// over them, for the two callers that cannot name a field at compile
+    /// time — the inspector and reset-to-default.
+    ///
+    /// [ADR-005]: ../../../docs/adr/005-provenance.md
+    pub provenance: Provenance,
     /// CFG-004: whether a key this release does not recognise stops the build
     /// rather than warning. Off by default, because a settings file written
     /// for a later release should degrade rather than fail; on for a publisher
@@ -149,6 +157,26 @@ impl Settings {
     }
 }
 
+/// Every settings key this release understands, in key order.
+///
+/// Derived by running resolution with no project file and keeping the list of
+/// keys it asked for, so it is the same list CFG-004 checks against and the
+/// same list the GUI can enumerate. There is no separately written schema to
+/// fall out of step with.
+pub fn known_keys() -> BTreeSet<String> {
+    let defaults = defaults();
+    let mut r = Resolver {
+        defaults: &defaults,
+        project: None,
+        diagnostics: Diagnostics::new(),
+        provenance: Provenance::default(),
+        asked: BTreeSet::new(),
+    };
+    r.asked.insert("schema_version".to_owned());
+    let _ = resolve_fields(&mut r);
+    r.asked
+}
+
 /// Merge the embedded defaults with a project file, field by field.
 ///
 /// Never fails. A settings file cannot be so wrong that there is no answer,
@@ -160,6 +188,7 @@ pub fn resolve(project: Option<&ConfigDocument>) -> (Settings, Diagnostics) {
         defaults: &defaults,
         project: None,
         diagnostics: Diagnostics::new(),
+        provenance: Provenance::default(),
         asked: BTreeSet::new(),
     };
 
@@ -174,57 +203,9 @@ pub fn resolve(project: Option<&ConfigDocument>) -> (Settings, Diagnostics) {
         }
     }
 
-    let settings = Settings {
-        strict: r.value("strict", |n| n.boolean()),
-        project: Project {
-            name: r.optional("project.name", |n| n.string()),
-            language: r.value("project.language", |n| n.string()),
-        },
-        books: Books {
-            order: r.list("books.order"),
-            include: r.optional_list("books.include"),
-            exclude: r.list("books.exclude"),
-        },
-        page: Page {
-            size: r.value("page.size", value::page_size),
-            columns: r.value("page.columns", |n| {
-                value::integer_in(n, 1, MAX_COLUMNS).map(|l| l.map(|v| v as u8))
-            }),
-            margin_top: r.value("page.margin_top", value::length_or_zero),
-            margin_bottom: r.value("page.margin_bottom", value::length_or_zero),
-            margin_inner: r.value("page.margin_inner", value::length_or_zero),
-            margin_outer: r.value("page.margin_outer", value::length_or_zero),
-            column_gap: r.value("page.column_gap", value::length_or_zero),
-            header_gap: r.value("page.header_gap", value::length_or_zero),
-            footer_gap: r.value("page.footer_gap", value::length_or_zero),
-        },
-        typography: Typography {
-            font_family: r.value("typography.font_family", |n| n.string()),
-            font_size: r.value("typography.font_size", value::length),
-            leading: r.value("typography.leading", value::length),
-            hyphenation: r.value("typography.hyphenation", |n| n.boolean()),
-        },
-        numbering: Numbering {
-            show_chapter_numbers: r.value("numbering.show_chapter_numbers", |n| n.boolean()),
-            show_verse_numbers: r.value("numbering.show_verse_numbers", |n| n.boolean()),
-        },
-        notes: Notes {
-            show_footnotes: r.value("notes.show_footnotes", |n| n.boolean()),
-            show_cross_references: r.value("notes.show_cross_references", |n| n.boolean()),
-        },
-        headers: Headers {
-            enabled: r.value("headers.enabled", |n| n.boolean()),
-            show_book_name: r.value("headers.show_book_name", |n| n.boolean()),
-            show_reference_range: r.value("headers.show_reference_range", |n| n.boolean()),
-            show_page_number: r.value("headers.show_page_number", |n| n.boolean()),
-        },
-        output: Output {
-            file: r.value("output.file", |n| {
-                n.string().map(|l| l.map(Utf8PathBuf::from))
-            }),
-            keep_intermediates: r.value("output.keep_intermediates", |n| n.boolean()),
-        },
-    };
+    let mut settings = resolve_fields(&mut r);
+
+    settings.provenance = std::mem::take(&mut r.provenance);
 
     // CFG-004, last: everything the file said that nothing above asked for.
     // After resolution rather than during, because `asked` is only complete
@@ -320,6 +301,66 @@ fn nearest_setting(given: &str, asked: &BTreeSet<String>) -> Option<String> {
         .map(|(_, k)| k.clone())
 }
 
+/// The fields, read in order. Split out of [`resolve`] so that
+/// [`known_keys`] can run the same reads without a project file and keep only
+/// the list of keys they asked for.
+fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
+    Settings {
+        // Filled in below: resolution has to finish before the index over it
+        // is complete.
+        provenance: Provenance::default(),
+        strict: r.value("strict", |n| n.boolean()),
+        project: Project {
+            name: r.optional("project.name", |n| n.string()),
+            language: r.value("project.language", |n| n.string()),
+        },
+        books: Books {
+            order: r.list("books.order"),
+            include: r.optional_list("books.include"),
+            exclude: r.list("books.exclude"),
+        },
+        page: Page {
+            size: r.value("page.size", value::page_size),
+            columns: r.value("page.columns", |n| {
+                value::integer_in(n, 1, MAX_COLUMNS).map(|l| l.map(|v| v as u8))
+            }),
+            margin_top: r.value("page.margin_top", value::length_or_zero),
+            margin_bottom: r.value("page.margin_bottom", value::length_or_zero),
+            margin_inner: r.value("page.margin_inner", value::length_or_zero),
+            margin_outer: r.value("page.margin_outer", value::length_or_zero),
+            column_gap: r.value("page.column_gap", value::length_or_zero),
+            header_gap: r.value("page.header_gap", value::length_or_zero),
+            footer_gap: r.value("page.footer_gap", value::length_or_zero),
+        },
+        typography: Typography {
+            font_family: r.value("typography.font_family", |n| n.string()),
+            font_size: r.value("typography.font_size", value::length),
+            leading: r.value("typography.leading", value::length),
+            hyphenation: r.value("typography.hyphenation", |n| n.boolean()),
+        },
+        numbering: Numbering {
+            show_chapter_numbers: r.value("numbering.show_chapter_numbers", |n| n.boolean()),
+            show_verse_numbers: r.value("numbering.show_verse_numbers", |n| n.boolean()),
+        },
+        notes: Notes {
+            show_footnotes: r.value("notes.show_footnotes", |n| n.boolean()),
+            show_cross_references: r.value("notes.show_cross_references", |n| n.boolean()),
+        },
+        headers: Headers {
+            enabled: r.value("headers.enabled", |n| n.boolean()),
+            show_book_name: r.value("headers.show_book_name", |n| n.boolean()),
+            show_reference_range: r.value("headers.show_reference_range", |n| n.boolean()),
+            show_page_number: r.value("headers.show_page_number", |n| n.boolean()),
+        },
+        output: Output {
+            file: r.value("output.file", |n| {
+                n.string().map(|l| l.map(Utf8PathBuf::from))
+            }),
+            keep_intermediates: r.value("output.keep_intermediates", |n| n.boolean()),
+        },
+    }
+}
+
 /// True if the project file may be read.
 fn check_schema_version(doc: &ConfigDocument, diagnostics: &mut Diagnostics) -> bool {
     let Some(node) = doc.find("schema_version") else {
@@ -387,6 +428,7 @@ struct Resolver<'a> {
     defaults: &'a ConfigDocument,
     project: Option<&'a ConfigDocument>,
     diagnostics: Diagnostics,
+    provenance: Provenance,
     /// Every key this resolution looked for.
     ///
     /// CFG-004's "unknown key" is defined against *this* rather than against a
@@ -405,10 +447,12 @@ impl Resolver<'_> {
         read: impl Fn(&Node<'_>) -> Result<Located<T>, Diagnostic>,
     ) -> Sourced<T> {
         self.asked.insert(key.to_owned());
-        if let Some(located) = self.read_project(key, &read) {
-            return Sourced::from_file(located);
-        }
-        Sourced::builtin(self.read_default(key, &read))
+        let sourced = match self.read_project(key, &read) {
+            Some(located) => Sourced::from_file(located),
+            None => Sourced::builtin(self.read_default(key, &read)),
+        };
+        self.record(key, &sourced);
+        sourced
     }
 
     /// A field with no built-in answer — absent unless the project sets it.
@@ -420,11 +464,21 @@ impl Resolver<'_> {
         self.asked.insert(key.to_owned());
         // The defaults file may still carry one, so a future release can give
         // an optional field a value without changing this code.
-        if let Some(located) = self.read_project(key, &read) {
-            return Some(Sourced::from_file(located));
-        }
-        let node = self.defaults.find(key)?;
-        Some(Sourced::builtin(self.must_read(key, &node, &read)))
+        let sourced = match self.read_project(key, &read) {
+            Some(located) => Sourced::from_file(located),
+            None => {
+                let node = self.defaults.find(key)?;
+                Sourced::builtin(self.must_read(key, &node, &read))
+            }
+        };
+        self.record(key, &sourced);
+        Some(sourced)
+    }
+
+    /// An unset optional field has no origin, because it has no value —
+    /// nothing chose it, and `Builtin` would be a claim that something did.
+    fn record<T>(&mut self, key: &str, sourced: &Sourced<T>) {
+        self.provenance.record(key, sourced.origin().clone());
     }
 
     /// A list is read separately from a single value, because one bad element
@@ -433,19 +487,25 @@ impl Resolver<'_> {
     /// named rather than the first.
     fn list(&mut self, key: &str) -> Sourced<Vec<String>> {
         self.asked.insert(key.to_owned());
-        match self.project_list(key) {
+        let sourced = match self.project_list(key) {
             Some(sourced) => sourced,
             None => Sourced::builtin(self.read_default(key, &read_strings)),
-        }
+        };
+        self.record(key, &sourced);
+        sourced
     }
 
     fn optional_list(&mut self, key: &str) -> Option<Sourced<Vec<String>>> {
         self.asked.insert(key.to_owned());
-        if let Some(sourced) = self.project_list(key) {
-            return Some(sourced);
-        }
-        let node = self.defaults.find(key)?;
-        Some(Sourced::builtin(self.must_read(key, &node, &read_strings)))
+        let sourced = match self.project_list(key) {
+            Some(sourced) => sourced,
+            None => {
+                let node = self.defaults.find(key)?;
+                Sourced::builtin(self.must_read(key, &node, &read_strings))
+            }
+        };
+        self.record(key, &sourced);
+        Some(sourced)
     }
 
     fn project_list(&mut self, key: &str) -> Option<Sourced<Vec<String>>> {

@@ -13,6 +13,7 @@
 //!
 //! [ADR-005]: ../../../docs/adr/005-provenance.md
 
+use std::collections::BTreeMap;
 use std::fmt;
 use std::ops::Deref;
 
@@ -115,6 +116,55 @@ impl<T> Sourced<T> {
     /// CFG-007's "reset to default" needs to know.
     pub fn is_overridden(&self) -> bool {
         !self.origin.is_builtin()
+    }
+}
+
+/// Every resolved value's origin, by settings key.
+///
+/// An *index* over the resolved values, not a second authority on them: each
+/// entry is written by the same expression that builds the [`Sourced`] it
+/// describes, so the two cannot disagree. ADR-005 rejected a side table
+/// because "nothing fails if a merge forgets to update it" — nothing can
+/// forget this one, because it is not maintained separately from the merge.
+///
+/// It exists because two callers need a *string-keyed* answer that a typed
+/// field cannot give: STY-008's inspector, which lists everything and would
+/// otherwise be a match over thirty field names, and CFG-007's
+/// reset-to-default, which asks "was this overridden" about a key the GUI
+/// knows only as text.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Provenance {
+    entries: BTreeMap<String, Origin>,
+}
+
+impl Provenance {
+    pub fn record(&mut self, key: &str, origin: Origin) {
+        self.entries.insert(key.to_owned(), origin);
+    }
+
+    pub fn get(&self, key: &str) -> Option<&Origin> {
+        self.entries.get(key)
+    }
+
+    /// Every key and where its value came from, in key order.
+    pub fn iter(&self) -> impl Iterator<Item = (&str, &Origin)> {
+        self.entries.iter().map(|(k, v)| (k.as_str(), v))
+    }
+
+    /// The keys the project file set — what CFG-007 offers to reset.
+    pub fn overridden(&self) -> impl Iterator<Item = &str> {
+        self.entries
+            .iter()
+            .filter(|(_, o)| !o.is_builtin())
+            .map(|(k, _)| k.as_str())
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
     }
 }
 

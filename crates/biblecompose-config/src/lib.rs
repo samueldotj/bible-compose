@@ -12,6 +12,6 @@ pub mod settings;
 pub mod value;
 
 pub use document::{ConfigDocument, Located, Node, Table};
-pub use provenance::{Origin, Sourced};
-pub use settings::{resolve, Settings, SCHEMA_VERSION};
+pub use provenance::{Origin, Provenance, Sourced};
+pub use settings::{known_keys, resolve, Settings, SCHEMA_VERSION};
 pub use value::{Length, PageSize, Unit};

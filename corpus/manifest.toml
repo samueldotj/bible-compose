@@ -1,0 +1,229 @@
+# BibleCompose composition corpus — generated; see README.md.
+#
+# Whole books, chosen to cover every required script and feature class
+# in as few files as possible. Verified by `cargo test -p biblecompose-testkit`.
+#
+# `sha256` is the point of the file: it makes drift detectable. If a corpus
+# file changes silently, every downstream failure becomes ambiguous.
+
+[[file]]
+path = "books/1TI-lifNT.usfm"
+sha256 = "9572440e40dd604fde9dd80b3033d8c615dbcd41c7ab8c08096d4524fdd46d8b"
+bytes = 52482
+book = "1TI"
+chapters = 6
+verses = 110
+translation = "lifNT"
+language = "Limbu"
+direction = "ltr"
+source = "https://ebible.org/Scriptures/lifNT_usfm.zip"
+copyright = "Copyright © 2009 Wycliffe Bible Translators, Inc."
+redistributable = "True"
+scripts = ["Latin", "Limbu"]
+features = ["introductions", "notes", "poetry", "titles", "verse_ranges"]
+traits = ["lf", "no_final_newline"]
+
+[[file]]
+path = "books/2SA-cmn-cu89t.usfm"
+sha256 = "55a6d65bba191767ab8258f5aadc7507117d770c14558367d1bf42be418dd2c9"
+bytes = 106149
+book = "2SA"
+chapters = 24
+verses = 694
+translation = "cmn-cu89t"
+language = "Chinese"
+direction = "ltr"
+source = "https://ebible.org/Scriptures/cmn-cu89t_usfm.zip"
+copyright = "public domain"
+redistributable = "True"
+scripts = ["Han", "Latin"]
+features = ["char_styles", "nested_markers", "notes", "poetry", "titles", "verse_ranges"]
+traits = ["lf", "no_final_newline"]
+
+[[file]]
+path = "books/DAN-srponspc.usfm"
+sha256 = "27dd5d90d313799a3aca70dcd46351867707eb92c79b859858e1ae7a97f32152"
+bytes = 94826
+book = "DAN"
+chapters = 12
+verses = 357
+translation = "srponspc"
+language = "Serbian"
+direction = "ltr"
+source = "https://ebible.org/Scriptures/srponspc_usfm.zip"
+copyright = "Copyright © 2005, 2017 Biblica, Inc."
+redistributable = "True"
+scripts = ["Cyrillic", "Latin"]
+features = ["char_styles", "nested_markers", "notes", "poetry", "titles"]
+traits = ["lf", "no_final_newline"]
+
+[[file]]
+path = "books/ECC-thaKJV.usfm"
+sha256 = "d0f198347ffcfefa01ccf04eac1536f5db009da4e39733380a262134632bf667"
+bytes = 93840
+book = "ECC"
+chapters = 12
+verses = 222
+translation = "thaKJV"
+language = "Thai"
+direction = "ltr"
+source = "https://ebible.org/Scriptures/thaKJV_usfm.zip"
+copyright = "Copyright © 2003 Philip Pope"
+redistributable = "True"
+scripts = ["Latin", "Thai"]
+features = ["introductions", "titles"]
+traits = ["lf", "no_final_newline"]
+
+[[file]]
+path = "books/EPH-mal2015.usfm"
+sha256 = "5872092c794c2268b22db56024c133ed7f8d49be49a72c8e2b4644b8bd07ed20"
+bytes = 50174
+book = "EPH"
+chapters = 6
+verses = 155
+translation = "mal2015"
+language = "Malayalam"
+direction = "ltr"
+source = "https://ebible.org/Scriptures/mal2015_usfm.zip"
+copyright = "Copyright © 2015 The Free Bible Foundation"
+redistributable = "True"
+scripts = ["Latin", "Malayalam"]
+features = ["attributes", "char_styles", "figures", "notes", "poetry", "titles"]
+traits = ["joiners", "lf", "no_final_newline"]
+
+[[file]]
+path = "books/EST-freebiblesindia-hindi.usfm"
+sha256 = "344f2dd9b861a95cebff048171d1fa9b9e4930fead020eb93368154902948865"
+bytes = 81005
+book = "EST"
+chapters = 10
+verses = 167
+translation = "freebiblesindia-hindi"
+language = "Hindi"
+direction = "ltr"
+source = "https://github.com/FreeBiblesIndia/Hindi_Bible/tree/0bc468f34cbfb77fefeb2685616e91fbd7d55101/usfm"
+copyright = "Creative Commons Attribution-ShareAlike 4.0 International. Original work available at http://www.freebiblesindia.in"
+redistributable = "True"
+scripts = ["Devanagari", "Latin"]
+features = ["char_styles", "introductions", "notes", "titles"]
+traits = ["joiners", "lf"]
+
+[[file]]
+path = "books/EZR-mya.usfm"
+sha256 = "90df68724f8eba48dec18c046979ea904b503c63be4283eca7561ab3a5e77f44"
+bytes = 162252
+book = "EZR"
+chapters = 10
+verses = 202
+translation = "mya"
+language = "Burmese"
+direction = "ltr"
+source = "https://ebible.org/Scriptures/mya_usfm.zip"
+copyright = "public domain"
+redistributable = "True"
+scripts = ["Latin", "Myanmar"]
+features = ["introductions", "lists", "nested_markers", "notes", "poetry", "tables", "titles", "verse_ranges"]
+traits = ["lf", "no_final_newline"]
+
+[[file]]
+path = "books/GAL-sankhm.usfm"
+sha256 = "2996d4598b47b6f445175d2a51b3ecf6c8dbd8533b5ef01b9dd3ecc089b1adab"
+bytes = 45235
+book = "GAL"
+chapters = 6
+verses = 149
+translation = "sankhm"
+language = "Saṃskṛtam"
+direction = "ltr"
+source = "https://ebible.org/Scriptures/sankhm_usfm.zip"
+copyright = "Copyright © 2018 SanskritBible.in"
+redistributable = "True"
+scripts = ["Khmer", "Latin"]
+features = ["titles"]
+traits = ["lf", "no_final_newline"]
+
+[[file]]
+path = "books/HOS-asmfb.usfm"
+sha256 = "5a9c39b52e7c7b3bf36e93a042711710d0b91fa7d573184e81016d405a893eb1"
+bytes = 92722
+book = "HOS"
+chapters = 14
+verses = 197
+translation = "asmfb"
+language = "Assamese"
+direction = "ltr"
+source = "https://ebible.org/Scriptures/asmfb_usfm.zip"
+copyright = "Copyright © 2017, 2018 Bridge Connectivity Solutions"
+redistributable = "True"
+scripts = ["Bengali", "Latin"]
+features = ["introductions", "notes", "poetry", "titles"]
+traits = ["lf", "no_final_newline"]
+
+[[file]]
+path = "books/LAM-freebiblesindia-tamil.usfm"
+sha256 = "9ec73559226014a64f09c49d1d898b7055fa76b49861e727ab470a0f385dc1d7"
+bytes = 62141
+book = "LAM"
+chapters = 5
+verses = 154
+translation = "freebiblesindia-tamil"
+language = "Tamil"
+direction = "ltr"
+source = "https://github.com/FreeBiblesIndia/Tamil_Bible/tree/c4f4695592040f2dde010a9e1192d36690376342/usfm"
+copyright = "Creative Commons Attribution-ShareAlike 4.0 International. Original work available at http://www.freebiblesindia.in"
+redistributable = "True"
+scripts = ["Latin", "Tamil"]
+features = ["introductions", "notes", "poetry", "titles"]
+traits = ["lf"]
+
+[[file]]
+path = "books/NEH-hbo.usfm"
+sha256 = "97f90a89eec5de15c3c79cba9ccba6a15e34c2a3fbcb765a24ed65363335c96d"
+bytes = 103867
+book = "NEH"
+chapters = 13
+verses = 405
+translation = "hbo"
+language = "Hebrew"
+direction = "rtl"
+source = "https://ebible.org/Scriptures/hbo_usfm.zip"
+copyright = "public domain"
+redistributable = "True"
+scripts = ["Hebrew"]
+features = ["titles"]
+traits = ["lf", "no_final_newline", "not_nfc"]
+
+[[file]]
+path = "books/PRO-grclxx.usfm"
+sha256 = "4ee80ca1e59fd90a93c5daaa464747f371529eaacfb4ca7cc6995f8339eefb6e"
+bytes = 151096
+book = "PRO"
+chapters = 29
+verses = 845
+translation = "grclxx"
+language = "Greek, Ancient"
+direction = "ltr"
+source = "https://ebible.org/Scriptures/grclxx_usfm.zip"
+copyright = "public domain"
+redistributable = "True"
+scripts = ["Greek", "Latin"]
+features = ["alt_numbering", "notes", "titles", "verse_ranges"]
+traits = ["lf", "no_final_newline", "not_nfc"]
+
+[[file]]
+path = "books/ROM-arbnav.usfm"
+sha256 = "8ac8000621857225efbbcf62ee80163130ef0f96fabca66248d227b2254d70a0"
+bytes = 114214
+book = "ROM"
+chapters = 16
+verses = 433
+translation = "arbnav"
+language = "Arabic, Standard"
+direction = "rtl"
+source = "https://ebible.org/Scriptures/arbnav_usfm.zip"
+copyright = "Copyright © 1988, 1997, 2012 Biblica, Inc.® ح‫قوق الطبع"
+redistributable = "True"
+scripts = ["Arabic", "Latin"]
+features = ["titles"]
+traits = ["lf", "no_final_newline"]
+

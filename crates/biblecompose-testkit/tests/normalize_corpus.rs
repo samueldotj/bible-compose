@@ -1,71 +1,37 @@
-//! A smoke run of normalization over a directory of real USFM.
+//! P1.6's assertion, over P1.2's corpus: normalization loses no Scripture text.
 //!
-//! Ignored by default: it needs a corpus, and the vendored one arrives with
-//! P1.2. Until then it is pointed at `usfm-core`'s own 200-file corpus, which
-//! is what P1.5 means by "across the corpus":
-//!
-//! ```text
-//! BIBLECOMPOSE_CORPUS=<path> cargo test -p biblecompose-scripture \
-//!     --test corpus -- --ignored --nocapture
-//! ```
+//! No environment variable and no external checkout — the books are committed,
+//! so this is a gate rather than something someone remembers to run.
 //!
 //! It asserts two things and reports a third. Normalization must not panic on
-//! anything real, and it must not lose a word — every non-space character of
-//! the source's Scripture text has to survive into the model. Unsupported
-//! markers are counted rather than asserted, because that number is a fact
-//! about the corpus, not a defect.
+//! anything real, and every word of the source's Scripture text has to survive
+//! into the model. Unsupported markers are counted rather than asserted,
+//! because that number is a fact about the corpus, not a defect.
 //!
 //! **No file is excused.** There was one: `usfm-core` read a bare `|` in
-//! paragraph text as an attribute block and dropped the rest of the line,
-//! which deleted the danda — the full stop of Sanskrit-derived scripts — and
-//! any words after it. Fixed upstream, so the exception is gone rather than
-//! grandfathered.
+//! paragraph text as an attribute block and dropped the rest of the line.
+//! Fixed upstream, so the exception is gone rather than grandfathered.
 
 use biblecompose_scripture::normalize::normalize;
 use biblecompose_scripture::{BookCode, ScriptureDocument};
+use biblecompose_testkit::corpus;
 use camino::Utf8Path;
 use std::collections::BTreeMap;
 
 #[test]
-#[ignore = "needs a corpus; see the module docs"]
-fn normalizing_a_real_corpus_loses_nothing() {
-    let Ok(dir) = std::env::var("BIBLECOMPOSE_CORPUS") else {
-        eprintln!("set BIBLECOMPOSE_CORPUS to a directory of .usfm files");
-        return;
-    };
-
+fn normalizing_the_corpus_loses_nothing() {
     let mut files = 0usize;
-    let mut skipped = 0usize;
     let mut unsupported: BTreeMap<String, usize> = BTreeMap::new();
     let mut losses = Vec::new();
 
-    for entry in std::fs::read_dir(&dir).expect("corpus directory") {
-        let path = entry.expect("entry").path();
-        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-        if !ext.eq_ignore_ascii_case("usfm") && !ext.eq_ignore_ascii_case("sfm") {
-            continue;
-        }
-        let Ok(source) = std::fs::read_to_string(&path) else {
-            skipped += 1;
-            continue;
-        };
-        // Discovery's own `identify` lives in `biblecompose-project`, which
-        // depends on this crate — dev-depending back would be a cycle. Two
-        // lines here is cheaper than the coupling.
-        let Some(code) = source
-            .strip_prefix('\u{FEFF}')
-            .unwrap_or(&source)
-            .lines()
-            .find_map(|l| l.trim_start().strip_prefix("\\id "))
-            .and_then(|rest| BookCode::parse(rest.split_whitespace().next().unwrap_or("")))
-        else {
-            skipped += 1;
-            continue;
-        };
+    for entry in corpus::books() {
+        let source = corpus::read(&entry);
+        let code = BookCode::parse(&entry.book)
+            .unwrap_or_else(|| panic!("{} is not a book code", entry.book));
 
-        let name = path.file_name().unwrap_or_default().to_string_lossy();
+        let name = entry.path.as_str();
         let document = usfm_core::Document::parse(source.as_str());
-        let (book, diagnostics) = normalize(code, Utf8Path::new(name.as_ref()), &document);
+        let (book, diagnostics) = normalize(code, Utf8Path::new(name), &document);
         files += 1;
 
         for d in diagnostics.iter() {
@@ -86,11 +52,11 @@ fn normalizing_a_real_corpus_loses_nothing() {
                     .collect();
                 println!("  {name}: missing {missing:?}");
             }
-            losses.push(name.into_owned());
+            losses.push(name.to_owned());
         }
     }
 
-    println!("normalized {files} files ({skipped} skipped)");
+    println!("normalized {files} books");
     println!(
         "distinct unsupported-marker diagnostics: {}",
         unsupported.len()

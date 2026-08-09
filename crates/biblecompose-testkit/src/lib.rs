@@ -4,6 +4,7 @@
 //! by that crate's own tests, and depending back would break ADR-004's rule
 //! and create a cycle.
 
+pub mod corpus;
 pub mod golden;
 pub mod pdf;
 

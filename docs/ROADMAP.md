@@ -128,7 +128,7 @@ Sizes are relative effort, not schedule. They exist to signal where the risk sit
 | **XL** | Where the project can go wrong. A poor approach here costs weeks, not days. |
 | **⏳** | Lead-time-bound. Little effort, unpredictable calendar. Orthogonal to size. |
 
-73 items: 19 S, 45 M, 7 L, 2 XL. Roughly comparable in scale to `easy-usfm`, which is not a coincidence — most of the difference is that BibleCompose does not build a parser ([ADR-001](adr/001-usfm-core.md)) and does not build an editor.
+73 items: 19 S, 46 M, 6 L, 2 XL (S1.4 dropped from L to M when [ADR-006](adr/006-single-binary.md) moved to option C). Roughly comparable in scale to `easy-usfm`, which is not a coincidence — most of the difference is that BibleCompose does not build a parser ([ADR-001](adr/001-usfm-core.md)) and does not build an editor.
 
 **The two XL items are worth knowing by name.** S0.2, the two-column Scripture page, is the item that decides whether the product is buildable as designed; it is XL despite being days of work, because a wrong answer there invalidates the emitter. P1.5, USJ-to-`ScriptureDocument` normalization, is the semantic heart — a bad model there is felt in styles, emission, and every diagnostic for the life of the project. Both deserve a design pass before code.
 
@@ -139,7 +139,7 @@ Five items are gated by something outside the work itself. Their calendar is not
 | ID | Gated by | Typical wait |
 |---|---|---|
 | **P1.1** | `usfm-core` extraction depends on `easy-usfm` reaching its own M0 | weeks, and see §4 |
-| **S1.2** | Building SILE's C dependencies under MSYS2; there is no upstream Windows binary to fall back on ([spike F-1](../spike/NOTES.md)) | unpredictable |
+| ~~**S1.2**~~ | ~~Building SILE's C dependencies under MSYS2~~ — **resolved**, and not that way: cross-compiled from Linux ([S1-NOTES P-9, P-10](../spike/S1-NOTES.md)) | *done* |
 | **P5.7** | Packaging SILE's native dependencies may need upstream fixes on at least one platform; answered in outline by S1 | unpredictable |
 | **P6.1** | Code-signing certificates must be purchased and issued | 3–10 business days |
 | **P6.2** | Default fonts need redistribution terms confirmed with rights holders | days to weeks |
@@ -210,17 +210,17 @@ Each item is one coherent deliverable. **Done includes tests and green CI**, not
 
 ## S1 · Packaging spike
 
-*5 items · 1 S, 2 M, 2 L. Runs alongside M1–M4; blocks P5.7. Findings in [S1-NOTES](../spike/S1-NOTES.md).*
+*5 items · 1 S, 3 M, 1 L. Three done, one skipped, **S1.4 remaining**. Runs alongside M1–M4; blocks P5.7. Findings in [S1-NOTES](../spike/S1-NOTES.md).*
 
 | ID | | Deliverable | Done when |
 |---|---|---|---|
 | **S1.1** | M | Build SILE 0.15.13 from source on Linux, and record what it actually needs | `./bootstrap.sh && ./configure && make` produces a working binary; the C libraries, their versions, and the Lua rock handling are written down. **The cargo question is already answered — no** ([S1-NOTES P-1](../spike/S1-NOTES.md)): `src/embed.rs` ships only as an autotools template, and the binary links seven static libraries built from C sources cargo never sees |
-| **S1.2** | L ⏳ | The same on Windows | Either a working build with the toolchain recorded, or a written finding that it is impractical and why. A negative answer is a result, not a failure — it lands on NFR-001, not on the schedule |
-| **S1.3** | M | The same on macOS | A working build, or the same finding |
-| **S1.4** | L | One binary that re-executes itself and typesets | `biblecompose build` produces a PDF on a machine with no SILE installed and nothing extracted to disk: the Lua tree and the 17 required rocks embedded via `rust-embed`, loaders injected, the child spawned from `current_exe()` with a reserved argument ([ADR-006](adr/006-single-binary.md) option B) |
-| **S1.5** | S | Measure and write up; settle ADR-006 | Artifact size recorded per platform; cancellation and a forced backend failure both still behave as they do today; [ADR-006](adr/006-single-binary.md) moves to Accepted, or to option C with the reason |
+| **S1.2** | L ✅ | The same on Windows | **Done.** Not under MSYS2 but cross-compiled from Linux with mingw-w64: four lines of patch to SILE, ICU taken from MSYS2's package, reproduced by [s1-windows-cross.sh](../spike/s1-windows-cross.sh). Typesets `john_1_1_5.xml` natively on Windows 11 to a 6×9in PDF whose text is identical to the Linux build's ([P-9](../spike/S1-NOTES.md), [P-10](../spike/S1-NOTES.md)). NFR-001's Tier-1 claim stands |
+| **S1.3** | M ⏭️ | The same on macOS | **Skipped.** No macOS available, and S1.2 answered the question S1 existed to ask. Reopen before P5.7, which cannot ship a macOS build without it |
+| **S1.4** | M | One binary that carries SILE and extracts it once | `biblecompose build` produces a PDF on a machine with no SILE installed: the bundle embedded via `rust-embed`, extracted to a cache directory on first run, verified before reuse, and invoked through the existing child-process path ([ADR-006](adr/006-single-binary.md) option C). Was L under option B |
+| **S1.5** | S ✅ | Measure and write up; settle ADR-006 | **Done.** Sizes measured on both platforms — 15 MB Linux, 78 MB Windows, the gap almost entirely ICU. [ADR-006](adr/006-single-binary.md) is **Accepted**, having **changed from option B to option C**: B's distinguishing claim ("nothing on disk") was false, and what remained of the distinction did not survive measurement |
 
-Not an item, but the thing to watch: if S1.4 turns out to be a week rather than days, option C — embedding the executable and extracting it once — is the fallback, and it changes nothing above the `Backend` trait.
+Not an item, but the thing to watch: **ICU data is 32 MB of the 78**, and filtering it is the only large size lever. It needs the SRS to say which scripts are supported — see [ADR-006's consequences](adr/006-single-binary.md#consequences), including the silent-failure hazard if the break dictionaries are filtered out with everything else.
 
 ## Phase 1 → M1 · USFM to PDF
 
@@ -356,7 +356,7 @@ Left open because answering them well needs either a rights holder or a thing th
 3. **PDF artwork as a figure source.** S0.7 answers it; if unsupported, P4.3 needs a documented conversion or rejection path.
 4. **Whether the deuterocanon appears in shipped presets.** The canon table carries those books from P1.4 regardless; whether a preset selects them is a product choice for P6.2.
 5. **Cross-reference placement beyond the note area.** Centre-column is explicitly post-MVP; whether an inline or end-of-paragraph mode joins the footnote-area mode in v1 is a P4.2 decision once the note area is working.
-6. **Whether Windows stays a Tier-1 target.** NFR-001 claims it is. There is no upstream SILE binary for Windows and its C dependencies must be built under MSYS2, so the claim rests on S1.2. A negative answer changes the requirement rather than the plan, which is why S1 sits at M1 and not at M5.
+6. ~~**Whether Windows stays a Tier-1 target.**~~ **Closed by S1.2: yes.** SILE cross-compiles from Linux and typesets correctly on Windows ([S1-NOTES P-9, P-10](../spike/S1-NOTES.md)). Two things replace this question rather than settling with it: upstream tests none of it, so every SILE upgrade is a Windows risk we absorb; and the Windows artifact is 78 MB against Linux's 15, of which 32 MB is ICU data — which turns "which scripts do we support?" into a live question the SRS has to answer.
 
 ---
 

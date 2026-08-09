@@ -455,6 +455,7 @@ pub mod code {
             NO_OUTPUT = "004",
             CANCELLED = "005",
             CLASS_VERSION_MISMATCH = "006",
+            BUNDLE_UNPACK_FAILED = "007",
         }
         Output "OUT" {
             DESTINATION_LOCKED = "001",

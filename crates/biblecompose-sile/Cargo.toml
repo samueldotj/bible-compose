@@ -10,11 +10,25 @@ description = "The SILE backend: XML emission, process invocation, log mapping."
 # ADR-004: this is the only crate that has heard of SILE, and nothing but
 # biblecompose-app may depend on it. Enforced by tests/architecture.rs in
 # biblecompose-testkit.
+[features]
+# ADR-006 option C: carry SILE inside the executable and unpack it once.
+# Off by default — a plain `cargo build` should not need a 78 MB runtime to
+# hand to rust-embed. Release builds turn it on and set
+# BIBLECOMPOSE_SILE_BUNDLE; see src/bundle.rs.
+embedded-sile = ["dep:rust-embed"]
+
 [dependencies]
 biblecompose-diagnostics.workspace = true
 biblecompose-scripture.workspace = true
 camino.workspace = true
 quick-xml.workspace = true
+# interpolate-folder-path: `#[folder = "$BIBLECOMPOSE_SILE_BUNDLE"]` is not
+#   expanded without it. debug-embed: otherwise a debug build reads the bundle
+#   off disk at run time, which is the opposite of what this feature is for.
+rust-embed = { version = "8", optional = true, features = [
+    "interpolate-folder-path",
+    "debug-embed",
+] }
 serde.workspace = true
 tempfile.workspace = true
 

@@ -18,6 +18,7 @@ use std::time::Duration;
 use biblecompose_diagnostics::{code, Diagnostic, SourceLoc};
 use camino::{Utf8Path, Utf8PathBuf};
 
+use crate::cache::RuntimeEnv;
 use crate::{Backend, BackendJob, BackendOutcome, BackendVersion, CancelToken, LogLine, Stream};
 
 /// How often the run loop checks the cancel flag. BLD-006 wants the UI usable
@@ -31,18 +32,39 @@ pub const SILE_ENV: &str = "BIBLECOMPOSE_SILE";
 #[derive(Debug, Clone)]
 pub struct SileBackend {
     exe: Utf8PathBuf,
+    /// Set when the backend came from the embedded bundle. An unpacked runtime
+    /// cannot be found by SILE on its own — see [`RuntimeEnv`].
+    runtime: Option<RuntimeEnv>,
 }
 
 impl SileBackend {
     pub fn new(exe: impl Into<Utf8PathBuf>) -> Self {
-        SileBackend { exe: exe.into() }
+        SileBackend {
+            exe: exe.into(),
+            runtime: None,
+        }
     }
 
-    /// The bundled runtime first, then an explicit override, then `PATH`.
+    /// A backend unpacked from the bundle, which needs its module paths told
+    /// to it rather than discovered.
+    pub fn unpacked(exe: impl Into<Utf8PathBuf>, runtime: RuntimeEnv) -> Self {
+        SileBackend {
+            exe: exe.into(),
+            runtime: Some(runtime),
+        }
+    }
+
+    /// An explicit override first, then the bundled runtime, then `PATH`.
     ///
-    /// At M0 there is no bundle yet (that is P5.7, and spike F-2 established
-    /// it must ship a runtime tree rather than a binary), so this is the
-    /// override and `PATH`.
+    /// The override wins deliberately: SILE-004 exists so a developer can point
+    /// at a newer backend *without rebuilding the bundle*, which it would not
+    /// do if the bundle took precedence.
+    ///
+    /// `PATH` last is the development fallback. In a shipped build the bundle
+    /// answers, and [ADR-006](../../../docs/adr/006-single-binary.md) notes
+    /// that this removes the "which SILE is it actually using" support question
+    /// — but only because the one remaining way to change the answer is an
+    /// environment variable somebody had to set on purpose.
     pub fn discover() -> Result<Self, Diagnostic> {
         if let Ok(p) = std::env::var(SILE_ENV) {
             let path = Utf8PathBuf::from(p);
@@ -53,19 +75,47 @@ impl SileBackend {
                 code::NOT_FOUND,
                 format!("{SILE_ENV} points at {path}, which does not exist"),
             )
-            .help("unset the variable to fall back to PATH"));
+            .help("unset the variable to fall back to the bundled backend"));
         }
-        Ok(SileBackend::new("sile"))
+
+        #[cfg(feature = "embedded-sile")]
+        {
+            let exe = crate::bundle::ensure()?;
+            let root = exe.parent().unwrap_or(&exe).to_owned();
+            Ok(SileBackend::unpacked(exe, RuntimeEnv::for_root(&root)))
+        }
+
+        #[cfg(not(feature = "embedded-sile"))]
+        {
+            Ok(SileBackend::new("sile"))
+        }
     }
 
     pub fn exe(&self) -> &Utf8Path {
         &self.exe
     }
 
+    /// The unpacked runtime this backend uses, if it came from the bundle.
+    pub fn runtime(&self) -> Option<&RuntimeEnv> {
+        self.runtime.as_ref()
+    }
+
     fn command(&self) -> Command {
         let mut c = Command::new(self.exe.as_std_path());
         // No shell anywhere on this path.
         c.stdin(Stdio::null());
+        // Every invocation, not just `run`: an unpacked SILE cannot answer
+        // `--version` either without being told where its Lua lives. Finding
+        // that out the hard way is what SILE-002's "did not report a version"
+        // looked like from the outside.
+        if let Some(rt) = &self.runtime {
+            c.env("SILE_PATH", rt.sile_path.as_str())
+                .env("LUA_PATH", &rt.lua_path)
+                .env("LUA_CPATH", &rt.lua_cpath);
+            if let Some(conf) = &rt.fontconfig {
+                c.env("FONTCONFIG_FILE", conf.as_str());
+            }
+        }
         c
     }
 }
@@ -147,14 +197,17 @@ impl Backend for SileBackend {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 
-        if !job.sile_path.is_empty() {
-            let joined = job
-                .sile_path
-                .iter()
-                .map(|p| p.as_str())
-                .collect::<Vec<_>>()
-                .join(path_separator());
-            cmd.env("SILE_PATH", joined);
+        // The project's class and package directories, plus — when the backend
+        // was unpacked from the bundle — its own tree, which it cannot find
+        // relative to itself once the working directory is the project.
+        // `command()` has already pointed SILE at its own tree; this adds the
+        // project's class and package directories in front of it.
+        let mut sile_path: Vec<&str> = job.sile_path.iter().map(|p| p.as_str()).collect();
+        if let Some(rt) = &self.runtime {
+            sile_path.push(rt.sile_path.as_str());
+        }
+        if !sile_path.is_empty() {
+            cmd.env("SILE_PATH", sile_path.join(path_separator()));
         }
 
         platform::before_spawn(&mut cmd);

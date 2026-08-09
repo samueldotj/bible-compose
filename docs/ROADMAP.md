@@ -210,14 +210,14 @@ Each item is one coherent deliverable. **Done includes tests and green CI**, not
 
 ## S1 · Packaging spike
 
-*5 items · 1 S, 3 M, 1 L. Three done, one skipped, **S1.4 remaining**. Runs alongside M1–M4; blocks P5.7. Findings in [S1-NOTES](../spike/S1-NOTES.md).*
+*5 items · 1 S, 3 M, 1 L. **Four done, one skipped — S1 is complete.** Findings in [S1-NOTES](../spike/S1-NOTES.md); what it leaves for P5.7 is at the end of that file.*
 
 | ID | | Deliverable | Done when |
 |---|---|---|---|
 | **S1.1** | M | Build SILE 0.15.13 from source on Linux, and record what it actually needs | `./bootstrap.sh && ./configure && make` produces a working binary; the C libraries, their versions, and the Lua rock handling are written down. **The cargo question is already answered — no** ([S1-NOTES P-1](../spike/S1-NOTES.md)): `src/embed.rs` ships only as an autotools template, and the binary links seven static libraries built from C sources cargo never sees |
 | **S1.2** | L ✅ | The same on Windows | **Done.** Not under MSYS2 but cross-compiled from Linux with mingw-w64: four lines of patch to SILE, ICU taken from MSYS2's package, reproduced by [s1-windows-cross.sh](../spike/s1-windows-cross.sh). Typesets `john_1_1_5.xml` natively on Windows 11 to a 6×9in PDF whose text is identical to the Linux build's ([P-9](../spike/S1-NOTES.md), [P-10](../spike/S1-NOTES.md)). NFR-001's Tier-1 claim stands |
 | **S1.3** | M ⏭️ | The same on macOS | **Skipped.** No macOS available, and S1.2 answered the question S1 existed to ask. Reopen before P5.7, which cannot ship a macOS build without it |
-| **S1.4** | M | One binary that carries SILE and extracts it once | `biblecompose build` produces a PDF on a machine with no SILE installed: the bundle embedded via `rust-embed`, extracted to a cache directory on first run, verified before reuse, and invoked through the existing child-process path ([ADR-006](adr/006-single-binary.md) option C). Was L under option B |
+| **S1.4** | M ✅ | One binary that carries SILE and extracts it once | **Done** ([P-11](../spike/S1-NOTES.md)). An 80.5 MB `biblecompose.exe` builds a correct PDF on Windows with no SILE installed and nothing configured: cold run 1.27 s, warm 0.12 s, cache directory named from the bundle's contents. Two gaps only running it could find — `--version` needs the runtime environment as much as a build does, and Windows has no system fontconfig to fall back on |
 | **S1.5** | S ✅ | Measure and write up; settle ADR-006 | **Done.** Sizes measured on both platforms — 15 MB Linux, 78 MB Windows, the gap almost entirely ICU. [ADR-006](adr/006-single-binary.md) is **Accepted**, having **changed from option B to option C**: B's distinguishing claim ("nothing on disk") was false, and what remained of the distinction did not survive measurement |
 
 Not an item, but the thing to watch: **ICU data is 32 MB of the 78**, and filtering it is the only large size lever. It needs the SRS to say which scripts are supported — see [ADR-006's consequences](adr/006-single-binary.md#consequences), including the silent-failure hazard if the break dictionaries are filtered out with everything else.

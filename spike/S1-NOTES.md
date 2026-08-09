@@ -9,8 +9,8 @@ The decision this measures is [ADR-006](../docs/adr/006-single-binary.md); the i
 | S1.1 Build from source on Linux | **Done** — builds in 68s (P-6); prerequisites in P-4 |
 | S1.2 The same on Windows | **Done — P-9, P-10.** Cross-compiled from Linux with mingw-w64; `sile.exe` typesets `john_1_1_5.xml` natively on Windows 11 to a correct 6×9in PDF whose text is identical to the Linux build's |
 | S1.3 The same on macOS | Queued in CI — no macOS available locally |
-| S1.4 A binary that re-executes itself | Not built, but **costed** (P-6, P-7): a 2.1 MB tree must reach disk either way |
-| S1.5 Measure; settle ADR-006 | **Linux measured: ~15 MB** (P-7). Waiting on S1.2/S1.3 to settle |
+| S1.4 One binary carrying SILE | **Done — P-11.** An 80.5 MB `biblecompose.exe` builds a correct PDF on Windows with no SILE installed and nothing configured |
+| S1.5 Measure; settle ADR-006 | **Done.** 15 MB Linux, 78 MB Windows (P-7, P-10). [ADR-006](../docs/adr/006-single-binary.md) **Accepted, changed from option B to option C** |
 
 ---
 
@@ -690,6 +690,78 @@ anything needs them.
 Windows builds, runs, and typesets correctly. What remains is engineering, not
 discovery: fold [s1-windows-cross.sh](s1-windows-cross.sh) into CI, filter ICU
 data, and fix the subset tag.
+
+---
+
+## P-11 — One binary, and the two things only running it could have found
+
+[ADR-006](../docs/adr/006-single-binary.md) option C, implemented in
+[`cache.rs`](../crates/biblecompose-sile/src/cache.rs) (the mechanism) and
+[`bundle.rs`](../crates/biblecompose-sile/src/bundle.rs) (the `rust-embed`
+wiring). The split is so the interesting logic has unit tests without a 78 MB
+fixture.
+
+Built against the P-10 stage and run on Windows 11 with `BIBLECOMPOSE_SILE`
+unset, no SILE on `PATH`, and the cache wiped:
+
+```
+> biblecompose.exe build --sile-path . -o john.pdf
+[loading] [loaded] [validating] [generating] [running SILE]
+  stdout: backend: SILE v0.15.13-dirty (LuaJIT 2.1.1785763465) [Rust]
+[publishing] [completed]
+wrote john.pdf
+```
+
+| | |
+|---|---|
+| binary | **80.5 MB**, one file |
+| cold run (unpacks) | 1.27 s |
+| warm run | 0.12 s |
+| PDF | 21,496 bytes, 1 page, 432 × 648 pt |
+| text | **identical to the Linux reference** |
+
+The cache directory is named from the bundle's contents
+(`%LOCALAPPDATA%\biblecompose\sile\16a0d75aee78aab8`), so "is it already
+unpacked?" is one `exists()`, an upgrade cannot half-reuse the old runtime, and
+two versions coexist while one replaces the other.
+
+### Two gaps that unit tests could not have caught
+
+Both were found by running the thing, and both are the same shape: an unpacked
+runtime knows nothing about where it is.
+
+**1. `--version` needs the environment too, not just `run`.** The runtime
+variables were set when spawning a typesetting job and nowhere else, so the
+first end-to-end attempt failed at `error[SILE-002]: the backend did not report
+a version` — while the unpacking had worked perfectly. Setting them in
+`command()` rather than in `run()` is the fix, and the general rule is: **every
+invocation of an unpacked backend needs the environment, including the trivial
+ones.**
+
+**2. Windows has no system fontconfig to fall back on.** A fontconfig
+cross-built for Windows carries a compiled-in config path from the machine that
+built it — something under `/usr/x86_64-w64-mingw32/` — which does not exist on
+the user's machine. It loads nothing, and every font lookup fails. So the
+runtime now writes a `fontconfig.conf` naming the bundle's own fonts, the
+Windows font directory and an absolute cache directory, and points
+`FONTCONFIG_FILE` at it.
+
+It has to be *written* rather than shipped, because the paths must be absolute
+and the runtime's location is content-addressed — unknown until unpack time.
+And it is Windows-only on purpose: Linux and macOS have a real system
+configuration, and replacing it with our guess would be a downgrade.
+
+### What this leaves for P5.7
+
+- **The bundle is not curated.** It is whatever [s1-windows-cross.sh](s1-windows-cross.sh)
+  staged, which still includes `libicutest78.dll` and `libicutu78.dll` that
+  nothing loads, and the test fixtures left in the directory. Curating it is
+  free size.
+- **ICU data is still 32 MB of the 78.** See [ADR-006](../docs/adr/006-single-binary.md#consequences).
+- **Nothing is signed yet** (P6.1), and an 80 MB unsigned executable that writes
+  30 DLLs into `%LOCALAPPDATA%` on first run is precisely the profile that
+  SmartScreen dislikes. Signing is not decoration here; it is what makes option
+  C's one real cost survivable.
 
 ---
 

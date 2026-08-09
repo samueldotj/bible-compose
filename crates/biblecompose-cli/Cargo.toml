@@ -13,6 +13,11 @@ path = "src/main.rs"
 
 # No GUI crate is linked here, which is how NFR-009 is satisfied structurally
 # rather than by discipline.
+[features]
+# Pass-through for ADR-006 option C. Declared here so a release
+# build turns it on once, at the top, rather than crate by crate.
+embedded-sile = ["biblecompose-app/embedded-sile"]
+
 [dependencies]
 biblecompose-app.workspace = true
 biblecompose-diagnostics.workspace = true

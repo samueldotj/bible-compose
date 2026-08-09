@@ -8,6 +8,11 @@ repository.workspace = true
 description = "Build orchestration, state machine, cancellation, project session."
 
 # The only crate permitted to depend on biblecompose-sile (ADR-004).
+[features]
+# Pass-through for ADR-006 option C. Declared here so a release
+# build turns it on once, at the top, rather than crate by crate.
+embedded-sile = ["biblecompose-sile/embedded-sile"]
+
 [dependencies]
 biblecompose-config.workspace = true
 biblecompose-diagnostics.workspace = true

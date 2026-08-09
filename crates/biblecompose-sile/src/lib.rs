@@ -5,6 +5,9 @@
 //! The rule is asserted by a test in `biblecompose-testkit`, because it is the
 //! kind that erodes one convenient import at a time.
 
+#[cfg(feature = "embedded-sile")]
+pub mod bundle;
+pub mod cache;
 pub mod emit;
 pub mod process;
 

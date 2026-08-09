@@ -1,0 +1,9 @@
+This directory stands in for a real SILE runtime so that
+`cargo build --features embedded-sile` compiles without one.
+
+A build that reaches this file at run time is misconfigured: it was compiled
+with the embedded backend but nothing was embedded. `bundle::ensure()` detects
+this file by name and reports it.
+
+To build a real bundle, see spike/s1-windows-cross.sh and set
+BIBLECOMPOSE_SILE_BUNDLE to the stage directory it produces.

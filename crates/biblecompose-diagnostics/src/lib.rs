@@ -463,7 +463,71 @@ pub mod code {
             PUBLISH_FAILED = "003",
         }
         Usfm "USFM" {
+            // BibleCompose's own. Bare digits, deliberately: every code
+            // `usfm-core` mints carries a severity letter, so the two
+            // authorities minting `USFM-*` cannot collide. A test below
+            // holds that line.
             UNSUPPORTED_MARKER = "003",
+
+            // ---- mirrored from `usfm-core` ----
+            //
+            // ADR-001: parser diagnostics reach the panel unchanged rather
+            // than re-coded, so a file reported one way in the editor is not
+            // reported another way in the compositor.
+            //
+            // Declared here rather than derived, because this crate depends
+            // on nothing (ARCHITECTURE §2) and must not grow a dependency on
+            // the parser to describe its codes. `Deserialize` resolves
+            // against `ALL`, so a build log containing one of these has to
+            // round-trip, which it cannot do if the code is unlisted.
+            //
+            // Kept honest from the other side: `biblecompose-scripture`
+            // maps every `usfm_core::DiagnosticCode` here through an
+            // exhaustive match, so a code added upstream fails our build
+            // rather than reaching a user as an unrecognised string.
+            UNKNOWN_MARKER                     = "W001",
+            DEPRECATED_MARKER                  = "W002",
+            UNCLOSED_MARKER                    = "E003",
+            STRAY_CLOSE_MARKER                 = "E004",
+            MISNESTED_MARKER                   = "E005",
+            MISSING_NESTING_PREFIX             = "E006",
+            IMPLICIT_CLOSE                     = "E007",
+            UNCLOSED_NOTE                      = "E008",
+            UNCLOSED_AT_EOF                    = "E009",
+            INVALID_CHAPTER_SEQUENCE           = "E010",
+            INVALID_VERSE_SEQUENCE             = "E011",
+            DUPLICATE_CHAPTER                  = "E012",
+            DUPLICATE_ID                       = "E013",
+            MISSING_ID_MARKER                  = "E014",
+            INVALID_BOOK_CODE                  = "E015",
+            NOTE_SUBMARKER_OUTSIDE_NOTE        = "E016",
+            TEXT_BEFORE_ID                     = "E017",
+            NON_ASCII_VERSE_DIGITS             = "E018",
+            HEADER_AFTER_BODY                  = "W019",
+            MILESTONE_MISMATCH                 = "E020",
+            MIXED_NORMALIZATION                = "I021",
+            JOINER_IN_MARKER_NAME              = "W022",
+            JOINER_AT_MARKER_BOUNDARY          = "I023",
+            INVALID_ATTRIBUTES                 = "E024",
+            MISSING_CHAPTER_NUMBER             = "E025",
+            MISSING_VERSE_NUMBER               = "E026",
+            VERSE_OUTSIDE_PARAGRAPH            = "W027",
+            MISSING_CHAPTER_MARKER             = "E028",
+            CHAR_CROSSES_VERSE_BOUNDARY        = "W029",
+            EMPTY_FIGURE                       = "W030",
+            UNQUOTED_ATTRIBUTE_VALUE           = "W031",
+            MISSING_REQUIRED_ATTRIBUTE         = "E032",
+            DEFAULT_ATTRIBUTE_NOT_DEFINED      = "E033",
+            BODY_PARAGRAPH_BEFORE_CHAPTER      = "W034",
+            NON_EMPTY_BLANK_LINE               = "W035",
+            LEADING_ZEROS                      = "W036",
+            EMPTY_WORD_MARKER                  = "W037",
+            MISSING_MILESTONE_SELF_CLOSE       = "E038",
+            INVALID_TABLE_COLUMN_SEQUENCE      = "E039",
+            MARKER_NEWER_THAN_DOCUMENT         = "I040",
+            LEGACY_FIGURE_SYNTAX               = "W041",
+            DUPLICATE_VERSE                    = "E042",
+            VERSE_GAP                          = "I043",
         }
     }
 }

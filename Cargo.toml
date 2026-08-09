@@ -19,6 +19,15 @@ biblecompose-testkit = { path = "crates/biblecompose-testkit" }
 
 # Emission uses quick-xml's writer rather than string formatting, because
 # ADR-002's guarantee is that escaping is the serializer's job and not ours.
+# The shared USFM engine (ADR-001). It lives in the easy-usfm repository
+# rather than its own, so a change that breaks either consumer is one commit
+# and not a release dance — that is the control that makes depending on a
+# pre-1.0 shared crate reasonable.
+#
+# Pinned to a revision, not a branch: a branch would let the parser move
+# underneath a golden-file test and turn a red build into a mystery.
+usfm-core = { git = "https://github.com/samueldotj/easy-usfm.git", rev = "2498fb7a7969fc5b45c27fe3b8add1c57b90bc93" }
+
 quick-xml = "0.37"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

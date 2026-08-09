@@ -1,6 +1,6 @@
 # ADR-001 — Share `usfm-core` with easy-usfm rather than build a parser
 
-**Status:** Proposed
+**Status:** **Accepted** — done and consumed. `usfm-core` is the crate's name as of [easy-usfm#7](https://github.com/samueldotj/easy-usfm/pull/7), and `biblecompose-scripture` depends on it at a pinned revision
 **Closes:** SRS §19 open decision *"USFM parser strategy"*
 
 ## Context
@@ -54,6 +54,10 @@ The seam is precise, and getting it right is what keeps this from becoming a sha
 
 Diagnostics from `usfm-core` pass through to the BibleCompose panel unchanged rather than being re-coded, so a message means the same thing in the editor and in the compositor.
 
+**How that is actually held**, since "unchanged" is easy to write and easy to erode. `biblecompose-diagnostics` mirrors upstream's 43 codes as declarations — it cannot depend on `usfm-core` ([ARCHITECTURE §2](../ARCHITECTURE.md#2-layering) has it depending on nothing) and `Deserialize` resolves against `ALL`, so an unlisted code would make a build log fail to round-trip. `biblecompose_scripture::usfm::code_for` then maps every `usfm_core::DiagnosticCode` through an **exhaustive match**: a code added upstream stops our build rather than reaching a user as an unrecognised string. A catch-all arm would have been the natural thing to write and would have turned every future upstream diagnostic into a silently mislabelled one.
+
+Both projects mint `USFM-*` codes, which is a collision waiting to happen. They stay disjoint because every upstream code carries a severity letter (`USFM-W001`) and every code of ours is bare digits (`USFM-003`) — asserted in a test rather than trusted, because on the day they collide two different conditions share one identifier and suppression settings start hiding the wrong thing.
+
 ## Consequences
 
 **What BibleCompose no longer builds.** A lexer, a CST and AST, a marker table with version metadata, span plumbing, verse-range parsing, a diagnostic severity model, a corpus with licensing cleared, a differential oracle, and a fuzz harness. SRS §16.1's first two test layers arrive with the dependency.
@@ -62,8 +66,9 @@ Diagnostics from `usfm-core` pass through to the BibleCompose panel unchanged ra
 
 **Three qualifications.**
 
-- **`usfm-core` does not exist yet.** `easy-usfm` is design-complete with no implementation, and this is its M0. BibleCompose's M1 therefore depends on another project's M0. Managed in [ROADMAP §4](../ROADMAP.md#4-the-dependency-on-easy-usfm), and the mitigation is that BibleCompose needs a *subset* — batch whole-file parse, spans, diagnostics — and not the incremental session that is the larger part of that milestone.
-- **The crate is shaped for editing.** Chapter-chunked incremental reparse exists for a keystroke loop BibleCompose does not have. Unused, and harmless — but the UTF-16 offset space is not harmless, because it exists to cross into JavaScript and BibleCompose has no reason to pay for the conversion. `usfm-core` should expose byte and line/column offsets as its native surface, with UTF-16 as a boundary concern of the WASM layer. That is arguably the better design for `easy-usfm` too, and is the first thing the extraction should straighten out.
+- ~~**`usfm-core` does not exist yet.**~~ **It did, and this was the ADR's most consequential error.** Written when `easy-usfm` was design-complete with no implementation, it planned BibleCompose's M1 around another project's unfinished M0. By the time P1.1 started the crate was 6,257 lines with ~200 tests, a 218-file corpus, and a fuzz target. The scheduling risk [ROADMAP §4](../ROADMAP.md#4-the-dependency-on-easy-usfm) is built around never materialised — worth recording, because the plan spent real caution on it.
+- ~~**The UTF-16 offset space is not harmless.**~~ **Already the better design, before we asked.** This ADR wanted byte offsets native with UTF-16 confined to the WASM boundary. That is what the crate does, and more strictly than proposed: `ByteSpan` has no `Serialize` impl at all, so a byte offset *cannot* reach JavaScript, and `Char16` — the only serializable offset — can be produced solely by `Utf16Mapper`. The conversion is one narrow path rather than a convention. **Nothing had to be straightened out.** One gap was real and small: line numbers existed only as a method on `Utf16Mapper`, so asking "which line?" meant going through the type built to cross into JavaScript. `LineIndex` and `LineCol` are now the byte-native surface, and `Utf16Mapper` holds one rather than keeping a second line table.
+- **The crate is still shaped for editing**, and that part stands. Chapter-chunked incremental reparse exists for a keystroke loop BibleCompose does not have. Unused, and harmless.
 - **Two consumers make the API harder to change.** A shared crate is a commitment. The control is that `usfm-core` stays inside one repository owner's hands and both consumers are in-tree or path-linked during development, so a breaking change is one atomic commit rather than a release dance.
 
 **The `usfm3` maturity risk is inherited, not added.** All four of `easy-usfm` ADR-001's controls carry over unchanged: the facade, the exact pin, the cheapness of forking 9,492 lines of MIT Rust, and becoming a visible downstream user. BibleCompose being a second consumer strengthens the last one.

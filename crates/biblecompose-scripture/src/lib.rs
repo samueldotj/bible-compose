@@ -19,6 +19,7 @@
 
 pub mod canon;
 pub mod fixtures;
+pub mod usfm;
 
 use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};

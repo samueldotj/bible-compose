@@ -146,6 +146,8 @@ Five items are gated by something outside the work itself. Their calendar is not
 
 ## 4. The dependency on easy-usfm
 
+> **Resolved, and it never bit.** By the time P1.1 started, `usfm-core` was implemented, tested and corpus-backed; the extraction was a rename plus one small API addition. What follows is kept as written because the reasoning was sound and the mitigation is still the right one if a shared dependency ever does slip.
+
 BibleCompose's M1 needs `usfm-core`, which is `easy-usfm`'s M0 and does not exist yet ([ADR-001](adr/001-usfm-core.md)). This is the largest scheduling risk in the plan and it is managed rather than avoided.
 
 **BibleCompose needs a subset.** Batch whole-file parse, source spans, diagnostics, verse index. It does not need the incremental chapter-chunked session, which is the larger and harder half of that milestone. So the extraction can be useful to BibleCompose well before `easy-usfm`'s own M0 is complete.
@@ -228,7 +230,7 @@ Not an item, but the thing to watch: **ICU data is 32 MB of the 78**, and filter
 
 | ID | | Deliverable | Done when |
 |---|---|---|---|
-| **P1.1** | M ⏳ | `usfm-core` extracted from `easy-usfm`; byte and line/column offsets native; both repositories consume it | Both projects build against the shared crate; no UTF-16 conversion occurs on BibleCompose's path; no `usfm3` type appears in the crate's public API ([ADR-001](adr/001-usfm-core.md)) |
+| **P1.1** | M ✅ | `usfm-core` extracted from `easy-usfm`; byte and line/column offsets native; both repositories consume it | Both projects build against the shared crate; no UTF-16 conversion occurs on BibleCompose's path; no `usfm3` type appears in the crate's public API ([ADR-001](adr/001-usfm-core.md)). **Done** — renamed and merged as [easy-usfm#7](https://github.com/samueldotj/easy-usfm/pull/7); `biblecompose-scripture` depends on it at a pinned revision and passes its 43 diagnostic codes through unchanged. Two of this item's premises were already false when it started — see [ADR-001's qualifications](adr/001-usfm-core.md#consequences) |
 | **P1.2** | S | Composition corpus: whole-book fixtures on top of `usfm-core`'s | At least one complete book per feature class and per script in the coverage list; pinned by checksum; verify harness passes |
 | **P1.3** | M | Project discovery: recursive scan, `\id` identification, duplicates, generated-directory exclusion | A renamed `MAT` file loads as MAT; two files declaring `\id MAT` block the build; `output/` and `.biblecompose/` never produce duplicate inputs; no code path opens a `.usfm` file for writing (PRJ-002 – PRJ-006, BLD-004) |
 | **P1.4** | M | Canon table as data, including deuterocanonical books; ordering and inclusion | GEN precedes EXO regardless of filename; configured order and configured exclusions are both reflected; adding a deuterocanonical book is a row, not a schema change (BOOK-001 – BOOK-003) |

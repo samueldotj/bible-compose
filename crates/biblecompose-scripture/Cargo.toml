@@ -8,6 +8,7 @@ repository.workspace = true
 description = "The normalized Scripture document model — what the publication is."
 
 [dependencies]
+usfm-core.workspace = true
 biblecompose-diagnostics.workspace = true
 camino.workspace = true
 serde.workspace = true

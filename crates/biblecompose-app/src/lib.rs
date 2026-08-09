@@ -153,6 +153,7 @@ pub fn build_with(
     // ---- validate ----------------------------------------------------------
     reporter.advance(BuildState::Validating);
     validate(doc, &mut diagnostics);
+    publish::preflight_destination(&request.output, &mut diagnostics);
     for d in diagnostics.iter() {
         reporter.diagnostic(d.clone());
     }

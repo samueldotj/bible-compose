@@ -9,7 +9,7 @@
 
 use std::io::ErrorKind;
 
-use biblecompose_diagnostics::{code, Diagnostic, SourceLoc};
+use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, SourceLoc};
 use camino::{Utf8Path, Utf8PathBuf};
 
 /// A scratch directory owned by one build.
@@ -235,5 +235,101 @@ mod tests {
 
         publish(&working, &dst).unwrap();
         assert!(dst.exists());
+    }
+}
+
+/// Whether the destination can be written, checked *before* the build runs.
+///
+/// [ADR-003](../../../docs/adr/003-gui.md) drops the integrated preview in
+/// favour of the platform's own PDF viewer, and that changes how often this
+/// matters. Windows 11 opens PDFs in Edge by default and Acrobat locks them
+/// outright, so a publisher who opens the output, adjusts a setting and
+/// rebuilds is holding the destination open — which is now the ordinary case
+/// rather than an unlucky one.
+///
+/// Discovering it at publish time would mean discovering it *after* a
+/// full-Bible build. [SRS-REVIEW F10](../../../docs/SRS-REVIEW.md) calls build
+/// time the dominant fact of this workflow; spending all of it to be told the
+/// destination was never writable is the worst available outcome.
+///
+/// A warning rather than an error, deliberately. The check is a prediction —
+/// the viewer may be closed while the build runs — so it must not refuse a
+/// build that would have succeeded. Publishing still fails loudly if the lock
+/// is real.
+pub fn preflight_destination(output: &Utf8Path, diagnostics: &mut Diagnostics) {
+    if !output.exists() {
+        return;
+    }
+
+    // Opening for append rather than write: it asks the filesystem the same
+    // question about sharing without truncating a file the build might not
+    // replace.
+    match std::fs::OpenOptions::new()
+        .append(true)
+        .open(output.as_std_path())
+    {
+        Ok(_) => {}
+        Err(e) => diagnostics.push(
+            Diagnostic::warning(
+                code::DESTINATION_LOCKED,
+                "the output file is open in another program",
+            )
+            .at(SourceLoc::file(output.to_owned()))
+            .help("close it before the build finishes, or publishing will fail")
+            .detail(e.to_string()),
+        ),
+    }
+}
+
+#[cfg(test)]
+mod preflight_tests {
+    use super::*;
+
+    #[test]
+    fn a_writable_destination_says_nothing() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let out = Utf8PathBuf::from_path_buf(dir.path().join("out.pdf")).expect("utf8");
+        std::fs::write(out.as_std_path(), b"%PDF-1.4\n").expect("write");
+
+        let mut diagnostics = Diagnostics::new();
+        preflight_destination(&out, &mut diagnostics);
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+    }
+
+    /// A first build has nothing to be locked.
+    #[test]
+    fn a_destination_that_does_not_exist_yet_says_nothing() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let out = Utf8PathBuf::from_path_buf(dir.path().join("new.pdf")).expect("utf8");
+
+        let mut diagnostics = Diagnostics::new();
+        preflight_destination(&out, &mut diagnostics);
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+    }
+
+    /// The check must not block a build, only predict a problem: the viewer
+    /// may be closed before publishing happens.
+    #[test]
+    fn a_locked_destination_warns_rather_than_blocks() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let out = Utf8PathBuf::from_path_buf(dir.path().join("held.pdf")).expect("utf8");
+        std::fs::write(out.as_std_path(), b"%PDF-1.4\n").expect("write");
+
+        // A directory where a file is expected is the portable way to make
+        // opening fail: Windows share-locking cannot be reproduced on Unix,
+        // and this exercises the same branch.
+        let blocked = Utf8PathBuf::from_path_buf(dir.path().join("dir.pdf")).expect("utf8");
+        std::fs::create_dir(blocked.as_std_path()).expect("mkdir");
+
+        let mut diagnostics = Diagnostics::new();
+        preflight_destination(&blocked, &mut diagnostics);
+
+        assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
+        let d = diagnostics.iter().next().expect("one");
+        assert_eq!(d.code, code::DESTINATION_LOCKED);
+        assert!(
+            !d.severity.blocks(),
+            "the pre-flight predicts; it must not refuse a build that would work"
+        );
     }
 }

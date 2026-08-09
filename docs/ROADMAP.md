@@ -17,6 +17,7 @@ Related: [SRS-REVIEW](SRS-REVIEW.md) · [ARCHITECTURE](ARCHITECTURE.md)
 | **S0** | Typesetting spike | nobody | We know SILE can set a Bible page. No Rust. | 8 |
 | **M0** | Skeleton and contract | nobody | The pipeline exists end to end on one book. Ugly, deterministic, tested. | 10 |
 | **S1** | Packaging spike | nobody | We know what a single binary costs, and whether Windows is a wall. | 5 |
+| **S2** | GUI spike | nobody | We know whether a native Rust shell can take Tamil and Hebrew input. | 1 |
 | **M1** | USFM to PDF | us | Real Scripture through the real parser, in two columns. | 9 |
 | **M2** | Configuration | us | Page, typography, and output settings, from file and from the GUI. | 10 |
 | **M3** | Styles | first outside testers | The visual layer, editable without TOML. First build worth showing. | 8 |
@@ -60,6 +61,22 @@ Build SILE from source on all three platforms and find out what a single distrib
 
 **Done when** a single binary on at least one platform typesets a fixture with no SILE installed, the artifact size is recorded, and the Windows answer is known either way.
 
+### S2 — GUI spike
+
+*Days, not weeks. Blocks M2, which is the milestone that builds a GUI.*
+
+One question: **can a native Rust toolkit accept Scripture-script text input on all three platforms?**
+
+[ADR-003](adr/003-gui.md) chose a webview on four arguments. Three have since expired — the integrated preview is gone, AccessKit gives a native toolkit a real accessibility tree, and cosmic-text shapes complex scripts in pure Rust. What is left is **typing**: input-method composition, candidate windows, and right-to-left caret and selection behaviour in ordinary text fields, for users who work in Tamil, Devanagari, Arabic and Hebrew.
+
+**It is worth a spike rather than an argument** for the same reason S0 and S1 were: the last three times something looked settled from the documentation — SILE's `bible` class, `--enable-embedded-resources`, PE symbol resolution — it was not.
+
+Two things ride on the answer beyond the toolchain preference. A native shell has no `libwebkit2gtk` dependency, so [ADR-006](adr/006-single-binary.md)'s single binary becomes true on Linux as well. And the whole JavaScript toolchain disappears.
+
+**Done when** a throwaway application has taken Tamil and Hindi input through a platform IME on Windows, shown Arabic and Hebrew with correct caret and selection behaviour, and been read by a screen reader — or has failed to, in writing.
+
+**If it fails**, the fallback is Tauri with a Rust/WASM frontend: no npm, no Vite, no TypeScript, at the cost of keeping the Linux dependency.
+
 ### M1 — USFM to PDF
 
 **You can** point the CLI at a folder of USFM and get a two-column PDF: paragraphs, poetry `q1`–`q4`, section headings, chapter and verse numbers, common character styles.
@@ -94,7 +111,7 @@ The heaviest layer of Lua class work, which S0 has already de-risked.
 
 ### M5 — Hardening
 
-**You can** rely on it. The full 66-book corpus builds. Fonts are pre-flighted, so a missing font or an uncovered script is an error rather than a page of tofu ([SRS-REVIEW F5](SRS-REVIEW.md#f5--sile-substitutes-missing-fonts-silently-so-pdf-003-and-pdf-004-cannot-be-delegated)). Cancel works mid-build. Draft builds make the iterate-and-rebuild loop usable ([SRS-REVIEW F10](SRS-REVIEW.md#f10--build-time-is-the-dominant-fact-of-the-workflow-and-the-srs-does-not-confront-it)). Caches make reopening fast. The integrated preview lands. SILE and its native dependencies are packaged for three platforms.
+**You can** rely on it. The full 66-book corpus builds. Fonts are pre-flighted, so a missing font or an uncovered script is an error rather than a page of tofu ([SRS-REVIEW F5](SRS-REVIEW.md#f5--sile-substitutes-missing-fonts-silently-so-pdf-003-and-pdf-004-cannot-be-delegated)). Cancel works mid-build. Draft builds make the iterate-and-rebuild loop usable ([SRS-REVIEW F10](SRS-REVIEW.md#f10--build-time-is-the-dominant-fact-of-the-workflow-and-the-srs-does-not-confront-it)). Caches make reopening fast. The finished PDF opens in the platform's own viewer. SILE and its native dependencies are packaged for three platforms.
 
 Packaging is called out as milestone content rather than release-week work, because HarfBuzz, fontconfig, ICU, and libtexpdf across Windows, macOS, and Linux is its own project.
 
@@ -298,10 +315,10 @@ Not an item, but the thing to watch: **ICU data is 32 MB of the 78**, and filter
 | **P5.3** | M | Full 66-book corpus build; PDF structural assertions; vendored pinned test fonts | Page count, page geometry, embedded font list, per-page extracted text, and image presence asserted; the suite does not fail when a system font is updated (PDF-001 – PDF-003, DET-002) |
 | **P5.4** | M | Draft builds and selected-book UI | A one-book draft after a single style change completes in a small fraction of a full-Bible build and is visibly marked as a draft (BLD-012, BOOK-004) |
 | **P5.5** | M | Discovery and parse caches with the five-part invalidation key | Reopening a 66-book project lists books in under 500 ms warm; a change to configuration, styles, marker table, backend version, or application version invalidates the cache ([SRS-REVIEW F14d](SRS-REVIEW.md#f14--smaller-gaps-and-conflicts)) |
-| **P5.6** | M | Integrated pdf.js preview, page-windowed | A 2,000-page PDF opens without rasterizing the whole document; the viewer runs with script execution and external links disabled (GUI-008, GUI-009) |
+| **P5.6** | S | Open PDF and Open Output Folder; output-path pre-flight | The finished PDF opens in the platform's own viewer and the containing folder can be revealed (GUI-009). **There is no integrated preview** — GUI-008 is a SHOULD and [ADR-003](adr/003-gui.md#revision-the-preview-is-gone-and-most-of-this-argument-with-it) declines it. The pre-flight is the part that matters: an external viewer holds the output open, so a locked destination is now the ordinary case rather than an edge one, and it must be reported **before** a full-Bible build rather than after it (OUT-001, [SRS-REVIEW F10](SRS-REVIEW.md#f10--build-time-is-the-dominant-fact-of-the-workflow-and-the-srs-does-not-confront-it)) |
 | **P5.7** | L ⏳ | Packaging SILE, HarfBuzz, fontconfig, ICU, libtexpdf, and the Lua rock tree for three platforms, on the shape S1 proved | A fresh machine with no SILE installed builds a PDF from the installer artefact; the application ships as one executable that re-executes itself to typeset ([ADR-006](adr/006-single-binary.md)), so cancellation and crash isolation are unchanged; `luasec` and `luasocket` are omitted, so the shipped runtime contains no TLS or socket code at all ([spike F-16](../spike/NOTES.md)); the advanced executable override still works for development (SILE-003, SILE-004, SILE-009) |
 | **P5.8** | M | SILE error mapping table; raw log collapsed behind it | Each known backend failure class becomes a BibleCompose diagnostic with the raw text available but collapsed; an unmapped failure still surfaces rather than being swallowed (SILE-007, DIA-005) |
-| **P5.9** | S | Offline end-to-end test; log hygiene review | A full open-edit-build-preview session succeeds with the network disabled and issues zero requests; the build log contains no Scripture by default (NFR-004, NFR-010) |
+| **P5.9** | S | Offline end-to-end test; log hygiene review | A full open-edit-build session succeeds with the network disabled and issues zero requests; the build log contains no Scripture by default (NFR-004, NFR-010) |
 
 ## Phase 6 → M6 · Version 1.0
 

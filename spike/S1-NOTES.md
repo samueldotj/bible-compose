@@ -7,7 +7,7 @@ The decision this measures is [ADR-006](../docs/adr/006-single-binary.md); the i
 | Item | Status |
 |---|---|
 | S1.1 Build from source on Linux | **Done** — builds in 68s (P-6); prerequisites in P-4 |
-| S1.2 The same on Windows | **Substantially answered — P-9.** Cross-compiled from Linux with mingw-w64; `sile.exe` is a native PE that runs on Windows 11, loads every module, and typesets as far as line breaking. One blocker left, and it is a packaging gap, not a porting one |
+| S1.2 The same on Windows | **Done — P-9, P-10.** Cross-compiled from Linux with mingw-w64; `sile.exe` typesets `john_1_1_5.xml` natively on Windows 11 to a correct 6×9in PDF whose text is identical to the Linux build's |
 | S1.3 The same on macOS | Queued in CI — no macOS available locally |
 | S1.4 A binary that re-executes itself | Not built, but **costed** (P-6, P-7): a 2.1 MB tree must reach disk either way |
 | S1.5 Measure; settle ADR-006 | **Linux measured: ~15 MB** (P-7). Waiting on S1.2/S1.3 to settle |
@@ -566,6 +566,130 @@ That is where S1.2 resumes.
    [FONT-001..004](../docs/SRS-REVIEW.md) — a data-reduced ICU would break
    line breaking silently on exactly the complex scripts the pre-flight exists
    to protect.
+
+---
+
+## P-10 — It typesets. The ICU blocker was a distro's packaging choice, nothing more.
+
+[P-9](#p-9--windows-works-cross-compiled-from-linux-running-natively-nine-walls-deep)
+ended one step short: Fedora's `mingw64-icu` carries no break-iterator data, so
+line breaking failed with `U_MISSING_RESOURCE_ERROR`. Replacing that ICU
+finishes the job.
+
+### MSYS2's ICU is complete
+
+MSYS2 packages are plain zstd tarballs, so this needed no MSYS2 installation —
+just `curl` and `tar` inside the same Fedora container.
+
+| ICU data | `brkitr` entries | dictionaries |
+|---|---|---|
+| Fedora `mingw64-icu` 74.2 | **0** | none |
+| Ubuntu native 70.1 (S1.1) | 32 | — |
+| **MSYS2 `mingw-w64-x86_64-icu` 78.3** | **36** | burmese, cj, khmer, lao, thai |
+
+All five dictionaries are present, which matters more than the count: those are
+the only way to break Thai, Khmer, Lao, Burmese and CJK at all, and their
+absence would not have produced an error — just one unbreakable line.
+
+### Two things it cost
+
+**A rebuild.** MSYS2 is on ICU 78, Fedora on 74, so the DLL names and the
+library names differ (`-licuin` vs `-licui18n`). `configure` bakes those into
+the Makefile, so this had to go back through configure, not just `make`.
+
+**A matching C++ runtime.** First run after the swap:
+
+```
+error loading module 'justenoughicu' from file './justenoughicu.dll':
+        The specified procedure could not be found.
+```
+
+ICU is C++ internally and MSYS2 built it with GCC 16; the stage carried
+Fedora's GCC 14 `libstdc++-6.dll`. Taking `gcc-libs` and `libwinpthread` from
+MSYS2 too fixed it. Worth noting for P5.7: **mixing distributions means
+matching their runtimes**, and the failure names neither the library nor the
+reason. (It also made the artifact smaller — Fedora's unstripped
+`libstdc++-6.dll` is 26 MB, MSYS2's is 2.7 MB.)
+
+### The result
+
+Run natively on Windows 11 against `tests/golden/john_1_1_5.xml`:
+
+```
+> .\sile.exe john_1_1_5.xml --class biblecompose -o out.pdf
+SILE v0.15.13-dirty (LuaJIT 2.1.1785763465) [Rust]
+<john_1_1_5.xml> as xml
+[1]
+exit 0
+```
+
+| | |
+|---|---|
+| pages | 1 |
+| page size | 432 × 648 pt — exactly 6 × 9 in |
+| fonts | DejaVuSerif + Bold, CID TrueType, embedded and subset |
+| running head | *John 1:1–1:5* |
+
+**`pdftotext` output is byte-identical to the Linux build's.** Same line breaks,
+same verse placement, same footnote. The typesetting is not merely working — it
+agrees with the reference platform.
+
+### Determinism across platforms is not free, and the cause is already known
+
+The two PDFs differ in 20,075 of 21,571 bytes. That is not as alarming as it
+looks:
+
+| | Linux | Windows |
+|---|---|---|
+| bytes | 21,431 | 21,571 |
+| `pdftotext` | identical | identical |
+| `/ID` | zeroed | zeroed |
+| subset tags | `ATAHYK+`, `KUZJES+` | `GSWZYT+`, `ZMKLGH+` |
+
+The font subset tag is random per run — [S0's F-15](NOTES.md), already known and
+already handled in the testkit by `strip_subset_prefix()`. Because content
+streams are Flate-compressed, changing six bytes inside an embedded font
+cascades through nearly the whole file, which is what produces the 20k figure.
+`/ID` being zeroed on both sides says SILE is not injecting timestamps.
+
+So **[DET-001/002](../docs/SRS-REVIEW.md) are unaffected by the port**, but
+cross-platform byte-identical output still requires fixing the subset tag, and
+that is now a cross-platform requirement rather than a nice-to-have.
+
+### Size: Windows is not 15 MB
+
+[P-7](#p-7--what-actually-ships-is-15-mb-and-the-embedding-does-not-shrink-it)
+measured the Linux artifact at ~15 MB and flagged that ICU came from the system
+there. Windows confirms the caveat — everything must ship:
+
+| | |
+|---|---|
+| `libicudt78.dll` (ICU data) | **32 MB** |
+| `libharfbuzz-subset-0.dll` | 8.5 MB |
+| `libharfbuzz-0.dll` | 6.6 MB |
+| `libicuin78.dll` | 3.1 MB |
+| `rusile.dll` | 2.8 MB |
+| all DLLs | 66 MB |
+| `sile.exe` | 1.2 MB |
+| staged total | **78 MB** |
+
+**ICU data alone is twice the entire Linux artifact.** This is the number
+[ADR-006](../docs/adr/006-single-binary.md) has to be settled against, not 15 MB,
+and it makes ICU data filtering the single highest-value size lever we have:
+keeping `brkitr` plus the locales we support and dropping converters, collation
+and timezones should recover most of that 32 MB. It also forces the question of
+which scripts BibleCompose commits to supporting — a decision the SRS should own
+rather than inherit from whichever distro's ICU we happened to link.
+
+The 78 MB is also un-deduplicated: `libicutest78.dll` and `libicutu78.dll` are
+staged because the closure walker copies whatever is present, not because
+anything needs them.
+
+### S1.2 is done
+
+Windows builds, runs, and typesets correctly. What remains is engineering, not
+discovery: fold [s1-windows-cross.sh](s1-windows-cross.sh) into CI, filter ICU
+data, and fix the subset tag.
 
 ---
 

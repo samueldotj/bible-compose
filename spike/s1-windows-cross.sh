@@ -10,9 +10,9 @@
 #
 # Produces /work/stage — sile.exe plus everything it needs beside it.
 #
-# KNOWN INCOMPLETE: Fedora's mingw64-icu carries no break-iterator data, so the
-# result typesets as far as line breaking and then fails with
-# U_MISSING_RESOURCE_ERROR. See P-9's last section. Everything else works.
+# Fedora's mingw64-icu carries NO break-iterator data (P-9), so ICU is taken
+# from MSYS2 instead — along with MSYS2's GCC runtime, because ICU is C++
+# internally and the two distributions' libstdc++ do not interchange (P-10).
 set -euo pipefail
 
 SILE_REF=${SILE_REF:-v0.15.13}
@@ -60,6 +60,38 @@ Version: 2.1.0-beta3
 Libs: -L\${libdir} -lluajit-5.1
 Cflags: -I\${includedir}
 EOF
+
+say "ICU and the C++ runtime from MSYS2, not Fedora"
+# Fedora's mingw64-icu is data-filtered: zero brkitr resources, so SILE cannot
+# break lines (U_MISSING_RESOURCE_ERROR). MSYS2's has all 36 plus the five
+# dictionaries for scripts written without spaces. MSYS2 packages are plain
+# zstd tarballs; no MSYS2 installation is needed to use one.
+cd "$WORK"
+fetch_msys2 () {  # $1 = package name glob, extracts into $2
+  local p
+  p=$(curl -s https://repo.msys2.org/mingw/mingw64/ \
+      | grep -oE "$1-[0-9][^\"]*\.pkg\.tar\.zst" | sort -V | tail -1)
+  [ -f "$p" ] || curl -sLO "https://repo.msys2.org/mingw/mingw64/$p"
+  mkdir -p "$2" && tar --use-compress-program=unzstd -xf "$p" -C "$2"
+  echo "  $p"
+}
+fetch_msys2 mingw-w64-x86_64-icu       "$WORK/msys2icu"
+fetch_msys2 mingw-w64-x86_64-gcc-libs  "$WORK/msys2gcc"
+fetch_msys2 mingw-w64-x86_64-libwinpthread-git "$WORK/msys2gcc"
+
+# Retire Fedora's ICU so pkg-config cannot find it, then install MSYS2's.
+mkdir -p "$WORK/icu-retired"
+for f in "$SYS"/bin/icu*.dll "$SYS"/lib/libicu*.dll.a "$SYS"/lib/pkgconfig/icu-*.pc; do
+  [ -e "$f" ] && mv "$f" "$WORK/icu-retired/" || true
+done
+rm -rf "$SYS/include/unicode"
+cp "$WORK"/msys2icu/mingw64/bin/libicu*.dll "$SYS/bin/"
+cp "$WORK"/msys2icu/mingw64/lib/libicu*.dll.a "$SYS/lib/"
+cp -r "$WORK"/msys2icu/mingw64/include/unicode "$SYS/include/"
+for pc in "$WORK"/msys2icu/mingw64/lib/pkgconfig/icu-*.pc; do
+  sed -e "s|^prefix=.*|prefix=$SYS|" -e "s|/mingw64|$SYS|g" "$pc" \
+    > "$SYS/lib/pkgconfig/$(basename "$pc")"
+done
 
 say "source"
 cd "$WORK"
@@ -182,6 +214,11 @@ while [ $changed -eq 1 ]; do
     done < <($OD -p "$f" 2>/dev/null | sed -n 's/^[[:space:]]*DLL Name:[[:space:]]*//p')
   done < <(find "$ST" -name '*.dll' -o -name '*.exe' -o -name '*.so')
 done
+
+# ICU is C++ internally and MSYS2 built it with a newer GCC than Fedora's, so
+# the C++ runtime must come from MSYS2 as well. Skipping this fails at load with
+# "The specified procedure could not be found", naming neither library nor cause.
+cp "$WORK"/msys2gcc/mingw64/bin/*.dll "$ST/"
 
 printf '  %s files, %s, %s DLLs\n' \
   "$(find "$ST" -type f | wc -l)" "$(du -sh "$ST" | cut -f1)" \

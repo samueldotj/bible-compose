@@ -13,5 +13,8 @@ camino.workspace = true
 serde.workspace = true
 toml_edit.workspace = true
 
+[dev-dependencies]
+tempfile.workspace = true
+
 [lints]
 workspace = true

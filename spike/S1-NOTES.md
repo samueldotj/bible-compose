@@ -7,7 +7,7 @@ The decision this measures is [ADR-006](../docs/adr/006-single-binary.md); the i
 | Item | Status |
 |---|---|
 | S1.1 Build from source on Linux | **Done** — builds in 68s (P-6); prerequisites in P-4 |
-| S1.2 The same on Windows | Queued in CI ([packaging-spike.yml](../.github/workflows/packaging-spike.yml)) — but **P-8**: upstream has no supported Windows build of the Rust CLI, so the job is testing a route we invented |
+| S1.2 The same on Windows | **Substantially answered — P-9.** Cross-compiled from Linux with mingw-w64; `sile.exe` is a native PE that runs on Windows 11, loads every module, and typesets as far as line breaking. One blocker left, and it is a packaging gap, not a porting one |
 | S1.3 The same on macOS | Queued in CI — no macOS available locally |
 | S1.4 A binary that re-executes itself | Not built, but **costed** (P-6, P-7): a 2.1 MB tree must reach disk either way |
 | S1.5 Measure; settle ADR-006 | **Linux measured: ~15 MB** (P-7). Waiting on S1.2/S1.3 to settle |
@@ -302,6 +302,13 @@ that as the whole job, and P-7 adds that the Lua half would need solving too.
 
 ## P-8 — Windows is not a toolchain problem. Upstream has no Windows build of the Rust CLI.
 
+> **Superseded in part by [P-9](#p-9--windows-works-cross-compiled-from-linux-running-natively-nine-walls-deep).**
+> Everything below about upstream's state is accurate and still worth knowing.
+> The conclusion drawn from it — that a Windows build is a porting project — was
+> too pessimistic: cross-compiling from Linux works, and P-9 records the cost.
+> Kept in place rather than rewritten, because the reasoning is what made P-9
+> worth attempting.
+
 Asked why S1.2 could not simply be done on the development machine. The shallow
 answer is the missing tools in P-3. The real answer is worse, and it lands on
 [NFR-001](../docs/SRS-v0.1.md), not on the schedule.
@@ -398,10 +405,174 @@ ways of shipping one binary; on Windows there may not be one binary to ship.
 
 ---
 
+## P-9 — Windows works. Cross-compiled from Linux, running natively, nine walls deep.
+
+[P-8](#p-8--windows-is-not-a-toolchain-problem-upstream-has-no-windows-build-of-the-rust-cli)
+concluded that a Windows build meant un-breaking SILE on Windows and should be
+treated as a project. **That was too pessimistic, and this supersedes it.** The
+route P-8 dismissed as "ours, not upstream's" turns out to work.
+
+WSL cannot host a Windows *binary*, but it can host the Windows *build*. A
+Fedora 41 container supplies a complete mingw-w64 cross stack; the resulting
+`sile.exe` was copied to this Windows 11 machine and run there. Every result
+below is from native execution, not wine and not WSL.
+
+### The cross stack is better than the native Linux one
+
+| | cross (Fedora `mingw64-*`) | Ubuntu native (S1.1) |
+|---|---|---|
+| HarfBuzz | **9.0.0** | 2.7.4 |
+| ICU | 74.2 | 70.1 |
+| fontconfig | 2.15.0 | 2.13.1 |
+| freetype | 2.13.2 | — |
+
+That matters beyond convenience: `configure` reported
+`harfbuzz-subset >= 6.0.0... yes`, so the cross build gets font variations and
+subsetting — the capability [P-5](#p-5--two-build-time-requirements-that-are-not-about-rust-at-all)
+had to switch off on Linux.
+
+**LuaJIT was the only gap** — there is no `mingw64-luajit`. LuaJIT cross-builds
+in one command (`make CROSS=x86_64-w64-mingw32- TARGET_SYS=Windows`) and is
+explicitly designed to; it yielded a PE `luajit.exe` and `lua51.dll`. With a
+hand-written `luajit.pc`, every one of SILE's dependencies resolved.
+
+### Nine failures, in order
+
+The value is the sequence, as in [P-4](#p-4--what-a-source-build-actually-demands-discovered-one-refusal-at-a-time).
+Nothing here was hard; there was just a lot of it, and none of it is documented
+anywhere because nobody has walked this path.
+
+| # | Failure | Cause | Fix |
+|---|---|---|---|
+| 1 | `cmp is required` | `diffutils` absent | install |
+| 2 | `pdfinfo is required` | `poppler-utils` absent | install |
+| 3 | `cannot find Lua module cassowary` | my `--with-system-luarocks` was wrong for cross | drop it |
+| 4 | rockspec name mismatch | autoconf sets `program_prefix=${host_alias}-` when cross compiling; SILE feeds the transformed name into the rockspec, so `sile-dev-1.rockspec` declares `package = "x86_64-w64-mingw32-sile"` | `--program-prefix=` |
+| 5 | `'rusile.dll' is not a standard library name` | `configure` **generates** `aminclude.am`, which is then newer than `Makefile.in`, so `make` re-runs automake — and automake 1.16.5 rejects the file configure just wrote (all three of `.so`, `.dylib`, `.dll`) | order timestamps so automake does not re-run |
+| 6 | 12 `libtexpdf` objects fail | `libtexpdf.h` **has** a MinGW branch, but a stale one: it defines `ftello`→`ftello64`, and modern mingw-w64 declares `ftello64` itself with `_off64_t`, conflicting with the `_off_t` prototypes the macro rewrites | delete the branch (3 lines) |
+| 7 | 5 of 6 `justenough` libraries fail | `silewin32.h` — SILE's *own* Windows compatibility header — implements `strcasestr()` with `tolower()` and never includes `<ctype.h>` | add the include (1 line) |
+| 8 | `cannot stat .../librusile.dll` | `CARGO_TARGET_TRIPLE` defaults to `rustc -vV \| sed -n 's/host: //p'` — **the build machine** — with no reference to `--host`. So configure knew the host was Windows (it set `LIBEXT = .dll`) and then looked under the Linux target directory | it is `AC_ARG_VAR`: pass `CARGO_TARGET_TRIPLE=x86_64-pc-windows-gnu` |
+| 9 | still `librusile.dll`, then `sile` | Windows DLLs take no `lib` prefix and executables end in `.exe`; the Makefile hardcodes Unix names | alias the files |
+
+After 9, `make` exits 0 and produces `sile.exe`: **PE32+ x86-64, 2.0 MB**.
+
+Total source patching: **four lines, in two files.**
+
+### The one real problem: two Lua VMs
+
+The first `sile.exe` ran on Windows and got as far as lpeg, then died with
+`attempt to perform arithmetic on a boolean value`. The cause is structural:
+
+```
+sile.exe      imports: KERNEL32, msvcrt, ntdll      ← no Lua DLL
+sile.exe      exports: 0 Lua symbols
+lua-utf8.so   imports: lua51.dll
+lpeg.so       imports: lua51.dll
+```
+
+`sile.exe` had LuaJIT statically linked inside it and exported none of it, while
+every rock DLL bound to a *separate* `lua51.dll`. Two LuaJIT VMs in one process:
+`luaopen_lpeg` registered its metatables into a VM that was not the one running
+the code.
+
+**This works on Linux only by an ELF accident** — a statically linked
+executable's symbols are globally visible, so `dlopen`ed modules resolve against
+the executable. PE has no equivalent; imports bind to a named DLL or nothing.
+It is also why upstream's CMake path builds a `lua51.dll` and links everything
+to it.
+
+`configure` already has the switch: **`--with-system-lua-sources`**, which stops
+mlua vendoring LuaJIT. With it, `sile.exe` shrank 2.0 MB → **1.2 MB**, gained
+`lua51.dll` in its imports, and the VM split disappeared.
+
+**This is the finding that generalises.** Anything statically linking Lua into
+the executable and expecting `dlopen`ed C modules to find it is relying on ELF
+behaviour that Windows does not have. It applies to [ADR-006](../docs/adr/006-single-binary.md)
+option A directly, and it is the second independent reason to reject it.
+
+### The C rocks cross-build too
+
+[P-7](#p-7--what-actually-ships-is-15-mb-and-the-embedding-does-not-shrink-it)'s
+16 native `.so` were the wall I expected to be worst. SILE's `Makefile-luarocks`
+does drive luarocks with the native toolchain regardless of `--host` — the first
+run produced 8 ELF objects in `lua_modules/lib64`. But luarocks takes the
+toolchain as variables, and pointing it at the cross compiler works.
+
+One wrinkle: luarocks emits `gcc -shared -L… -lluajit-5.1 -o out.so obj.o`, with
+the library **before** the object. GNU ld resolves left to right, so it is
+discarded before anything needs it. A three-line wrapper that appends the
+library last fixes every rock at once.
+
+| rock | result |
+|---|---|
+| luautf8, lpeg, luafilesystem, compat53 (×4), luaexpat, lua-zlib | **9 PE32+ DLLs** |
+| bit32 | fails — needs POSIX `strerror_r`; **not needed**, configure skips it under LuaJIT |
+| linenoise | fails — needs `termios.h`; it is the REPL line editor, not typesetting |
+
+The `.so` extension does not need changing: SILE searches both `?.so` and `?.dll`
+on its cpath, and `LoadLibrary` does not care what the file is called.
+
+### How far it actually gets
+
+Run natively on Windows 11, from the staged tree:
+
+```
+> .\sile.exe --version
+SILE v0.15.13-dirty (LuaJIT 2.1.1785763465) [Rust]
+```
+
+and on a real document (`tests/golden/john_1_1_5.xml`, `--class biblecompose`)
+it parses the XML, loads the class, resolves DejaVu Serif through fontconfig,
+enters the HarfBuzz shaper, and stops in the ICU line breaker:
+
+```
+Word break parser failure: U_MISSING_RESOURCE_ERROR
+```
+
+### The last blocker is packaging, not porting
+
+Fedora's `mingw64-icu` ships a **data-reduced** ICU. Counting break-iterator
+resources in each data library:
+
+| ICU data | `brkitr` entries |
+|---|---|
+| Ubuntu native (S1.1, works) | 32 |
+| Fedora native | 78 |
+| **Fedora `mingw64-icu` 74.2** | **0** |
+
+So the cross ICU has no break-iterator data at all, and SILE cannot break lines.
+Nothing about Windows is implicated — the library is simply packaged without it.
+Three ways out, none attempted yet: MSYS2's `mingw-w64-x86_64-icu`, ICU's
+published `icudt74l.dat` with `ICU_DATA` set, or building ICU data ourselves.
+That is where S1.2 resumes.
+
+### What this changes
+
+1. **NFR-001's Tier-1 Windows claim is defensible again.** P-8 doubted it. On
+   this evidence Windows is reachable, from Linux, in CI, with four lines of
+   patch and a documented flag list.
+2. **`--with-system-lua-sources` is mandatory on Windows**, not optional. It
+   should be in the build recipe with the reason attached, because the failure
+   it prevents (`arithmetic on a boolean`) points nowhere near its cause.
+3. **[packaging-spike.yml](../.github/workflows/packaging-spike.yml)'s Windows
+   job is the wrong shape.** It attempts a native MSYS2 build. A Linux cross job
+   is faster, is now a known-good path, and matches how P5.7 would ship. Keep
+   MSYS2 as a second data point; make cross the primary.
+4. **P-8's conclusion is superseded** on the question of feasibility. What
+   survives from it is accurate and still matters: upstream does not test any of
+   this, so every SILE upgrade is a Windows risk we absorb, and that belongs in
+   the risk register.
+5. **The ICU data question is now on the critical path** for both Windows and
+   [FONT-001..004](../docs/SRS-REVIEW.md) — a data-reduced ICU would break
+   line breaking silently on exactly the complex scripts the pre-flight exists
+   to protect.
+
+---
+
 ## What this already tells P5.7
 
 Three things, none of which depend on finishing the build:
 
-1. **CI must build from source on every platform.** Not `cargo build`. The GitHub workflow's `backend` job installs a prebuilt SILE today; for packaging it will need `./bootstrap.sh && ./configure && make`. On Windows it may not be autotools at all — P-8 found upstream has no autotools Windows support and a separate, disabled CMake build; settle that before assuming an MSYS2 runner is the shape.
+1. **CI must build from source on every platform.** Not `cargo build`. The GitHub workflow's `backend` job installs a prebuilt SILE today; for packaging it will need `./bootstrap.sh && ./configure && make`. The Windows job should **cross-compile from Linux** rather than run MSYS2 natively — P-9 walked that route end to end and [s1-windows-cross.sh](s1-windows-cross.sh) reproduces it.
 2. **`--features static` is not a shortcut.** The embedding work in [S1.4](../docs/ROADMAP.md#s1--packaging-spike) is ours either way.
 3. **The macOS leg needs a runner before it needs effort.** GitHub provides `macos-latest`; that is the cheapest way to answer S1.3 and it can be answered in CI before anyone builds it by hand.

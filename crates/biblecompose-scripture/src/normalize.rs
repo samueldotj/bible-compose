@@ -400,11 +400,17 @@ impl Cx<'_> {
             // USJ calls it `file`; the model calls it `src`, because that is
             // what the USFM attribute is called and what a user will look for.
             src: node.attribute("file").unwrap_or_default().into(),
-            alt: {
-                let alt = flatten(&node.children);
-                (!alt.is_empty()).then_some(alt)
+            // `\fig caption|alt="..." src="..."\fig*` — the content is the
+            // **caption** and `alt` is a separate attribute. Reading the
+            // content as `alt` left `caption` empty and, when a file supplied
+            // a real `alt` too, emitted the attribute twice. A Malayalam
+            // Ephesians in the corpus does exactly that, and the resulting XML
+            // was not well formed.
+            caption: {
+                let caption = flatten(&node.children);
+                (!caption.is_empty()).then_some(caption)
             },
-            caption: None,
+            alt: node.attribute("alt").map(str::to_owned),
             size: node.attribute("size").map(str::to_owned),
             attributes: attributes(node),
         }
@@ -449,7 +455,15 @@ impl Cx<'_> {
 
         Inline::Unsupported(Unsupported {
             marker: marker.to_owned(),
-            text: flatten(&node.children),
+            // Empty on purpose. Every caller normalizes this node's children
+            // into the surrounding content, so copying the text here as well
+            // would emit it twice — which the M1 construct golden caught, and
+            // which is a worse failure than the loss FUN-002 guards against:
+            // a duplicated verse reads as Scripture.
+            //
+            // `Unsupported` is a record that a marker's *effect* was lost. The
+            // words are not lost, so they are not its to carry.
+            text: String::new(),
             location,
         })
     }
@@ -476,7 +490,21 @@ fn attributes(node: &Node) -> Vec<Attribute> {
         .filter(|a| {
             !matches!(
                 a.key.as_str(),
-                "number" | "sid" | "eid" | "caller" | "altnumber" | "pubnumber" | "style" | "align"
+                "number"
+                    | "sid"
+                    | "eid"
+                    | "caller"
+                    | "altnumber"
+                    | "pubnumber"
+                    | "style"
+                    | "align"
+                    // A figure carries these as `src` and `size`; emitting
+                    // them again produces duplicate XML attributes, which is
+                    // a well-formedness error rather than an untidiness.
+                    | "file"
+                    | "src"
+                    | "size"
+                    | "alt"
             )
         })
         .map(|a| Attribute {

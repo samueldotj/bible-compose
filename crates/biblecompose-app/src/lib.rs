@@ -5,6 +5,7 @@
 //! the only thing that orchestrates — `biblecompose-core` from SRS §12.1 is
 //! gone because its stated job had exactly one caller.
 
+pub mod project;
 pub mod publish;
 pub mod state;
 

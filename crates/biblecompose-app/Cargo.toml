@@ -23,6 +23,7 @@ camino.workspace = true
 serde.workspace = true
 
 [dev-dependencies]
+quick-xml.workspace = true
 biblecompose-testkit.workspace = true
 tempfile.workspace = true
 

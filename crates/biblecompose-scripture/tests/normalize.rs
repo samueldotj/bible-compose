@@ -271,7 +271,10 @@ fn a_figure_keeps_its_source_and_attributes() {
     };
     assert_eq!(f.src, "ark.png");
     assert_eq!(f.size.as_deref(), Some("span"));
-    assert_eq!(f.alt.as_deref(), Some("The ark"));
+    // The content of ig is the caption; \ is a separate attribute
+    // and this file supplies none.
+    assert_eq!(f.caption.as_deref(), Some("The ark"));
+    assert_eq!(f.alt, None);
     // USFM-003: attributes we do not model are preserved rather than dropped.
     assert!(
         f.attributes.iter().any(|a| a.key == "ref"),

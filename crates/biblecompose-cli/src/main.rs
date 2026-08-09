@@ -15,9 +15,12 @@ use biblecompose_app::{
     backend_version, build, emit, BuildEvent, BuildReporter, BuildRequest, BuildState, CancelToken,
     CONTRACT_VERSION,
 };
+use biblecompose_diagnostics::Diagnostics;
 use biblecompose_diagnostics::Severity;
 use biblecompose_scripture::fixtures;
-use camino::Utf8PathBuf;
+use biblecompose_scripture::plan::BookPlan;
+use biblecompose_scripture::ScriptureDocument;
+use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -37,7 +40,10 @@ enum Command {
     ///
     /// The golden-file path: fast, hermetic, and needs no typesetter.
     Emit {
-        /// A built-in fixture. M0 has no parser, so documents come from here.
+        /// A folder of USFM. Takes precedence over `--fixture`.
+        #[arg(long)]
+        books: Option<Utf8PathBuf>,
+        /// A built-in fixture, for testing the pipeline without a project.
         #[arg(long, default_value = "john_1_1_5")]
         fixture: String,
         /// Write to a file rather than stdout.
@@ -47,12 +53,18 @@ enum Command {
 
     /// Parse and validate without emitting or typesetting.
     Validate {
+        /// A folder of USFM. Takes precedence over `--fixture`.
+        #[arg(long)]
+        books: Option<Utf8PathBuf>,
         #[arg(long, default_value = "john_1_1_5")]
         fixture: String,
     },
 
     /// Full pipeline: validate, emit, typeset, publish.
     Build {
+        /// A folder of USFM. Takes precedence over `--fixture`.
+        #[arg(long)]
+        books: Option<Utf8PathBuf>,
         #[arg(long, default_value = "john_1_1_5")]
         fixture: String,
         /// Where the PDF goes. Never written until the build succeeds.
@@ -78,6 +90,30 @@ enum Command {
 
     /// List the built-in fixtures.
     Fixtures,
+}
+
+/// A folder if one was given, otherwise a built-in fixture.
+///
+/// The fixture path stays because it is how the pipeline is exercised with no
+/// project and no parser — which is what M0 was built on and what the golden
+/// tests still use.
+fn document(
+    books: Option<&Utf8Path>,
+    fixture: &str,
+) -> Result<(ScriptureDocument, Diagnostics), String> {
+    match books {
+        Some(root) => {
+            let loaded = biblecompose_app::project::load(root, &BookPlan::canonical());
+            if loaded.blocked() {
+                for d in loaded.diagnostics.iter() {
+                    eprintln!("{d}");
+                }
+                return Err(format!("{root} cannot be built"));
+            }
+            Ok((loaded.document, loaded.diagnostics))
+        }
+        None => Ok((load(fixture)?, Diagnostics::new())),
+    }
 }
 
 fn main() -> ExitCode {
@@ -117,8 +153,15 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             }
         }
 
-        Command::Emit { fixture, output } => {
-            let doc = load(&fixture)?;
+        Command::Emit {
+            books,
+            fixture,
+            output,
+        } => {
+            let (doc, diagnostics) = document(books.as_deref(), &fixture)?;
+            for d in diagnostics.iter() {
+                eprintln!("{d}");
+            }
             let emitted = emit(&doc);
             match output {
                 Some(path) => std::fs::write(path.as_std_path(), emitted.xml.as_bytes())
@@ -131,8 +174,11 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             Ok(ExitCode::SUCCESS)
         }
 
-        Command::Validate { fixture } => {
-            let doc = load(&fixture)?;
+        Command::Validate { books, fixture } => {
+            let (doc, diagnostics) = document(books.as_deref(), &fixture)?;
+            for d in diagnostics.iter() {
+                println!("{d}");
+            }
             println!(
                 "{} book(s), {} character(s) of Scripture",
                 doc.books.len(),
@@ -146,6 +192,7 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
         }
 
         Command::Build {
+            books,
             fixture,
             output,
             project,
@@ -153,7 +200,10 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             keep_intermediates,
             events,
         } => {
-            let doc = load(&fixture)?;
+            let (doc, load_diagnostics) = document(books.as_deref(), &fixture)?;
+            for d in load_diagnostics.iter() {
+                eprintln!("{d}");
+            }
             let request = BuildRequest::new(project, output)
                 .with_sile_path(sile_path)
                 .keeping_intermediates(keep_intermediates);

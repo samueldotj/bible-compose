@@ -81,6 +81,7 @@ dependencies = [
  "biblecompose-sile",
  "biblecompose-testkit",
  "camino",
+ "quick-xml",
  "serde",
  "tempfile",
 ]

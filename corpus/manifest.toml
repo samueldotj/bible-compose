@@ -177,6 +177,23 @@ features = ["introductions", "notes", "poetry", "titles"]
 traits = ["lf"]
 
 [[file]]
+path = "books/MRK-bsb.usfm"
+sha256 = "24663e114be1bd15d3065730cfe779bed2f583156d8134eedc89ccf54f95f3c8"
+bytes = 98109
+book = "MRK"
+chapters = 16
+verses = 673
+translation = "bsb"
+language = "English"
+direction = "ltr"
+source = "https://github.com/dharmatech/bsb-usfm/tree/5186f55fb2ffdcd63a94aa4e6f9073f06606f72c/usfm"
+copyright = "Public domain. The Berean Standard Bible, berean.bible"
+redistributable = "True"
+scripts = ["Latin"]
+features = ["notes", "poetry", "titles"]
+traits = ["lf"]
+
+[[file]]
 path = "books/NEH-hbo.usfm"
 sha256 = "97f90a89eec5de15c3c79cba9ccba6a15e34c2a3fbcb765a24ed65363335c96d"
 bytes = 103867

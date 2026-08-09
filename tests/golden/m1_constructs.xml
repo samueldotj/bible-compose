@@ -1,0 +1,26 @@
+<biblecompose version="1" class="biblecompose">
+<book code="MRK" name="Mark">
+<heading style="is" level="1">Introduction</heading>
+<para style="ip">An introduction paragraph with <char style="iqt">quoted words</char> in it.</para>
+<heading style="iot" level="1">Outline</heading>
+<para style="io1">The beginning <char style="ior">(1:1-8)</char></para>
+<para style="cl"><chapter n="1"/>Chapter One</para>
+<heading style="s" level="1">The Beginning of the Gospel</heading>
+<heading style="r" level="1">(Matthew 3:1-12; Luke 3:1-18)</heading>
+<para style="p"><verse n="1" start="1" end="1"/> The beginning of the gospel of <char style="nd">Jesus Christ</char>, <char style="add">the</char> Son of God. <verse n="2-3" start="2" end="3"/> As it is written: <char style="wj">A voice of one calling in the wilderness</char><note style="f" caller="+" origin="1:2">
+<para style="p"><char style="fq">wilderness </char><char style="ft">Or </char><char style="fqa">desert</char></para></note><xref caller="-" origin="1:2"><char style="xt">Isaiah 40:3</char></xref>.</para>
+<poetry style="q" level="1">Prepare the way for the Lord,</poetry>
+<poetry style="q" level="2">make straight paths for Him.</poetry>
+<break/>
+<para style="m">A continuation paragraph with no indent.</para>
+<para style="pi1">An indented paragraph.</para>
+<item level="1">A list item</item>
+<item level="2">A nested list item</item>
+<table>
+<row header="true"><cell align="start">Name </cell><cell align="start">Count</cell></row>
+<row header="false"><cell align="start">Levi </cell><cell align="start">3</cell></row>
+</table>
+<para style="p"><verse n="4" start="4" end="4"/> A word with attributes: <char style="w">baptism</char>, and a nested marker: <char style="add">supplied <char style="bd">bold</char></char>. <verse n="5" start="5" end="5" alt="5b"/> Alternate numbering, and a figure: </para>
+<figure src="jordan.png" size="span" ref="1:5">The Jordan</figure>
+<para style="p"><verse n="6" start="6" end="6"/> <milestone marker="qt-s" start="true" who="John"/>A quotation milestone<milestone marker="qt-e" start="false"/> and a <unsupported marker="zcustom"></unsupported>custom marker.</para>
+</book></biblecompose>

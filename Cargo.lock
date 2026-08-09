@@ -120,7 +120,9 @@ name = "biblecompose-project"
 version = "0.1.0"
 dependencies = [
  "biblecompose-diagnostics",
+ "biblecompose-scripture",
  "camino",
+ "tempfile",
 ]
 
 [[package]]

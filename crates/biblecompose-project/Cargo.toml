@@ -9,7 +9,11 @@ description = "Project folder discovery, book identification and asset resolutio
 
 [dependencies]
 biblecompose-diagnostics.workspace = true
+biblecompose-scripture.workspace = true
 camino.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

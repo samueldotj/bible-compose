@@ -426,6 +426,7 @@ pub mod code {
             DUPLICATE_BOOK_ID = "001",
             UNREADABLE_FILE = "002",
             NO_BOOKS_FOUND = "003",
+            UNIDENTIFIED_BOOK = "004",
         }
         Config "CFG" {
             INVALID_TOML = "001",

@@ -14,37 +14,17 @@
 //! the source's Scripture text has to survive into the model. Unsupported
 //! markers are counted rather than asserted, because that number is a fact
 //! about the corpus, not a defect.
+//!
+//! **No file is excused.** There was one: `usfm-core` read a bare `|` in
+//! paragraph text as an attribute block and dropped the rest of the line,
+//! which deleted the danda — the full stop of Sanskrit-derived scripts — and
+//! any words after it. Fixed upstream, so the exception is gone rather than
+//! grandfathered.
 
 use biblecompose_scripture::normalize::normalize;
 use biblecompose_scripture::{BookCode, ScriptureDocument};
 use camino::Utf8Path;
 use std::collections::BTreeMap;
-
-/// Files that lose text for a reason **above** this crate.
-///
-/// A bare `|` in ordinary paragraph text makes `usfm-core` discard the rest of
-/// the line, with no diagnostic:
-///
-/// ```text
-/// \v 11 before| after more words   →   content: [verse, " before"]
-/// ```
-///
-/// USFM attributes are only meaningful on a character marker closed with
-/// `\marker*`; a pipe in running text is punctuation. It is the **danda** in
-/// Sanskrit-derived scripts, so this is not exotic input — it is how several
-/// Indic translations write a full stop. It only bites when text follows the
-/// pipe on the same line, which is why one file of 197 hits it rather than
-/// fifteen.
-///
-/// Named here rather than silently tolerated: an exception with a reason is
-/// worth more than a disabled assertion.
-///
-/// **Fixed upstream** — `usfm-core` now restores a mis-lexed pipe from the
-/// token stream. Verified against the working tree: with the fix in place this
-/// list can be empty and all 197 files pass. It stays until the dependency
-/// revision in the workspace `Cargo.toml` moves past the fix, because the
-/// pinned revision is still the one that loses the text.
-const KNOWN_UPSTREAM_LOSS: &[&str] = &["70-3JNsanasm.usfm"];
 
 #[test]
 #[ignore = "needs a corpus; see the module docs"]
@@ -97,8 +77,7 @@ fn normalizing_a_real_corpus_loses_nothing() {
         // becoming a space is not a loss.
         let got = squeeze(&ScriptureDocument::new(vec![book]).text());
         let want = squeeze(&scripture_text(&source));
-        if !want.is_empty() && !contains_all(&got, &want) && !KNOWN_UPSTREAM_LOSS.contains(&&*name)
-        {
+        if !want.is_empty() && !contains_all(&got, &want) {
             if std::env::var("BIBLECOMPOSE_CORPUS_VERBOSE").is_ok() && losses.len() < 3 {
                 let missing: Vec<&str> = want
                     .split(' ')

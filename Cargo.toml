@@ -26,7 +26,7 @@ biblecompose-testkit = { path = "crates/biblecompose-testkit" }
 #
 # Pinned to a revision, not a branch: a branch would let the parser move
 # underneath a golden-file test and turn a red build into a mystery.
-usfm-core = { git = "https://github.com/samueldotj/easy-usfm.git", rev = "2498fb7a7969fc5b45c27fe3b8add1c57b90bc93" }
+usfm-core = { git = "https://github.com/samueldotj/easy-usfm.git", rev = "37ccab0088153a2fb8c5a36c2ba32acc1ebe769c" }
 
 quick-xml = "0.37"
 serde = { version = "1", features = ["derive"] }

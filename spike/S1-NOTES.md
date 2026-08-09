@@ -7,7 +7,7 @@ The decision this measures is [ADR-006](../docs/adr/006-single-binary.md); the i
 | Item | Status |
 |---|---|
 | S1.1 Build from source on Linux | **Done** — builds in 68s (P-6); prerequisites in P-4 |
-| S1.2 The same on Windows | Queued in CI ([packaging-spike.yml](../.github/workflows/packaging-spike.yml)) |
+| S1.2 The same on Windows | Queued in CI ([packaging-spike.yml](../.github/workflows/packaging-spike.yml)) — but **P-8**: upstream has no supported Windows build of the Rust CLI, so the job is testing a route we invented |
 | S1.3 The same on macOS | Queued in CI — no macOS available locally |
 | S1.4 A binary that re-executes itself | Not built, but **costed** (P-6, P-7): a 2.1 MB tree must reach disk either way |
 | S1.5 Measure; settle ADR-006 | **Linux measured: ~15 MB** (P-7). Waiting on S1.2/S1.3 to settle |
@@ -113,7 +113,7 @@ Reading the build files, this looked like most of option B's work being already 
 
 **Linux — done.** WSL Ubuntu 22.04 builds it (P-6). The prerequisites were installed as P-4 records; `sudo` was not available for most of it, which turned out not to matter.
 
-**Windows — not attempted locally.** No MSVC on `PATH`, no `cmake`, no `perl`, no MSYS2. Cargo finds a linker for pure-Rust crates, so the MSVC toolchain is installed somewhere, but none of what an autotools build needs is. Queued on the CI runner instead, which is both faster to try and closer to how P5.7 will really build it.
+**Windows — not attempted locally.** The local inventory is better than this note first said: **MSVC 2022 Build Tools are installed** (`cl.exe` 14.44, `vcvars64.bat`), along with the Windows SDK, chocolatey and winget. What is absent is `cmake`, `perl`, MSYS2, and administrator rights. But the missing tools are not the real obstacle — see **P-8**, which is the answer to "why not just build it here": upstream does not have a Windows build to run. Queued on the CI runner, with the caveat P-8 raises about *which* build the runner should attempt.
 
 **macOS — not available here at all.** Only answerable on a runner.
 
@@ -300,10 +300,108 @@ that as the whole job, and P-7 adds that the Lua half would need solving too.
 
 ---
 
+## P-8 — Windows is not a toolchain problem. Upstream has no Windows build of the Rust CLI.
+
+Asked why S1.2 could not simply be done on the development machine. The shallow
+answer is the missing tools in P-3. The real answer is worse, and it lands on
+[NFR-001](../docs/SRS-v0.1.md), not on the schedule.
+
+### The autotools build has no Windows support at all
+
+`configure.ac` in v0.15.13 contains **zero** occurrences of `mingw`, `windows`,
+`cygwin` or `win32`. The `./bootstrap.sh && ./configure && make` route that S1.1
+used on Linux is not a route upstream has ever pointed at Windows.
+
+### Windows has a *separate* build, and it is a different product
+
+There is a `CMakeLists.txt` whose entire body is `if (WIN32)`. It does not
+invoke cargo anywhere. What it produces is:
+
+```cmake
+configure_file(sile.in sile.lua)
+...
+COMMAND "<INSTALL_DIR>/bin/glue.exe" "<INSTALL_DIR>/bin/srlua.exe"
+        "${CMAKE_CURRENT_BINARY_DIR}/sile.lua"
+        "${CMAKE_CURRENT_BINARY_DIR}/sile.exe"
+```
+
+`srlua` glues a Lua interpreter to a script. So the Windows `sile.exe` is the
+**pre-Rust Lua CLI**, not the 0.15 Rust binary S1.1 built. The six `justenough`
+libraries are built as MSVC `SHARED` DLLs with `/EXPORT:luaopen_*` and loaded at
+runtime — the opposite of the seven static `.a` files the Rust binary links
+(P-1). Everything ADR-006 assumes about the Linux artifact — `--features
+static`, embedded resources, one binary to re-execute — describes an object this
+path does not produce.
+
+The sources it needs are all still present (`justenough/*.c`, `sile.in`,
+`silewin32.h`, `core/ classes/ languages/ packages/ lua-libraries/`), so it is
+stale rather than gutted.
+
+### It also builds its own supply chain, from forks
+
+`ExternalProject_Add` clones and compiles, per build: expat R_2_2_6, **ICU from
+`hunter-packages/icu` v63.1-p5 plus a local `icu.diff`**, harfbuzz 6.0,
+freetype VER-2-12-1, libpng, zlib, fontconfig (`fontconfig.diff` is ~8,600
+lines), Lua (`lua.diff`), and srlua (`srlua.diff`). Four vendored patches
+against four upstreams, one of which is a third-party ICU fork pinned seven
+major versions behind the ICU 70 the Linux build used.
+
+`cmake_minimum_required(VERSION 3.0)` is a hard error under CMake ≥ 4.0 —
+workable with `CMAKE_POLICY_VERSION_MINIMUM`, but a fair signal of last touch.
+
+### Upstream says so plainly
+
+`azure-pipelines.yml` — the pipeline the README's Windows badge points at:
+
+```yaml
+trigger: none
+  # Disable Windows CI builds until somebody is actually working on fixing them
+```
+
+targeting `windows-2019` and `Visual Studio 16 2019`. And `README.md`:
+
+> Nobody is currently maintaining Windows compatibility in SILE and we expect
+> the state to be a bit broken.
+
+The README's advice to Windows users is to use WSL.
+
+### So: why not natively, here?
+
+Not because the machine lacks MSVC — it has it. Because doing S1.2 natively
+means **being the person who un-breaks SILE on Windows**: reviving a disabled
+CMake build, against a forked ICU, to produce a Lua binary that is not the
+artifact ADR-006 is about. That is a project, not a spike step, and it should be
+decided as one rather than drifted into.
+
+### Consequence — two, and the second is the expensive one
+
+**1. The queued CI job is testing an unsupported route.**
+[packaging-spike.yml](../.github/workflows/packaging-spike.yml)'s Windows job
+uses MSYS2/MINGW64 with autotools and `mingw-w64-x86_64-rust`. That was a
+reasonable guess, and it may yet work — mingw supplies every dependency as a
+package, and autoconf handles host triples without being told about them. But it
+is *our* route, not upstream's, and a red result would not distinguish "Windows
+cannot build SILE" from "this route was never meant to". **The job should try
+both**: MINGW64 autotools, and CMake/MSVC per the Azure pipeline. Either green
+is an answer; both red is the finding.
+
+**2. NFR-001's Tier-1 Windows claim rests on something unowned.** Even in the
+best case — MINGW64 autotools works — we would be the only party building SILE
+that way, and no upstream CI protects it. Every SILE upgrade becomes a Windows
+risk we absorb. That belongs in the risk register in
+[SRS-REVIEW.md](../docs/SRS-REVIEW.md), and the fallback worth pricing is
+shipping the **Lua** SILE on Windows, since that is the one upstream at least
+once supported.
+
+**S1.5 cannot settle ADR-006 until this is resolved.** The ADR chooses between
+ways of shipping one binary; on Windows there may not be one binary to ship.
+
+---
+
 ## What this already tells P5.7
 
 Three things, none of which depend on finishing the build:
 
-1. **CI must run autotools on every platform.** Not `cargo build`. The GitHub workflow's `backend` job installs a prebuilt SILE today; for packaging it will need `./bootstrap.sh && ./configure && make`, and on Windows that means an MSYS2 runner.
+1. **CI must build from source on every platform.** Not `cargo build`. The GitHub workflow's `backend` job installs a prebuilt SILE today; for packaging it will need `./bootstrap.sh && ./configure && make`. On Windows it may not be autotools at all — P-8 found upstream has no autotools Windows support and a separate, disabled CMake build; settle that before assuming an MSYS2 runner is the shape.
 2. **`--features static` is not a shortcut.** The embedding work in [S1.4](../docs/ROADMAP.md#s1--packaging-spike) is ours either way.
 3. **The macOS leg needs a runner before it needs effort.** GitHub provides `macos-latest`; that is the cheapest way to answer S1.3 and it can be answered in CI before anyone builds it by hand.

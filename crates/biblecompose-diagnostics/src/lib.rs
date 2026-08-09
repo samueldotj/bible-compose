@@ -440,6 +440,12 @@ pub mod code {
             // and distinct from INVALID_UNIT because "true" is not a length
             // that was written wrongly, it is not a length at all.
             WRONG_TYPE = "006",
+            // The right kind of value, but not one this setting accepts — an
+            // unrecognised choice, or a number outside the range that can
+            // produce a page. Separate from WRONG_TYPE because the fix is
+            // different: the author knows what they meant and needs the list
+            // of what is allowed, not a lesson in TOML types.
+            INVALID_VALUE = "007",
         }
         Style "STY" {
             UNKNOWN_SELECTOR = "001",

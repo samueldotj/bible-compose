@@ -7,5 +7,7 @@
 //! parsing arrive at P2.3 onward and all read through it.
 
 pub mod document;
+pub mod value;
 
 pub use document::{ConfigDocument, Located, Node, Table};
+pub use value::{Length, PageSize, Unit};

@@ -36,6 +36,13 @@ clap = { version = "4", features = ["derive"] }
 tempfile = "3"
 toml = "0.8"
 
+# The configuration layer's single parse (ARCHITECTURE §6, CFG-003). Chosen
+# over `toml` because it keeps the source text, the spans and the formatting,
+# which is what makes a line and column on a bad key possible and a write-back
+# that preserves comments possible. Default features off: `serde` would
+# reintroduce the second, span-less parse this exists to avoid.
+toml_edit = { version = "0.25", default-features = false, features = ["parse", "display"] }
+
 [workspace.lints.clippy]
 # `Diagnostic` is ~200 bytes because it carries a location, a Scripture
 # reference, help text and collapsed backend detail — all of which exist so a

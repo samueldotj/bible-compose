@@ -434,6 +434,12 @@ pub mod code {
             INVALID_UNIT = "003",
             UNKNOWN_SCHEMA_VERSION = "004",
             UNKNOWN_BOOK_CODE = "005",
+            // Well-formed TOML holding the wrong kind of value —
+            // `page.width = true`. Distinct from INVALID_TOML because the
+            // file parses and every *other* setting in it is still usable,
+            // and distinct from INVALID_UNIT because "true" is not a length
+            // that was written wrongly, it is not a length at all.
+            WRONG_TYPE = "006",
         }
         Style "STY" {
             UNKNOWN_SELECTOR = "001",

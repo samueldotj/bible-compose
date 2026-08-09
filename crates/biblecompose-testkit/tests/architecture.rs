@@ -149,6 +149,61 @@ fn the_workspace_is_the_eight_crates_plus_the_test_kit() {
     );
 }
 
+/// ARCHITECTURE §6: "the format-preserving document is the only parse; the
+/// typed view is derived from it."
+///
+/// That is enforceable, and only structurally. A `serde` derive reading the
+/// same file is a second code path over the same bytes: it produces values
+/// with no spans, and when the two disagree the symptom is a setting the
+/// inspector attributes to the file and the build ignores. So the second
+/// parser is kept out of reach rather than merely unused — `toml` is not a
+/// dependency of the configuration crate, and `toml_edit`'s own `serde`
+/// feature is off.
+#[test]
+fn the_configuration_layer_has_exactly_one_toml_parser() {
+    let manifest = repo_root().join("crates/biblecompose-config/Cargo.toml");
+    let text = std::fs::read_to_string(manifest.as_std_path()).expect("readable manifest");
+    let value: toml::Value = text.parse().expect("valid TOML");
+    let deps = value["dependencies"]
+        .as_table()
+        .expect("the config crate has dependencies");
+
+    assert!(
+        deps.contains_key("toml_edit"),
+        "biblecompose-config parses TOML with toml_edit"
+    );
+    assert!(
+        !deps.contains_key("toml"),
+        "biblecompose-config must not depend on `toml`: it is a second parse of \
+         the same file, producing values with no spans (ARCHITECTURE §6)"
+    );
+
+    let root = repo_root().join("Cargo.toml");
+    let root: toml::Value = std::fs::read_to_string(root.as_std_path())
+        .expect("readable workspace manifest")
+        .parse()
+        .expect("valid TOML");
+    let edit = &root["workspace"]["dependencies"]["toml_edit"];
+
+    assert_eq!(
+        edit.get("default-features").and_then(toml::Value::as_bool),
+        Some(false),
+        "toml_edit must be taken with default features off, so the feature set \
+         below is the whole of it"
+    );
+    let features: Vec<&str> = edit["features"]
+        .as_array()
+        .expect("an explicit feature list")
+        .iter()
+        .filter_map(toml::Value::as_str)
+        .collect();
+    assert!(
+        !features.contains(&"serde"),
+        "toml_edit's `serde` feature reintroduces the span-less second parse \
+         this rule exists to prevent; features are {features:?}"
+    );
+}
+
 /// A dependency cycle would not compile, but a *layering* inversion might —
 /// diagnostics is the bottom of the stack and must stay there.
 #[test]

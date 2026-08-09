@@ -1,5 +1,11 @@
 //! Settings and styles: defaults, cascade, provenance, validation.
 //!
-//! Placeholder at M0: the configuration layer is P2.2 onward. M0 drives the
-//! emitter from hand-built fixtures, so nothing here is needed to prove the
-//! pipeline.
+//! [`document`] is the layer everything else in this crate stands on — one
+//! `toml_edit` parse per file, read typed and kept editable, so the values a
+//! build uses and the file a GUI writes back cannot come apart
+//! (ARCHITECTURE §6). The schema, the merge with embedded defaults, and unit
+//! parsing arrive at P2.3 onward and all read through it.
+
+pub mod document;
+
+pub use document::{ConfigDocument, Located, Node, Table};

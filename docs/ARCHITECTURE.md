@@ -95,7 +95,7 @@ defaults/
 └── styles.toml
 ```
 
-Seven crates plus a test kit, against the SRS's ten. `biblecompose-layout` is gone ([ADR-004](adr/004-no-layout-crate.md)); `biblecompose-usfm` and `biblecompose-model` are replaced by the shared `usfm-core` plus a thin normalization crate ([ADR-001](adr/001-usfm-core.md)); `biblecompose-core`'s orchestration lives in `biblecompose-app`, which is the only thing that orchestrates.
+Eight crates plus a test kit, against the SRS's ten. `biblecompose-tauri` is the desktop shell and arrives at M2 ([ADR-003](adr/003-gui.md)): a bridge with no domain logic, so the CLI and the GUI cannot disagree about what a build is. `biblecompose-layout` is gone ([ADR-004](adr/004-no-layout-crate.md)); `biblecompose-usfm` and `biblecompose-model` are replaced by the shared `usfm-core` plus a thin normalization crate ([ADR-001](adr/001-usfm-core.md)); `biblecompose-core`'s orchestration lives in `biblecompose-app`, which is the only thing that orchestrates.
 
 Everything except `biblecompose-app` builds without Tauri and runs headless. That is NFR-009, satisfied structurally rather than by discipline, and `biblecompose-cli` is the proof that it holds — it is built from milestone one and never allowed to break.
 

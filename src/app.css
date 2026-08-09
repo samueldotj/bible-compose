@@ -1,0 +1,21 @@
+/* Logical properties throughout, never `margin-left`.
+   The interface must mirror for Arabic and Hebrew, and retrofitting that
+   later is the expensive version of doing it now. */
+:root {
+  font-family: system-ui, sans-serif;
+  color-scheme: light dark;
+}
+body {
+  margin: 0;
+  padding-block: 2rem;
+  padding-inline: 2rem;
+}
+h1 {
+  margin-block-start: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.status {
+  margin-block-start: 1rem;
+  opacity: 0.8;
+}

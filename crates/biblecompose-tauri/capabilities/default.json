@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "What the main window is permitted to do. Deliberately small: every addition here widens what a compromised frontend could reach, and BibleCompose's frontend renders content that arrived by email.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

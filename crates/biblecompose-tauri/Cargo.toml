@@ -1,0 +1,31 @@
+[package]
+name = "biblecompose-tauri"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The desktop shell: window, dialogs, file I/O, and the command bridge."
+
+# The shell owns no domain logic. It is a bridge — every command here is a thin
+# translation between a frontend request and `biblecompose-app` (ARCHITECTURE
+# section 2), which is why this crate may depend on the app and nothing below it.
+# Two targets: a library the shell logic lives in, and a thin binary. The
+# split is what lets the commands be unit-tested without starting a window.
+[lib]
+name = "biblecompose_tauri_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[dependencies]
+biblecompose-scripture.workspace = true
+biblecompose-app.workspace = true
+biblecompose-diagnostics.workspace = true
+camino.workspace = true
+serde.workspace = true
+tauri = { version = "2", features = [] }
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[lints]
+workspace = true

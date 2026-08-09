@@ -114,7 +114,7 @@ fn the_cli_links_no_gui_crate() {
 /// dropped because its job had one caller; this stops it growing back.
 #[test]
 fn no_crate_depends_on_the_app_except_the_cli() {
-    let allowed = ["biblecompose-cli"];
+    let allowed = ["biblecompose-cli", "biblecompose-tauri"];
     let offenders: Vec<String> = manifests()
         .iter()
         .filter(|m| !allowed.contains(&m.name.as_str()))
@@ -129,7 +129,7 @@ fn no_crate_depends_on_the_app_except_the_cli() {
 
 /// Every crate in the workspace is one the architecture actually names.
 #[test]
-fn the_workspace_is_the_seven_crates_plus_the_test_kit() {
+fn the_workspace_is_the_eight_crates_plus_the_test_kit() {
     let names: Vec<String> = manifests().into_iter().map(|m| m.name).collect();
     let expected = [
         "biblecompose-app",
@@ -139,12 +139,13 @@ fn the_workspace_is_the_seven_crates_plus_the_test_kit() {
         "biblecompose-project",
         "biblecompose-scripture",
         "biblecompose-sile",
+        "biblecompose-tauri",
         "biblecompose-testkit",
     ];
     assert_eq!(
         names,
         expected.iter().map(|s| (*s).to_owned()).collect::<Vec<_>>(),
-        "ARCHITECTURE §3 lists seven crates plus a test kit"
+        "ARCHITECTURE §3 lists eight crates plus a test kit"
     );
 }
 
@@ -173,7 +174,7 @@ fn print_the_dependency_graph() {
     for (name, deps) in &graph {
         println!("{name} → {deps:?}");
     }
-    assert_eq!(graph.len(), 8);
+    assert_eq!(graph.len(), 9);
 }
 
 /// SILE-005 / DET-001: no `HashMap` or `HashSet` on the emission path.

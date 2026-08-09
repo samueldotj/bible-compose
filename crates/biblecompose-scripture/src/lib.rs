@@ -19,6 +19,7 @@
 
 pub mod canon;
 pub mod fixtures;
+pub mod plan;
 pub mod usfm;
 
 use camino::Utf8PathBuf;

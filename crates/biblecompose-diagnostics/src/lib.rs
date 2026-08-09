@@ -433,6 +433,7 @@ pub mod code {
             UNKNOWN_KEY = "002",
             INVALID_UNIT = "003",
             UNKNOWN_SCHEMA_VERSION = "004",
+            UNKNOWN_BOOK_CODE = "005",
         }
         Style "STY" {
             UNKNOWN_SELECTOR = "001",

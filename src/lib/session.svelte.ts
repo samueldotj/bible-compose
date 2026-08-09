@@ -94,13 +94,26 @@ export class Session {
     return this.project !== null && !this.building && !this.opening;
   }
 
+  /**
+   * Never rejects.
+   *
+   * It is called from an effect, where a rejection is an unhandled promise and
+   * nothing on screen. Both halves can fail independently — a shell with no
+   * backend can still subscribe; one with no event channel can still report
+   * versions — so each is caught on its own and the window says what is
+   * missing instead of coming up blank.
+   */
   async start(): Promise<void> {
     try {
       this.versions = await backend().versions();
     } catch (e: unknown) {
       this.fault = String(e);
     }
-    this.#stop = await backend().onBuildEvent((event) => this.#receive(event));
+    try {
+      this.#stop = await backend().onBuildEvent((event) => this.#receive(event));
+    } catch (e: unknown) {
+      this.fault = `no build events: ${String(e)}`;
+    }
   }
 
   stop(): void {

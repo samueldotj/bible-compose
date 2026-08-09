@@ -19,6 +19,7 @@
 
 pub mod canon;
 pub mod fixtures;
+pub mod normalize;
 pub mod plan;
 pub mod usfm;
 
@@ -384,11 +385,15 @@ pub struct Unsupported {
 }
 
 macro_rules! styles {
-    ($( $(#[$m:meta])* $name:ident { $( $variant:ident => $s:literal ),* $(,)? } )*) => {
+    ($(
+        $(#[$m:meta])* $name:ident {
+            $( $(#[$vm:meta])* $variant:ident => $s:literal ),* $(,)?
+        }
+    )*) => {
         $(
             $(#[$m])*
             #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-            pub enum $name { $( $variant ),* }
+            pub enum $name { $( $(#[$vm])* $variant ),* }
 
             impl $name {
                 /// The USFM marker this style corresponds to. Also the string
@@ -419,6 +424,19 @@ styles! {
         Pmo => "pmo", Pm => "pm", Pmc => "pmc", Pmr => "pmr",
         Pi1 => "pi1", Pi2 => "pi2", Pi3 => "pi3",
         Mi => "mi", Nb => "nb", Pc => "pc",
+
+        // Introduction matter. Present because a corpus run found it in a
+        // fifth of real books: leaving it unsupported produced hundreds of
+        // warnings per file and told a publisher nothing they could act on.
+        // Whether an introduction is *printed* is a style question (M3);
+        // whether it survives normalization is not.
+        Ip => "ip", Ipi => "ipi", Im => "im", Imi => "imi",
+        Ipq => "ipq", Imq => "imq", Ipr => "ipr", Iex => "iex",
+        Io1 => "io1", Io2 => "io2", Io3 => "io3", Io4 => "io4",
+        Ili1 => "ili1", Ili2 => "ili2",
+        Ie => "ie",
+        /// `\\cl` — a chapter label, printed in place of or beside the number.
+        Cl => "cl",
     }
 
     /// Poetry. The `level` on `Block::Poetry` carries the digit; this is the
@@ -430,6 +448,8 @@ styles! {
     /// Section headings and their relatives.
     HeadingStyle {
         S => "s", Sr => "sr", R => "r", D => "d", Sp => "sp",
+        /// Introduction headings, for the same reason as the paragraphs.
+        Is => "is", Imt => "imt", Iot => "iot",
     }
 
     /// Character-level markers.
@@ -438,6 +458,27 @@ styles! {
         Nd => "nd", No => "no", Sc => "sc", Sup => "sup", Wj => "wj",
         Qt => "qt", Sig => "sig", Tl => "tl", K => "k", Pn => "pn",
         Ord => "ord", W => "w",
+
+        // Note and cross-reference internals. `\\ft` alone appeared 2,758
+        // times in a 200-file corpus run; treating the body of every footnote
+        // as an unsupported style would bury the diagnostics panel under
+        // warnings about documents that are perfectly ordinary.
+        //
+        // `\\fr` and `\\xo` are here even though the *first* of each is
+        // consumed into `Note::origin` / `CrossReference::origin` before this
+        // table is consulted. A cross-reference may carry several origins,
+        // and the corpus run found 26 second ones — without a style they
+        // would each be reported as unsupported, which is a warning about
+        // nothing.
+        Fr => "fr", Xo => "xo",
+        Ft => "ft", Fq => "fq", Fqa => "fqa", Fk => "fk", Fp => "fp",
+        Fv => "fv", Fdc => "fdc", Fl => "fl", Fw => "fw",
+        Xt => "xt", Xk => "xk", Xq => "xq",
+        Xot => "xot", Xnt => "xnt", Xdc => "xdc",
+        /// `\\ior` — an outline reference inside introduction matter.
+        Ior => "ior",
+        /// `\\iqt` — quoted text inside introduction matter.
+        Iqt => "iqt",
     }
 }
 

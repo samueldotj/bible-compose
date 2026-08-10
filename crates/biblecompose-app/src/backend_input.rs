@@ -1,4 +1,4 @@
-//! Resolved settings, translated into what the SILE class takes.
+//! Resolved configuration, translated into what the SILE class takes.
 //!
 //! This is the one place the two vocabularies meet, and it lives here rather
 //! than in either of them on purpose. `biblecompose-config` must not know
@@ -18,7 +18,9 @@
 //!
 //! [ADR-005]: ../../../docs/adr/005-provenance.md
 
-use biblecompose_config::Settings;
+use biblecompose_config::style::PROPERTIES;
+use biblecompose_config::{ResolvedStyles, Settings};
+use biblecompose_sile::StyleRule;
 
 /// The `-O key=value` pairs for one build, in a fixed order.
 ///
@@ -65,4 +67,61 @@ pub fn class_options(s: &Settings) -> Vec<(String, String)> {
 /// cannot drift with a `Display` impl somewhere else.
 fn flag(on: bool) -> String {
     if on { "true" } else { "false" }.to_owned()
+}
+
+/// The resolved styles, as the rules the emitter writes into the document.
+///
+/// Only selectors with something to say. An empty entry is the built-in
+/// sheet saying "this marker is supported and renders as body text", and
+/// writing it out would be a line of XML per paragraph marker that means
+/// nothing.
+///
+/// Property names cross unchanged — the TOML key, the XML attribute and the
+/// Lua field are one word, so there is no translation table between the file a
+/// publisher writes and the table the class reads, and therefore nothing for
+/// the two to disagree about.
+pub fn style_rules(styles: &ResolvedStyles) -> Vec<StyleRule> {
+    let mut out = Vec::new();
+    for (selector, resolved) in styles.iter() {
+        let properties = properties_of(resolved);
+        if properties.is_empty() {
+            continue;
+        }
+        out.push(StyleRule {
+            selector: selector.key(),
+            properties,
+        });
+    }
+    out
+}
+
+/// One style's properties, in `PROPERTIES` order.
+///
+/// Lengths cross as points, for the same reason the class options do: the text
+/// has to be a function of the value alone, or two runs that resolved the same
+/// page by different routes would produce different bytes (DET-001).
+fn properties_of(resolved: &biblecompose_config::ResolvedStyle) -> Vec<(String, String)> {
+    let s = &resolved.style;
+    let mut out: Vec<(String, String)> = Vec::new();
+    let mut put = |name: &str, value: Option<String>| {
+        if let Some(value) = value {
+            out.push((name.to_owned(), value));
+        }
+    };
+
+    put("font_size", s.font_size.map(|l| l.to_sile()));
+    put("weight", s.weight.map(|w| w.to_string()));
+    put("italic", s.italic.map(flag));
+    put("smallcaps", s.smallcaps.map(flag));
+    put("space_above", s.space_above.map(|l| l.to_sile()));
+    put("space_below", s.space_below.map(|l| l.to_sile()));
+    put("indent", s.indent.map(|l| l.to_sile()));
+    put("raise", s.raise.map(|l| l.to_sile()));
+    put("align", s.align.map(|a| a.as_str().to_owned()));
+
+    debug_assert!(
+        out.len() <= PROPERTIES.len(),
+        "a property was written twice, or one exists that PROPERTIES does not list"
+    );
+    out
 }

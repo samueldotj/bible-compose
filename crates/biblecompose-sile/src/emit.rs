@@ -79,7 +79,7 @@ pub struct Emitted {
 /// because a file path in the output is a file path in a golden file.
 ///
 /// [ADR-005]: ../../../docs/adr/005-provenance.md
-pub fn emit(doc: &ScriptureDocument) -> Emitted {
+pub fn emit(doc: &ScriptureDocument, styles: &[StyleRule]) -> Emitted {
     let mut w = Writer::new(Cursor::new(Vec::new()));
     let mut state = EmitState::default();
 
@@ -87,6 +87,8 @@ pub fn emit(doc: &ScriptureDocument) -> Emitted {
     root.push_attribute(("version", CONTRACT_VERSION));
     root.push_attribute(("class", "biblecompose"));
     write(&mut w, Event::Start(root), &mut state);
+
+    emit_styles(&mut w, styles, &mut state);
 
     for book in &doc.books {
         emit_book(&mut w, book, &mut state);
@@ -108,6 +110,56 @@ pub fn emit(doc: &ScriptureDocument) -> Emitted {
         line_map: state.line_map,
         dropped: state.dropped,
     }
+}
+
+/// One selector's resolved appearance, as the backend takes it.
+///
+/// Plain strings, already in the units SILE reads, already in the order they
+/// are to be written. Declared here rather than taken from
+/// `biblecompose-config` because this crate must not know a configuration
+/// layer exists (ARCHITECTURE §2) — and because [ADR-005] requires that the
+/// emitter cannot see provenance, which a type with nowhere to put it
+/// guarantees rather than promises.
+///
+/// [ADR-005]: ../../../docs/adr/005-provenance.md
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StyleRule {
+    /// The selector's key — `chapter`, `poetry.q1`, `character.bd`.
+    pub selector: String,
+    /// Property name and value, in a fixed order. A `Vec` and not a map:
+    /// attribute order is part of what makes the output byte-reproducible
+    /// (SILE-005), and a `HashMap` would shuffle it per process.
+    pub properties: Vec<(String, String)>,
+}
+
+/// The resolved styles, as data at the head of the document.
+///
+/// ADR-002's rule is that Scripture is a text node and never syntax; the same
+/// reasoning applies to style values, which arrive as attributes and never as
+/// command fragments. A style that could carry `\command` would be a style
+/// file that can run code, and style files travel with projects.
+///
+/// Only selectors with something to say are written. The class treats an
+/// absent one as "no styling", which is what the built-in sheet means by an
+/// empty entry.
+fn emit_styles(w: &mut Writer<Cursor<Vec<u8>>>, styles: &[StyleRule], state: &mut EmitState) {
+    if styles.is_empty() {
+        return;
+    }
+
+    newline(w, state);
+    write(w, Event::Start(BytesStart::new("styles")), state);
+    for rule in styles {
+        newline(w, state);
+        let mut el = BytesStart::new("style");
+        el.push_attribute(("for", rule.selector.as_str()));
+        for (name, value) in &rule.properties {
+            el.push_attribute((name.as_str(), value.as_str()));
+        }
+        write(w, Event::Empty(el), state);
+    }
+    newline(w, state);
+    write(w, Event::End(BytesEnd::new("styles")), state);
 }
 
 #[derive(Default)]
@@ -418,7 +470,7 @@ mod tests {
 
     #[test]
     fn root_carries_the_contract_version() {
-        let out = emit(&fixtures::john_1_1_5());
+        let out = emit(&fixtures::john_1_1_5(), &[]);
         assert!(out
             .xml
             .starts_with("<biblecompose version=\"1\" class=\"biblecompose\">"));
@@ -429,7 +481,7 @@ mod tests {
     /// character that means something in SIL syntax.
     #[test]
     fn sil_syntax_in_scripture_becomes_inert_text() {
-        let out = emit(&fixtures::adversarial());
+        let out = emit(&fixtures::adversarial(), &[]);
 
         // A backslash survives as a backslash — it is not a command.
         assert!(out.xml.contains(r"Backslash \bd and \par"));
@@ -459,7 +511,7 @@ mod tests {
                 content: vec![Inline::Text(hostile.to_owned())],
             }],
         )]);
-        let out = emit(&doc);
+        let out = emit(&doc, &[]);
         assert_eq!(
             out.xml.matches("<para").count(),
             1,
@@ -471,9 +523,13 @@ mod tests {
     #[test]
     fn emission_is_byte_identical_across_runs() {
         for (name, doc) in fixtures::all() {
-            let first = emit(&doc).xml;
+            let first = emit(&doc, &[]).xml;
             for _ in 0..32 {
-                assert_eq!(first, emit(&doc).xml, "fixture {name} is not deterministic");
+                assert_eq!(
+                    first,
+                    emit(&doc, &[]).xml,
+                    "fixture {name} is not deterministic"
+                );
             }
         }
     }
@@ -481,7 +537,7 @@ mod tests {
     #[test]
     fn line_endings_are_lf_only() {
         for (name, doc) in fixtures::all() {
-            let xml = emit(&doc).xml;
+            let xml = emit(&doc, &[]).xml;
             assert!(!xml.contains('\r'), "fixture {name} emitted a CR");
         }
     }
@@ -490,14 +546,14 @@ mod tests {
     /// are formatted here, at the boundary, not left to the class.
     #[test]
     fn numeric_attributes_are_written_as_strings() {
-        let out = emit(&fixtures::john_1_1_5());
+        let out = emit(&fixtures::john_1_1_5(), &[]);
         assert!(out.xml.contains(r#"<chapter n="1"/>"#));
         assert!(out.xml.contains(r#"<verse n="1" start="1" end="1"/>"#));
     }
 
     #[test]
     fn line_map_resolves_a_backend_line_to_a_reference() {
-        let out = emit(&fixtures::john_1_1_5());
+        let out = emit(&fixtures::john_1_1_5(), &[]);
         assert!(!out.line_map.is_empty());
         let last = out
             .line_map
@@ -510,14 +566,14 @@ mod tests {
 
     #[test]
     fn unsupported_markers_are_reported_not_silently_dropped() {
-        let out = emit(&fixtures::kitchen_sink());
+        let out = emit(&fixtures::kitchen_sink(), &[]);
         assert!(out.dropped.iter().any(|u| u.marker == "zmystery"));
         assert!(out.xml.contains(r#"<unsupported marker="zmystery">"#));
     }
 
     #[test]
     fn every_block_and_inline_variant_emits() {
-        let out = emit(&fixtures::kitchen_sink());
+        let out = emit(&fixtures::kitchen_sink(), &[]);
         for expected in [
             "<para",
             "<poetry",
@@ -545,7 +601,7 @@ mod tests {
 
     #[test]
     fn book_name_is_carried_for_the_running_head() {
-        let out = emit(&fixtures::two_books());
+        let out = emit(&fixtures::two_books(), &[]);
         assert!(out.xml.contains(r#"<book code="GEN" name="Genesis">"#));
         assert!(out.xml.contains(r#"<book code="JHN" name="John">"#));
         // Canonical order, not insertion order.

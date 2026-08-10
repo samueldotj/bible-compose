@@ -1,4 +1,4 @@
-//! P2.3, part 2 — resolved settings reaching the page.
+//! P2.3 part 2 and P3.4 — resolved configuration reaching the page.
 //!
 //! The interesting failure here is not a wrong value, it is a value the class
 //! has never heard of: SILE treats an undeclared class option as a hard error,
@@ -6,7 +6,7 @@
 //! build that dies at the typesetting step with a message about Lua. The last
 //! test in this file is the one that stops that reaching a user.
 
-use biblecompose_app::class_options::class_options;
+use biblecompose_app::backend_input::class_options;
 use biblecompose_config::{settings, ConfigDocument, Settings};
 use biblecompose_testkit::repo_root;
 

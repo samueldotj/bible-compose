@@ -74,7 +74,7 @@ fn golden_path(name: &str) -> Utf8PathBuf {
 #[test]
 fn the_m1_construct_set_emits_a_stable_document() {
     let (_dir, document) = load("MRK.usfm", M1_CONSTRUCTS);
-    let emitted = biblecompose_app::emit(&document);
+    let emitted = biblecompose_app::emit(&document, &styles());
     golden::assert_matches(&golden_path("m1_constructs"), &emitted.xml);
 }
 
@@ -90,7 +90,7 @@ fn the_same_usfm_emits_identically_twice() {
 
 fn emit_once() -> String {
     let (_dir, document) = load("MRK.usfm", M1_CONSTRUCTS);
-    biblecompose_app::emit(&document).xml
+    biblecompose_app::emit(&document, &styles()).xml
 }
 
 /// A whole real book emits without the emitter dropping a construct it does
@@ -102,7 +102,7 @@ fn every_corpus_book_emits_with_nothing_unsupported_by_the_emitter() {
         let name = format!("{}.usfm", entry.book);
         let (_dir, document) = load(&name, &source);
 
-        let emitted = biblecompose_app::emit(&document);
+        let emitted = biblecompose_app::emit(&document, &styles());
         assert!(
             emitted.unsupported.is_empty(),
             "{} — the emitter dropped: {:?}",
@@ -129,7 +129,7 @@ fn every_corpus_book_emits_well_formed_xml() {
         let source = corpus::read(&entry);
         let name = format!("{}.usfm", entry.book);
         let (_dir, document) = load(&name, &source);
-        let xml = biblecompose_app::emit(&document).xml;
+        let xml = biblecompose_app::emit(&document, &styles()).xml;
 
         let mut reader = quick_xml::Reader::from_str(&xml);
         let mut buf = Vec::new();
@@ -153,4 +153,15 @@ fn every_corpus_book_emits_well_formed_xml() {
             }
         }
     }
+}
+
+/// No styles.
+///
+/// These goldens are about one thing: USFM becoming the document structure.
+/// The built-in sheet would add eighty lines of appearance above the two dozen
+/// that are the subject, and would churn this file every time a point size
+/// changed. The styles block has its own golden, which is where a change to it
+/// belongs.
+fn styles() -> biblecompose_config::ResolvedStyles {
+    biblecompose_config::ResolvedStyles::default()
 }

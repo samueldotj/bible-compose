@@ -36,7 +36,7 @@ fn tmp() -> (tempfile::TempDir, Utf8PathBuf) {
 fn job_for(name: &str, work: &Utf8PathBuf) -> BackendJob {
     let doc = fixtures::by_name(name).expect("a known fixture");
     BackendJob {
-        xml: emit(&doc).xml,
+        xml: emit(&doc, &[]).xml,
         work_dir: work.clone(),
         pdf_name: format!("{name}.pdf"),
         sile_path: vec![class_dir()],

@@ -17,7 +17,7 @@ use std::sync::Arc;
 use biblecompose_diagnostics::Diagnostic;
 use camino::{Utf8Path, Utf8PathBuf};
 
-pub use emit::{emit, Emitted, LineMap, LineRef, CONTRACT_VERSION};
+pub use emit::{emit, Emitted, LineMap, LineRef, StyleRule, CONTRACT_VERSION};
 pub use process::SileBackend;
 
 /// One invocation of the typesetting backend.

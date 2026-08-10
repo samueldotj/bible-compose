@@ -5,12 +5,12 @@
 //! the only thing that orchestrates — `biblecompose-core` from SRS §12.1 is
 //! gone because its stated job had exactly one caller.
 
-pub mod class_options;
+pub mod backend_input;
 pub mod project;
 pub mod publish;
 pub mod state;
 
-use biblecompose_config::Settings;
+use biblecompose_config::{ResolvedStyles, Settings};
 use biblecompose_diagnostics::{code, Diagnostic, Diagnostics};
 use biblecompose_scripture::ScriptureDocument;
 use biblecompose_sile::{BackendJob, SileBackend, Stream};
@@ -43,8 +43,8 @@ pub struct EmittedDocument {
 /// Emit backend input without invoking anything.
 ///
 /// The golden-file path: fast, hermetic, and needs no typesetter installed.
-pub fn emit(doc: &ScriptureDocument) -> EmittedDocument {
-    let e = biblecompose_sile::emit(doc);
+pub fn emit(doc: &ScriptureDocument, styles: &ResolvedStyles) -> EmittedDocument {
+    let e = biblecompose_sile::emit(doc, &backend_input::style_rules(styles));
     EmittedDocument {
         xml: e.xml,
         unsupported: e.dropped.into_iter().map(|u| u.marker).collect(),
@@ -92,6 +92,8 @@ pub struct BuildRequest {
     /// Resolved settings. Defaults to the built-in ones, so a caller that has
     /// not read a project file still gets a complete, valid set (CFG-001).
     pub settings: Settings,
+    /// Resolved styles, likewise (STY-001).
+    pub styles: ResolvedStyles,
     /// Deterministic, so the build directory name does not vary between two
     /// otherwise identical runs.
     pub build_id: String,
@@ -105,6 +107,7 @@ impl BuildRequest {
             sile_path: Vec::new(),
             keep_intermediates: false,
             settings: Settings::builtin(),
+            styles: biblecompose_config::cascade::resolve(None, false).0,
             build_id: "current".to_owned(),
         }
     }
@@ -121,6 +124,11 @@ impl BuildRequest {
 
     pub fn with_settings(mut self, settings: Settings) -> Self {
         self.settings = settings;
+        self
+    }
+
+    pub fn with_styles(mut self, styles: ResolvedStyles) -> Self {
+        self.styles = styles;
         self
     }
 }
@@ -183,7 +191,7 @@ pub fn build_with(
 
     // ---- emit --------------------------------------------------------------
     reporter.advance(BuildState::Emitting);
-    let emitted = biblecompose_sile::emit(doc);
+    let emitted = biblecompose_sile::emit(doc, &backend_input::style_rules(&request.styles));
     for u in &emitted.dropped {
         let d = Diagnostic::warning(
             code::UNSUPPORTED_MARKER,
@@ -212,7 +220,7 @@ pub fn build_with(
         sile_path: request.sile_path.clone(),
         project_root: request.project_root.clone(),
         class: "biblecompose".to_owned(),
-        class_options: class_options::class_options(&request.settings),
+        class_options: backend_input::class_options(&request.settings),
     };
 
     if cancel.is_cancelled() {
@@ -396,11 +404,21 @@ mod tests {
                 return Err(Diagnostic::warning(code::CANCELLED, "build cancelled"));
             }
             if self.fail {
+                // The line is found in the document this job was actually
+                // given rather than hardcoded. A real backend reports a line
+                // in the file it read, and anything above the Scripture — the
+                // styles block, since P3.4 — moves it.
+                let line = job
+                    .xml
+                    .lines()
+                    .position(|l| l.contains("<verse"))
+                    .map(|i| i + 1)
+                    .expect("the fixture has a verse");
                 return Err(Diagnostic::error(
                     code::NONZERO_EXIT,
                     "the typesetting backend exited with status 1",
                 )
-                .detail("document.xml:3: something went wrong".to_owned()));
+                .detail(format!("document.xml:{line}: something went wrong")));
             }
             if self.write_pdf {
                 std::fs::write(job.pdf_path().as_std_path(), b"%PDF-1.5 fake").unwrap();

@@ -335,40 +335,104 @@ end
 -- content, so block containers process only their element children. Inside a
 -- paragraph every character is Scripture and is processed verbatim.
 --
--- Appearance lives in `styles` below rather than in the emitted document. At
--- M0 there is no configuration layer, so these are the built-in defaults that
--- P3.1 will make overridable; the document says *what*, this says *how*.
+-- Appearance arrives in the document, as a `<styles>` block of resolved
+-- values (P3.4). It used to be a table here; it is not any more, because
+-- STY-001 makes it a publisher's to change and a table in this file is not.
+-- The document still says *what* and this file still says *how* — but "how"
+-- is now a lookup rather than a constant.
+--
+-- Values arrive as attributes and never as command fragments (ADR-002). A
+-- style file travels with a project, by email, from a third party, and a
+-- property that could carry `\command` would make one executable.
 -- ---------------------------------------------------------------------------
 
-local styles = {
-   -- The body font used to live here. It is a class option now, because it is
-   -- the first thing a publisher changes and CFG-002 requires that to come
-   -- from settings; the rest follow at P3.1.
-   heading = {
-      s = { size = "10.2pt", weight = 600, above = "7pt", below = "1pt" },
-      r = { size = "7.6pt", style = "italic", above = "1pt", below = "3pt" },
-      d = { size = "9.2pt", style = "italic", above = "4pt", below = "2pt" },
-      sp = { size = "9.2pt", style = "italic", above = "4pt", below = "2pt" },
-      sr = { size = "7.6pt", style = "italic", above = "1pt", below = "3pt" },
-   },
-   chapter = { size = "21pt", weight = 700 },
-   verse = { size = "6.4pt", weight = 600, raise = "0.42em" },
-   note = { size = "7.4pt" },
-   xref = { size = "7.4pt", style = "italic" },
-   poetry_indent = 9, -- points per level
-   char = {
-      bd = { weight = 700 },
-      bdit = { weight = 700, style = "italic" },
-      em = { style = "italic" },
-      it = { style = "italic" },
-      nd = { features = "+smcp" },
-      sc = { features = "+smcp" },
-      wj = {},
-      add = { style = "italic" },
-      qt = { style = "italic" },
-      tl = { style = "italic" },
-   },
+--- This class's document-scoped state, created once.
+--
+-- `SILE.scratch` is where SILE keeps per-document state, and a second document
+-- processed in the same process must not inherit the first one's appearance or
+-- its book count.
+--
+-- One initialiser, because two is how the first version of this broke: the
+-- style lookup created the table without `books`, so the guard that gives the
+-- second and later books a page break compared a number with nil.
+local function scratch ()
+   local s = SILE.scratch.biblecompose
+   if not s then
+      s = {}
+      SILE.scratch.biblecompose = s
+   end
+   s.books = s.books or 0
+   s.styles = s.styles or {}
+   return s
+end
+
+--- The resolved styles, keyed by selector.
+local function sheet ()
+   return scratch().styles
+end
+
+--- One selector's properties, or an empty table.
+--
+-- Empty is a real answer and not a missing one: the built-in sheet leaves most
+-- paragraph markers unstyled, meaning "renders as body text".
+local function style (selector)
+   return sheet()[selector] or {}
+end
+
+--- The font attributes a style asks for, or nil when it asks for none.
+--
+-- `nil` rather than an empty table so a caller can skip the `\font` call
+-- entirely — wrapping every run in a font switch that changes nothing costs a
+-- shaper round trip per element.
+local function face (s)
+   local f = nil
+   local function want (key, value)
+      if value ~= nil then
+         f = f or {}
+         f[key] = value
+      end
+   end
+   want("size", s.font_size)
+   want("weight", s.weight and tonumber(s.weight) or nil)
+   if SU.boolean(s.italic, false) then
+      want("style", "italic")
+   end
+   if SU.boolean(s.smallcaps, false) then
+      want("features", "+smcp")
+   end
+   return f
+end
+
+--- Run `body` with a style's font applied, if it has one.
+local function styled (selector, body)
+   local f = face(style(selector))
+   if f then
+      SILE.call("font", f, body)
+   else
+      body()
+   end
+end
+
+--- The alignment a style asks for, as the command that produces it.
+--
+-- Justified is SILE's own default for a paragraph, so it is the absence of a
+-- command rather than one of its own.
+local ALIGNMENT = {
+   center = "center",
+   end_ = "raggedleft",
+   start = "raggedright",
 }
+
+local function alignment (s)
+   if s.align == "center" then
+      return ALIGNMENT.center
+   elseif s.align == "end" then
+      return ALIGNMENT.end_
+   elseif s.align == "start" then
+      return ALIGNMENT.start
+   end
+   return nil
+end
 
 --- Process only element children, discarding whitespace laid out for humans.
 local function elements (content)
@@ -416,17 +480,36 @@ function class:registerXmlCommands ()
       elements(content)
    end)
 
+   -- The resolved style map. Read before anything is set, because every
+   -- element below looks into it.
+   self:registerCommand("styles", function (_, content)
+      local into = sheet()
+      for _, item in ipairs(content) do
+         if type(item) == "table" and item.command == "style" then
+            local o = item.options or {}
+            local key = o["for"]
+            if key then
+               into[key] = o
+            end
+         end
+      end
+   end)
+
+   -- Never reached: `styles` consumes its children itself. Registered so that
+   -- a `<style>` arriving anywhere else is inert rather than "unknown command".
+   self:registerCommand("style", function (_, _) end)
+
    self:registerCommand("book", function (options, content)
       -- A new book starts a new page — but the break goes at the START of the
       -- second and later books, never at the end of one. `\supereject` after
       -- the final book fills the balanced frames with infinite glue that can
       -- never be balanced, and SILE spins forever rather than failing.
-      SILE.scratch.biblecompose = SILE.scratch.biblecompose or { books = 0 }
-      if SILE.scratch.biblecompose.books > 0 then
+      local s = scratch()
+      if s.books > 0 then
          SILE.typesetter:leaveHmode()
          SILE.call("eject")
       end
-      SILE.scratch.biblecompose.books = SILE.scratch.biblecompose.books + 1
+      s.books = s.books + 1
 
       SILE.call("bc:book", {}, { options.name or options.code or "" })
       if options.name then
@@ -442,33 +525,78 @@ function class:registerXmlCommands ()
    end)
 
    self:registerCommand("heading", function (options, content)
-      local s = styles.heading[options.style] or styles.heading.s
+      local selector = "heading." .. (options.style or "s") .. (options.level or "1")
+      local s = style(selector)
       SILE.call("goodbreak")
-      skip(s.above)
-      SILE.call("font", { size = s.size, weight = s.weight, style = s.style }, function ()
-         SILE.process(content)
+      skip(s.space_above)
+      local align = alignment(s)
+      styled(selector, function ()
+         if align then
+            SILE.call(align, {}, function ()
+               SILE.process(content)
+            end)
+         else
+            SILE.process(content)
+         end
       end)
       SILE.call("par")
       SILE.call("nobreak")
-      skip(s.below)
+      skip(s.space_below)
    end)
 
-   self:registerCommand("para", function (_, content)
-      SILE.process(content)
-      SILE.call("par")
+   self:registerCommand("para", function (options, content)
+      local selector = "paragraph." .. (options.style or "p")
+      local s = style(selector)
+      skip(s.space_above)
+      SILE.settings:temporarily(function ()
+         if s.indent then
+            SILE.settings:set("document.lskip", SILE.types.node.glue(s.indent))
+         end
+         local align = alignment(s)
+         styled(selector, function ()
+            if align then
+               SILE.call(align, {}, function ()
+                  SILE.process(content)
+               end)
+            else
+               SILE.process(content)
+               SILE.call("par")
+            end
+         end)
+      end)
+      skip(s.space_below)
    end)
 
    self:registerCommand("poetry", function (options, content)
-      local level = tonumber(options.level) or 1
-      skip("1pt")
-      SILE.call("glue", { width = (level * styles.poetry_indent) .. "pt" })
-      SILE.process(content)
-      SILE.call("par")
+      local selector = "poetry." .. (options.style or "q") .. (options.level or "1")
+      local s = style(selector)
+      skip(s.space_above or "1pt")
+      local align = alignment(s)
+      -- An indent on a poetry line is a first-line indent of the whole line,
+      -- so it is glue at the start rather than a left skip: a line that wraps
+      -- should hang, which is what a reader expects of verse.
+      if s.indent and not align then
+         SILE.call("glue", { width = s.indent })
+      end
+      styled(selector, function ()
+         if align then
+            SILE.call(align, {}, function ()
+               SILE.process(content)
+            end)
+         else
+            SILE.process(content)
+            SILE.call("par")
+         end
+      end)
+      skip(s.space_below)
    end)
 
    self:registerCommand("item", function (options, content)
       local level = tonumber(options.level) or 1
-      SILE.call("glue", { width = (level * styles.poetry_indent) .. "pt" })
+      local s = style("list." .. level)
+      if s.indent then
+         SILE.call("glue", { width = s.indent })
+      end
       SILE.process(content)
       SILE.call("par")
    end)
@@ -515,7 +643,7 @@ function class:registerXmlCommands ()
 
    self:registerCommand("bc:chapter-number", function (_, content)
       SILE.call("noindent")
-      SILE.call("font", { size = styles.chapter.size, weight = styles.chapter.weight }, function ()
+      styled("chapter", function ()
          SILE.process(content)
       end)
       SILE.call("kern", { width = "4pt" })
@@ -526,8 +654,9 @@ function class:registerXmlCommands ()
    end)
 
    self:registerCommand("bc:verse-number", function (_, content)
-      SILE.call("raise", { height = styles.verse.raise }, function ()
-         SILE.call("font", { size = styles.verse.size, weight = styles.verse.weight }, function ()
+      local s = style("verse")
+      SILE.call("raise", { height = s.raise or "0pt" }, function ()
+         styled("verse", function ()
             SILE.process(content)
          end)
       end)
@@ -535,8 +664,10 @@ function class:registerXmlCommands ()
    end)
 
    self:registerCommand("char", function (options, content)
-      local s = styles.char[options.style] or {}
-      SILE.call("font", s, function ()
+      -- An unstyled character marker still processes its content. \wj is the
+      -- example that matters: red-letter text is a style a publisher may set
+      -- and may equally leave alone, and either way the words are Scripture.
+      styled("character." .. (options.style or ""), function ()
          SILE.process(content)
       end)
    end)
@@ -549,7 +680,7 @@ function class:registerXmlCommands ()
          return
       end
       SILE.call("footnote", {}, function ()
-         SILE.call("font", { size = styles.note.size }, function ()
+         styled("note.f", function ()
             elements(content)
          end)
       end)
@@ -560,7 +691,7 @@ function class:registerXmlCommands ()
          return
       end
       SILE.call("footnote", {}, function ()
-         SILE.call("font", { size = styles.xref.size, style = styles.xref.style }, function ()
+         styled("reference", function ()
             SILE.process(content)
          end)
       end)
@@ -578,7 +709,7 @@ function class:registerXmlCommands ()
       end)
       if content and #content > 0 then
          SILE.call("par")
-         SILE.call("font", { size = "7.6pt", style = "italic" }, function ()
+         styled("caption", function ()
             SILE.process(content)
          end)
       end
@@ -605,7 +736,7 @@ function class:_setheads ()
    end
 
    local book = o.headbook and SILE.scratch.chapterverse and SILE.scratch.chapterverse.book
-   local headfont = { size = "8.2pt", style = "italic" }
+   local headfont = face(style("head")) or {}
    SILE.call("left-running-head", {}, function ()
       SILE.settings:temporarily(function ()
          SILE.settings:set("document.lskip", SILE.types.node.glue())

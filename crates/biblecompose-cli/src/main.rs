@@ -19,7 +19,6 @@ use biblecompose_config::Settings;
 use biblecompose_diagnostics::Diagnostics;
 use biblecompose_diagnostics::Severity;
 use biblecompose_scripture::fixtures;
-use biblecompose_scripture::ScriptureDocument;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, Subcommand};
 
@@ -101,15 +100,18 @@ enum Command {
 /// The fixture path stays because it is how the pipeline is exercised with no
 /// project and no parser — which is what M0 was built on and what the golden
 /// tests still use.
-fn document(
-    books: Option<&Utf8Path>,
-    fixture: &str,
-) -> Result<(ScriptureDocument, Settings, Diagnostics), String> {
+fn document(books: Option<&Utf8Path>, fixture: &str) -> Result<project::Opened, String> {
     let Some(root) = books else {
-        // The fixture path has no folder to read settings from, so it gets the
-        // built-in ones — which is also what CFG-001 promises a folder with no
-        // settings file.
-        return Ok((load(fixture)?, Settings::builtin(), Diagnostics::new()));
+        // The fixture path has no folder to read settings or styles from, so
+        // it gets the built-in ones — which is also what CFG-001 and STY-001
+        // promise a folder that has neither file.
+        return Ok(project::Opened {
+            root: Utf8PathBuf::from("."),
+            settings: Settings::builtin(),
+            styles: biblecompose_config::cascade::resolve(None, false).0,
+            document: load(fixture)?,
+            diagnostics: Diagnostics::new(),
+        });
     };
 
     // Through `open` rather than calling settings, plan and load in order:
@@ -124,7 +126,7 @@ fn document(
         }
         return Err(format!("{root} cannot be built"));
     }
-    Ok((opened.document, opened.settings, opened.diagnostics))
+    Ok(opened)
 }
 
 fn main() -> ExitCode {
@@ -169,11 +171,12 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             fixture,
             output,
         } => {
-            let (doc, _settings, diagnostics) = document(books.as_deref(), &fixture)?;
+            let opened = document(books.as_deref(), &fixture)?;
+            let (doc, diagnostics) = (&opened.document, &opened.diagnostics);
             for d in diagnostics.iter() {
                 eprintln!("{d}");
             }
-            let emitted = emit(&doc);
+            let emitted = emit(doc, &opened.styles);
             match output {
                 Some(path) => std::fs::write(path.as_std_path(), emitted.xml.as_bytes())
                     .map_err(|e| format!("could not write {path}: {e}"))?,
@@ -186,7 +189,8 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
         }
 
         Command::Validate { books, fixture } => {
-            let (doc, _settings, diagnostics) = document(books.as_deref(), &fixture)?;
+            let opened = document(books.as_deref(), &fixture)?;
+            let (doc, diagnostics) = (&opened.document, &opened.diagnostics);
             for d in diagnostics.iter() {
                 println!("{d}");
             }
@@ -211,7 +215,12 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             keep_intermediates,
             events,
         } => {
-            let (doc, settings, load_diagnostics) = document(books.as_deref(), &fixture)?;
+            let opened = document(books.as_deref(), &fixture)?;
+            let (doc, settings, load_diagnostics) = (
+                &opened.document,
+                opened.settings.clone(),
+                &opened.diagnostics,
+            );
             for d in load_diagnostics.iter() {
                 eprintln!("{d}");
             }
@@ -226,7 +235,8 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             let request = BuildRequest::new(project, output)
                 .with_sile_path(sile_path)
                 .keeping_intermediates(keep)
-                .with_settings(settings);
+                .with_settings(settings)
+                .with_styles(opened.styles.clone());
 
             let (mut reporter, rx) = BuildReporter::new();
             let cancel = CancelToken::new();
@@ -234,7 +244,7 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             // The build runs on this thread; the reporter is drained after it
             // finishes. A GUI would drain concurrently — the point of the
             // event stream is that neither observer owns the build.
-            let report = build(&doc, &request, &cancel, &mut reporter);
+            let report = build(doc, &request, &cancel, &mut reporter);
             drop(reporter);
 
             for event in rx.iter() {

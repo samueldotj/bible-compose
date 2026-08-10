@@ -1,0 +1,83 @@
+<biblecompose version="1" class="biblecompose">
+<styles>
+<style for="poetry.q1" indent="9pt"/>
+<style for="poetry.q2" indent="18pt"/>
+<style for="poetry.q3" indent="27pt"/>
+<style for="poetry.q4" indent="36pt"/>
+<style for="poetry.qr1" align="end"/>
+<style for="poetry.qr2" align="end"/>
+<style for="poetry.qr3" align="end"/>
+<style for="poetry.qr4" align="end"/>
+<style for="poetry.qc1" align="center"/>
+<style for="poetry.qc2" align="center"/>
+<style for="poetry.qc3" align="center"/>
+<style for="poetry.qc4" align="center"/>
+<style for="poetry.qa1" italic="true" space_above="4pt" space_below="1pt"/>
+<style for="poetry.qa2" italic="true" space_above="4pt" space_below="1pt"/>
+<style for="poetry.qa3" italic="true" space_above="4pt" space_below="1pt"/>
+<style for="poetry.qa4" italic="true" space_above="4pt" space_below="1pt"/>
+<style for="heading.s1" font_size="10.2pt" weight="600" space_above="7pt" space_below="1pt"/>
+<style for="heading.s2" font_size="9.6pt" weight="600" space_above="5pt" space_below="1pt"/>
+<style for="heading.s3" font_size="9.6pt" weight="600" space_above="5pt" space_below="1pt"/>
+<style for="heading.s4" font_size="9.6pt" weight="600" space_above="5pt" space_below="1pt"/>
+<style for="heading.sr1" font_size="7.6pt" italic="true" space_above="1pt" space_below="3pt"/>
+<style for="heading.sr2" font_size="7.6pt" italic="true" space_above="1pt" space_below="3pt"/>
+<style for="heading.sr3" font_size="7.6pt" italic="true" space_above="1pt" space_below="3pt"/>
+<style for="heading.sr4" font_size="7.6pt" italic="true" space_above="1pt" space_below="3pt"/>
+<style for="heading.r1" font_size="7.6pt" italic="true" space_above="1pt" space_below="3pt"/>
+<style for="heading.r2" font_size="7.6pt" italic="true" space_above="1pt" space_below="3pt"/>
+<style for="heading.r3" font_size="7.6pt" italic="true" space_above="1pt" space_below="3pt"/>
+<style for="heading.r4" font_size="7.6pt" italic="true" space_above="1pt" space_below="3pt"/>
+<style for="heading.d1" font_size="9.2pt" italic="true" space_above="4pt" space_below="2pt"/>
+<style for="heading.d2" font_size="9.2pt" italic="true" space_above="4pt" space_below="2pt"/>
+<style for="heading.d3" font_size="9.2pt" italic="true" space_above="4pt" space_below="2pt"/>
+<style for="heading.d4" font_size="9.2pt" italic="true" space_above="4pt" space_below="2pt"/>
+<style for="heading.sp1" font_size="9.2pt" italic="true" space_above="4pt" space_below="2pt"/>
+<style for="heading.sp2" font_size="9.2pt" italic="true" space_above="4pt" space_below="2pt"/>
+<style for="heading.sp3" font_size="9.2pt" italic="true" space_above="4pt" space_below="2pt"/>
+<style for="heading.sp4" font_size="9.2pt" italic="true" space_above="4pt" space_below="2pt"/>
+<style for="heading.is1" font_size="10.2pt" weight="600" space_above="7pt" space_below="2pt"/>
+<style for="heading.is2" font_size="10.2pt" weight="600" space_above="7pt" space_below="2pt"/>
+<style for="heading.is3" font_size="10.2pt" weight="600" space_above="7pt" space_below="2pt"/>
+<style for="heading.is4" font_size="10.2pt" weight="600" space_above="7pt" space_below="2pt"/>
+<style for="heading.imt1" font_size="12pt" weight="600" space_above="8pt" space_below="4pt" align="center"/>
+<style for="heading.imt2" font_size="12pt" weight="600" space_above="8pt" space_below="4pt" align="center"/>
+<style for="heading.imt3" font_size="12pt" weight="600" space_above="8pt" space_below="4pt" align="center"/>
+<style for="heading.imt4" font_size="12pt" weight="600" space_above="8pt" space_below="4pt" align="center"/>
+<style for="heading.iot1" font_size="9.6pt" weight="600" space_above="6pt" space_below="2pt"/>
+<style for="heading.iot2" font_size="9.6pt" weight="600" space_above="6pt" space_below="2pt"/>
+<style for="heading.iot3" font_size="9.6pt" weight="600" space_above="6pt" space_below="2pt"/>
+<style for="heading.iot4" font_size="9.6pt" weight="600" space_above="6pt" space_below="2pt"/>
+<style for="character.add" italic="true"/>
+<style for="character.bd" weight="700"/>
+<style for="character.bdit" weight="700" italic="true"/>
+<style for="character.em" italic="true"/>
+<style for="character.it" italic="true"/>
+<style for="character.nd" smallcaps="true"/>
+<style for="character.sc" smallcaps="true"/>
+<style for="character.qt" italic="true"/>
+<style for="character.sig" italic="true"/>
+<style for="character.tl" italic="true"/>
+<style for="character.k" italic="true"/>
+<style for="character.fq" italic="true"/>
+<style for="character.fqa" italic="true"/>
+<style for="character.fk" weight="600"/>
+<style for="character.iqt" italic="true"/>
+<style for="list.1" indent="9pt"/>
+<style for="list.2" indent="18pt"/>
+<style for="list.3" indent="27pt"/>
+<style for="list.4" indent="36pt"/>
+<style for="chapter" font_size="18pt" weight="700" italic="true" smallcaps="true" space_above="6pt" space_below="3pt" indent="36pt" raise="2pt" align="center"/>
+<style for="verse" font_size="6.4pt" weight="600" raise="2.8pt"/>
+<style for="note.f" font_size="7.4pt"/>
+<style for="note.fe" font_size="7.4pt"/>
+<style for="reference" font_size="7.4pt" italic="true"/>
+<style for="caption" font_size="7.6pt" italic="true"/>
+<style for="head" font_size="8.2pt" italic="true"/>
+<style for="folio" font_size="8.2pt"/>
+</styles>
+<book code="JHN" name="John">
+<heading style="s" level="1">The Beginning</heading>
+<para style="m"><chapter n="1"/><verse n="1" start="1" end="1"/>In the beginning was the Word, and the Word was with God, and the Word was God.<verse n="2" start="2" end="2"/>He was with God in the beginning.<verse n="3" start="3" end="3"/>Through Him all things were made, and without Him nothing was made that has been made.<verse n="4" start="4" end="4"/>In Him was life, and that life was the light of men.<verse n="5" start="5" end="5"/>The Light shines in the darkness, and the darkness has not overcome<note style="f" caller="+" origin="1:5">
+<para style="p">Or comprehended</para></note> it.</para>
+</book></biblecompose>

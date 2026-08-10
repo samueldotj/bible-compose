@@ -16,7 +16,7 @@ use biblecompose_testkit::golden;
 fn every_fixture_matches_its_golden_file() {
     let dir = biblecompose_testkit::golden_dir();
     for (name, doc) in fixtures::all() {
-        let emitted = emit(&doc);
+        let emitted = emit(&doc, &[]);
         golden::assert_matches(&dir.join(format!("{name}.xml")), &emitted.xml);
     }
 }
@@ -27,9 +27,9 @@ fn every_fixture_matches_its_golden_file() {
 #[test]
 fn emission_does_not_vary_between_runs_in_one_process() {
     for (name, doc) in fixtures::all() {
-        let first = emit(&doc).xml;
+        let first = emit(&doc, &[]).xml;
         for _ in 0..64 {
-            assert_eq!(first, emit(&doc).xml, "{name} varied between runs");
+            assert_eq!(first, emit(&doc, &[]).xml, "{name} varied between runs");
         }
     }
 }
@@ -57,7 +57,7 @@ fn golden_files_are_stored_with_lf_endings() {
 /// mistake would otherwise lock in a regression.
 #[test]
 fn the_adversarial_golden_still_contains_inert_sil_syntax() {
-    let xml = emit(&fixtures::adversarial()).xml;
+    let xml = emit(&fixtures::adversarial(), &[]).xml;
     assert!(xml.contains(r"\bd"), "a backslash must survive as text");
     assert!(xml.contains(r"\par"));
     assert!(xml.contains("{like this}"));

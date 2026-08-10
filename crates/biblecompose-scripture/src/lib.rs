@@ -398,7 +398,9 @@ pub struct Note {
     pub content: Vec<Block>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// Ordered and hashable because the style layer keys selectors by it, and a
+/// selector has to sit in a map.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum NoteKind {
     /// `\f`
     Footnote,

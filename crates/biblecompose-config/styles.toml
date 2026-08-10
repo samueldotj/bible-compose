@@ -1,0 +1,216 @@
+# BibleCompose built-in styles (STY-001).
+#
+# Every marker the application supports has a selector; only the ones with
+# something to say appear here. A marker absent from this file is not
+# unsupported — it renders as body text, which is the right answer for `\p`,
+# `\m` and most of the introduction markers.
+#
+# Selectors are `[class.marker]`. The class is part of the identity, so
+# `[paragraph.x]` and `[character.x]` are different elements and cannot
+# collide (STY-003).
+#
+# Sizes are absolute here rather than multiples of the body size. The body is
+# a setting (`typography.font_size`) and these are the sizes that setting was
+# chosen against; expressing them as ratios is worth doing, and is a change to
+# make deliberately with a look at the page rather than as a side effect.
+#
+# Properties: font_size, weight, italic, smallcaps, space_above, space_below,
+# indent, raise, align.
+
+# --------------------------------------------------------------- headings
+
+[heading.s1]
+font_size = "10.2pt"
+weight = 600
+space_above = "7pt"
+space_below = "1pt"
+
+[heading.s2]
+font_size = "9.6pt"
+weight = 600
+space_above = "5pt"
+space_below = "1pt"
+
+# `\sr` — the reference range under a section heading.
+[heading.sr1]
+font_size = "7.6pt"
+italic = true
+space_above = "1pt"
+space_below = "3pt"
+
+# `\r` — parallel passage references.
+[heading.r1]
+font_size = "7.6pt"
+italic = true
+space_above = "1pt"
+space_below = "3pt"
+
+# `\d` — a Hebrew psalm superscription. Part of the text, not a heading over
+# it, which is why it is not bold.
+[heading.d1]
+font_size = "9.2pt"
+italic = true
+space_above = "4pt"
+space_below = "2pt"
+
+# `\sp` — the speaker in Song of Songs and Job.
+[heading.sp1]
+font_size = "9.2pt"
+italic = true
+space_above = "4pt"
+space_below = "2pt"
+
+[heading.is1]
+font_size = "10.2pt"
+weight = 600
+space_above = "7pt"
+space_below = "2pt"
+
+[heading.imt1]
+font_size = "12pt"
+weight = 600
+space_above = "8pt"
+space_below = "4pt"
+align = "center"
+
+[heading.iot1]
+font_size = "9.6pt"
+weight = 600
+space_above = "6pt"
+space_below = "2pt"
+
+# ----------------------------------------------------------------- poetry
+#
+# Nine points per level, which is what the M0 class used. Each level is
+# written out rather than computed: a publisher who wants the third level
+# pulled back further should be able to say so without the other three moving.
+
+[poetry.q1]
+indent = "9pt"
+
+[poetry.q2]
+indent = "18pt"
+
+[poetry.q3]
+indent = "27pt"
+
+[poetry.q4]
+indent = "36pt"
+
+# `\qr` — a line set to the right margin.
+[poetry.qr1]
+align = "end"
+
+# `\qc` — centred, as in an acrostic title.
+[poetry.qc1]
+align = "center"
+
+# `\qa` — an acrostic heading letter.
+[poetry.qa1]
+italic = true
+space_above = "4pt"
+space_below = "1pt"
+
+# ------------------------------------------------------------------ lists
+
+[list.1]
+indent = "9pt"
+
+[list.2]
+indent = "18pt"
+
+[list.3]
+indent = "27pt"
+
+[list.4]
+indent = "36pt"
+
+# ------------------------------------------------------ chapter and verse
+
+[chapter]
+font_size = "21pt"
+weight = 700
+
+[verse]
+font_size = "6.4pt"
+weight = 600
+raise = "2.8pt"
+
+# ------------------------------------------------- notes and cross-refs
+
+[note.f]
+font_size = "7.4pt"
+
+[note.fe]
+font_size = "7.4pt"
+
+[reference]
+font_size = "7.4pt"
+italic = true
+
+# ------------------------------------------------------ page furniture
+
+[head]
+font_size = "8.2pt"
+italic = true
+
+[folio]
+font_size = "8.2pt"
+
+[caption]
+font_size = "7.6pt"
+italic = true
+
+# ------------------------------------------------------- character styles
+
+[character.bd]
+weight = 700
+
+[character.bdit]
+weight = 700
+italic = true
+
+[character.em]
+italic = true
+
+[character.it]
+italic = true
+
+[character.add]
+italic = true
+
+[character.qt]
+italic = true
+
+[character.tl]
+italic = true
+
+# `\nd` — the divine name, conventionally small capitals.
+[character.nd]
+smallcaps = true
+
+[character.sc]
+smallcaps = true
+
+# `\sig` — the signature at the end of an epistle.
+[character.sig]
+italic = true
+
+# `\k` — a keyword in a glossary entry.
+[character.k]
+italic = true
+
+# `\fq`, `\fqa` — the quoted text a footnote is about.
+[character.fq]
+italic = true
+
+[character.fqa]
+italic = true
+
+# `\fk` — the keyword a footnote defines.
+[character.fk]
+weight = 600
+
+# `\iqt` — quoted text in introduction matter.
+[character.iqt]
+italic = true

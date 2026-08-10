@@ -9,6 +9,10 @@ description = "Settings and styles: defaults, cascade, provenance, validation."
 
 [dependencies]
 biblecompose-diagnostics.workspace = true
+# Styles are keyed by marker, and the markers are the model's vocabulary.
+# Mirroring ParaStyle and friends here instead would be a second list of
+# every supported marker, kept in a crate that cannot see the first.
+biblecompose-scripture.workspace = true
 camino.workspace = true
 serde.workspace = true
 toml_edit.workspace = true

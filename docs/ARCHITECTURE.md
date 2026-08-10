@@ -66,6 +66,8 @@ Two of these are not free choices. The webview is what supplies complex-script t
     biblecompose-diagnostics is used by every box above and depends on none of them.
 ```
 
+`biblecompose-config` also reaches `biblecompose-scripture`, for one reason: a style is keyed by the marker it applies to, and the markers are the model's vocabulary. Mirroring them into the style layer would be a second list of every supported marker, kept where it cannot be checked against the first.
+
 The arrows that are *not* there are the design. `biblecompose-scripture` does not know what a page is. `biblecompose-config` does not know what SILE is. `biblecompose-sile` is the only crate that has ever heard of SILE, and it is reached only through a trait. Nothing below `biblecompose-app` knows a GUI exists.
 
 ## 3. Crates

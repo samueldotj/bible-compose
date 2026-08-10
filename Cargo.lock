@@ -197,6 +197,7 @@ name = "biblecompose-config"
 version = "0.1.0"
 dependencies = [
  "biblecompose-diagnostics",
+ "biblecompose-scripture",
  "camino",
  "serde",
  "tempfile",

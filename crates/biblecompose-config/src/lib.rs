@@ -10,12 +10,16 @@ pub mod document;
 pub mod edit;
 pub mod form;
 pub mod provenance;
+pub mod selector;
 pub mod settings;
+pub mod style;
 pub mod value;
 
 pub use document::{ConfigDocument, Located, Node, Table};
 pub use edit::{set_validated, SettingValue, SettingsFile};
 pub use form::{Field, Kind};
 pub use provenance::{Origin, Provenance, Sourced};
+pub use selector::StyleSelector;
 pub use settings::{known_keys, resolve, Settings, SCHEMA_VERSION};
+pub use style::{Align, Style, StyleSheet};
 pub use value::{Length, PageSize, Unit};

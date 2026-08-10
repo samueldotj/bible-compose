@@ -263,7 +263,7 @@ Not an item, but the thing to watch: **ICU data is 32 MB of the 78**, and filter
 
 | ID | | Deliverable | Done when |
 |---|---|---|---|
-| **P3.1** | M | Style schema, typed selectors, and a built-in style for every supported marker | Every marker BibleCompose claims to support renders without a project override; `paragraph.q1` and a same-named selector in another class cannot collide (STY-001, STY-003) |
+| **P3.1** | M ✅ | Style schema, typed selectors, and a built-in style for every supported marker | Every marker BibleCompose claims to support renders without a project override; `paragraph.q1` and a same-named selector in another class cannot collide (STY-001, STY-003). The selector list is generated from the model's marker enums, so a marker added to the model gets a selector rather than silently going unstyled |
 | **P3.2** | M | Cascade, single-parent inheritance flattening, cycle detection | A `styles.toml` override changes only what it names; `q2` inherits poetry properties from `q1`; a cycle is one diagnostic naming the cycle, not a stack overflow (STY-002, STY-007) |
 | **P3.3** | S | Unsupported selector and property diagnostics with a location | A misspelled property is reported at its line rather than silently ignored (STY-004) |
 | **P3.4** | M | Resolved style map emitted as data; the class applies it | Style values reach SILE as data, never as command fragments; golden XML covers the full property set ([ADR-002](adr/002-sile-interface.md)) |

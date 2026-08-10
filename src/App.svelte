@@ -80,7 +80,9 @@
     {:else}
       <StyleEditor />
     {/if}
-    <BuildLog />
+    {#if session.showLog}
+      <BuildLog />
+    {/if}
   </div>
 </main>
 

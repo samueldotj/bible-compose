@@ -186,6 +186,11 @@ pub enum WireBuildEvent {
     Output {
         path: String,
     },
+    /// Where the backend's output is being written. Announced before the run,
+    /// so the window can offer it even for a build that never finishes.
+    LogFile {
+        path: String,
+    },
     /// How far the typesetter has got. `expected` is the last build's page
     /// count and is absent the first time a project is built, because nothing
     /// knows how long a document is until it has been set.
@@ -675,6 +680,9 @@ fn wire_event(event: BuildEvent) -> WireBuildEvent {
         BuildEvent::Log { stream, text } => WireBuildEvent::Log { stream, text },
         BuildEvent::Backend(version) => WireBuildEvent::Backend { version },
         BuildEvent::Output(path) => WireBuildEvent::Output {
+            path: path.to_string(),
+        },
+        BuildEvent::LogFile(path) => WireBuildEvent::LogFile {
             path: path.to_string(),
         },
         BuildEvent::Pages { done, expected } => WireBuildEvent::Pages { done, expected },

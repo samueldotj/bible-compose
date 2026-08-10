@@ -117,6 +117,9 @@ pub enum BuildEvent {
     },
     /// The published PDF.
     Output(camino::Utf8PathBuf),
+    /// Where the backend's output is being written, announced before the run
+    /// starts so it is known even if the run never ends.
+    LogFile(camino::Utf8PathBuf),
 }
 
 /// Drives the state machine and publishes its events.
@@ -167,6 +170,10 @@ impl BuildReporter {
 
     pub fn backend(&self, version: String) {
         let _ = self.tx.send(BuildEvent::Backend(version));
+    }
+
+    pub fn log_file(&self, path: camino::Utf8PathBuf) {
+        let _ = self.tx.send(BuildEvent::LogFile(path));
     }
 
     pub fn pages(&self, done: u32, expected: Option<u32>) {

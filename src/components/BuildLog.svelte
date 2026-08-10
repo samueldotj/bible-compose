@@ -40,6 +40,9 @@
   <header>
     <h2 id="log-heading">Build log <span class="tally">{session.log.length}</span></h2>
     <div class="actions">
+      {#if session.logFile}
+        <span class="path" title={session.logFile}>{session.logFile}</span>
+      {/if}
       {#if !follow}
         <button type="button" onclick={() => ((follow = true), box && (box.scrollTop = box.scrollHeight))}>
           Follow
@@ -76,7 +79,20 @@
   }
   .actions {
     display: flex;
-    gap: 0.3rem;
+    gap: 0.4rem;
+    align-items: baseline;
+  }
+  /* The file is the copy that outlives the window; the pane is the one you can
+     watch. Showing the path is what makes the first discoverable. */
+  .path {
+    font-size: 0.7rem;
+    opacity: 0.5;
+    direction: rtl;
+    text-align: start;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-inline-size: 22rem;
   }
   .actions button {
     padding-block: 0.1rem;

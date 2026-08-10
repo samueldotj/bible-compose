@@ -14,6 +14,7 @@ use biblecompose_config::{ResolvedStyles, Settings};
 use biblecompose_diagnostics::{code, Diagnostic, Diagnostics};
 use biblecompose_scripture::ScriptureDocument;
 use biblecompose_sile::{BackendEvent, BackendJob, SileBackend, Stream};
+use std::io::Write;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -215,6 +216,15 @@ pub fn build_with(
         Err(e) => return failed(reporter, diagnostics, e),
     };
 
+    // Everything the backend says goes here as well as to the event stream.
+    // Opened before the run so a failure that happens immediately still leaves
+    // a file to read.
+    let log_path = build_dir.log_path();
+    let mut log_file = std::fs::File::create(log_path.as_std_path())
+        .ok()
+        .map(std::io::BufWriter::new);
+    reporter.log_file(log_path.clone());
+
     let job = BackendJob {
         xml: emitted.xml,
         work_dir: build_dir.path().to_owned(),
@@ -238,13 +248,20 @@ pub fn build_with(
     let outcome = {
         let reporter = &*reporter;
         backend.run(&job, cancel, &mut |event| match event {
-            BackendEvent::Log(line) => reporter.log(
-                match line.stream {
+            BackendEvent::Log(line) => {
+                let stream = match line.stream {
                     Stream::Stdout => "stdout",
                     Stream::Stderr => "stderr",
-                },
-                line.text,
-            ),
+                };
+                if let Some(file) = log_file.as_mut() {
+                    // Tagged, because the two streams interleave and which one
+                    // a line came from is half of what it means. A write that
+                    // fails is not worth a diagnostic: the build is the point,
+                    // and the same text is going to the panel anyway.
+                    let _ = writeln!(file, "{stream}: {}", line.text);
+                }
+                reporter.log(stream, line.text);
+            }
             BackendEvent::Page(done) => {
                 // Highest seen rather than last reported. A bar that goes
                 // backwards is worse than no bar, and nothing guarantees the
@@ -256,6 +273,10 @@ pub fn build_with(
             }
         })
     };
+
+    if let Some(mut file) = log_file {
+        let _ = file.flush();
+    }
 
     let outcome = match outcome {
         Ok(o) => {
@@ -271,6 +292,11 @@ pub fn build_with(
             if e.code == code::CANCELLED {
                 return cancelled(reporter, diagnostics);
             }
+            // SILE-008 removes intermediates after a *successful* build. A
+            // failed one keeps them, because the log explaining the failure is
+            // among them and deleting it is deleting the answer to the
+            // question the failure just raised.
+            build_dir.keep();
             return failed(reporter, diagnostics, e);
         }
     };
@@ -282,6 +308,7 @@ pub fn build_with(
 
     reporter.advance(BuildState::Publishing);
     if let Err(e) = publish(&outcome.pdf, &request.output) {
+        build_dir.keep();
         return failed(reporter, diagnostics, e);
     }
     if request.keep_intermediates {
@@ -585,6 +612,65 @@ mod tests {
             .expect("the failure is reported");
         let r = d.reference.as_ref().expect("with a Scripture reference");
         assert_eq!(r.book, "John");
+    }
+
+    /// SILE-006: everything the backend said, in a file, tagged by stream.
+    #[test]
+    fn the_backend_output_is_written_to_a_log_file() {
+        let (_g, root) = tmp();
+        let req = BuildRequest::new(&root, root.join("out.pdf")).keeping_intermediates(true);
+        let (mut r, _rx) = BuildReporter::new();
+        let report = build_with(
+            &fixtures::john_1_1_5(),
+            &req,
+            &FakeBackend {
+                write_pdf: true,
+                fail: false,
+            },
+            &CancelToken::new(),
+            &mut r,
+        );
+        assert!(report.succeeded());
+
+        let log = root
+            .join(".biblecompose")
+            .join("build")
+            .join("current")
+            .join("build.log");
+        let text = std::fs::read_to_string(log.as_std_path()).expect("the log was written");
+        assert!(text.contains("stdout: fake backend ran"), "{text}");
+    }
+
+    /// A failed build keeps its directory, because the log explaining the
+    /// failure is in it and deleting it deletes the answer.
+    #[test]
+    fn a_failed_build_leaves_its_log_behind() {
+        let (_g, root) = tmp();
+        // Not asking for intermediates: SILE-008 removes them after a
+        // *successful* build, and this is the other case.
+        let req = BuildRequest::new(&root, root.join("out.pdf"));
+        let (mut r, _rx) = BuildReporter::new();
+        let report = build_with(
+            &fixtures::john_1_1_5(),
+            &req,
+            &FakeBackend {
+                write_pdf: false,
+                fail: true,
+            },
+            &CancelToken::new(),
+            &mut r,
+        );
+        assert_eq!(report.state, BuildState::Failed);
+
+        let log = root
+            .join(".biblecompose")
+            .join("build")
+            .join("current")
+            .join("build.log");
+        assert!(
+            log.exists(),
+            "the log of a failed build must survive the build directory"
+        );
     }
 
     #[test]

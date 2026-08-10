@@ -55,6 +55,17 @@ export class Session {
   /** Pages set so far, and what the last build of this project needed. */
   pagesDone = $state(0);
   pagesExpected = $state<number | null>(null);
+  /** Where the backend's output is being written (SILE-006). */
+  logFile = $state<string | null>(null);
+  /**
+   * Whether the log pane is showing.
+   *
+   * Hidden by default: it is the backend's own chatter, it is long, and the
+   * page counter beside the Build button now answers the question it used to
+   * be watched for. GUI-003 still holds — it is one click away and it is a
+   * file — but it no longer takes half the window to say "working".
+   */
+  showLog = $state(false);
 
   selectedBook = $state<string | null>(null);
   severity = $state<SeverityFilter>("all");
@@ -237,6 +248,9 @@ export class Session {
       case "output":
         this.output = event.path;
         break;
+      case "logFile":
+        this.logFile = event.path;
+        break;
       case "pages":
         this.pagesDone = event.done;
         this.pagesExpected = event.expected ?? null;
@@ -268,6 +282,7 @@ export class Session {
     this.log = [];
     this.pagesDone = 0;
     this.pagesExpected = null;
+    this.logFile = null;
     this.buildDiagnostics = [];
     this.output = null;
     this.buildState = "idle";

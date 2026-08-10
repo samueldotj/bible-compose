@@ -91,6 +91,17 @@
     </span>
   {/if}
 
+  <button
+    type="button"
+    class="log-toggle"
+    class:on={session.showLog}
+    aria-pressed={session.showLog}
+    title={session.logFile ?? "The backend's own output"}
+    onclick={() => (session.showLog = !session.showLog)}
+  >
+    Log
+  </button>
+
   {#if session.output}
     <span class="output" title={session.output}>wrote {session.output}</span>
   {:else if session.project}
@@ -194,6 +205,22 @@
   .note {
     font-size: 0.8rem;
     color: #c0392b;
+  }
+  .log-toggle {
+    padding-block: 0.15rem;
+    padding-inline: 0.5rem;
+    border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.75rem;
+    opacity: 0.7;
+    cursor: pointer;
+  }
+  .log-toggle.on {
+    background: color-mix(in oklab, currentColor 12%, transparent);
+    opacity: 1;
   }
   .output,
   .backend {

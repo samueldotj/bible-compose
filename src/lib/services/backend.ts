@@ -112,6 +112,7 @@ export type BuildEvent =
   | { kind: "backend"; version: string }
   | { kind: "output"; path: string }
   | { kind: "pages"; done: number; expected?: number }
+  | { kind: "logFile"; path: string }
   | { kind: "finished"; state: BuildState };
 
 /** Stops delivering events. */

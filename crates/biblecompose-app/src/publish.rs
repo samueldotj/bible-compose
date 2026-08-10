@@ -41,6 +41,15 @@ impl BuildDir {
         &self.path
     }
 
+    /// Where the backend's output is written verbatim (SILE-006).
+    ///
+    /// A file rather than only a pane, because the thing a log is for is being
+    /// sent to somebody, and a log you have to select and copy out of a window
+    /// is a log nobody sends.
+    pub fn log_path(&self) -> Utf8PathBuf {
+        self.path.join("build.log")
+    }
+
     /// SILE-008: intermediates are removed after a successful build unless the
     /// user asked to keep them.
     pub fn keep(&mut self) {

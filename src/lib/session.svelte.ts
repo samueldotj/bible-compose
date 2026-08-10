@@ -81,6 +81,8 @@ export class Session {
 
   /** Which configuration tab is showing. One of `TABS`. */
   pane = $state("settings");
+  /** And which section within the Styles tab. One of `STYLE_TABS`. */
+  stylePane = $state("typography");
 
   #stop: (() => void) | null = null;
 

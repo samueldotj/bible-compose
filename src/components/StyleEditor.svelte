@@ -16,6 +16,10 @@
   import { ALIGNMENTS, STYLE_GROUPS, type PropertyRow } from "../lib/styles";
   import type { StyleProperty } from "../lib/services/backend";
 
+  /** Which of `STYLE_GROUPS` to show. The tab decides. */
+  const { groups: show }: { groups: readonly string[] } = $props();
+
+  const shown = $derived(STYLE_GROUPS.filter((g) => show.includes(g.id)));
   const bySelector = $derived(new Map(session.styles.map((s) => [s.selector, s])));
 
   function held(selector: string, property: string): StyleProperty | undefined {
@@ -47,7 +51,7 @@
   {#if session.styles.length === 0}
     <p class="empty">Loading…</p>
   {:else}
-    {#each STYLE_GROUPS as group (group.id)}
+    {#each shown as group (group.id)}
       <fieldset>
         <legend>{group.title}</legend>
 

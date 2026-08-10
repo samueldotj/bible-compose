@@ -9,6 +9,8 @@
  * setting to the schema never produces a blank row, only an untranslated one.
  */
 
+import { STYLE_GROUPS } from "./styles";
+
 export interface Group {
   readonly id: string;
   readonly title: string;
@@ -145,4 +147,32 @@ export const TABS: readonly Tab[] = [
   { id: "page", title: "Page", settingGroups: ["page"] },
   { id: "appears", title: "What appears", settingGroups: ["content"] },
   { id: "styles", title: "Styles", settingGroups: ["typography"], styles: true },
+];
+
+/**
+ * The Styles tab's own tabs.
+ *
+ * One section at a time. Stacked, the seven of them are several screens of
+ * form, and a publisher adjusting the poetry indents has no use for the
+ * character styles while they do it.
+ *
+ * Typography leads because it is the one most people change, and because it is
+ * the only one of these that is a *setting* — a body font is chosen once for
+ * the publication, where every other section is keyed by marker.
+ */
+export interface SubTab {
+  readonly id: string;
+  readonly title: string;
+  readonly settingGroups: readonly string[];
+  readonly styleGroups: readonly string[];
+}
+
+export const STYLE_TABS: readonly SubTab[] = [
+  { id: "typography", title: "Typography", settingGroups: ["typography"], styleGroups: [] },
+  ...STYLE_GROUPS.map((g) => ({
+    id: g.id,
+    title: g.title,
+    settingGroups: [] as readonly string[],
+    styleGroups: [g.id],
+  })),
 ];

@@ -5,7 +5,7 @@
   import ProjectPane from "./components/ProjectPane.svelte";
   import SettingsForm from "./components/SettingsForm.svelte";
   import StyleEditor from "./components/StyleEditor.svelte";
-  import { TABS } from "./lib/labels";
+  import { STYLE_TABS, TABS } from "./lib/labels";
   import { session } from "./lib/session.svelte";
 
   $effect(() => {
@@ -16,6 +16,7 @@
   // `TABS` is a non-empty constant, but its type does not say so — and a
   // stored pane id from an older build could name a tab that no longer exists.
   const tab = $derived(TABS.find((t) => t.id === session.pane) ?? TABS[0]!);
+  const styleTab = $derived(STYLE_TABS.find((t) => t.id === session.stylePane) ?? STYLE_TABS[0]!);
 
   function folderName(path: string): string {
     return path.split(/[/\\]/).filter(Boolean).pop() ?? path;
@@ -83,9 +84,28 @@
       </p>
     {/if}
 
-    <SettingsForm groups={tab.settingGroups} orphans={tab.orphans ?? false} />
     {#if tab.styles}
-      <StyleEditor />
+      <nav class="tabs subtabs" aria-label="Styles sections">
+        {#each STYLE_TABS as s (s.id)}
+          <button
+            type="button"
+            class:active={session.stylePane === s.id}
+            aria-current={session.stylePane === s.id ? "true" : undefined}
+            onclick={() => (session.stylePane = s.id)}
+          >
+            {s.title}
+          </button>
+        {/each}
+      </nav>
+
+      {#if styleTab.settingGroups.length > 0}
+        <SettingsForm groups={styleTab.settingGroups} />
+      {/if}
+      {#if styleTab.styleGroups.length > 0}
+        <StyleEditor groups={styleTab.styleGroups} />
+      {/if}
+    {:else}
+      <SettingsForm groups={tab.settingGroups} orphans={tab.orphans ?? false} />
     {/if}
     {#if session.showLog}
       <BuildLog />
@@ -155,6 +175,18 @@
     font-size: 0.85rem;
     opacity: 0.6;
     cursor: pointer;
+  }
+  /* Quieter than the tabs above them, so the two rows read as a hierarchy
+     rather than as eleven equal choices. */
+  .subtabs {
+    flex-wrap: wrap;
+    border-block-end-style: dashed;
+    margin-block-start: -0.4rem;
+  }
+  .subtabs button {
+    padding-block: 0.2rem;
+    padding-inline: 0.55rem;
+    font-size: 0.78rem;
   }
   .hint {
     margin-block: 0;

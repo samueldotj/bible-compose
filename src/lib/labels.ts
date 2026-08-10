@@ -107,3 +107,42 @@ export const GROUPS: readonly Group[] = [
 export function labelFor(key: string): string {
   return LABELS[key] ?? key;
 }
+
+/**
+ * How the configuration is split across tabs.
+ *
+ * Four rather than two, because "Settings" had become a scroll: the page
+ * geometry, what appears on it, and how it is set are three separate decisions
+ * a publisher makes at three separate times.
+ *
+ * Typography sits with the styles even though it is a *setting*. The split
+ * between the two files is about scope — one body font for the publication,
+ * many styles keyed by marker — and that is a distinction the schema has to
+ * make and a person choosing a typeface does not.
+ */
+export interface Tab {
+  readonly id: string;
+  readonly title: string;
+  /** Which of `GROUPS` this tab shows. */
+  readonly settingGroups: readonly string[];
+  /** Whether the style editor appears below them. */
+  readonly styles?: boolean;
+  /**
+   * Where a setting belonging to no group ends up. Exactly one tab claims
+   * them, so a key added to the schema is visible somewhere rather than
+   * nowhere.
+   */
+  readonly orphans?: boolean;
+}
+
+export const TABS: readonly Tab[] = [
+  {
+    id: "settings",
+    title: "Settings",
+    settingGroups: ["project", "books", "output"],
+    orphans: true,
+  },
+  { id: "page", title: "Page", settingGroups: ["page"] },
+  { id: "appears", title: "What appears", settingGroups: ["content"] },
+  { id: "styles", title: "Styles", settingGroups: ["typography"], styles: true },
+];

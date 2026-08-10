@@ -16,12 +16,20 @@
   import { session } from "../lib/session.svelte";
   import type { Setting } from "../lib/services/backend";
 
+  /**
+   * Which groups to show, and whether to sweep up the settings that belong to
+   * none. The tab decides — this renders whatever it is handed, so adding a
+   * tab is a change to one list rather than to a component.
+   */
+  const { groups: show, orphans = false }: { groups: readonly string[]; orphans?: boolean } =
+    $props();
+
   const grouped = $derived.by(() => {
     const settings = session.settings;
     const byKey = new Map(settings.map((s) => [s.key, s]));
     const placed = new Set<string>();
 
-    const groups = GROUPS.map((g) => {
+    const groups = GROUPS.filter((g) => show.includes(g.id)).map((g) => {
       const rows: Setting[] = [];
       for (const key of g.keys) {
         const row = byKey.get(key);
@@ -33,9 +41,14 @@
       return { id: g.id, title: g.title, rows };
     }).filter((g) => g.rows.length > 0);
 
-    const orphans = settings.filter((s) => !placed.has(s.key));
-    if (orphans.length > 0) {
-      groups.push({ id: "other", title: "Other", rows: orphans });
+    if (orphans) {
+      // Against every group, not only the ones on this tab: a key that has a
+      // home elsewhere is not an orphan.
+      const homed = new Set(GROUPS.flatMap((g) => g.keys));
+      const stray = settings.filter((s) => !homed.has(s.key));
+      if (stray.length > 0) {
+        groups.push({ id: "other", title: "Other", rows: stray });
+      }
     }
     return groups;
   });
@@ -57,16 +70,7 @@
   }
 </script>
 
-<section class="pane" aria-labelledby="settings-heading">
-  <h2 id="settings-heading">Settings</h2>
-
-  {#if !session.editable}
-    <p class="hint">
-      The built-in defaults, which is what a folder with no <code>biblecompose.toml</code> gets.
-      Open a project to change them.
-    </p>
-  {/if}
-
+<section class="pane" aria-label="Settings">
   {#if session.settings.length === 0}
     <p class="empty">Loading…</p>
   {:else}
@@ -200,14 +204,6 @@
   }
   .empty {
     opacity: 0.65;
-  }
-  .hint {
-    margin-block: 0 0.7rem;
-    font-size: 0.82rem;
-    opacity: 0.7;
-  }
-  code {
-    font-size: 0.95em;
   }
   input:disabled {
     opacity: 0.75;

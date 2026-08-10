@@ -5,12 +5,17 @@
   import ProjectPane from "./components/ProjectPane.svelte";
   import SettingsForm from "./components/SettingsForm.svelte";
   import StyleEditor from "./components/StyleEditor.svelte";
+  import { TABS } from "./lib/labels";
   import { session } from "./lib/session.svelte";
 
   $effect(() => {
     void session.start();
     return () => session.stop();
   });
+
+  // `TABS` is a non-empty constant, but its type does not say so — and a
+  // stored pane id from an older build could name a tab that no longer exists.
+  const tab = $derived(TABS.find((t) => t.id === session.pane) ?? TABS[0]!);
 
   function folderName(path: string): string {
     return path.split(/[/\\]/).filter(Boolean).pop() ?? path;
@@ -53,31 +58,33 @@
     <DiagnosticsPanel />
   </div>
   <div class="right">
-    <!-- One pane at a time: both are long, and a publisher is doing one or the
-         other. Tabs rather than an accordion so the choice survives an edit,
-         which reopens the project and would otherwise collapse it. -->
+    <!-- One tab at a time: each is long on its own, and the page geometry, what
+         appears on it, and how it is set are three decisions a publisher makes
+         at three separate times. Tabs rather than an accordion so the choice
+         survives an edit, which reopens the project and would otherwise
+         collapse it. -->
     <nav class="tabs" aria-label="Configuration">
-      <button
-        type="button"
-        class:active={session.pane === "settings"}
-        aria-current={session.pane === "settings" ? "true" : undefined}
-        onclick={() => (session.pane = "settings")}
-      >
-        Settings
-      </button>
-      <button
-        type="button"
-        class:active={session.pane === "styles"}
-        aria-current={session.pane === "styles" ? "true" : undefined}
-        onclick={() => (session.pane = "styles")}
-      >
-        Styles
-      </button>
+      {#each TABS as t (t.id)}
+        <button
+          type="button"
+          class:active={session.pane === t.id}
+          aria-current={session.pane === t.id ? "true" : undefined}
+          onclick={() => (session.pane = t.id)}
+        >
+          {t.title}
+        </button>
+      {/each}
     </nav>
 
-    {#if session.pane === "settings"}
-      <SettingsForm />
-    {:else}
+    {#if !session.editable}
+      <p class="hint">
+        The built-in defaults, which is what a folder with no project files gets. Open a project to
+        change them.
+      </p>
+    {/if}
+
+    <SettingsForm groups={tab.settingGroups} orphans={tab.orphans ?? false} />
+    {#if tab.styles}
       <StyleEditor />
     {/if}
     {#if session.showLog}
@@ -148,6 +155,11 @@
     font-size: 0.85rem;
     opacity: 0.6;
     cursor: pointer;
+  }
+  .hint {
+    margin-block: 0;
+    font-size: 0.82rem;
+    opacity: 0.7;
   }
   .tabs button.active {
     border-block-end-color: currentColor;

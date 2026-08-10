@@ -79,8 +79,8 @@ export class Session {
   /** The same, for style properties, keyed `selector.property`. */
   styleErrors = $state<Record<string, readonly Diagnostic[]>>({});
 
-  /** Which of the two panes is showing. */
-  pane = $state<"settings" | "styles">("settings");
+  /** Which configuration tab is showing. One of `TABS`. */
+  pane = $state("settings");
 
   #stop: (() => void) | null = null;
 

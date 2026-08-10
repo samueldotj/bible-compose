@@ -43,16 +43,7 @@
   }
 </script>
 
-<section class="pane" aria-labelledby="styles-heading">
-  <h2 id="styles-heading">Styles</h2>
-
-  {#if !session.editable}
-    <p class="hint">
-      The built-in styles, which is what a project with no <code>styles.toml</code> gets. Open a
-      project to change them.
-    </p>
-  {/if}
-
+<section class="pane" aria-label="Styles">
   {#if session.styles.length === 0}
     <p class="empty">Loading…</p>
   {:else}
@@ -218,14 +209,6 @@
   }
   .empty {
     opacity: 0.65;
-  }
-  .hint {
-    margin-block: 0 0.7rem;
-    font-size: 0.82rem;
-    opacity: 0.7;
-  }
-  code {
-    font-size: 0.95em;
   }
   input:disabled,
   select:disabled {

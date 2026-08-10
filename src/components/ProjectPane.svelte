@@ -52,10 +52,16 @@
 </section>
 
 <style>
+  /* A whole Bible is sixty-six rows, and the pane sits above the diagnostics
+     panel — so the list scrolls rather than pushing everything else off the
+     window. Tall enough that a Gospel-sized project never scrolls at all. */
   ul {
     list-style: none;
     margin: 0;
     padding: 0;
+    max-block-size: 22rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .row {
     display: grid;

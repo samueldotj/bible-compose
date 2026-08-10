@@ -91,6 +91,17 @@ export interface Style {
   readonly properties: readonly StyleProperty[];
 }
 
+/**
+ * What the application does before any project says otherwise.
+ *
+ * CFG-001 and STY-001 both say there is always an answer, so the window can
+ * show one before a folder is open.
+ */
+export interface Defaults {
+  readonly settings: readonly Setting[];
+  readonly styles: readonly Style[];
+}
+
 export interface Project {
   readonly root: string;
   readonly books: readonly BookSummary[];
@@ -129,6 +140,8 @@ export interface Backend {
   versions(): Promise<{ app: string; contract: string; backend: string }>;
   /** Ask the operating system for a folder. `null` if the person cancelled. */
   chooseFolder(): Promise<string | null>;
+  /** The built-in settings and styles, with no project involved. */
+  defaults(): Promise<Defaults>;
   /** Discover and validate a project folder without building it. */
   openProject(root: string): Promise<Project>;
   /**
@@ -158,6 +171,7 @@ export const tauriBackend: Backend = {
     // The plugin's type allows an array; `multiple: false` means it never is.
     return typeof chosen === "string" ? chosen : null;
   },
+  defaults: () => invoke("defaults"),
   openProject: (root) => invoke("open_project", { root }),
   setSetting: (root, key, value) => invoke("set_setting", { root, key, value }),
   resetSetting: (root, key) => invoke("reset_setting", { root, key }),

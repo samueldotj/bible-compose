@@ -16,9 +16,7 @@
   import { ALIGNMENTS, STYLE_GROUPS, type PropertyRow } from "../lib/styles";
   import type { StyleProperty } from "../lib/services/backend";
 
-  const bySelector = $derived(
-    new Map((session.project?.styles ?? []).map((s) => [s.selector, s])),
-  );
+  const bySelector = $derived(new Map(session.styles.map((s) => [s.selector, s])));
 
   function held(selector: string, property: string): StyleProperty | undefined {
     return bySelector.get(selector)?.properties.find((p) => p.name === property);
@@ -48,8 +46,15 @@
 <section class="pane" aria-labelledby="styles-heading">
   <h2 id="styles-heading">Styles</h2>
 
-  {#if !session.project}
-    <p class="empty">No project open.</p>
+  {#if !session.editable}
+    <p class="hint">
+      The built-in styles, which is what a project with no <code>styles.toml</code> gets. Open a
+      project to change them.
+    </p>
+  {/if}
+
+  {#if session.styles.length === 0}
+    <p class="empty">Loading…</p>
   {:else}
     {#each STYLE_GROUPS as group (group.id)}
       <fieldset>
@@ -71,6 +76,7 @@
                     {id}
                     type="checkbox"
                     checked={p?.value === "true"}
+                    disabled={!session.editable}
                     onchange={(e) =>
                       commit(style.selector, property, e.currentTarget.checked ? "true" : "false")}
                   />
@@ -78,6 +84,7 @@
                   <select
                     {id}
                     value={p?.value ?? "start"}
+                    disabled={!session.editable}
                     onchange={(e) => commit(style.selector, property, e.currentTarget.value)}
                   >
                     {#each ALIGNMENTS as option (option)}
@@ -91,6 +98,7 @@
                     value={p?.value ?? ""}
                     placeholder={property.kind === "integer" ? "400" : "unset"}
                     spellcheck="false"
+                    disabled={!session.editable}
                     onchange={(e) => commit(style.selector, property, e.currentTarget.value)}
                   />
                 {/if}
@@ -98,7 +106,7 @@
                 <button
                   type="button"
                   class="reset"
-                  disabled={p?.origin !== "file"}
+                  disabled={!session.editable || p?.origin !== "file"}
                   title={p?.origin === "file"
                     ? "Restore what the cascade would decide"
                     : "This project has not set it"}
@@ -210,5 +218,17 @@
   }
   .empty {
     opacity: 0.65;
+  }
+  .hint {
+    margin-block: 0 0.7rem;
+    font-size: 0.82rem;
+    opacity: 0.7;
+  }
+  code {
+    font-size: 0.95em;
+  }
+  input:disabled,
+  select:disabled {
+    opacity: 0.75;
   }
 </style>

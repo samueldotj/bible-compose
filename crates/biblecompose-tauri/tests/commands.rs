@@ -322,3 +322,45 @@ fn a_style_edit_leaves_the_rest_of_the_sheet_alone() {
     assert!(after.contains("# My design."));
     assert!(after.contains("weight   = 700   # heavy"));
 }
+
+/// The window shows something before a project is open. CFG-001 and STY-001
+/// both say there is always an answer, so two empty panes were showing less
+/// than the truth.
+#[test]
+fn the_defaults_are_available_without_a_project() {
+    let d = biblecompose_tauri_lib::builtin_config();
+
+    let size = d
+        .settings
+        .iter()
+        .find(|s| s.key == "page.size")
+        .expect("page.size is a setting");
+    assert_eq!(size.value, "6x9in");
+    assert!(!size.overridden, "nothing has overridden anything yet");
+
+    let chapter = d
+        .styles
+        .iter()
+        .find(|s| s.selector == "chapter")
+        .expect("chapter is styled");
+    assert!(chapter
+        .properties
+        .iter()
+        .all(|p| p.origin == "builtin" || p.origin == "inherited"));
+
+    // Every selector the editor offers must be in here, or a row would render
+    // blank the moment the window opens.
+    for selector in [
+        "chapter",
+        "verse",
+        "note.f",
+        "poetry.q1",
+        "character.bd",
+        "head",
+    ] {
+        assert!(
+            d.styles.iter().any(|s| s.selector == selector),
+            "no `{selector}` in the defaults"
+        );
+    }
+}

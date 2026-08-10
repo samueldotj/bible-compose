@@ -17,7 +17,7 @@
   import type { Setting } from "../lib/services/backend";
 
   const grouped = $derived.by(() => {
-    const settings = session.project?.settings ?? [];
+    const settings = session.settings;
     const byKey = new Map(settings.map((s) => [s.key, s]));
     const placed = new Set<string>();
 
@@ -60,8 +60,15 @@
 <section class="pane" aria-labelledby="settings-heading">
   <h2 id="settings-heading">Settings</h2>
 
-  {#if !session.project}
-    <p class="empty">No project open.</p>
+  {#if !session.editable}
+    <p class="hint">
+      The built-in defaults, which is what a folder with no <code>biblecompose.toml</code> gets.
+      Open a project to change them.
+    </p>
+  {/if}
+
+  {#if session.settings.length === 0}
+    <p class="empty">Loading…</p>
   {:else}
     {#each grouped as group (group.id)}
       <fieldset>
@@ -76,6 +83,7 @@
                 id={`set-${setting.key}`}
                 type="checkbox"
                 checked={setting.value === "true"}
+                disabled={!session.editable}
                 onchange={(e) => toggle(setting, e.currentTarget.checked)}
               />
             {:else if setting.kind === "integer"}
@@ -84,6 +92,7 @@
                 type="number"
                 min="1"
                 value={setting.value}
+                disabled={!session.editable}
                 onchange={(e) => commit(setting, e.currentTarget.value)}
               />
             {:else}
@@ -93,6 +102,7 @@
                 value={setting.value}
                 placeholder={PLACEHOLDERS[setting.key] ?? ""}
                 spellcheck="false"
+                disabled={!session.editable}
                 onchange={(e) => commit(setting, e.currentTarget.value)}
               />
             {/if}
@@ -100,7 +110,7 @@
             <button
               type="button"
               class="reset"
-              disabled={!setting.overridden}
+              disabled={!session.editable || !setting.overridden}
               title={setting.overridden ? "Restore the built-in value" : "Already the default"}
               onclick={() => void session.resetSetting(setting.key)}
             >
@@ -190,5 +200,16 @@
   }
   .empty {
     opacity: 0.65;
+  }
+  .hint {
+    margin-block: 0 0.7rem;
+    font-size: 0.82rem;
+    opacity: 0.7;
+  }
+  code {
+    font-size: 0.95em;
+  }
+  input:disabled {
+    opacity: 0.75;
   }
 </style>

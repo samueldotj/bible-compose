@@ -22,7 +22,9 @@ use std::sync::{Arc, Mutex};
 
 use biblecompose_app::{project, BuildEvent, BuildReporter, BuildRequest, BuildState, CancelToken};
 use biblecompose_config::style::PROPERTIES;
-use biblecompose_config::{edit, form, ConfigDocument, Origin, TomlFile, SCHEMA_VERSION};
+use biblecompose_config::{
+    cascade, edit, form, ConfigDocument, Origin, Settings, TomlFile, SCHEMA_VERSION,
+};
 use biblecompose_diagnostics::{Diagnostic as AppDiagnostic, Diagnostics, Severity};
 use camino::{Utf8Path, Utf8PathBuf};
 use serde::Serialize;
@@ -155,6 +157,19 @@ pub struct WireProject {
     pub blocked: bool,
 }
 
+/// What the application is configured to do before any project says otherwise.
+///
+/// The window shows these at startup rather than two empty panes. A publisher
+/// deciding whether this tool suits them should be able to see what it does
+/// with a Bible before they have one open, and CFG-001 and STY-001 both say
+/// there is always an answer — so showing nothing was showing less than the
+/// truth.
+#[derive(Debug, Clone, Serialize)]
+pub struct WireDefaults {
+    pub settings: Vec<WireSetting>,
+    pub styles: Vec<WireStyle>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct WireVersions {
     pub app: String,
@@ -244,6 +259,24 @@ fn versions() -> WireVersions {
         // the thing that is broken.
         backend: biblecompose_app::backend_version()
             .unwrap_or_else(|d| format!("backend unavailable — {}", d.message)),
+    }
+}
+
+/// The built-in settings and styles, with no project involved.
+#[tauri::command]
+fn defaults() -> WireDefaults {
+    builtin_config()
+}
+
+/// [`defaults`] without the Tauri binding.
+pub fn builtin_config() -> WireDefaults {
+    WireDefaults {
+        settings: Settings::builtin()
+            .fields()
+            .into_iter()
+            .map(wire_field)
+            .collect(),
+        styles: wire_styles(&cascade::resolve(None, false).0),
     }
 }
 
@@ -699,6 +732,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             versions,
+            defaults,
             open_project,
             set_setting,
             reset_setting,

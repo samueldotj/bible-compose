@@ -14,6 +14,7 @@ import {
   backend,
   type BuildEvent,
   type BuildState,
+  type Defaults,
   type Diagnostic,
   type Project,
   type Severity,
@@ -40,6 +41,8 @@ const LOG_LIMIT = 5000;
 export class Session {
   versions = $state<{ app: string; contract: string; backend: string } | null>(null);
   project = $state<Project | null>(null);
+  /** Shown until a project is open, so the panes are never blank. */
+  defaults = $state<Defaults | null>(null);
   /** A failure that is not about the project — the shell itself. */
   fault = $state<string | null>(null);
   opening = $state(false);
@@ -105,6 +108,27 @@ export class Session {
     return this.project?.books ?? [];
   }
 
+  /**
+   * The settings the panes show: the project's when there is one, the
+   * built-in ones before that.
+   */
+  get settings() {
+    return this.project?.settings ?? this.defaults?.settings ?? [];
+  }
+
+  get styles() {
+    return this.project?.styles ?? this.defaults?.styles ?? [];
+  }
+
+  /**
+   * Whether a change can be saved. Without a project there is no file to save
+   * it to, so the controls are shown filled in and disabled rather than
+   * accepting an edit that would go nowhere.
+   */
+  get editable(): boolean {
+    return this.project !== null;
+  }
+
   get errorCount(): number {
     return this.diagnostics.filter((d) => d.severity === "error").length;
   }
@@ -125,6 +149,11 @@ export class Session {
   async start(): Promise<void> {
     try {
       this.versions = await backend().versions();
+    } catch (e: unknown) {
+      this.fault = String(e);
+    }
+    try {
+      this.defaults = await backend().defaults();
     } catch (e: unknown) {
       this.fault = String(e);
     }

@@ -5,11 +5,12 @@ use std::collections::BTreeSet;
 use biblecompose_config::selector::{StyleSelector, MAX_LEVEL};
 use biblecompose_config::style::{self, Align, Style, PROPERTIES};
 use biblecompose_config::ConfigDocument;
+use biblecompose_diagnostics::Severity;
 use biblecompose_scripture::{CharStyle, HeadingStyle, NoteKind, ParaStyle, PoetryStyle};
 
 fn sheet(source: &str) -> (biblecompose_config::StyleSheet, Vec<String>) {
     let doc = ConfigDocument::parse("styles.toml", source.to_owned()).expect("valid fixture");
-    let (sheet, diagnostics) = style::read(&doc);
+    let (sheet, diagnostics) = style::read(&doc, Severity::Warning);
     (sheet, diagnostics.iter().map(|d| d.to_string()).collect())
 }
 
@@ -21,7 +22,7 @@ fn sheet(source: &str) -> (biblecompose_config::StyleSheet, Vec<String>) {
 fn the_built_in_sheet_is_clean() {
     let doc = ConfigDocument::parse("styles.toml", style::BUILTIN_STYLES_TOML.to_owned())
         .expect("the built-in styles parse");
-    let (sheet, diagnostics) = style::read(&doc);
+    let (sheet, diagnostics) = style::read(&doc, Severity::Warning);
     assert!(
         diagnostics.is_empty(),
         "{:?}",

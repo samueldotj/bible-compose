@@ -25,7 +25,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use biblecompose_diagnostics::{code, Diagnostic, Diagnostics};
+use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, Severity};
 
 use crate::document::ConfigDocument;
 use crate::provenance::{Origin, Provenance};
@@ -96,13 +96,22 @@ impl ResolvedStyles {
 /// Never fails, for the same reason settings resolution never fails: there is
 /// always a built-in answer. What it produces is a list of diagnostics the
 /// caller decides whether to block on.
-pub fn resolve(project: Option<&ConfigDocument>) -> (ResolvedStyles, Diagnostics) {
+pub fn resolve(project: Option<&ConfigDocument>, strict: bool) -> (ResolvedStyles, Diagnostics) {
     let builtin = style::builtin();
+
+    // CFG-004's `strict` covers styles too. A publisher who asked to be
+    // stopped by a settings key this release does not recognise did not mean
+    // "except for the ones that decide what the page looks like".
+    let severity = if strict {
+        Severity::Error
+    } else {
+        Severity::Warning
+    };
 
     let mut diagnostics = Diagnostics::new();
     let overrides = match project {
         Some(doc) => {
-            let (sheet, d) = style::read(doc);
+            let (sheet, d) = style::read(doc, severity);
             diagnostics.extend(d);
             sheet
         }

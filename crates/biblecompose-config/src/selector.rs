@@ -24,6 +24,20 @@ use biblecompose_scripture::{CharStyle, HeadingStyle, NoteKind, ParaStyle, Poetr
 /// not require an infinite table.
 pub const MAX_LEVEL: u8 = 4;
 
+/// The classes that take a marker after the dot.
+///
+/// The rest — `chapter`, `folio` — are whole selectors on their own. Knowing
+/// which is which is what lets a misspelled *class* be reported as itself
+/// rather than as a complaint about each property inside it.
+pub const GROUP_CLASSES: [&str; 6] = [
+    "paragraph",
+    "poetry",
+    "heading",
+    "character",
+    "list",
+    "note",
+];
+
 /// An element a style can be written for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum StyleSelector {

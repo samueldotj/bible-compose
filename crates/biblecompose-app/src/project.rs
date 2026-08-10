@@ -10,7 +10,7 @@
 //! is. [ARCHITECTURE §2](../../../docs/ARCHITECTURE.md) puts the arrow from
 //! `biblecompose-app` to both of them and nowhere else.
 
-use biblecompose_config::{ConfigDocument, Settings};
+use biblecompose_config::{cascade, ConfigDocument, ResolvedStyles, Settings};
 use biblecompose_diagnostics::{Diagnostic, Diagnostics};
 use biblecompose_project::discover;
 use biblecompose_scripture::normalize::normalize;
@@ -33,6 +33,9 @@ impl Loaded {
 
 /// What a project's settings file is called, if it has one.
 pub const SETTINGS_FILE: &str = "biblecompose.toml";
+
+/// And its style sheet.
+pub const STYLES_FILE: &str = "styles.toml";
 
 /// Read the project's settings.
 ///
@@ -83,6 +86,7 @@ pub fn plan(settings: &Settings) -> (BookPlan, Diagnostics) {
 pub struct Opened {
     pub root: Utf8PathBuf,
     pub settings: Settings,
+    pub styles: ResolvedStyles,
     pub document: ScriptureDocument,
     pub diagnostics: Diagnostics,
 }
@@ -108,6 +112,9 @@ impl Opened {
 pub fn open(root: &Utf8Path) -> Opened {
     let (settings, mut diagnostics) = settings(root);
 
+    let (styles, style_diagnostics) = styles(root, *settings.strict);
+    diagnostics.extend(style_diagnostics);
+
     let (book_plan, plan_diagnostics) = plan(&settings);
     diagnostics.extend(plan_diagnostics);
 
@@ -117,8 +124,32 @@ pub fn open(root: &Utf8Path) -> Opened {
     Opened {
         root: root.to_owned(),
         settings,
+        styles,
         document: loaded.document,
         diagnostics,
+    }
+}
+
+/// Read the project's style sheet over the built-in one.
+///
+/// Same shape as [`settings`], and the same reasoning about a file that will
+/// not parse: the diagnostic blocks the build, so the built-in styles returned
+/// beside it never lay out a page. `strict` comes from the settings, because a
+/// publisher who asked to be stopped by an unrecognised key meant that about
+/// the styles too.
+pub fn styles(root: &Utf8Path, strict: bool) -> (ResolvedStyles, Diagnostics) {
+    let path = root.join(STYLES_FILE);
+    if !path.exists() {
+        return cascade::resolve(None, strict);
+    }
+
+    match ConfigDocument::read(&path) {
+        Ok(doc) => cascade::resolve(Some(&doc), strict),
+        Err(d) => {
+            let (styles, mut diagnostics) = cascade::resolve(None, strict);
+            diagnostics.push(d);
+            (styles, diagnostics)
+        }
     }
 }
 

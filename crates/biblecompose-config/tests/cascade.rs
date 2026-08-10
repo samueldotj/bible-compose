@@ -10,7 +10,7 @@ use biblecompose_scripture::{CharStyle, HeadingStyle, PoetryStyle};
 
 fn resolve(source: &str) -> (ResolvedStyles, Diagnostics) {
     let doc = ConfigDocument::parse("styles.toml", source.to_owned()).expect("valid fixture");
-    cascade::resolve(Some(&doc))
+    cascade::resolve(Some(&doc), false)
 }
 
 fn messages(d: &Diagnostics) -> Vec<String> {
@@ -38,7 +38,7 @@ fn an_override_changes_only_what_it_names() {
     );
 
     // And nothing else moved.
-    let builtin = cascade::resolve(None).0;
+    let builtin = cascade::resolve(None, false).0;
     assert_eq!(
         styles.get(StyleSelector::Verse),
         builtin.get(StyleSelector::Verse)
@@ -47,7 +47,7 @@ fn an_override_changes_only_what_it_names() {
 
 #[test]
 fn with_no_project_sheet_everything_is_built_in() {
-    let (styles, d) = cascade::resolve(None);
+    let (styles, d) = cascade::resolve(None, false);
     assert!(d.is_empty(), "{:?}", messages(&d));
     assert!(!styles.is_empty());
 
@@ -277,7 +277,7 @@ fn a_three_step_cycle_terminates() {
 /// to do about a marker the model produced.
 #[test]
 fn every_selector_resolves() {
-    let (styles, _) = cascade::resolve(None);
+    let (styles, _) = cascade::resolve(None, false);
     for selector in StyleSelector::all() {
         let _ = styles.get(selector);
     }
@@ -314,7 +314,7 @@ fn every_resolved_property_has_an_origin() {
 
 #[test]
 fn an_alignment_survives_the_cascade() {
-    let (styles, _) = cascade::resolve(None);
+    let (styles, _) = cascade::resolve(None, false);
     assert_eq!(
         styles
             .get(StyleSelector::Poetry(PoetryStyle::Qc, 1))

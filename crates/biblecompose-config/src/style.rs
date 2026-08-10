@@ -15,7 +15,7 @@
 
 use std::collections::BTreeMap;
 
-use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, SourceLoc};
+use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, Severity, SourceLoc};
 
 use crate::document::{ConfigDocument, Node};
 use crate::selector::StyleSelector;
@@ -197,7 +197,7 @@ impl StyleSheet {
 pub fn builtin() -> StyleSheet {
     let doc = ConfigDocument::parse("<built-in styles>", BUILTIN_STYLES_TOML.to_owned())
         .expect("the built-in styles are valid TOML");
-    let (sheet, diagnostics) = read(&doc);
+    let (sheet, diagnostics) = read(&doc, Severity::Warning);
     debug_assert!(
         diagnostics.is_empty(),
         "the built-in styles produced diagnostics: {:?}",
@@ -215,7 +215,7 @@ pub fn builtin() -> StyleSheet {
 /// element for, and a property it has no meaning for. Each is reported at its
 /// own line and the rest of the sheet is still read, because a typo in one
 /// heading is not a reason to lose a publisher's whole design.
-pub fn read(doc: &ConfigDocument) -> (StyleSheet, Diagnostics) {
+pub fn read(doc: &ConfigDocument, severity: Severity) -> (StyleSheet, Diagnostics) {
     let mut sheet = StyleSheet::default();
     let mut diagnostics = Diagnostics::new();
 
@@ -228,12 +228,21 @@ pub fn read(doc: &ConfigDocument) -> (StyleSheet, Diagnostics) {
         // `[chapter]` is a style; `[paragraph]` is a group of them. Which one
         // a class is, is decided by whether it parses as a whole selector.
         if let Some(selector) = StyleSelector::parse(class) {
-            read_into(&mut sheet, selector, &node, &mut diagnostics);
+            read_into(&mut sheet, selector, &node, severity, &mut diagnostics);
+            continue;
+        }
+
+        // A class that takes no marker and is not a whole selector is
+        // misspelled *as a class*. Descending into it would complain about
+        // every property inside instead — three warnings about
+        // `chaptr.font_size` where one about `[chaptr]` is the fact.
+        if !crate::selector::GROUP_CLASSES.contains(&class) {
+            diagnostics.push(unknown_selector(&node, severity));
             continue;
         }
 
         let Ok(group) = node.table() else {
-            diagnostics.push(unknown_selector(&node));
+            diagnostics.push(unknown_selector(&node, severity));
             continue;
         };
         for name in group.names() {
@@ -241,8 +250,10 @@ pub fn read(doc: &ConfigDocument) -> (StyleSheet, Diagnostics) {
                 continue;
             };
             match StyleSelector::parse(&format!("{class}.{name}")) {
-                Some(selector) => read_into(&mut sheet, selector, &entry, &mut diagnostics),
-                None => diagnostics.push(unknown_selector(&entry)),
+                Some(selector) => {
+                    read_into(&mut sheet, selector, &entry, severity, &mut diagnostics)
+                }
+                None => diagnostics.push(unknown_selector(&entry, severity)),
             }
         }
     }
@@ -254,6 +265,7 @@ fn read_into(
     sheet: &mut StyleSheet,
     selector: StyleSelector,
     node: &Node<'_>,
+    severity: Severity,
     diagnostics: &mut Diagnostics,
 ) {
     let table = match node.table() {
@@ -324,26 +336,31 @@ fn read_into(
         match node.string() {
             Ok(named) => match StyleSelector::parse(&named.value) {
                 Some(parent) if parent == selector => diagnostics.push(
-                    Diagnostic::warning(
+                    Diagnostic::error(
                         code::INHERITANCE_CYCLE,
                         format!("`{selector}` inherits from itself"),
                     )
-                    .at(node.loc()),
+                    .at(node.loc())
+                    .help("remove the `inherits` key"),
                 ),
                 Some(parent) => {
                     entry.inherits = Some(parent);
                     entry.inherits_at = Some(node.loc());
                 }
-                None => diagnostics.push(
-                    Diagnostic::warning(
+                None => diagnostics.push(with_suggestion(
+                    Diagnostic::new(
+                        severity,
                         code::UNKNOWN_SELECTOR,
                         format!(
-                            "`{selector}` inherits from `{}`, which is not an element this                              release can style",
+                            "`{selector}` inherits from `{}`, which is not an element                              this release can style",
                             named.value
                         ),
                     )
                     .at(node.loc()),
-                ),
+                    &named.value,
+                    selector_keys(),
+                    "styles are written as `[class.marker]`, for example `[poetry.q1]`",
+                )),
             },
             Err(d) => diagnostics.push(d),
         }
@@ -353,14 +370,22 @@ fn read_into(
     for name in table.names() {
         if name != INHERITS && !PROPERTIES.contains(&name) {
             if let Some(stray) = table.get(name) {
-                diagnostics.push(
-                    Diagnostic::warning(
+                diagnostics.push(with_suggestion(
+                    Diagnostic::new(
+                        severity,
                         code::UNKNOWN_PROPERTY,
                         format!("`{}` is not a style property", stray.dotted_path()),
                     )
-                    .at(stray.loc())
-                    .help(format!("the properties are: {}", PROPERTIES.join(", "))),
-                );
+                    .at(stray.loc()),
+                    name,
+                    PROPERTIES
+                        .iter()
+                        .copied()
+                        .chain([INHERITS])
+                        .map(str::to_owned)
+                        .collect(),
+                    &format!("the properties are: {}", PROPERTIES.join(", ")),
+                ));
             }
         }
     }
@@ -368,14 +393,49 @@ fn read_into(
     sheet.set(selector, entry);
 }
 
-fn unknown_selector(node: &Node<'_>) -> Diagnostic {
-    Diagnostic::warning(
-        code::UNKNOWN_SELECTOR,
-        format!(
-            "`{}` is not an element this release can style",
-            node.dotted_path()
-        ),
+fn unknown_selector(node: &Node<'_>, severity: Severity) -> Diagnostic {
+    with_suggestion(
+        Diagnostic::new(
+            severity,
+            code::UNKNOWN_SELECTOR,
+            format!(
+                "`{}` is not an element this release can style",
+                node.dotted_path()
+            ),
+        )
+        .at(node.loc()),
+        node.dotted_path(),
+        selector_keys(),
+        "styles are written as `[class.marker]`, for example `[poetry.q1]` or `[character.bd]`",
     )
-    .at(node.loc())
-    .help("styles are written as `[class.marker]`, for example `[poetry.q1]` or `[character.bd]`")
+}
+
+/// Every selector key, for the nearest-match search.
+fn selector_keys() -> Vec<String> {
+    StyleSelector::all().into_iter().map(|s| s.key()).collect()
+}
+
+/// The nearest candidate if it is close enough to be a slip, and the general
+/// advice otherwise.
+///
+/// The same rule as everywhere else in the configuration layer: within two
+/// edits gets a suggestion, anything further gets none, because no guess is
+/// better than a bad guess.
+fn with_suggestion(
+    d: Diagnostic,
+    given: &str,
+    candidates: Vec<String>,
+    fallback: &str,
+) -> Diagnostic {
+    let given = given.to_ascii_lowercase();
+    let nearest = candidates
+        .into_iter()
+        .map(|c| (value::distance(&given, &c.to_ascii_lowercase()), c))
+        .filter(|(distance, _)| *distance <= 2)
+        .min_by(|a, b| a.0.cmp(&b.0));
+
+    match nearest {
+        Some((_, name)) => d.help(format!("did you mean `{name}`?")),
+        None => d.help(fallback),
+    }
 }

@@ -112,20 +112,19 @@ fn document(
         return Ok((load(fixture)?, Settings::builtin(), Diagnostics::new()));
     };
 
-    let (settings, mut diagnostics) = project::settings(root);
-    let (plan, plan_diagnostics) = project::plan(&settings);
-    diagnostics.extend(plan_diagnostics);
+    // Through `open` rather than calling settings, plan and load in order:
+    // the window does the same, and two places composing those four steps is
+    // two places that can end up disagreeing about what opening a project
+    // means. It is also how the style sheet gets read at all.
+    let opened = project::open(root);
 
-    let loaded = project::load(root, &plan);
-    diagnostics.extend(loaded.diagnostics);
-
-    if diagnostics.has_blocking() {
-        for d in diagnostics.iter() {
+    if opened.blocked() {
+        for d in opened.diagnostics.iter() {
             eprintln!("{d}");
         }
         return Err(format!("{root} cannot be built"));
     }
-    Ok((loaded.document, settings, diagnostics))
+    Ok((opened.document, opened.settings, opened.diagnostics))
 }
 
 fn main() -> ExitCode {

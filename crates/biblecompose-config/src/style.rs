@@ -15,7 +15,7 @@
 
 use std::collections::BTreeMap;
 
-use biblecompose_diagnostics::{code, Diagnostic, Diagnostics};
+use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, SourceLoc};
 
 use crate::document::{ConfigDocument, Node};
 use crate::selector::StyleSelector;
@@ -105,6 +105,10 @@ impl Style {
     }
 }
 
+/// The key naming a style's parent. Not a property — it says where the other
+/// properties come from.
+pub const INHERITS: &str = "inherits";
+
 /// The property names, in one place.
 ///
 /// Used to read a style and to detect a misspelled property, so the two
@@ -121,28 +125,58 @@ pub const PROPERTIES: [&str; 9] = [
     "align",
 ];
 
+/// One selector's entry in a sheet: what it says, what it inherits from, and
+/// where each of those was written.
+///
+/// The locations are kept per property rather than per entry because that is
+/// the granularity the inspector answers at (STY-008) and the granularity the
+/// cascade decides at — two properties of one selector routinely come from two
+/// different files.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct StyleEntry {
+    pub style: Style,
+    /// STY-007's single parent, named explicitly. `None` means the implicit
+    /// one — the level below, for a levelled family — or nothing.
+    pub inherits: Option<StyleSelector>,
+    /// Where `inherits` itself was written, for the cycle diagnostic.
+    pub inherits_at: Option<SourceLoc>,
+    pub locations: BTreeMap<&'static str, SourceLoc>,
+}
+
 /// A whole sheet: every selector that has something to say, and what.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct StyleSheet {
-    entries: BTreeMap<StyleSelector, Style>,
+    entries: BTreeMap<StyleSelector, StyleEntry>,
 }
 
 impl StyleSheet {
     /// What this sheet says about a selector on its own, with no cascade.
     pub fn get(&self, selector: StyleSelector) -> Style {
-        self.entries.get(&selector).copied().unwrap_or_default()
+        self.entries
+            .get(&selector)
+            .map(|e| e.style)
+            .unwrap_or_default()
+    }
+
+    pub fn entry(&self, selector: StyleSelector) -> Option<&StyleEntry> {
+        self.entries.get(&selector)
     }
 
     pub fn contains(&self, selector: StyleSelector) -> bool {
         self.entries.contains_key(&selector)
     }
 
-    pub fn set(&mut self, selector: StyleSelector, style: Style) {
-        self.entries.insert(selector, style);
+    pub fn set(&mut self, selector: StyleSelector, entry: StyleEntry) {
+        self.entries.insert(selector, entry);
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (StyleSelector, &Style)> {
+    pub fn iter(&self) -> impl Iterator<Item = (StyleSelector, &StyleEntry)> {
         self.entries.iter().map(|(k, v)| (*k, v))
+    }
+
+    /// Every selector either sheet mentions, in key order.
+    pub fn selectors(&self) -> impl Iterator<Item = StyleSelector> + '_ {
+        self.entries.keys().copied()
     }
 
     pub fn len(&self) -> usize {
@@ -230,11 +264,20 @@ fn read_into(
         }
     };
 
-    let mut style = sheet.get(selector);
-    let mut read = |key: &str, f: &mut dyn FnMut(&Node<'_>) -> Result<(), Diagnostic>| {
+    let mut entry = sheet.entry(selector).cloned().unwrap_or_default();
+    let style = &mut entry.style;
+    let locations = &mut entry.locations;
+
+    let mut read = |key: &'static str, f: &mut dyn FnMut(&Node<'_>) -> Result<(), Diagnostic>| {
         if let Some(value) = table.get(key) {
-            if let Err(d) = f(&value) {
-                diagnostics.push(d);
+            match f(&value) {
+                // Recorded only when the value was usable: a property that was
+                // rejected is not in force, and pointing the inspector at the
+                // line it was written on would say it is.
+                Ok(()) => {
+                    locations.insert(key, value.loc());
+                }
+                Err(d) => diagnostics.push(d),
             }
         }
     };
@@ -276,9 +319,39 @@ fn read_into(
         Ok(())
     });
 
+    // STY-007: a single named parent.
+    if let Some(node) = table.get(INHERITS) {
+        match node.string() {
+            Ok(named) => match StyleSelector::parse(&named.value) {
+                Some(parent) if parent == selector => diagnostics.push(
+                    Diagnostic::warning(
+                        code::INHERITANCE_CYCLE,
+                        format!("`{selector}` inherits from itself"),
+                    )
+                    .at(node.loc()),
+                ),
+                Some(parent) => {
+                    entry.inherits = Some(parent);
+                    entry.inherits_at = Some(node.loc());
+                }
+                None => diagnostics.push(
+                    Diagnostic::warning(
+                        code::UNKNOWN_SELECTOR,
+                        format!(
+                            "`{selector}` inherits from `{}`, which is not an element this                              release can style",
+                            named.value
+                        ),
+                    )
+                    .at(node.loc()),
+                ),
+            },
+            Err(d) => diagnostics.push(d),
+        }
+    }
+
     // STY-004: anything left is a property this release has no meaning for.
     for name in table.names() {
-        if !PROPERTIES.contains(&name) {
+        if name != INHERITS && !PROPERTIES.contains(&name) {
             if let Some(stray) = table.get(name) {
                 diagnostics.push(
                     Diagnostic::warning(
@@ -292,7 +365,7 @@ fn read_into(
         }
     }
 
-    sheet.set(selector, style);
+    sheet.set(selector, entry);
 }
 
 fn unknown_selector(node: &Node<'_>) -> Diagnostic {

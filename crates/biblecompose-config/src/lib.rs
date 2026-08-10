@@ -6,6 +6,7 @@
 //! (ARCHITECTURE §6). The schema, the merge with embedded defaults, and unit
 //! parsing arrive at P2.3 onward and all read through it.
 
+pub mod cascade;
 pub mod document;
 pub mod edit;
 pub mod form;
@@ -15,6 +16,7 @@ pub mod settings;
 pub mod style;
 pub mod value;
 
+pub use cascade::{ResolvedStyle, ResolvedStyles};
 pub use document::{ConfigDocument, Located, Node, Table};
 pub use edit::{set_validated, SettingValue, SettingsFile};
 pub use form::{Field, Kind};

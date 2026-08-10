@@ -30,16 +30,22 @@ use crate::document::Located;
 /// the position is not known" — which the ADR's bare `u32` could only express
 /// by fabricating a zero, the exact thing the ADR says not to do.
 ///
-/// `Inherited { from: StyleSelector }` arrives with the style layer at M3. It
-/// is a distinct case and not a flattening into `Builtin`: when `q2` takes its
-/// indent from `q1`, "why does this look like this" is answered by the
-/// inheritance and not by any file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Origin {
     /// The embedded defaults. Also the answer where the origin is genuinely
     /// unknown — never a fabricated file location.
     Builtin,
     File(SourceLoc),
+    /// Taken from another style (STY-007).
+    ///
+    /// A distinct case and not a flattening into whatever the parent's own
+    /// origin was: when `q2` gets its indent from `q1`, "why does this look
+    /// like this" is answered by the inheritance, and an inspector that said
+    /// "built-in default" would be answering a question nobody asked. Where
+    /// the parent in turn got it is one more read away.
+    Inherited {
+        from: crate::selector::StyleSelector,
+    },
 }
 
 impl Origin {
@@ -50,8 +56,10 @@ impl Origin {
     /// The location to point a diagnostic at, if there is one.
     pub const fn location(&self) -> Option<&SourceLoc> {
         match self {
-            Origin::Builtin => None,
             Origin::File(loc) => Some(loc),
+            // An inherited value's location is its parent's, which is a
+            // different question and a separate read.
+            Origin::Builtin | Origin::Inherited { .. } => None,
         }
     }
 }
@@ -61,6 +69,7 @@ impl fmt::Display for Origin {
         match self {
             Origin::Builtin => f.write_str("built-in default"),
             Origin::File(loc) => write!(f, "{loc}"),
+            Origin::Inherited { from } => write!(f, "inherited from {from}"),
         }
     }
 }

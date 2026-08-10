@@ -21,7 +21,7 @@
 use std::sync::{Arc, Mutex};
 
 use biblecompose_app::{project, BuildEvent, BuildReporter, BuildRequest, BuildState, CancelToken};
-use biblecompose_config::{edit, form, ConfigDocument, Origin, SettingsFile, SCHEMA_VERSION};
+use biblecompose_config::{edit, form, ConfigDocument, SettingsFile, SCHEMA_VERSION};
 use biblecompose_diagnostics::{Diagnostic as AppDiagnostic, Diagnostics, Severity};
 use camino::{Utf8Path, Utf8PathBuf};
 use serde::Serialize;
@@ -462,14 +462,15 @@ fn wire_field(f: form::Field) -> WireSetting {
         kind: f.kind.as_str(),
         value: f.value,
         overridden: !f.origin.is_builtin(),
-        location: match &f.origin {
-            Origin::Builtin => None,
-            Origin::File(loc) => Some(WireLocation {
-                path: loc.path.to_string(),
-                line: loc.line,
-                column: loc.column,
-            }),
-        },
+        // Through `location()` rather than matching the variants here: it is
+        // the one place that decides which origins have a place to jump to,
+        // and a settings field can never be `Inherited` anyway — only styles
+        // inherit.
+        location: f.origin.location().map(|loc| WireLocation {
+            path: loc.path.to_string(),
+            line: loc.line,
+            column: loc.column,
+        }),
     }
 }
 

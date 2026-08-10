@@ -97,16 +97,24 @@
           </button>
         {/each}
       </nav>
-
-      {#if styleTab.settingGroups.length > 0}
-        <SettingsForm groups={styleTab.settingGroups} />
-      {/if}
-      {#if styleTab.styleGroups.length > 0}
-        <StyleEditor groups={styleTab.styleGroups} />
-      {/if}
-    {:else}
-      <SettingsForm groups={tab.settingGroups} orphans={tab.orphans ?? false} />
     {/if}
+
+    <!-- The tabs stay put and the form moves under them. Outside a scroller
+         the Page section alone pushes the Build button off the bottom of the
+         window, and the control you press after changing something should not
+         be the one you have to go looking for. -->
+    <div class="scroller">
+      {#if tab.styles}
+        {#if styleTab.settingGroups.length > 0}
+          <SettingsForm groups={styleTab.settingGroups} />
+        {/if}
+        {#if styleTab.styleGroups.length > 0}
+          <StyleEditor groups={styleTab.styleGroups} />
+        {/if}
+      {:else}
+        <SettingsForm groups={tab.settingGroups} orphans={tab.orphans ?? false} />
+      {/if}
+    </div>
     {#if session.showLog}
       <BuildLog />
     {/if}
@@ -187,6 +195,14 @@
     padding-block: 0.2rem;
     padding-inline: 0.55rem;
     font-size: 0.78rem;
+  }
+  .scroller {
+    max-block-size: 60vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Room for the scrollbar, so a value in the rightmost column is never
+       under it. */
+    padding-inline-end: 0.4rem;
   }
   .hint {
     margin-block: 0;

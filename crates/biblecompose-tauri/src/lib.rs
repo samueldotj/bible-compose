@@ -186,6 +186,14 @@ pub enum WireBuildEvent {
     Output {
         path: String,
     },
+    /// How far the typesetter has got. `expected` is the last build's page
+    /// count and is absent the first time a project is built, because nothing
+    /// knows how long a document is until it has been set.
+    Pages {
+        done: u32,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        expected: Option<u32>,
+    },
     /// Not one of `BuildEvent`'s: the frontend needs to know the stream has
     /// ended even when the build died before reaching a terminal state.
     Finished {
@@ -669,6 +677,7 @@ fn wire_event(event: BuildEvent) -> WireBuildEvent {
         BuildEvent::Output(path) => WireBuildEvent::Output {
             path: path.to_string(),
         },
+        BuildEvent::Pages { done, expected } => WireBuildEvent::Pages { done, expected },
     }
 }
 

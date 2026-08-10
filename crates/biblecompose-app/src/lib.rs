@@ -13,7 +13,9 @@ pub mod state;
 use biblecompose_config::{ResolvedStyles, Settings};
 use biblecompose_diagnostics::{code, Diagnostic, Diagnostics};
 use biblecompose_scripture::ScriptureDocument;
-use biblecompose_sile::{BackendJob, SileBackend, Stream};
+use biblecompose_sile::{BackendEvent, BackendJob, SileBackend, Stream};
+use std::sync::atomic::{AtomicU32, Ordering};
+
 use camino::{Utf8Path, Utf8PathBuf};
 
 pub use publish::{publish, BuildDir};
@@ -230,16 +232,28 @@ pub fn build_with(
     // ---- typeset -----------------------------------------------------------
     reporter.advance(BuildState::Typesetting);
     let backend_version;
+    // What the last successful build of this project needed, if there was one.
+    let expected = remembered_pages(&request.project_root);
+    let pages = AtomicU32::new(0);
     let outcome = {
         let reporter = &*reporter;
-        backend.run(&job, cancel, &mut |line| {
-            reporter.log(
+        backend.run(&job, cancel, &mut |event| match event {
+            BackendEvent::Log(line) => reporter.log(
                 match line.stream {
                     Stream::Stdout => "stdout",
                     Stream::Stderr => "stderr",
                 },
                 line.text,
-            );
+            ),
+            BackendEvent::Page(done) => {
+                // Highest seen rather than last reported. A bar that goes
+                // backwards is worse than no bar, and nothing guarantees the
+                // backend's counter only rises — a second pass over a page
+                // would report it twice.
+                if done > pages.fetch_max(done, Ordering::Relaxed) {
+                    reporter.pages(done, expected);
+                }
+            }
         })
     };
 
@@ -262,6 +276,10 @@ pub fn build_with(
     };
 
     // ---- publish -----------------------------------------------------------
+    // Recorded before publishing, because the page count is a fact about the
+    // typeset document whether or not moving it into place succeeds.
+    remember_pages(&request.project_root, pages.load(Ordering::Relaxed));
+
     reporter.advance(BuildState::Publishing);
     if let Err(e) = publish(&outcome.pdf, &request.output) {
         return failed(reporter, diagnostics, e);
@@ -305,6 +323,38 @@ fn validate(doc: &ScriptureDocument, diagnostics: &mut Diagnostics) {
             );
         }
     }
+}
+
+/// Where the last build's page count is kept.
+///
+/// Inside `.biblecompose/`, which discovery already ignores, so it cannot be
+/// mistaken for part of the publication.
+fn pages_file(project_root: &Utf8Path) -> Utf8PathBuf {
+    project_root.join(".biblecompose").join("last-pages")
+}
+
+/// How many pages the last build of this project produced.
+///
+/// Best-effort in both directions: a missing, unreadable or nonsensical file
+/// means there is no estimate, and the first build of a project shows a bar
+/// with no end rather than a wrong one.
+fn remembered_pages(project_root: &Utf8Path) -> Option<u32> {
+    let text = std::fs::read_to_string(pages_file(project_root).as_std_path()).ok()?;
+    let pages: u32 = text.trim().parse().ok()?;
+    (pages > 0).then_some(pages)
+}
+
+fn remember_pages(project_root: &Utf8Path, pages: u32) {
+    if pages == 0 {
+        return;
+    }
+    let path = pages_file(project_root);
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent.as_std_path());
+    }
+    // Failing to write is not worth a diagnostic: the only consequence is that
+    // the next build's bar has no end.
+    let _ = std::fs::write(path.as_std_path(), pages.to_string());
 }
 
 fn enrich_with_reference(d: Diagnostic, map: &biblecompose_sile::LineMap) -> Diagnostic {
@@ -392,14 +442,18 @@ mod tests {
             &self,
             job: &BackendJob,
             cancel: &CancelToken,
-            log: &mut dyn FnMut(LogLine),
+            report: &mut dyn FnMut(BackendEvent),
         ) -> Result<BackendOutcome, Diagnostic> {
             std::fs::create_dir_all(job.work_dir.as_std_path()).unwrap();
             std::fs::write(job.xml_path().as_std_path(), &job.xml).unwrap();
-            log(LogLine {
+            report(BackendEvent::Log(LogLine {
                 stream: Stream::Stdout,
                 text: "fake backend ran".to_owned(),
-            });
+            }));
+            // Two pages, so the progress path is exercised by every build in
+            // these tests rather than only by a real typesetter.
+            report(BackendEvent::Page(1));
+            report(BackendEvent::Page(2));
             if cancel.is_cancelled() {
                 return Err(Diagnostic::warning(code::CANCELLED, "build cancelled"));
             }

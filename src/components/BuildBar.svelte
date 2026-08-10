@@ -53,6 +53,38 @@
 
   <span class="state {tone}">{LABELS[session.buildState]}</span>
 
+  {#if session.building}
+    <!-- A real count, always; a bar with an end only when there is an honest
+         one to give. The estimate is the previous build's page count, which is
+         the only thing that knows how long this document is — a typesetter
+         does not, until it has set it. -->
+    <div class="progress" role="status" aria-live="polite">
+      <div
+        class="track"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={session.pagesExpected ?? undefined}
+        aria-valuenow={session.progress === null ? undefined : session.pagesDone}
+        aria-label="Typesetting progress"
+      >
+        {#if session.progress !== null}
+          <div class="fill" style:inline-size="{session.progress * 100}%"></div>
+        {:else}
+          <div class="fill sweeping"></div>
+        {/if}
+      </div>
+      <span class="pages">
+        {#if session.pagesDone === 0}
+          starting…
+        {:else if session.pagesExpected}
+          page {session.pagesDone} of about {session.pagesExpected}
+        {:else}
+          page {session.pagesDone}
+        {/if}
+      </span>
+    </div>
+  {/if}
+
   {#if session.project?.blocked && !session.built}
     <span class="note">
       {session.errorCount} error{session.errorCount === 1 ? "" : "s"} must be fixed first
@@ -110,6 +142,54 @@
   }
   .state.idle {
     opacity: 0.55;
+  }
+  .progress {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    min-inline-size: 16rem;
+  }
+  .track {
+    position: relative;
+    flex: 1;
+    block-size: 0.4rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: color-mix(in oklab, currentColor 15%, transparent);
+  }
+  .fill {
+    block-size: 100%;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.55;
+    transition: inline-size 200ms linear;
+  }
+  /* No estimate, so the bar says "working" rather than a fraction it would be
+     making up. */
+  .fill.sweeping {
+    inline-size: 35%;
+    animation: sweep 1.4s ease-in-out infinite;
+  }
+  @keyframes sweep {
+    0% {
+      margin-inline-start: -35%;
+    }
+    100% {
+      margin-inline-start: 100%;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fill.sweeping {
+      animation: none;
+      inline-size: 100%;
+      opacity: 0.3;
+    }
+  }
+  .pages {
+    font-size: 0.78rem;
+    opacity: 0.7;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
   .note {
     font-size: 0.8rem;

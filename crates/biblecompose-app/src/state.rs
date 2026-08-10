@@ -104,6 +104,17 @@ pub enum BuildEvent {
     },
     /// The backend version, once known (SILE-002).
     Backend(String),
+    /// How many pages have been set, and how many the last successful build of
+    /// this project needed.
+    ///
+    /// The estimate is the previous run's page count because there is no other
+    /// honest source: a typesetter does not know how long a document is until
+    /// it has set it. `None` on the first build of a project, which is the one
+    /// time a bar cannot be more than "something is happening".
+    Pages {
+        done: u32,
+        expected: Option<u32>,
+    },
     /// The published PDF.
     Output(camino::Utf8PathBuf),
 }
@@ -156,6 +167,10 @@ impl BuildReporter {
 
     pub fn backend(&self, version: String) {
         let _ = self.tx.send(BuildEvent::Backend(version));
+    }
+
+    pub fn pages(&self, done: u32, expected: Option<u32>) {
+        let _ = self.tx.send(BuildEvent::Pages { done, expected });
     }
 
     pub fn output(&self, path: camino::Utf8PathBuf) {

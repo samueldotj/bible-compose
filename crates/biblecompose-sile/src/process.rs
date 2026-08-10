@@ -9,7 +9,7 @@
 //!
 //! [ADR-002]: ../../../docs/adr/002-sile-interface.md
 
-use std::io::{BufRead, BufReader};
+use std::io::{BufReader, Read};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
 use std::thread;
@@ -19,7 +19,9 @@ use biblecompose_diagnostics::{code, Diagnostic, SourceLoc};
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::cache::RuntimeEnv;
-use crate::{Backend, BackendJob, BackendOutcome, BackendVersion, CancelToken, LogLine, Stream};
+use crate::{
+    Backend, BackendEvent, BackendJob, BackendOutcome, BackendVersion, CancelToken, LogLine, Stream,
+};
 
 /// How often the run loop checks the cancel flag. BLD-006 wants the UI usable
 /// within a second; this is the polling half of that budget.
@@ -200,13 +202,13 @@ impl Backend for SileBackend {
         &self,
         job: &BackendJob,
         cancel: &CancelToken,
-        log: &mut dyn FnMut(LogLine),
+        report: &mut dyn FnMut(BackendEvent),
     ) -> Result<BackendOutcome, Diagnostic> {
         let version = self.version()?;
-        log(LogLine {
+        report(BackendEvent::Log(LogLine {
             stream: Stream::Stdout,
             text: format!("backend: {version}"),
-        });
+        }));
 
         std::fs::create_dir_all(job.work_dir.as_std_path()).map_err(|e| {
             Diagnostic::error(code::PUBLISH_FAILED, "could not create the build directory")
@@ -281,7 +283,7 @@ impl Backend for SileBackend {
         // arrives immediately still has something to kill.
         let guard = platform::Guard::adopt(&child);
 
-        let (tx, rx) = mpsc::channel::<LogLine>();
+        let (tx, rx) = mpsc::channel::<BackendEvent>();
         let mut pumps = Vec::new();
         if let Some(out) = child.stdout.take() {
             pumps.push(spawn_pump(out, Stream::Stdout, tx.clone()));
@@ -291,12 +293,12 @@ impl Backend for SileBackend {
         }
         drop(tx);
 
-        let status = wait_with_cancel(&mut child, cancel, &rx, log, &guard)?;
+        let status = wait_with_cancel(&mut child, cancel, &rx, report, &guard)?;
 
         // Drain anything the pumps produced after the last poll. SILE-006:
         // no line is lost because the process ended.
-        for line in rx.iter() {
-            log(line);
+        for event in rx.iter() {
+            report(event);
         }
         for p in pumps {
             let _ = p.join();
@@ -345,39 +347,107 @@ fn path_separator() -> &'static str {
 fn spawn_pump<R: std::io::Read + Send + 'static>(
     reader: R,
     stream: Stream,
-    tx: mpsc::Sender<LogLine>,
+    tx: mpsc::Sender<BackendEvent>,
 ) -> thread::JoinHandle<()> {
     thread::spawn(move || {
-        // `lines()` on lossy-decoded bytes: SILE can emit non-UTF-8 in a font
-        // name, and losing a log line to a decode error would be the one thing
-        // SILE-006 forbids.
         let mut buf = BufReader::new(reader);
-        let mut raw = Vec::new();
+        let mut chunk = [0u8; 4096];
+        // What has arrived since the last newline. Bytes rather than a string:
+        // SILE can emit non-UTF-8 in a font name, and losing a log line to a
+        // decode error would be the one thing SILE-006 forbids.
+        let mut pending: Vec<u8> = Vec::new();
+        // How much of `pending` has already been searched for page markers, so
+        // a growing tail is not rescanned from the start on every read.
+        let mut scanned = 0usize;
+
         loop {
-            raw.clear();
-            match buf.read_until(b'\n', &mut raw) {
+            let read = match buf.read(&mut chunk) {
                 Ok(0) | Err(_) => break,
-                Ok(_) => {
-                    let text = String::from_utf8_lossy(&raw).trim_end().to_owned();
-                    if tx.send(LogLine { stream, text }).is_err() {
-                        break;
-                    }
+                Ok(n) => n,
+            };
+            pending.extend_from_slice(&chunk[..read]);
+
+            // Progress first, because it is the whole reason this reads bytes
+            // rather than lines: SILE writes `[12] ` for each finished page
+            // *without a newline*, so a line-buffered reader delivers the
+            // entire run's worth in one go when the document ends — which is
+            // to say, never, from the point of view of someone watching.
+            if let Some((page, upto)) = last_page_marker(&pending[scanned..]) {
+                scanned += upto;
+                if tx.send(BackendEvent::Page(page)).is_err() {
+                    break;
                 }
+            }
+
+            // Then whole lines, unchanged: the log is still exactly what the
+            // backend wrote, page markers included.
+            while let Some(at) = pending.iter().position(|b| *b == b'\n') {
+                let line: Vec<u8> = pending.drain(..=at).collect();
+                scanned = 0;
+                let text = String::from_utf8_lossy(&line).trim_end().to_owned();
+                if tx
+                    .send(BackendEvent::Log(LogLine { stream, text }))
+                    .is_err()
+                {
+                    return;
+                }
+            }
+        }
+
+        // Whatever the process left without a trailing newline.
+        if !pending.is_empty() {
+            let text = String::from_utf8_lossy(&pending).trim_end().to_owned();
+            if !text.is_empty() {
+                let _ = tx.send(BackendEvent::Log(LogLine { stream, text }));
             }
         }
     })
 }
 
+/// The highest complete `[n] ` marker in `bytes`, and how far to skip.
+///
+/// The *highest* rather than each in turn: a slow reader can take one chunk
+/// holding twenty pages, and twenty events would be twenty repaints of a bar
+/// that only needs its last position. A marker is only counted once its
+/// closing bracket has arrived, so a page number is never reported half-read.
+fn last_page_marker(bytes: &[u8]) -> Option<(u32, usize)> {
+    let mut found = None;
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] != b'[' {
+            i += 1;
+            continue;
+        }
+        let mut j = i + 1;
+        let mut value: u32 = 0;
+        let mut digits = 0;
+        while j < bytes.len() && bytes[j].is_ascii_digit() {
+            value = value
+                .saturating_mul(10)
+                .saturating_add(u32::from(bytes[j] - b'0'));
+            digits += 1;
+            j += 1;
+        }
+        if digits > 0 && j < bytes.len() && bytes[j] == b']' {
+            found = Some((value, j + 1));
+            i = j + 1;
+        } else {
+            i += 1;
+        }
+    }
+    found
+}
+
 fn wait_with_cancel(
     child: &mut Child,
     cancel: &CancelToken,
-    rx: &mpsc::Receiver<LogLine>,
-    log: &mut dyn FnMut(LogLine),
+    rx: &mpsc::Receiver<BackendEvent>,
+    report: &mut dyn FnMut(BackendEvent),
     guard: &platform::Guard,
 ) -> Result<std::process::ExitStatus, Diagnostic> {
     loop {
-        while let Ok(line) = rx.try_recv() {
-            log(line);
+        while let Ok(event) = rx.try_recv() {
+            report(event);
         }
 
         if cancel.is_cancelled() {

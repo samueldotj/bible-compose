@@ -8,7 +8,9 @@
 //! Point `BIBLECOMPOSE_SILE` at a binary to run them (SILE-004).
 
 use biblecompose_scripture::fixtures;
-use biblecompose_sile::{emit, Backend, BackendJob, CancelToken, SileBackend, Stream};
+use biblecompose_sile::{
+    emit, Backend, BackendEvent, BackendJob, CancelToken, LogLine, SileBackend, Stream,
+};
 use camino::Utf8PathBuf;
 
 /// `None` when no backend is available, with the reason printed once.
@@ -84,7 +86,7 @@ fn every_fixture_typesets_to_a_pdf() {
 
         // SILE-006: the version line and the backend's own output both arrive.
         assert!(
-            lines.iter().any(|l| l.text.contains("SILE")),
+            log_lines(&lines).iter().any(|l| l.text.contains("SILE")),
             "{name}: no backend output reached the log"
         );
     }
@@ -102,7 +104,7 @@ fn backend_output_is_captured_from_both_streams() {
     assert!(!lines.is_empty(), "nothing was captured at all");
     // The fixture carries a figure with a path that does not resolve from the
     // repository root, so SILE has something to say on stderr.
-    let streams: Vec<Stream> = lines.iter().map(|l| l.stream).collect();
+    let streams: Vec<Stream> = log_lines(&lines).iter().map(|l| l.stream).collect();
     assert!(
         streams.contains(&Stream::Stdout),
         "stdout must reach the log"
@@ -142,4 +144,16 @@ fn a_cancelled_build_reports_cancellation() {
         .run(&job, &cancel, &mut |_| {})
         .expect_err("a cancelled run does not succeed");
     assert_eq!(err.code, biblecompose_diagnostics::code::CANCELLED);
+}
+
+/// The log half of what a backend reports. The page events beside them are
+/// progress, not output, and no test here is about them.
+fn log_lines(events: &[BackendEvent]) -> Vec<LogLine> {
+    events
+        .iter()
+        .filter_map(|e| match e {
+            BackendEvent::Log(line) => Some(line.clone()),
+            BackendEvent::Page(_) => None,
+        })
+        .collect()
 }

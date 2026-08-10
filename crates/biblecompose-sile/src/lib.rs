@@ -109,6 +109,22 @@ pub enum Stream {
     Stderr,
 }
 
+/// Everything a running backend has to say.
+///
+/// Two kinds, because a log line and a page are different things to a person
+/// watching: one is evidence for a support question, the other is evidence
+/// that the wait is finite.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BackendEvent {
+    Log(LogLine),
+    /// A page has been shipped.
+    ///
+    /// SILE writes `[12] ` to stderr as each page is finished, and that is the
+    /// only progress it offers — there is no total, because a typesetter does
+    /// not know how many pages a document has until it has set them.
+    Page(u32),
+}
+
 /// Cooperative cancellation, shared with whoever can press the button.
 ///
 /// Cheap to clone and safe to poll from any thread. What makes cancellation
@@ -146,7 +162,7 @@ pub trait Backend {
         &self,
         job: &BackendJob,
         cancel: &CancelToken,
-        log: &mut dyn FnMut(LogLine),
+        report: &mut dyn FnMut(BackendEvent),
     ) -> Result<BackendOutcome, Diagnostic>;
 }
 

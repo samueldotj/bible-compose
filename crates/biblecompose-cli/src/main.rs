@@ -296,6 +296,10 @@ fn print_event(event: &BuildEvent, as_json: bool) {
         BuildEvent::Log { stream, text } => println!("  {stream}: {text}"),
         BuildEvent::Backend(v) => println!("  backend: {v}"),
         BuildEvent::Output(p) => println!("  output: {p}"),
+        // One line per page would be a wall of them on a whole Bible; the
+        // window draws a bar from these, and a terminal already has the
+        // backend's own `[1] [2]` in the log.
+        BuildEvent::Pages { .. } => {}
         BuildEvent::Diagnostic(_) => {}
     }
 }

@@ -52,6 +52,9 @@ export class Session {
   buildDiagnostics = $state<Diagnostic[]>([]);
   output = $state<string | null>(null);
   backendVersion = $state<string | null>(null);
+  /** Pages set so far, and what the last build of this project needed. */
+  pagesDone = $state(0);
+  pagesExpected = $state<number | null>(null);
 
   selectedBook = $state<string | null>(null);
   severity = $state<SeverityFilter>("all");
@@ -234,6 +237,10 @@ export class Session {
       case "output":
         this.output = event.path;
         break;
+      case "pages":
+        this.pagesDone = event.done;
+        this.pagesExpected = event.expected ?? null;
+        break;
       case "finished":
         this.buildState = event.state;
         this.building = false;
@@ -244,8 +251,23 @@ export class Session {
     }
   }
 
+  /**
+   * How far along, as a fraction, or `null` when nothing can honestly say.
+   *
+   * Capped just short of full while the build is still running: a bar that
+   * sits at 100% for the last thirty seconds of a long document is a bar that
+   * has lied, and this estimate is the *previous* build's page count, so
+   * overshooting it is normal rather than exceptional.
+   */
+  get progress(): number | null {
+    if (!this.pagesExpected || this.pagesDone === 0) return null;
+    return Math.min(this.pagesDone / this.pagesExpected, 0.99);
+  }
+
   #forgetBuild(): void {
     this.log = [];
+    this.pagesDone = 0;
+    this.pagesExpected = null;
     this.buildDiagnostics = [];
     this.output = null;
     this.buildState = "idle";

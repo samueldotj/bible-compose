@@ -4,6 +4,7 @@
   import DiagnosticsPanel from "./components/DiagnosticsPanel.svelte";
   import ProjectPane from "./components/ProjectPane.svelte";
   import SettingsForm from "./components/SettingsForm.svelte";
+  import StyleEditor from "./components/StyleEditor.svelte";
   import { session } from "./lib/session.svelte";
 
   $effect(() => {
@@ -52,7 +53,33 @@
     <DiagnosticsPanel />
   </div>
   <div class="right">
-    <SettingsForm />
+    <!-- One pane at a time: both are long, and a publisher is doing one or the
+         other. Tabs rather than an accordion so the choice survives an edit,
+         which reopens the project and would otherwise collapse it. -->
+    <nav class="tabs" aria-label="Configuration">
+      <button
+        type="button"
+        class:active={session.pane === "settings"}
+        aria-current={session.pane === "settings" ? "true" : undefined}
+        onclick={() => (session.pane = "settings")}
+      >
+        Settings
+      </button>
+      <button
+        type="button"
+        class:active={session.pane === "styles"}
+        aria-current={session.pane === "styles" ? "true" : undefined}
+        onclick={() => (session.pane = "styles")}
+      >
+        Styles
+      </button>
+    </nav>
+
+    {#if session.pane === "settings"}
+      <SettingsForm />
+    {:else}
+      <StyleEditor />
+    {/if}
     <BuildLog />
   </div>
 </main>
@@ -102,6 +129,28 @@
     max-inline-size: 46rem;
     margin-block: 0 1rem;
     opacity: 0.75;
+  }
+  .tabs {
+    display: flex;
+    gap: 0.25rem;
+    border-block-end: 1px solid color-mix(in oklab, currentColor 15%, transparent);
+  }
+  .tabs button {
+    padding-block: 0.3rem;
+    padding-inline: 0.8rem;
+    border: 0;
+    border-block-end: 2px solid transparent;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: 0.85rem;
+    opacity: 0.6;
+    cursor: pointer;
+  }
+  .tabs button.active {
+    border-block-end-color: currentColor;
+    opacity: 1;
+    font-weight: 600;
   }
   main {
     display: grid;

@@ -182,3 +182,143 @@ fn a_book_carries_its_own_problem_count() {
         .count();
     assert_eq!(problems, john.errors + john.warnings);
 }
+
+// ------------------------------------------------------- P3.5: styles
+
+use biblecompose_tauri_lib::{clear_style, write_style};
+
+/// GUI-004 end to end: a style edit writes `styles.toml` and the next read
+/// sees it, with no TOML typed by anyone.
+#[test]
+fn editing_a_style_writes_the_sheet() {
+    let (_dir, root) = project(None);
+
+    let p = write_style(&root, "chapter", "font_size", "30pt").expect("30pt is a length");
+    let chapter = p
+        .styles
+        .iter()
+        .find(|s| s.selector == "chapter")
+        .expect("chapter is styled");
+    let size = chapter
+        .properties
+        .iter()
+        .find(|p| p.name == "font_size")
+        .unwrap();
+
+    assert_eq!(size.value, "30pt");
+    assert_eq!(size.origin, "file");
+
+    // The header explains the file, so it is at the top of it.
+    assert_eq!(size.location.as_ref().unwrap().line, Some(5));
+
+    let written = std::fs::read_to_string(root.join("styles.toml").as_std_path())
+        .expect("a style sheet was created");
+    assert!(written.starts_with("# BibleCompose styles."), "{written}");
+    assert!(written.contains("[chapter]"), "{written}");
+    assert!(written.contains("font_size = \"30pt\""));
+}
+
+/// STY-008 through the shell: a value the project did not set says whether it
+/// is a built-in or came from another style.
+#[test]
+fn a_style_property_says_where_it_came_from() {
+    let (_dir, root) = project(None);
+    let p = project_at(&root);
+
+    let of = |selector: &str, property: &str| {
+        p.styles
+            .iter()
+            .find(|s| s.selector == selector)
+            .and_then(|s| s.properties.iter().find(|p| p.name == property))
+            .unwrap_or_else(|| panic!("no {selector}.{property}"))
+            .clone()
+    };
+
+    assert_eq!(of("chapter", "font_size").origin, "builtin");
+    assert!(of("chapter", "font_size").location.is_none());
+
+    // `qr2` has no entry of its own; its alignment comes from `qr1`.
+    let inherited = of("poetry.qr2", "align");
+    assert_eq!(inherited.origin, "inherited");
+    assert_eq!(inherited.from.as_deref(), Some("poetry.qr1"));
+}
+
+/// A style that inherits follows an edit to what it inherits from — the whole
+/// point of the cascade, seen through the window.
+#[test]
+fn editing_a_parent_moves_what_inherits_from_it() {
+    let (_dir, root) = project(None);
+    let p = write_style(&root, "poetry.q1", "space_above", "5pt").expect("a length");
+
+    let q2 = p
+        .styles
+        .iter()
+        .find(|s| s.selector == "poetry.q2")
+        .unwrap()
+        .properties
+        .iter()
+        .find(|p| p.name == "space_above")
+        .expect("q2 now has one");
+
+    assert_eq!(q2.value, "5pt");
+    assert_eq!(q2.origin, "inherited");
+    assert_eq!(q2.from.as_deref(), Some("poetry.q1"));
+}
+
+#[test]
+fn a_refused_style_edit_writes_nothing() {
+    let (_dir, root) = project(None);
+    let refused = write_style(&root, "chapter", "font_size", "enormous").expect_err("not a length");
+
+    assert_eq!(refused.len(), 1);
+    assert_eq!(refused[0].code, "CFG-003");
+    assert!(
+        !root.join("styles.toml").exists(),
+        "a refused first edit must not leave a file behind"
+    );
+}
+
+#[test]
+fn a_property_the_schema_does_not_have_is_refused_before_anything_is_written() {
+    let (_dir, root) = project(None);
+    let refused = write_style(&root, "chapter", "colour", "red").expect_err("not a property");
+    assert_eq!(refused[0].code, "STY-002");
+    assert!(!root.join("styles.toml").exists());
+}
+
+/// STY-005's other half: removing an override puts the cascade back in charge.
+#[test]
+fn resetting_a_style_restores_the_cascade() {
+    let (_dir, root) = project(None);
+    write_style(&root, "chapter", "font_size", "30pt").expect("writes");
+
+    let p = clear_style(&root, "chapter", "font_size").expect("resets");
+    let size = p
+        .styles
+        .iter()
+        .find(|s| s.selector == "chapter")
+        .unwrap()
+        .properties
+        .iter()
+        .find(|p| p.name == "font_size")
+        .unwrap();
+
+    assert_eq!(size.value, "21pt", "the built-in size is back");
+    assert_eq!(size.origin, "builtin");
+}
+
+/// A style edit must not disturb the rest of the sheet (CFG-006 applies to
+/// both files).
+#[test]
+fn a_style_edit_leaves_the_rest_of_the_sheet_alone() {
+    let (_dir, root) = project(None);
+    let sheet = "# My design.\n\n[chapter]\nweight   = 700   # heavy\nfont_size = \"20pt\"\n";
+    std::fs::write(root.join("styles.toml").as_std_path(), sheet).expect("write");
+
+    write_style(&root, "chapter", "font_size", "22pt").expect("writes");
+
+    let after = std::fs::read_to_string(root.join("styles.toml").as_std_path()).unwrap();
+    assert_eq!(after, sheet.replace("\"20pt\"", "\"22pt\""));
+    assert!(after.contains("# My design."));
+    assert!(after.contains("weight   = 700   # heavy"));
+}

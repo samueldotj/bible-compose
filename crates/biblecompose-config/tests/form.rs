@@ -3,13 +3,13 @@
 
 use std::collections::BTreeSet;
 
-use biblecompose_config::edit::{self, SettingsFile};
+use biblecompose_config::edit::{self, TomlFile};
 use biblecompose_config::form::Kind;
 use biblecompose_config::settings::{self, known_keys, Settings};
 use biblecompose_config::ConfigDocument;
 
-fn open(source: &str) -> SettingsFile {
-    SettingsFile::new(
+fn open(source: &str) -> TomlFile {
+    TomlFile::new(
         ConfigDocument::parse("biblecompose.toml", source.to_owned()).expect("valid fixture"),
     )
 }
@@ -121,7 +121,8 @@ fn reading_a_field_back_matches_the_control_it_came_from() {
 #[test]
 fn a_good_value_is_written() {
     let mut file = open("schema_version = 1\n[page]\nsize = \"6x9in\"\n");
-    edit::set_validated(&mut file, "page.size", "a5".into()).expect("a5 is a page size");
+    edit::set_validated(&mut file, "page.size", "a5".into(), &edit::settings_check)
+        .expect("a5 is a page size");
     assert!(file.to_toml().contains("size = \"a5\""));
 }
 
@@ -133,8 +134,13 @@ fn a_value_the_reader_rejects_leaves_the_file_untouched() {
     let before = "schema_version = 1\n[page]\nsize = \"6x9in\"\n";
     let mut file = open(before);
 
-    let refused = edit::set_validated(&mut file, "page.size", "quarto".into())
-        .expect_err("quarto is not a page size");
+    let refused = edit::set_validated(
+        &mut file,
+        "page.size",
+        "quarto".into(),
+        &edit::settings_check,
+    )
+    .expect_err("quarto is not a page size");
 
     assert_eq!(refused.len(), 1);
     assert_eq!(refused.iter().next().unwrap().code.as_str(), "CFG-003");
@@ -146,7 +152,7 @@ fn a_value_the_reader_rejects_leaves_the_file_untouched() {
 #[test]
 fn an_existing_problem_does_not_block_editing_a_different_key() {
     let mut file = open("schema_version = 1\n[page]\ncolumns = 99\n");
-    edit::set_validated(&mut file, "page.size", "a5".into())
+    edit::set_validated(&mut file, "page.size", "a5".into(), &edit::settings_check)
         .expect("the bad columns value is not this edit's fault");
     assert!(file.to_toml().contains("size = \"a5\""));
     assert!(file.to_toml().contains("columns = 99"), "left as it was");
@@ -158,8 +164,8 @@ fn an_existing_problem_does_not_block_editing_a_different_key() {
 fn writing_a_key_the_schema_does_not_know_is_refused() {
     let before = "schema_version = 1\n";
     let mut file = open(before);
-    let refused =
-        edit::set_validated(&mut file, "page.wdith", "6in".into()).expect_err("not a setting");
+    let refused = edit::set_validated(&mut file, "page.wdith", "6in".into(), &edit::settings_check)
+        .expect_err("not a setting");
     assert_eq!(refused.iter().next().unwrap().code.as_str(), "CFG-002");
     assert_eq!(file.to_toml(), before);
 }

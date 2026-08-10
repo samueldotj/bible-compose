@@ -59,6 +59,11 @@ export class Session {
 
   /** Diagnostics from the last edit that was refused, shown against the field. */
   fieldErrors = $state<Record<string, readonly Diagnostic[]>>({});
+  /** The same, for style properties, keyed `selector.property`. */
+  styleErrors = $state<Record<string, readonly Diagnostic[]>>({});
+
+  /** Which of the two panes is showing. */
+  pane = $state<"settings" | "styles">("settings");
 
   #stop: (() => void) | null = null;
 
@@ -168,6 +173,30 @@ export class Session {
     }
   }
 
+  async setStyle(selector: string, property: string, value: string): Promise<void> {
+    if (!this.project) return;
+    const key = `${selector}.${property}`;
+    try {
+      this.project = await backend().setStyle(this.project.root, selector, property, value);
+      this.styleErrors = without(this.styleErrors, key);
+    } catch (e: unknown) {
+      // Nothing was written, so the row keeps showing the value in force with
+      // the reason the new one was refused beside it.
+      this.styleErrors = { ...this.styleErrors, [key]: asDiagnostics(e) };
+    }
+  }
+
+  async resetStyle(selector: string, property: string): Promise<void> {
+    if (!this.project) return;
+    const key = `${selector}.${property}`;
+    try {
+      this.project = await backend().resetStyle(this.project.root, selector, property);
+      this.styleErrors = without(this.styleErrors, key);
+    } catch (e: unknown) {
+      this.styleErrors = { ...this.styleErrors, [key]: asDiagnostics(e) };
+    }
+  }
+
   async build(): Promise<void> {
     if (!this.project || this.building) return;
     this.#forgetBuild();
@@ -224,11 +253,16 @@ export class Session {
   }
 
   #clearFieldError(key: string): void {
-    if (!(key in this.fieldErrors)) return;
-    const next = { ...this.fieldErrors };
-    delete next[key];
-    this.fieldErrors = next;
+    this.fieldErrors = without(this.fieldErrors, key);
   }
+}
+
+/** A copy without one key, since assigning a new object is what runes watch. */
+function without<T>(record: Record<string, T>, key: string): Record<string, T> {
+  if (!(key in record)) return record;
+  const next = { ...record };
+  delete next[key];
+  return next;
 }
 
 export const session = new Session();

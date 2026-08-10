@@ -1,0 +1,124 @@
+/**
+ * Which styles the editor offers, and what to call them.
+ *
+ * The schema has around a hundred and forty selectors and nine properties
+ * each. Showing all of that is a spreadsheet, not an editor — so this is the
+ * curated set GUI-004 names: paragraph spacing, heading size, poetry indent,
+ * chapter and verse appearance, footnote style, and the common character
+ * styles. Body font and size are settings rather than styles and live in the
+ * settings form.
+ *
+ * Curation belongs here and not in `biblecompose-config` for the same reason
+ * labels do: it is a decision about what to put in front of a person. The
+ * schema still holds everything, the inspector can still show all of it, and a
+ * publisher who wants a selector this list omits can write it in `styles.toml`
+ * by hand and the cascade will honour it.
+ */
+
+export type PropertyKind = "length" | "integer" | "boolean" | "align";
+
+export interface PropertyRow {
+  readonly name: string;
+  readonly label: string;
+  readonly kind: PropertyKind;
+}
+
+export interface StyleRow {
+  readonly selector: string;
+  readonly label: string;
+  readonly properties: readonly PropertyRow[];
+}
+
+export interface StyleGroup {
+  readonly id: string;
+  readonly title: string;
+  readonly rows: readonly StyleRow[];
+}
+
+const SIZE: PropertyRow = { name: "font_size", label: "Size", kind: "length" };
+const WEIGHT: PropertyRow = { name: "weight", label: "Weight", kind: "integer" };
+const ITALIC: PropertyRow = { name: "italic", label: "Italic", kind: "boolean" };
+const SMALLCAPS: PropertyRow = { name: "smallcaps", label: "Small caps", kind: "boolean" };
+const ABOVE: PropertyRow = { name: "space_above", label: "Space above", kind: "length" };
+const BELOW: PropertyRow = { name: "space_below", label: "Space below", kind: "length" };
+const INDENT: PropertyRow = { name: "indent", label: "Indent", kind: "length" };
+const RAISE: PropertyRow = { name: "raise", label: "Raise", kind: "length" };
+const ALIGN: PropertyRow = { name: "align", label: "Alignment", kind: "align" };
+
+const HEADING = [SIZE, WEIGHT, ITALIC, ABOVE, BELOW];
+const CHARACTER = [WEIGHT, ITALIC, SMALLCAPS];
+
+export const ALIGNMENTS = ["start", "center", "end", "justify"] as const;
+
+export const STYLE_GROUPS: readonly StyleGroup[] = [
+  {
+    id: "headings",
+    title: "Headings",
+    rows: [
+      { selector: "heading.s1", label: "Section", properties: HEADING },
+      { selector: "heading.s2", label: "Subsection", properties: HEADING },
+      { selector: "heading.r1", label: "Parallel references", properties: HEADING },
+      { selector: "heading.d1", label: "Psalm superscription", properties: HEADING },
+      { selector: "heading.sp1", label: "Speaker", properties: HEADING },
+    ],
+  },
+  {
+    id: "paragraphs",
+    title: "Paragraphs",
+    rows: [
+      { selector: "paragraph.p", label: "Body", properties: [ABOVE, BELOW, INDENT, ALIGN] },
+      { selector: "paragraph.pc", label: "Centred", properties: [ABOVE, BELOW, ALIGN] },
+      { selector: "paragraph.ip", label: "Introduction", properties: [SIZE, ITALIC, ABOVE, BELOW] },
+    ],
+  },
+  {
+    id: "poetry",
+    title: "Poetry",
+    rows: [
+      { selector: "poetry.q1", label: "Level 1", properties: [INDENT, ABOVE, BELOW] },
+      { selector: "poetry.q2", label: "Level 2", properties: [INDENT] },
+      { selector: "poetry.q3", label: "Level 3", properties: [INDENT] },
+      { selector: "poetry.q4", label: "Level 4", properties: [INDENT] },
+      { selector: "poetry.qc1", label: "Centred line", properties: [ALIGN] },
+      { selector: "poetry.qr1", label: "Right-aligned line", properties: [ALIGN] },
+    ],
+  },
+  {
+    id: "numbers",
+    title: "Chapter and verse",
+    rows: [
+      { selector: "chapter", label: "Chapter number", properties: [SIZE, WEIGHT, ITALIC] },
+      { selector: "verse", label: "Verse number", properties: [SIZE, WEIGHT, RAISE] },
+    ],
+  },
+  {
+    id: "notes",
+    title: "Notes",
+    rows: [
+      { selector: "note.f", label: "Footnote", properties: [SIZE, ITALIC] },
+      { selector: "reference", label: "Cross-reference", properties: [SIZE, ITALIC] },
+    ],
+  },
+  {
+    id: "characters",
+    title: "Character styles",
+    rows: [
+      { selector: "character.bd", label: "Bold", properties: CHARACTER },
+      { selector: "character.it", label: "Italic", properties: CHARACTER },
+      { selector: "character.em", label: "Emphasis", properties: CHARACTER },
+      { selector: "character.add", label: "Added words", properties: CHARACTER },
+      { selector: "character.nd", label: "Divine name", properties: CHARACTER },
+      { selector: "character.wj", label: "Words of Jesus", properties: CHARACTER },
+      { selector: "character.qt", label: "Quoted text", properties: CHARACTER },
+    ],
+  },
+  {
+    id: "furniture",
+    title: "Page furniture",
+    rows: [
+      { selector: "head", label: "Running head", properties: [SIZE, ITALIC] },
+      { selector: "folio", label: "Page number", properties: [SIZE, ITALIC] },
+      { selector: "caption", label: "Figure caption", properties: [SIZE, ITALIC] },
+    ],
+  },
+];

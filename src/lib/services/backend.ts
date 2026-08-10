@@ -75,11 +75,28 @@ export interface Setting {
   readonly location?: SourceLocation;
 }
 
+export type StyleOrigin = "builtin" | "file" | "inherited";
+
+export interface StyleProperty {
+  readonly name: string;
+  readonly value: string;
+  readonly origin: StyleOrigin;
+  /** The selector it was inherited from, when it was. */
+  readonly from?: string;
+  readonly location?: SourceLocation;
+}
+
+export interface Style {
+  readonly selector: string;
+  readonly properties: readonly StyleProperty[];
+}
+
 export interface Project {
   readonly root: string;
   readonly books: readonly BookSummary[];
   readonly diagnostics: readonly Diagnostic[];
   readonly settings: readonly Setting[];
+  readonly styles: readonly Style[];
   readonly output: string;
   readonly blocked: boolean;
 }
@@ -119,6 +136,10 @@ export interface Backend {
   setSetting(root: string, key: string, value: string): Promise<Project>;
   /** Remove one setting, so the built-in value applies again (CFG-007). */
   resetSetting(root: string, key: string): Promise<Project>;
+  /** Write one style property (STY-005). Rejects with the reason, unchanged. */
+  setStyle(root: string, selector: string, property: string, value: string): Promise<Project>;
+  /** Remove one, so the cascade decides it again. */
+  resetStyle(root: string, selector: string, property: string): Promise<Project>;
   /** Returns as soon as the build is handed to a thread (GUI-012). */
   startBuild(root: string): Promise<void>;
   /** Ask the running build to stop. `false` if there was not one. */
@@ -138,6 +159,10 @@ export const tauriBackend: Backend = {
   openProject: (root) => invoke("open_project", { root }),
   setSetting: (root, key, value) => invoke("set_setting", { root, key, value }),
   resetSetting: (root, key) => invoke("reset_setting", { root, key }),
+  setStyle: (root, selector, property, value) =>
+    invoke("set_style", { root, selector, property, value }),
+  resetStyle: (root, selector, property) =>
+    invoke("reset_style", { root, selector, property }),
   startBuild: (root) => invoke("start_build", { root }),
   cancelBuild: () => invoke("cancel_build"),
   onBuildEvent: async (handler) => {

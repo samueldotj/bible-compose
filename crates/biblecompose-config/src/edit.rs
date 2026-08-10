@@ -1,5 +1,5 @@
-//! Changing a settings file without disturbing the rest of it
-//! (CFG-005 – CFG-007).
+//! Changing a TOML file without disturbing the rest of it
+//! (CFG-005 – CFG-007, STY-005).
 //!
 //! The whole reason `toml_edit` is the only parse is here. What gets written
 //! back is the document that was read, with one value replaced, so a comment a
@@ -89,41 +89,70 @@ impl SettingValue {
     }
 }
 
-/// A settings file open for editing.
+/// A project file open for editing — `biblecompose.toml` or `styles.toml`.
+///
+/// Not settings-specific: both files are TOML a publisher may also edit by
+/// hand, and both are written back the same way. Naming it for one of them
+/// would have been a reason to write the second mechanism.
 ///
 /// Made from a [`ConfigDocument`], which it consumes: reading gives spans and
 /// editing destroys them, and the two are different types so a location taken
 /// before an edit cannot be used after one.
 #[derive(Clone)]
-pub struct SettingsFile {
+pub struct TomlFile {
     path: Utf8PathBuf,
     doc: DocumentMut,
 }
 
-impl SettingsFile {
+impl TomlFile {
     pub fn new(doc: ConfigDocument) -> Self {
         let path = doc.path().to_owned();
-        SettingsFile {
+        TomlFile {
             path,
             doc: doc.into_editable(),
         }
     }
 
-    /// An empty file, for a project that has no settings yet.
+    /// A new file with nothing in it but an explanation.
     ///
     /// The header is the only thing written that nobody asked for, and it is
     /// there because a bare `[page]` appearing in a folder is a mystery
-    /// otherwise.
-    pub fn create(path: impl Into<Utf8PathBuf>, schema_version: i64) -> Self {
-        let source = format!(
+    /// otherwise. `header` must be valid TOML — the callers below are the only
+    /// ones, and both are constants.
+    pub fn create(path: impl Into<Utf8PathBuf>, header: &str) -> Self {
+        // The header is the root table's *prefix*, not a parsed document.
+        //
+        // Parsing it and editing the result puts the comments at the bottom: a
+        // TOML document that is nothing but comments has them as its trailer,
+        // so the first table inserted lands above them, and the note
+        // explaining the file reads as a footnote to it.
+        let mut doc = DocumentMut::new();
+        doc.as_table_mut().decor_mut().set_prefix(header.to_owned());
+        TomlFile {
+            path: path.into(),
+            doc,
+        }
+    }
+
+    /// The header a new `biblecompose.toml` starts with.
+    pub fn settings_header(schema_version: i64) -> String {
+        format!(
             "# BibleCompose settings. Anything not set here uses the built-in\n\
              # default, so an empty file and no file mean the same thing.\n\
              schema_version = {schema_version}\n"
-        );
-        let path = path.into();
-        let doc = ConfigDocument::parse(path.clone(), source)
-            .expect("the generated header is valid TOML");
-        SettingsFile::new(doc)
+        )
+    }
+
+    /// And a new `styles.toml`.
+    ///
+    /// No `schema_version`: the styles file has no version of its own, because
+    /// what it is written against is the settings vocabulary the project
+    /// already declares.
+    pub fn styles_header() -> String {
+        "# BibleCompose styles. Each entry is `[class.marker]`, and names only\n\
+         # the properties it changes; everything else comes from the built-in\n\
+         # set or from the style it inherits from.\n"
+            .to_owned()
     }
 
     pub fn path(&self) -> &Utf8Path {
@@ -214,6 +243,10 @@ impl SettingsFile {
 
 /// Set a key only if the file still resolves cleanly afterwards.
 ///
+/// `check` decides what "resolves" means — settings resolution for a settings
+/// file, the style cascade for a sheet — so one mechanism serves both and
+/// there is no second opinion about validity in either.
+///
 /// A form field is text, and text can say `"quarto"`. Validating it here would
 /// mean a second opinion about what a page size is; instead the edit is made
 /// on a copy, the copy is resolved by the same reader that resolves a
@@ -225,15 +258,16 @@ impl SettingsFile {
 /// *this* field. On refusal the file is untouched and the new diagnostics are
 /// returned — they are what the field shows.
 pub fn set_validated(
-    file: &mut SettingsFile,
+    file: &mut TomlFile,
     key: &str,
     value: SettingValue,
+    check: &dyn Fn(&ConfigDocument) -> Diagnostics,
 ) -> Result<(), Diagnostics> {
-    let before = complaints(&file.to_toml(), file.path());
+    let before = complaints(&file.to_toml(), file.path(), check);
 
     let mut trial = file.clone();
     trial.set(key, value);
-    let after = complaints(&trial.to_toml(), file.path());
+    let after = complaints(&trial.to_toml(), file.path(), check);
 
     let mut fresh = Diagnostics::new();
     for d in after {
@@ -254,11 +288,27 @@ pub fn set_validated(
 
 /// Every diagnostic a settings text produces, including the parse error if it
 /// does not parse at all.
-fn complaints(toml: &str, path: &Utf8Path) -> Vec<Diagnostic> {
+fn complaints(
+    toml: &str,
+    path: &Utf8Path,
+    check: &dyn Fn(&ConfigDocument) -> Diagnostics,
+) -> Vec<Diagnostic> {
     match ConfigDocument::parse(path.to_owned(), toml.to_owned()) {
-        Ok(doc) => crate::settings::resolve(Some(&doc)).1.into_iter().collect(),
+        Ok(doc) => check(&doc).into_iter().collect(),
         Err(d) => vec![d],
     }
+}
+
+/// What counts as a complaint about a settings file.
+pub fn settings_check(doc: &ConfigDocument) -> Diagnostics {
+    crate::settings::resolve(Some(doc)).1
+}
+
+/// And about a style sheet. `strict` is the project's own setting, so a
+/// publisher who asked to be stopped by an unrecognised key is stopped here
+/// too rather than having an edit quietly accepted.
+pub fn styles_check(strict: bool) -> impl Fn(&ConfigDocument) -> Diagnostics {
+    move |doc| crate::cascade::resolve(Some(doc), strict).1
 }
 
 /// `"page.margin.inner"` → (`["page", "margin"]`, `"inner"`).

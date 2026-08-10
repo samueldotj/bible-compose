@@ -21,7 +21,8 @@
 use std::sync::{Arc, Mutex};
 
 use biblecompose_app::{project, BuildEvent, BuildReporter, BuildRequest, BuildState, CancelToken};
-use biblecompose_config::{edit, form, ConfigDocument, SettingsFile, SCHEMA_VERSION};
+use biblecompose_config::style::PROPERTIES;
+use biblecompose_config::{edit, form, ConfigDocument, Origin, TomlFile, SCHEMA_VERSION};
 use biblecompose_diagnostics::{Diagnostic as AppDiagnostic, Diagnostics, Severity};
 use camino::{Utf8Path, Utf8PathBuf};
 use serde::Serialize;
@@ -117,12 +118,37 @@ pub struct WireSetting {
     pub location: Option<WireLocation>,
 }
 
+/// One property of one style, with where its value was decided (STY-008).
+#[derive(Debug, Clone, Serialize)]
+pub struct WireStyleProperty {
+    pub name: &'static str,
+    pub value: String,
+    /// `builtin`, `file`, or `inherited`.
+    pub origin: &'static str,
+    /// The selector this was inherited from, when it was.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub from: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<WireLocation>,
+}
+
+/// One element's finished appearance (GUI-004).
+#[derive(Debug, Clone, Serialize)]
+pub struct WireStyle {
+    pub selector: String,
+    pub properties: Vec<WireStyleProperty>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct WireProject {
     pub root: String,
     pub books: Vec<WireBook>,
     pub diagnostics: Vec<WireDiagnostic>,
     pub settings: Vec<WireSetting>,
+    /// Every selector's resolved appearance, whether or not the project set
+    /// any of it. The editor shows a curated few; the inspector needs them
+    /// all, and sending the lot costs a few kilobytes once per open.
+    pub styles: Vec<WireStyle>,
     /// Where a build would write, resolved against the project folder.
     pub output: String,
     /// Whether a build can start at all (DIA-002).
@@ -246,7 +272,8 @@ pub fn write_setting(
     let (current, _) = project::settings(root);
     let kind = current.kind_of(key).unwrap_or(form::Kind::Text);
 
-    edit::set_validated(&mut file, key, kind.read(value)).map_err(|d| wire_all(&d))?;
+    edit::set_validated(&mut file, key, kind.read(value), &edit::settings_check)
+        .map_err(|d| wire_all(&d))?;
     file.save().map_err(|d| vec![WireDiagnostic::from(&d)])?;
 
     Ok(project_at(root))
@@ -262,6 +289,70 @@ fn reset_setting(root: String, key: String) -> Result<WireProject, Vec<WireDiagn
 pub fn clear_setting(root: &Utf8Path, key: &str) -> Result<WireProject, Vec<WireDiagnostic>> {
     let mut file = open_settings_file(root).map_err(|d| vec![WireDiagnostic::from(&d)])?;
     if file.reset(key) {
+        file.save().map_err(|d| vec![WireDiagnostic::from(&d)])?;
+    }
+    Ok(project_at(root))
+}
+
+/// Set one style property (STY-005).
+#[tauri::command]
+fn set_style(
+    root: String,
+    selector: String,
+    property: String,
+    value: String,
+) -> Result<WireProject, Vec<WireDiagnostic>> {
+    write_style(&Utf8PathBuf::from(root), &selector, &property, &value)
+}
+
+/// [`set_style`] without the Tauri binding.
+pub fn write_style(
+    root: &Utf8Path,
+    selector: &str,
+    property: &str,
+    value: &str,
+) -> Result<WireProject, Vec<WireDiagnostic>> {
+    if !PROPERTIES.contains(&property) {
+        return Err(vec![WireDiagnostic::from(&not_a_property(property))]);
+    }
+
+    let mut file = open_styles_file(root).map_err(|d| vec![WireDiagnostic::from(&d)])?;
+    let strict = *project::settings(root).0.strict;
+
+    // Style properties are strings, integers or booleans. Which one a property
+    // is comes from the schema, not from guessing at the text.
+    let parsed = style_kind(property).read(value);
+
+    edit::set_validated(
+        &mut file,
+        &format!("{selector}.{property}"),
+        parsed,
+        &edit::styles_check(strict),
+    )
+    .map_err(|d| wire_all(&d))?;
+    file.save().map_err(|d| vec![WireDiagnostic::from(&d)])?;
+
+    Ok(project_at(root))
+}
+
+/// Remove one style property, so the cascade decides it again (STY-005).
+#[tauri::command]
+fn reset_style(
+    root: String,
+    selector: String,
+    property: String,
+) -> Result<WireProject, Vec<WireDiagnostic>> {
+    clear_style(&Utf8PathBuf::from(root), &selector, &property)
+}
+
+/// [`reset_style`] without the Tauri binding.
+pub fn clear_style(
+    root: &Utf8Path,
+    selector: &str,
+    property: &str,
+) -> Result<WireProject, Vec<WireDiagnostic>> {
+    let mut file = open_styles_file(root).map_err(|d| vec![WireDiagnostic::from(&d)])?;
+    if file.reset(&format!("{selector}.{property}")) {
         file.save().map_err(|d| vec![WireDiagnostic::from(&d)])?;
     }
     Ok(project_at(root))
@@ -313,7 +404,8 @@ fn start_build(
         let opened = project::open(&root);
         let request = BuildRequest::new(root, opened.output())
             .keeping_intermediates(*opened.settings.output.keep_intermediates)
-            .with_settings(opened.settings.clone());
+            .with_settings(opened.settings.clone())
+            .with_styles(opened.styles.clone());
 
         let mut reporter = reporter;
         // Everything opening the project had to say reaches the panel before
@@ -375,13 +467,98 @@ fn is_building(session: tauri::State<'_, Arc<Session>>) -> bool {
 
 /// The project's settings file, opened for editing — created if the project
 /// has never had one.
-fn open_settings_file(root: &Utf8Path) -> Result<SettingsFile, AppDiagnostic> {
-    let path = root.join(project::SETTINGS_FILE);
+fn open_settings_file(root: &Utf8Path) -> Result<TomlFile, AppDiagnostic> {
+    open_or_create(
+        &root.join(project::SETTINGS_FILE),
+        &TomlFile::settings_header(SCHEMA_VERSION),
+    )
+}
+
+/// The project's style sheet, likewise.
+fn open_styles_file(root: &Utf8Path) -> Result<TomlFile, AppDiagnostic> {
+    open_or_create(&root.join(project::STYLES_FILE), &TomlFile::styles_header())
+}
+
+fn open_or_create(path: &Utf8Path, header: &str) -> Result<TomlFile, AppDiagnostic> {
     if path.exists() {
-        Ok(SettingsFile::new(ConfigDocument::read(&path)?))
+        Ok(TomlFile::new(ConfigDocument::read(path)?))
     } else {
-        Ok(SettingsFile::create(path, SCHEMA_VERSION))
+        Ok(TomlFile::create(path.to_owned(), header))
     }
+}
+
+/// Which control a style property needs.
+///
+/// Small enough to state here, and stating it is what lets the frontend send
+/// only the text a field holds. Anything not named is text — a length, a page
+/// size, an alignment.
+fn style_kind(property: &str) -> form::Kind {
+    match property {
+        "weight" => form::Kind::Integer,
+        "italic" | "smallcaps" => form::Kind::Boolean,
+        _ => form::Kind::Text,
+    }
+}
+
+fn not_a_property(property: &str) -> AppDiagnostic {
+    AppDiagnostic::error(
+        biblecompose_diagnostics::code::UNKNOWN_PROPERTY,
+        format!("`{property}` is not a style property"),
+    )
+    .help(format!("the properties are: {}", PROPERTIES.join(", ")))
+}
+
+/// Every resolved style, flattened for the window.
+fn wire_styles(styles: &biblecompose_config::ResolvedStyles) -> Vec<WireStyle> {
+    styles
+        .iter()
+        .map(|(selector, resolved)| WireStyle {
+            selector: selector.key(),
+            properties: wire_style_properties(resolved),
+        })
+        .filter(|s| !s.properties.is_empty())
+        .collect()
+}
+
+fn wire_style_properties(resolved: &biblecompose_config::ResolvedStyle) -> Vec<WireStyleProperty> {
+    let s = &resolved.style;
+    let values: [(&'static str, Option<String>); 9] = [
+        ("font_size", s.font_size.map(|l| l.to_string())),
+        ("weight", s.weight.map(|w| w.to_string())),
+        ("italic", s.italic.map(|b| b.to_string())),
+        ("smallcaps", s.smallcaps.map(|b| b.to_string())),
+        ("space_above", s.space_above.map(|l| l.to_string())),
+        ("space_below", s.space_below.map(|l| l.to_string())),
+        ("indent", s.indent.map(|l| l.to_string())),
+        ("raise", s.raise.map(|l| l.to_string())),
+        ("align", s.align.map(|a| a.as_str().to_owned())),
+    ];
+
+    values
+        .into_iter()
+        .filter_map(|(name, value)| {
+            let value = value?;
+            let origin = resolved.origin_of(name);
+            Some(WireStyleProperty {
+                name,
+                value,
+                origin: match origin {
+                    Some(Origin::File(_)) => "file",
+                    Some(Origin::Inherited { .. }) => "inherited",
+                    _ => "builtin",
+                },
+                from: match origin {
+                    Some(Origin::Inherited { from }) => Some(from.key()),
+                    _ => None,
+                },
+                location: origin.and_then(Origin::location).map(|loc| WireLocation {
+                    path: loc.path.to_string(),
+                    line: loc.line,
+                    column: loc.column,
+                }),
+            })
+        })
+        .collect()
 }
 
 /// Everything the window shows about a project folder.
@@ -416,6 +593,7 @@ pub fn project_at(root: &Utf8Path) -> WireProject {
             .into_iter()
             .map(wire_field)
             .collect(),
+        styles: wire_styles(&opened.styles),
         output: opened.output().to_string(),
         blocked: opened.blocked(),
     }
@@ -507,6 +685,8 @@ pub fn run() {
             open_project,
             set_setting,
             reset_setting,
+            set_style,
+            reset_style,
             start_build,
             cancel_build,
             is_building,

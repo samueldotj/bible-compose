@@ -18,7 +18,7 @@ pub mod value;
 
 pub use cascade::{ResolvedStyle, ResolvedStyles};
 pub use document::{ConfigDocument, Located, Node, Table};
-pub use edit::{set_validated, SettingValue, SettingsFile};
+pub use edit::{set_validated, SettingValue, TomlFile};
 pub use form::{Field, Kind};
 pub use provenance::{Origin, Provenance, Sourced};
 pub use selector::StyleSelector;

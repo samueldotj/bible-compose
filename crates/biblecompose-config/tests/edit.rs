@@ -1,7 +1,7 @@
 //! P2.7 — CFG-005 to CFG-007: a GUI edit changes one key and nothing else,
 //! and a reset restores the built-in value.
 
-use biblecompose_config::edit::{SettingValue, SettingsFile};
+use biblecompose_config::edit::{SettingValue, TomlFile};
 use biblecompose_config::settings::{self, Settings};
 use biblecompose_config::ConfigDocument;
 
@@ -27,9 +27,9 @@ font_family = 'Gentium Plus'
 font_size   = \"11.5pt\"
 ";
 
-fn open(source: &str) -> SettingsFile {
+fn open(source: &str) -> TomlFile {
     let doc = ConfigDocument::parse("biblecompose.toml", source.to_owned()).expect("valid fixture");
-    SettingsFile::new(doc)
+    TomlFile::new(doc)
 }
 
 fn resolve(source: &str) -> Settings {
@@ -189,7 +189,7 @@ fn saving_replaces_the_file_and_leaves_no_temporary_behind() {
         .expect("UTF-8 temp path");
     std::fs::write(path.as_std_path(), HANDWRITTEN).expect("write the fixture");
 
-    let mut file = SettingsFile::new(ConfigDocument::read(&path).expect("reads back"));
+    let mut file = TomlFile::new(ConfigDocument::read(&path).expect("reads back"));
     file.set("page.columns", 1_i64);
     file.save().expect("saves");
 
@@ -214,7 +214,7 @@ fn a_saved_change_survives_reopening() {
         .expect("UTF-8 temp path");
     std::fs::write(path.as_std_path(), HANDWRITTEN).expect("write the fixture");
 
-    let mut file = SettingsFile::new(ConfigDocument::read(&path).expect("reads"));
+    let mut file = TomlFile::new(ConfigDocument::read(&path).expect("reads"));
     file.set("typography.font_family", "Noto Serif Tamil");
     file.save().expect("saves");
 
@@ -232,7 +232,10 @@ fn a_saved_change_survives_reopening() {
 /// A project with no settings file at all gets one that says what it is.
 #[test]
 fn a_new_file_starts_with_a_version_and_an_explanation() {
-    let mut file = SettingsFile::create("biblecompose.toml", settings::SCHEMA_VERSION);
+    let mut file = TomlFile::create(
+        "biblecompose.toml",
+        &TomlFile::settings_header(settings::SCHEMA_VERSION),
+    );
     file.set("page.size", "a5");
 
     let text = file.to_toml();

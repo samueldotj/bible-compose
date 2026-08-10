@@ -364,3 +364,55 @@ fn the_defaults_are_available_without_a_project() {
         );
     }
 }
+
+/// STY-008: the inspector answers for *any* element, so the window is sent
+/// every selector — including the ones nothing has set.
+#[test]
+fn every_selector_reaches_the_window() {
+    let (_dir, root) = project(None);
+    let p = project_at(&root);
+
+    // `\p` renders as body text: the built-in sheet sets nothing for it, and
+    // "nothing decides this" is the answer to why it looks the way it does.
+    let plain = p
+        .styles
+        .iter()
+        .find(|s| s.selector == "paragraph.p")
+        .expect("an unstyled paragraph is still an element");
+    assert!(plain.properties.is_empty());
+
+    // And the whole schema is there, not a curated few.
+    assert!(
+        p.styles.len() > 100,
+        "only {} selectors reached the window",
+        p.styles.len()
+    );
+}
+
+/// The chain the inspector walks: an inherited property names the selector it
+/// came from, and that selector is one the window also has.
+#[test]
+fn an_inherited_property_names_a_selector_the_window_has() {
+    let (_dir, root) = project(None);
+    let p = project_at(&root);
+
+    let inherited: Vec<(&str, &str)> = p
+        .styles
+        .iter()
+        .flat_map(|s| {
+            s.properties
+                .iter()
+                .filter(|prop| prop.origin == "inherited")
+                .map(move |prop| (s.selector.as_str(), prop.from.as_deref().unwrap_or("")))
+        })
+        .collect();
+
+    assert!(!inherited.is_empty(), "nothing inherits anything");
+    for (selector, from) in inherited {
+        assert!(!from.is_empty(), "`{selector}` inherits from nowhere");
+        assert!(
+            p.styles.iter().any(|s| s.selector == from),
+            "`{selector}` inherits from `{from}`, which the window does not have"
+        );
+    }
+}

@@ -50,6 +50,28 @@ const CHARACTER = [WEIGHT, ITALIC, SMALLCAPS];
 
 export const ALIGNMENTS = ["start", "center", "end", "justify"] as const;
 
+/**
+ * Every property, for the inspector.
+ *
+ * STY-008 asks what each property of an element is *and where it came from*,
+ * which includes the ones nothing decides — "not set" is an answer, and one a
+ * publisher wondering why a heading has no space above it needs.
+ *
+ * The editor's groups are a subset of these chosen per selector; this is the
+ * whole set, in the order the schema lists them.
+ */
+export const ALL_PROPERTIES: readonly PropertyRow[] = [
+  SIZE,
+  WEIGHT,
+  ITALIC,
+  SMALLCAPS,
+  ABOVE,
+  BELOW,
+  INDENT,
+  RAISE,
+  ALIGN,
+];
+
 export const STYLE_GROUPS: readonly StyleGroup[] = [
   {
     id: "headings",
@@ -122,3 +144,12 @@ export const STYLE_GROUPS: readonly StyleGroup[] = [
     ],
   },
 ];
+
+/** What the editor calls a selector, where it has a name for it. */
+export function labelForSelector(selector: string): string | undefined {
+  for (const group of STYLE_GROUPS) {
+    const row = group.rows.find((r) => r.selector === selector);
+    if (row) return `${group.title} · ${row.label}`;
+  }
+  return undefined;
+}

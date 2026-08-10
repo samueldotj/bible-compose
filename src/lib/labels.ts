@@ -165,6 +165,8 @@ export interface SubTab {
   readonly title: string;
   readonly settingGroups: readonly string[];
   readonly styleGroups: readonly string[];
+  /** The read-only view over every selector, rather than a form (STY-008). */
+  readonly inspector?: boolean;
 }
 
 export const STYLE_TABS: readonly SubTab[] = [
@@ -175,4 +177,7 @@ export const STYLE_TABS: readonly SubTab[] = [
     settingGroups: [] as readonly string[],
     styleGroups: [g.id],
   })),
+  // Last, because it is where you go when the form above has not answered the
+  // question — and it answers for every element rather than the curated ones.
+  { id: "inspect", title: "Inspect", settingGroups: [], styleGroups: [], inspector: true },
 ];

@@ -562,7 +562,12 @@ fn wire_styles(styles: &biblecompose_config::ResolvedStyles) -> Vec<WireStyle> {
             selector: selector.key(),
             properties: wire_style_properties(resolved),
         })
-        .filter(|s| !s.properties.is_empty())
+        // Unfiltered, including the selectors nothing has set. STY-008 asks
+        // what each property of an element is *and where it came from*, and
+        // "nothing decides this" is an answer — the one a publisher wondering
+        // why a paragraph looks like body text is looking for. The emitter's
+        // own list is filtered separately, because an empty rule in the
+        // document is a line of XML that says nothing.
         .collect()
 }
 

@@ -5,6 +5,7 @@
   import ProjectPane from "./components/ProjectPane.svelte";
   import SettingsForm from "./components/SettingsForm.svelte";
   import StyleEditor from "./components/StyleEditor.svelte";
+  import StyleInspector from "./components/StyleInspector.svelte";
   import { STYLE_TABS, TABS } from "./lib/labels";
   import { session } from "./lib/session.svelte";
 
@@ -105,6 +106,9 @@
          be the one you have to go looking for. -->
     <div class="scroller">
       {#if tab.styles}
+        {#if styleTab.inspector}
+          <StyleInspector />
+        {/if}
         {#if styleTab.settingGroups.length > 0}
           <SettingsForm groups={styleTab.settingGroups} />
         {/if}

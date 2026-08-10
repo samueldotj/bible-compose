@@ -83,6 +83,9 @@ export class Session {
   pane = $state("settings");
   /** And which section within the Styles tab. One of `STYLE_TABS`. */
   stylePane = $state("typography");
+  /** The selector the inspector is showing, and what is filtering the list. */
+  inspected = $state<string | null>(null);
+  inspectFilter = $state("");
 
   #stop: (() => void) | null = null;
 

@@ -78,7 +78,7 @@ The GUI shell arrives ([ADR-003](adr/003-gui.md)) along with the whole configura
 
 **Established here:** CFG-006 — a GUI write does not disturb the rest of the file.
 
-### M3 — Styles
+### M3 — Styles ✅
 
 **You can** change how it looks — body typography, poetry indents, heading sizes, chapter and verse appearance, character styles — from the GUI or from `styles.toml`, with the inspector telling you where each value came from.
 
@@ -270,7 +270,7 @@ Not an item, but the thing to watch: **ICU data is 32 MB of the 78**, and filter
 | **P3.5** | L ✅ | Style editor GUI | Body font and size, paragraph spacing, heading size, poetry indent, chapter and verse appearance, footnote style, and common character styles are all editable and persist (GUI-004, STY-005). Every row says whether its value is built-in, from the project's file, or inherited from a named style — so [P3.6](#) is a read of what is already on screen |
 | **P3.6** | S ✅ | Resolved-style inspector | For any element, the inspector shows each property's value and whether it came from the built-in set, a project file with a location, or inheritance from a named selector (STY-008). Free, as [ADR-005](adr/005-provenance.md) predicted: every value carried its origin from the moment it was resolved, so this is a read rather than a mechanism |
 | **P3.7** | M ✅ | External edit and reload; changed-file detection | An external `styles.toml` edit is reflected after reload; an externally edited USFM file raises a changed-file indication (STY-006, FUN-006, FUN-007). Detection is a fingerprint compared on demand rather than a filesystem watcher — translation projects live on synced folders, where a watcher is a storm generator |
-| **P3.8** | S | Golden XML across the style matrix | Every selector class and every supported property has a golden case; a style change that should affect one selector is proven not to affect others |
+| **P3.8** | S ✅ | Golden XML across the style matrix | Every selector class and every supported property has a golden case; a style change that should affect one selector is proven not to affect others — with a control test proving the isolation check can see a leak when there is one |
 
 ## Phase 4 → M4 · Publishing structures
 

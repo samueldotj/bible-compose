@@ -28,7 +28,7 @@ use biblecompose_sile::StyleRule;
 /// same build identical. Grouped the way the settings file is, so a reader
 /// comparing the two can follow.
 pub fn class_options(s: &Settings) -> Vec<(String, String)> {
-    class_options_with(s, None)
+    class_options_with(s, None, None)
 }
 
 /// The same, told which file the body font resolved to.
@@ -39,6 +39,7 @@ pub fn class_options(s: &Settings) -> Vec<(String, String)> {
 pub fn class_options_with(
     s: &Settings,
     body_font: Option<&crate::font::ResolvedFont>,
+    hyphenation: Option<&crate::hyphenation::Hyphenation>,
 ) -> Vec<(String, String)> {
     let mut out: Vec<(String, String)> = Vec::new();
     let mut put = |key: &str, value: String| out.push((key.to_owned(), value));
@@ -69,7 +70,16 @@ pub fn class_options_with(
     put("fontsize", s.typography.font_size.to_sile());
     put("leading", s.typography.leading.to_sile());
     put("language", s.project.language.to_string());
-    put("hyphenate", flag(*s.typography.hyphenation));
+    // What pre-flight decided, not what the file asked for. The setting is
+    // the request; this is the answer, and FONT-004's diagnostic is where the
+    // difference is explained.
+    put(
+        "hyphenate",
+        flag(match hyphenation {
+            Some(h) => h.enabled,
+            None => *s.typography.hyphenation,
+        }),
+    );
 
     // What appears on the page.
     put("chapternumbers", flag(*s.numbering.show_chapter_numbers));

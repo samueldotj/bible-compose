@@ -201,6 +201,8 @@ Isolated across three variants:
 
 This is the third finding of the same shape, and the shape is now the point: **SILE warns or stays silent where a publishing tool must block.** Fonts ([SRS-REVIEW F5](../docs/SRS-REVIEW.md#f5--sile-substitutes-missing-fonts-silently-so-pdf-003-and-pdf-004-cannot-be-delegated)), frame geometry (F-7), hyphenation (F-11).
 
+> **Correction, from implementing FONT-004.** The observation above holds and the explanation does not. SILE 0.15.13 *does* ship Tamil patterns — `languages/ta/hyphens-tex.lua`, auto-generated from TeX — and they are what hyphenated the page. Re-measured on one book of Lamentations: `ta` drew 510 hyphens, `am` and a nonexistent tag drew 7 (the number in the source text), and `en` drew 7 as well, because English patterns do not match Tamil letters. So a language with no patterns gets no hyphenation rather than another language's, and the fix is not the pattern table proposed here — a table of languages with patterns would have passed `ta` through. It is the script that decides. See [ARCHITECTURE §7.2](../docs/ARCHITECTURE.md#72-hyphenation).
+
 ### F-12 — A page of tofu is a clean, passing build
 
 The control that settles PDF-004. Identical document, identical text, only the font changed to DejaVu Serif, which has no Tamil coverage at all:

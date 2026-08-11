@@ -254,9 +254,13 @@ Two details make it work in practice. Project-local fonts must be usable without
 
 ### 7.2 Hyphenation
 
-Asking the backend for a language it has no patterns for does not get you "no hyphenation" — it gets you *another language's* hyphenation, applied silently. A Tamil Bible set that way carries hyphens in the middle of Tamil words throughout, and nothing reports it (FONT-004).
+A Tamil Bible set through the backend carries hyphens in the middle of Tamil words throughout, and nothing reports it (FONT-004). [Spike F-11](../spike/NOTES.md) recorded the symptom and inferred the cause: that asking for a language the backend cannot hyphenate gets you *another language's* patterns.
 
-So BibleCompose ships a table of the languages the pinned backend actually has patterns for, versioned with the class (SILE-009). A configured language with patterns is passed through; one without is passed as undefined, and if the project asked for hyphenation the resolver says why it is off. The table is data for the same reason the canon table is.
+**Measured against the pinned backend, that inference is wrong and the symptom is real.** SILE 0.15.13 ships `languages/ta/hyphens-tex.lua`; Tamil patterns exist, they are auto-generated from TeX, and they fire. On one book of Lamentations: `ta` produced 510 hyphens, `am` and a nonexistent tag produced 7 — the number in the source text — and `en` also produced 7, because English patterns do not match Tamil letters. A language with no patterns gets *no* hyphenation, not somebody else's.
+
+So the defect is narrower and sharper than a missing-pattern table would address, and a table of "languages the backend has patterns for" would have passed `ta` straight through, which is the bug. **What decides it is the script**: hyphenation is a convention of the Latin, Greek and Cyrillic traditions and a few others, and in Tamil, Devanagari, Thai, Hebrew, Arabic and the rest a mid-word hyphen is an error however good the patterns are.
+
+The script is read from the text rather than from the language tag, because the text is what gets set and a tag can be absent, wrong, or describe a book that is mostly in another script. Where the script does not hyphenate, the backend is told not to, and a project that asked for hyphenation is told why it is off — nothing is wrong with the project, but a setting that did nothing has to be mentioned. The language tag itself is passed through unchanged: it drives more than hyphenation, and rewriting it to encode a hyphenation decision would hide that decision in a value something else reads.
 
 ### 7.3 Geometry and assets
 

@@ -7,6 +7,7 @@
 
 pub mod backend_input;
 pub mod font;
+pub mod hyphenation;
 pub mod project;
 pub mod publish;
 pub mod state;
@@ -187,6 +188,14 @@ pub fn build_with(
         &backend.font_dirs(),
         &mut diagnostics,
     );
+    // FONT-004, and for the same reason as the font check: the backend will
+    // hyphenate a script that does not hyphenate and say nothing.
+    let hyphenation = hyphenation::decide(
+        &request.settings.project.language,
+        *request.settings.typography.hyphenation,
+        doc,
+        &mut diagnostics,
+    );
     publish::preflight_destination(&request.output, &mut diagnostics);
     for d in diagnostics.iter() {
         reporter.diagnostic(d.clone());
@@ -244,7 +253,11 @@ pub fn build_with(
         sile_path: request.sile_path.clone(),
         project_root: request.project_root.clone(),
         class: "biblecompose".to_owned(),
-        class_options: backend_input::class_options_with(&request.settings, body_font.as_ref()),
+        class_options: backend_input::class_options_with(
+            &request.settings,
+            body_font.as_ref(),
+            Some(&hyphenation),
+        ),
     };
 
     if cancel.is_cancelled() {

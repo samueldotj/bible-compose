@@ -168,3 +168,64 @@ fn a_backend_font_is_not_a_project_font() {
     let found = font::resolve("DejaVu Serif", &root, &latin()).expect("the vendored face");
     assert!(!found.from_project);
 }
+
+// ------------------------------------------------------------- FONT-004
+
+/// Tamil Scripture is not hyphenated, and the build says so.
+///
+/// The measured defect: SILE ships auto-generated Tamil patterns, they fire,
+/// and one book of Lamentations came out with 510 hyphens in it against 7 in
+/// the source text.
+#[test]
+fn tamil_scripture_is_not_hyphenated_and_the_build_says_so() {
+    use biblecompose_app::hyphenation;
+
+    let (_dir, doc) = tamil_scripture();
+    let mut d = Diagnostics::new();
+    let plan = hyphenation::decide("ta", true, &doc, &mut d);
+
+    assert!(!plan.enabled, "Tamil does not break words across lines");
+    assert_eq!(plan.language, "ta", "the tag is not rewritten to hide it");
+
+    let said = d
+        .iter()
+        .find(|d| d.code.as_str() == "FONT-004")
+        .expect("a setting that did nothing has to be mentioned");
+    assert_eq!(
+        said.severity,
+        Severity::Info,
+        "nothing is wrong with the project"
+    );
+    assert!(said.message.contains("Tamil"), "{}", said.message);
+    assert!(!d.has_blocking());
+}
+
+/// And Latin Scripture still is, or the fix would be a regression dressed as
+/// a diagnostic.
+#[test]
+fn latin_scripture_is_still_hyphenated() {
+    use biblecompose_app::hyphenation;
+
+    let mut d = Diagnostics::new();
+    let plan = hyphenation::decide("en", true, &fixtures::kitchen_sink(), &mut d);
+    assert!(plan.enabled);
+    assert!(d.is_empty());
+}
+
+/// The script is read from the text, not from the language tag: a tag can be
+/// absent, wrong, or describe a book that is mostly in another script.
+#[test]
+fn the_script_decides_rather_than_the_tag() {
+    use biblecompose_app::hyphenation;
+
+    let (_dir, doc) = tamil_scripture();
+    assert_eq!(hyphenation::non_hyphenating_script(&doc), Some("Tamil"));
+    assert_eq!(
+        hyphenation::non_hyphenating_script(&fixtures::kitchen_sink()),
+        None
+    );
+
+    // Tagged English, set in Tamil — the text wins.
+    let mut d = Diagnostics::new();
+    assert!(!hyphenation::decide("en", true, &doc, &mut d).enabled);
+}

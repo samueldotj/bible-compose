@@ -13,6 +13,7 @@ import {
   asDiagnostics,
   backend,
   type BuildEvent,
+  type Changes,
   type BuildState,
   type Defaults,
   type Diagnostic,
@@ -37,6 +38,17 @@ export type SeverityFilter = Severity | "all";
  * is lost that matters, because the build directory keeps the real log.
  */
 const LOG_LIMIT = 5000;
+
+/**
+ * How often the project is compared against what is on disk (FUN-007).
+ *
+ * Two seconds: fast enough that a publisher who saved in another editor and
+ * switched back finds the notice already there, slow enough that statting a
+ * project's files is nothing. Nobody is timing this — the notice offers a
+ * reload rather than performing one, so it only has to be true by the time it
+ * is acted on.
+ */
+const WATCH_INTERVAL = 2000;
 
 export class Session {
   versions = $state<{ app: string; contract: string; backend: string } | null>(null);
@@ -87,7 +99,11 @@ export class Session {
   inspected = $state<string | null>(null);
   inspectFilter = $state("");
 
+  /** Files changed on disk since the project was read (FUN-007). */
+  changes = $state<Changes | null>(null);
+
   #stop: (() => void) | null = null;
+  #watch: ReturnType<typeof setInterval> | null = null;
 
   /**
    * The list the panel shows.
@@ -138,6 +154,20 @@ export class Session {
     return this.diagnostics.filter((d) => d.severity === "error").length;
   }
 
+  /** Whether anything on disk differs from what the window is showing. */
+  get changedCount(): number {
+    const c = this.changes;
+    if (!c) return 0;
+    return c.modified.length + c.added.length + c.removed.length;
+  }
+
+  /** The names, for a one-line notice. */
+  get changedNames(): string[] {
+    const c = this.changes;
+    if (!c) return [];
+    return [...c.modified, ...c.added, ...c.removed];
+  }
+
   get canBuild(): boolean {
     return this.project !== null && !this.building && !this.opening;
   }
@@ -172,6 +202,31 @@ export class Session {
   stop(): void {
     this.#stop?.();
     this.#stop = null;
+    if (this.#watch !== null) {
+      clearInterval(this.#watch);
+      this.#watch = null;
+    }
+  }
+
+  /**
+   * Start comparing the project against disk, once there is one.
+   *
+   * Skipped while a build is running: the build writes into the project's own
+   * cache directory, and although those files are not watched, a publisher
+   * watching a progress bar does not need a second thing competing for
+   * attention.
+   */
+  #startWatching(): void {
+    if (this.#watch !== null) return;
+    this.#watch = setInterval(() => {
+      if (!this.project || this.building) return;
+      void backend()
+        .changedFiles()
+        .then((changes) => (this.changes = changes))
+        // A failed comparison is not worth a fault banner — the next tick
+        // tries again, and the window is still showing a correct project.
+        .catch(() => {});
+    }, WATCH_INTERVAL);
   }
 
   async choose(): Promise<void> {
@@ -184,6 +239,8 @@ export class Session {
     this.fault = null;
     try {
       this.project = await backend().openProject(root);
+      this.changes = null;
+      this.#startWatching();
       // A new project's diagnostics are its own; the previous build's are not
       // about this folder and would be read as if they were.
       this.#forgetBuild();
@@ -203,6 +260,7 @@ export class Session {
     if (!this.project) return;
     try {
       this.project = await backend().setSetting(this.project.root, key, value);
+      this.changes = null;
       this.#clearFieldError(key);
     } catch (e: unknown) {
       // The file was not changed, so the form keeps showing the old value with
@@ -215,6 +273,7 @@ export class Session {
     if (!this.project) return;
     try {
       this.project = await backend().resetSetting(this.project.root, key);
+      this.changes = null;
       this.#clearFieldError(key);
     } catch (e: unknown) {
       this.fieldErrors = { ...this.fieldErrors, [key]: asDiagnostics(e) };
@@ -226,6 +285,7 @@ export class Session {
     const key = `${selector}.${property}`;
     try {
       this.project = await backend().setStyle(this.project.root, selector, property, value);
+      this.changes = null;
       this.styleErrors = without(this.styleErrors, key);
     } catch (e: unknown) {
       // Nothing was written, so the row keeps showing the value in force with
@@ -239,6 +299,7 @@ export class Session {
     const key = `${selector}.${property}`;
     try {
       this.project = await backend().resetStyle(this.project.root, selector, property);
+      this.changes = null;
       this.styleErrors = without(this.styleErrors, key);
     } catch (e: unknown) {
       this.styleErrors = { ...this.styleErrors, [key]: asDiagnostics(e) };

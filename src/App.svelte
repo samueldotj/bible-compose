@@ -33,7 +33,23 @@
 
   {#if session.project}
     <span class="project" title={session.project.root}>{folderName(session.project.root)}</span>
-    <button type="button" class="reload" onclick={() => void session.reopen()}>Reload</button>
+    <button
+      type="button"
+      class="reload"
+      class:stale={session.changedCount > 0}
+      onclick={() => void session.reopen()}
+    >
+      Reload
+    </button>
+    {#if session.changedCount > 0}
+      <!-- FUN-007 offers a reload rather than performing one: a reload throws
+           away nothing, but doing it under someone mid-edit would move the
+           form they were reading. -->
+      <span class="changed" title={session.changedNames.join(", ")}>
+        {session.changedCount}
+        {session.changedCount === 1 ? "file has" : "files have"} changed on disk
+      </span>
+    {/if}
   {/if}
 
   {#if session.versions}
@@ -153,6 +169,14 @@
   }
   .project {
     font-weight: 600;
+  }
+  .reload.stale {
+    border-color: #b8860b;
+    font-weight: 600;
+  }
+  .changed {
+    font-size: 0.78rem;
+    color: #8a6100;
   }
   .versions {
     margin-inline-start: auto;

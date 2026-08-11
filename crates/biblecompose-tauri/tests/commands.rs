@@ -416,3 +416,94 @@ fn an_inherited_property_names_a_selector_the_window_has() {
         );
     }
 }
+
+// -------------------------------------------------- P3.7: external edits
+
+/// STY-006: a style sheet edited outside the window is in force after a
+/// reload, with no restart.
+#[test]
+fn an_external_style_edit_is_reflected_after_reload() {
+    let (_dir, root) = project(None);
+
+    let before = project_at(&root);
+    let size_of = |p: &biblecompose_tauri_lib::WireProject| {
+        p.styles
+            .iter()
+            .find(|s| s.selector == "chapter")
+            .unwrap()
+            .properties
+            .iter()
+            .find(|p| p.name == "font_size")
+            .unwrap()
+            .clone()
+    };
+    assert_eq!(size_of(&before).value, "21pt");
+    assert_eq!(size_of(&before).origin, "builtin");
+
+    // Somebody edits the file in a text editor while the window is open.
+    std::fs::write(
+        root.join("styles.toml").as_std_path(),
+        "[chapter]\nfont_size = \"27pt\"\n",
+    )
+    .expect("write");
+
+    let after = size_of(&project_at(&root));
+    assert_eq!(after.value, "27pt");
+    assert_eq!(after.origin, "file");
+    assert_eq!(after.location.as_ref().unwrap().line, Some(2));
+}
+
+/// FUN-006: the same for settings, and for the books the settings select.
+#[test]
+fn an_external_settings_edit_is_reflected_after_reload() {
+    let (_dir, root) = project(None);
+    assert_eq!(project_at(&root).books.len(), 1);
+
+    std::fs::write(
+        root.join("biblecompose.toml").as_std_path(),
+        "schema_version = 1\n[books]\nexclude = [\"JHN\"]\n",
+    )
+    .expect("write");
+
+    assert!(
+        project_at(&root).books.is_empty(),
+        "the reloaded project must honour the file as written"
+    );
+}
+
+/// FUN-007: an externally edited book is noticed.
+#[test]
+fn an_external_book_edit_is_noticed() {
+    use biblecompose_app::Fingerprint;
+
+    let (_dir, root) = project(None);
+    let fingerprint = Fingerprint::take(&root);
+    assert!(fingerprint.changes(&root).is_empty());
+
+    std::fs::write(
+        root.join("JHN.usfm").as_std_path(),
+        "\\id JHN\n\\h John\n\\c 1\n\\p\n\\v 1 Edited elsewhere.\n",
+    )
+    .expect("write");
+
+    let changes = fingerprint.changes(&root);
+    assert_eq!(changes.modified.len(), 1, "{changes:?}");
+    assert!(changes.modified[0].ends_with("JHN.usfm"));
+}
+
+/// And the window's own writes are not external edits — otherwise every
+/// settings change would put a "reload?" notice on screen.
+#[test]
+fn the_windows_own_write_is_not_a_change() {
+    use biblecompose_app::Fingerprint;
+
+    let (_dir, root) = project(None);
+    write_setting(&root, "page.columns", "1").expect("writes");
+
+    // What the shell does after a write: take the fingerprint again.
+    let fingerprint = Fingerprint::take(&root);
+    assert!(
+        fingerprint.changes(&root).is_empty(),
+        "a file we just wrote is not somebody else's edit"
+    );
+}

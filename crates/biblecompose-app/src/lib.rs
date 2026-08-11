@@ -9,6 +9,7 @@ pub mod backend_input;
 pub mod project;
 pub mod publish;
 pub mod state;
+pub mod watch;
 
 use biblecompose_config::{ResolvedStyles, Settings};
 use biblecompose_diagnostics::{code, Diagnostic, Diagnostics};
@@ -21,6 +22,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 pub use publish::{publish, BuildDir};
 pub use state::{BuildEvent, BuildReporter, BuildState};
+pub use watch::{Changes, Fingerprint};
 
 /// The backend boundary, re-exported.
 ///

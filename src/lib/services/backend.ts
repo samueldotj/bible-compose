@@ -102,6 +102,13 @@ export interface Defaults {
   readonly styles: readonly Style[];
 }
 
+/** What has changed on disk since the window last read the project. */
+export interface Changes {
+  readonly modified: readonly string[];
+  readonly added: readonly string[];
+  readonly removed: readonly string[];
+}
+
 export interface Project {
   readonly root: string;
   readonly books: readonly BookSummary[];
@@ -144,6 +151,8 @@ export interface Backend {
   defaults(): Promise<Defaults>;
   /** Discover and validate a project folder without building it. */
   openProject(root: string): Promise<Project>;
+  /** What has changed on disk since then (FUN-007). */
+  changedFiles(): Promise<Changes>;
   /**
    * Write one setting. Rejects with the diagnostics the new value would cause,
    * having changed nothing.
@@ -173,6 +182,7 @@ export const tauriBackend: Backend = {
   },
   defaults: () => invoke("defaults"),
   openProject: (root) => invoke("open_project", { root }),
+  changedFiles: () => invoke("changed_files"),
   setSetting: (root, key, value) => invoke("set_setting", { root, key, value }),
   resetSetting: (root, key) => invoke("reset_setting", { root, key }),
   setStyle: (root, selector, property, value) =>

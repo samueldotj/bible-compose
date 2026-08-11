@@ -20,7 +20,9 @@
 
 use std::sync::{Arc, Mutex};
 
-use biblecompose_app::{project, BuildEvent, BuildReporter, BuildRequest, BuildState, CancelToken};
+use biblecompose_app::{
+    project, BuildEvent, BuildReporter, BuildRequest, BuildState, CancelToken, Fingerprint,
+};
 use biblecompose_config::style::PROPERTIES;
 use biblecompose_config::{
     cascade, edit, form, ConfigDocument, Origin, Settings, TomlFile, SCHEMA_VERSION,
@@ -170,6 +172,14 @@ pub struct WireDefaults {
     pub styles: Vec<WireStyle>,
 }
 
+/// What has changed on disk since the window last read the project.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct WireChanges {
+    pub modified: Vec<String>,
+    pub added: Vec<String>,
+    pub removed: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct WireVersions {
     pub app: String,
@@ -245,6 +255,9 @@ pub struct Session {
     /// The cancel token of the build in flight. `Some` is also what "a build
     /// is running" means, so the two cannot get out of step.
     running: Mutex<Option<CancelToken>>,
+    /// What the open project looked like on disk when it was last read
+    /// (FUN-007).
+    watched: Mutex<Option<(Utf8PathBuf, Fingerprint)>>,
 }
 
 // ---------------------------------------------------------------- commands
@@ -281,8 +294,49 @@ pub fn builtin_config() -> WireDefaults {
 }
 
 #[tauri::command]
-fn open_project(root: String) -> WireProject {
-    project_at(&Utf8PathBuf::from(root))
+fn open_project(session: tauri::State<'_, Arc<Session>>, root: String) -> WireProject {
+    observe(&session, &Utf8PathBuf::from(root))
+}
+
+/// Read the project and remember what it looked like.
+///
+/// Every command that touches the project goes through this, including the
+/// ones that *write* — a settings file we just saved is not an external
+/// change, and reporting it as one would put a "reload?" prompt on screen
+/// after every edit the window itself made.
+fn observe(session: &Session, root: &Utf8Path) -> WireProject {
+    let project = project_at(root);
+    *session
+        .watched
+        .lock()
+        .expect("the session lock is not poisoned") =
+        Some((root.to_owned(), Fingerprint::take(root)));
+    project
+}
+
+/// What has changed on disk since the project was last read (FUN-007).
+#[tauri::command]
+fn changed_files(session: tauri::State<'_, Arc<Session>>) -> WireChanges {
+    let watched = session
+        .watched
+        .lock()
+        .expect("the session lock is not poisoned");
+    let Some((root, fingerprint)) = watched.as_ref() else {
+        return WireChanges::default();
+    };
+
+    let changes = fingerprint.changes(root);
+    WireChanges {
+        modified: changes.modified.iter().map(name_of).collect(),
+        added: changes.added.iter().map(name_of).collect(),
+        removed: changes.removed.iter().map(name_of).collect(),
+    }
+}
+
+/// File names rather than paths: the window shows them in one line, and the
+/// project folder is already named above it.
+fn name_of(path: &Utf8PathBuf) -> String {
+    path.file_name().unwrap_or(path.as_str()).to_owned()
 }
 
 /// Write one setting and reopen the project (CFG-005).
@@ -293,11 +347,25 @@ fn open_project(root: String) -> WireProject {
 /// window describing the previous project.
 #[tauri::command]
 fn set_setting(
+    session: tauri::State<'_, Arc<Session>>,
     root: String,
     key: String,
     value: String,
 ) -> Result<WireProject, Vec<WireDiagnostic>> {
-    write_setting(&Utf8PathBuf::from(root), &key, &value)
+    let root = Utf8PathBuf::from(root);
+    let project = write_setting(&root, &key, &value)?;
+    forget_changes(&session, &root);
+    Ok(project)
+}
+
+/// Take a fresh fingerprint after the window has written something, so its own
+/// edit is not reported back to it as an external one.
+fn forget_changes(session: &Session, root: &Utf8Path) {
+    *session
+        .watched
+        .lock()
+        .expect("the session lock is not poisoned") =
+        Some((root.to_owned(), Fingerprint::take(root)));
 }
 
 /// [`set_setting`] without the Tauri binding.
@@ -327,8 +395,15 @@ pub fn write_setting(
 
 /// Remove one setting, so the built-in value applies again (CFG-007).
 #[tauri::command]
-fn reset_setting(root: String, key: String) -> Result<WireProject, Vec<WireDiagnostic>> {
-    clear_setting(&Utf8PathBuf::from(root), &key)
+fn reset_setting(
+    session: tauri::State<'_, Arc<Session>>,
+    root: String,
+    key: String,
+) -> Result<WireProject, Vec<WireDiagnostic>> {
+    let root = Utf8PathBuf::from(root);
+    let project = clear_setting(&root, &key)?;
+    forget_changes(&session, &root);
+    Ok(project)
 }
 
 /// [`reset_setting`] without the Tauri binding.
@@ -343,12 +418,16 @@ pub fn clear_setting(root: &Utf8Path, key: &str) -> Result<WireProject, Vec<Wire
 /// Set one style property (STY-005).
 #[tauri::command]
 fn set_style(
+    session: tauri::State<'_, Arc<Session>>,
     root: String,
     selector: String,
     property: String,
     value: String,
 ) -> Result<WireProject, Vec<WireDiagnostic>> {
-    write_style(&Utf8PathBuf::from(root), &selector, &property, &value)
+    let root = Utf8PathBuf::from(root);
+    let project = write_style(&root, &selector, &property, &value)?;
+    forget_changes(&session, &root);
+    Ok(project)
 }
 
 /// [`set_style`] without the Tauri binding.
@@ -384,11 +463,15 @@ pub fn write_style(
 /// Remove one style property, so the cascade decides it again (STY-005).
 #[tauri::command]
 fn reset_style(
+    session: tauri::State<'_, Arc<Session>>,
     root: String,
     selector: String,
     property: String,
 ) -> Result<WireProject, Vec<WireDiagnostic>> {
-    clear_style(&Utf8PathBuf::from(root), &selector, &property)
+    let root = Utf8PathBuf::from(root);
+    let project = clear_style(&root, &selector, &property)?;
+    forget_changes(&session, &root);
+    Ok(project)
 }
 
 /// [`reset_style`] without the Tauri binding.
@@ -739,6 +822,7 @@ pub fn run() {
             versions,
             defaults,
             open_project,
+            changed_files,
             set_setting,
             reset_setting,
             set_style,

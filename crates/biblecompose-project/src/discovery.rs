@@ -182,6 +182,21 @@ pub fn identify(source: &str) -> Option<BookCode> {
     None
 }
 
+/// Every Scripture file in the project, by the rules [`discover`] uses.
+///
+/// Public because change detection has to watch exactly the files discovery
+/// reads (FUN-007), and a second walk with its own idea of which extensions
+/// count and which directories to skip is a second idea of what the project
+/// *is*. Diagnostics from the walk are discarded here: this answers "what is
+/// on disk", and an unreadable directory is `discover`'s to report.
+pub fn scripture_files(root: &Utf8Path) -> Vec<Utf8PathBuf> {
+    let mut out = Vec::new();
+    let mut ignored = Diagnostics::new();
+    walk(root, &mut out, &mut ignored);
+    out.sort();
+    out
+}
+
 fn walk(dir: &Utf8Path, out: &mut Vec<Utf8PathBuf>, diagnostics: &mut Diagnostics) {
     let entries = match std::fs::read_dir(dir.as_std_path()) {
         Ok(e) => e,

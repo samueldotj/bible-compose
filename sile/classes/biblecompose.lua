@@ -49,6 +49,10 @@ local OPTIONS = {
    { key = "footsep", kind = "string", default = "3%ph" },
    -- Typography.
    { key = "fontfamily", kind = "string", default = "DejaVu Serif" },
+   -- A font the project ships is named by path, not by family (FONT-003).
+   -- fontconfig has never heard of it, and S0.5 confirmed SILE loads a face
+   -- by filename and subsets and embeds it correctly.
+   { key = "fontfile", kind = "string", default = "" },
    { key = "fontsize", kind = "string", default = "9.2pt" },
    { key = "leading", kind = "string", default = "11.2pt" },
    { key = "language", kind = "string", default = "en" },
@@ -468,7 +472,11 @@ function class:registerXmlCommands ()
       -- The body font comes from settings, not from `styles`. Everything else
       -- in `styles` is sized relative to it in spirit but not yet in code —
       -- P3.1 makes the rest overridable and can then express them as ratios.
-      SILE.call("font", { family = o.fontfamily, size = o.fontsize })
+      if o.fontfile ~= "" then
+         SILE.call("font", { filename = o.fontfile, size = o.fontsize })
+      else
+         SILE.call("font", { family = o.fontfamily, size = o.fontsize })
+      end
       SILE.settings:set("document.baselineskip", SILE.types.node.vglue(o.leading))
 
       -- Hyphenation is per-language in SILE, and the way to have none is a

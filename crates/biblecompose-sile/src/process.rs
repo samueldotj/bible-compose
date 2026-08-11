@@ -158,6 +158,16 @@ impl SileBackend {
 }
 
 impl Backend for SileBackend {
+    fn font_dirs(&self) -> Vec<Utf8PathBuf> {
+        // The unpacked runtime's own font directory, which is also the first
+        // entry in the fontconfig file it is given — so this is the same
+        // preference order the backend itself applies.
+        self.runtime
+            .as_ref()
+            .map(|rt| vec![rt.sile_path.join("fonts")])
+            .unwrap_or_default()
+    }
+
     fn version(&self) -> Result<BackendVersion, Diagnostic> {
         let out = self
             .command()

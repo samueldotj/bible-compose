@@ -20,6 +20,8 @@ biblecompose-project.workspace = true
 biblecompose-scripture.workspace = true
 biblecompose-sile.workspace = true
 camino.workspace = true
+fontdb.workspace = true
+ttf-parser.workspace = true
 serde.workspace = true
 
 [dev-dependencies]

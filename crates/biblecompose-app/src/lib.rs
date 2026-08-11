@@ -6,6 +6,7 @@
 //! gone because its stated job had exactly one caller.
 
 pub mod backend_input;
+pub mod font;
 pub mod project;
 pub mod publish;
 pub mod state;
@@ -177,6 +178,15 @@ pub fn build_with(
     // ---- validate ----------------------------------------------------------
     reporter.advance(BuildState::Validating);
     validate(doc, &mut diagnostics);
+    // ARCHITECTURE §7.1, before the backend rather than after: SILE will
+    // substitute a font that cannot draw the text and report success.
+    let body_font = font::preflight(
+        &request.settings.typography.font_family,
+        doc,
+        &request.project_root,
+        &backend.font_dirs(),
+        &mut diagnostics,
+    );
     publish::preflight_destination(&request.output, &mut diagnostics);
     for d in diagnostics.iter() {
         reporter.diagnostic(d.clone());
@@ -234,7 +244,7 @@ pub fn build_with(
         sile_path: request.sile_path.clone(),
         project_root: request.project_root.clone(),
         class: "biblecompose".to_owned(),
-        class_options: backend_input::class_options(&request.settings),
+        class_options: backend_input::class_options_with(&request.settings, body_font.as_ref()),
     };
 
     if cancel.is_cancelled() {
@@ -460,6 +470,14 @@ mod tests {
     }
 
     impl Backend for FakeBackend {
+        /// The vendored Latin face, standing in for the one the real bundle
+        /// carries. A fake backend that claimed no fonts would make every
+        /// build in this module block on FONT-001 — a suite testing what is
+        /// installed on the machine rather than what the code does.
+        fn font_dirs(&self) -> Vec<Utf8PathBuf> {
+            vec![biblecompose_testkit::repo_root().join("tests/fonts")]
+        }
+
         fn version(&self) -> Result<BackendVersion, Diagnostic> {
             Ok(BackendVersion {
                 raw: "SILE v0.15.13 (fake)".to_owned(),

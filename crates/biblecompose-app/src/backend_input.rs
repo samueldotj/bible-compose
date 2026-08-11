@@ -28,6 +28,18 @@ use biblecompose_sile::StyleRule;
 /// same build identical. Grouped the way the settings file is, so a reader
 /// comparing the two can follow.
 pub fn class_options(s: &Settings) -> Vec<(String, String)> {
+    class_options_with(s, None)
+}
+
+/// The same, told which file the body font resolved to.
+///
+/// A project font crosses as a path (FONT-003): fontconfig has never heard of
+/// it, so a family name would silently resolve to something else — which is
+/// the failure the coverage check exists to catch, reintroduced one step later.
+pub fn class_options_with(
+    s: &Settings,
+    body_font: Option<&crate::font::ResolvedFont>,
+) -> Vec<(String, String)> {
     let mut out: Vec<(String, String)> = Vec::new();
     let mut put = |key: &str, value: String| out.push((key.to_owned(), value));
 
@@ -44,6 +56,16 @@ pub fn class_options(s: &Settings) -> Vec<(String, String)> {
 
     // Typography.
     put("fontfamily", s.typography.font_family.to_string());
+    put(
+        "fontfile",
+        match body_font {
+            Some(font) if font.from_project => font.path.to_string(),
+            // A system font is named, so the backend picks the face for the
+            // weight and style each run asks for rather than being pinned to
+            // the one file this check happened to read.
+            _ => String::new(),
+        },
+    );
     put("fontsize", s.typography.font_size.to_sile());
     put("leading", s.typography.leading.to_sile());
     put("language", s.project.language.to_string());

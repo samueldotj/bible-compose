@@ -164,6 +164,18 @@ pub trait Backend {
         cancel: &CancelToken,
         report: &mut dyn FnMut(BackendEvent),
     ) -> Result<BackendOutcome, Diagnostic>;
+
+    /// Directories this backend will find fonts in, beyond the system's.
+    ///
+    /// Pre-flight has to check the face the backend will actually use
+    /// (ARCHITECTURE §7.1), and a bundled runtime carries fonts the operating
+    /// system has never heard of — including the built-in default. Without
+    /// this the check would report the shipped default as missing on every
+    /// machine, which is the worst kind of false alarm: one that is always
+    /// wrong and always shown.
+    fn font_dirs(&self) -> Vec<Utf8PathBuf> {
+        Vec::new()
+    }
 }
 
 /// Where the BibleCompose SILE class lives, relative to a repository root.

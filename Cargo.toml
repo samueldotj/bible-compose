@@ -34,6 +34,14 @@ serde_json = "1"
 camino = { version = "1", features = ["serde1"] }
 clap = { version = "4", features = ["derive"] }
 tempfile = "3"
+
+# Pre-flight's font half (ARCHITECTURE §7.1). `fontdb` finds the face a family
+# name resolves to; `ttf-parser` reads its character map. Both pure Rust, so
+# the check runs the same way on three platforms and needs nothing installed.
+# Default features off on fontdb: `fontconfig` would shell out to a parser we
+# do not need, and system enumeration is what its own backends already do.
+fontdb = { version = "0.24", default-features = false, features = ["fs", "memmap"] }
+ttf-parser = "0.25"
 toml = "0.8"
 
 # The configuration layer's single parse (ARCHITECTURE §6, CFG-003). Chosen

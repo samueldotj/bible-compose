@@ -18,6 +18,10 @@ use crate::settings::Settings;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
     Text,
+    /// A font family name. Text as far as the file is concerned, but a form
+    /// can offer the ones that exist rather than asking a person to spell one,
+    /// and this is where it learns that it may.
+    Font,
     /// A length with a unit — `"0.55in"`.
     Length,
     /// `"6x9in"`, or a named size.
@@ -34,6 +38,7 @@ impl Kind {
     pub const fn as_str(self) -> &'static str {
         match self {
             Kind::Text => "text",
+            Kind::Font => "font",
             Kind::Length => "length",
             Kind::PageSize => "page_size",
             Kind::Integer => "integer",
@@ -152,7 +157,7 @@ impl Settings {
 
         push(
             "typography.font_family",
-            Text,
+            Font,
             self.typography.font_family.to_string(),
         );
         push(

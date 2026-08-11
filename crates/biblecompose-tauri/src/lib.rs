@@ -18,6 +18,7 @@
 //! runs commands off the UI thread, because the frontend would be waiting on
 //! its promise with nothing to show.
 
+use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
 
 use biblecompose_app::{
@@ -120,6 +121,18 @@ pub struct WireSetting {
     /// ADR-005 refuses to invent a location.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub location: Option<WireLocation>,
+}
+
+/// One font the picker offers (GUI-003).
+#[derive(Debug, Clone, Serialize)]
+pub struct WireFont {
+    pub family: String,
+    /// `project`, `backend`, or `system` — where a build would find it.
+    pub source: &'static str,
+    /// How many of the open Scripture's distinct characters it cannot draw.
+    /// Absent when there is no project open to check it against.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub missing: Option<usize>,
 }
 
 /// One property of one style, with where its value was decided (STY-008).
@@ -258,6 +271,10 @@ pub struct Session {
     /// What the open project looked like on disk when it was last read
     /// (FUN-007).
     watched: Mutex<Option<(Utf8PathBuf, Fingerprint)>>,
+    /// The distinct characters the open Scripture sets, kept so the font
+    /// picker can check three hundred families against them without reading
+    /// the books again (GUI-003).
+    characters: Mutex<BTreeSet<char>>,
 }
 
 // ---------------------------------------------------------------- commands
@@ -305,13 +322,49 @@ fn open_project(session: tauri::State<'_, Arc<Session>>, root: String) -> WirePr
 /// change, and reporting it as one would put a "reload?" prompt on screen
 /// after every edit the window itself made.
 fn observe(session: &Session, root: &Utf8Path) -> WireProject {
-    let project = project_at(root);
+    let opened = project::open(root);
+    // From this open rather than a second one: the picker's answer must be
+    // about the books the window is showing.
+    *session
+        .characters
+        .lock()
+        .expect("the session lock is not poisoned") =
+        biblecompose_app::font::characters(&opened.document);
     *session
         .watched
         .lock()
         .expect("the session lock is not poisoned") =
         Some((root.to_owned(), Fingerprint::take(root)));
-    project
+    wire_project(root, opened)
+}
+
+/// Every font a build could resolve, and whether it can set this Scripture
+/// (GUI-003).
+///
+/// The coverage count is the reason this is not the operating system's font
+/// dialog: choosing a font that cannot draw the book is the mistake FONT-002
+/// exists to catch, and a picker that allows it silently has simply moved the
+/// error later.
+#[tauri::command]
+fn fonts(session: tauri::State<'_, Arc<Session>>, root: Option<String>) -> Vec<WireFont> {
+    let characters = session
+        .characters
+        .lock()
+        .expect("the session lock is not poisoned")
+        .clone();
+    // Without a project there is still a list worth showing — the built-in
+    // settings are editable before a folder is open — it just cannot say
+    // which entries cover anything.
+    let root = root.map(Utf8PathBuf::from).unwrap_or_default();
+
+    biblecompose_app::fonts(&root, &characters)
+        .into_iter()
+        .map(|c| WireFont {
+            family: c.family,
+            source: c.source.as_str(),
+            missing: c.missing,
+        })
+        .collect()
 }
 
 /// What has changed on disk since the project was last read (FUN-007).
@@ -697,8 +750,15 @@ fn wire_style_properties(resolved: &biblecompose_config::ResolvedStyle) -> Vec<W
 
 /// Everything the window shows about a project folder.
 pub fn project_at(root: &Utf8Path) -> WireProject {
-    let opened = project::open(root);
+    wire_project(root, project::open(root))
+}
 
+/// The wire form of a project already opened.
+///
+/// Split out because [`observe`] needs the [`project::Opened`] itself as well
+/// as its wire form, and opening the folder twice to get both would parse
+/// every book twice.
+fn wire_project(root: &Utf8Path, opened: project::Opened) -> WireProject {
     let books = opened
         .document
         .books
@@ -827,6 +887,7 @@ pub fn run() {
             reset_setting,
             set_style,
             reset_style,
+            fonts,
             start_build,
             cancel_build,
             is_building,

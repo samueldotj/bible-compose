@@ -229,3 +229,79 @@ fn the_script_decides_rather_than_the_tag() {
     let mut d = Diagnostics::new();
     assert!(!hyphenation::decide("en", true, &doc, &mut d).enabled);
 }
+
+// ------------------------------------------------------------- GUI-003
+
+/// The picker's list agrees with what a build would resolve, and answers the
+/// question the pre-flight would otherwise answer too late.
+#[test]
+fn the_picker_says_which_fonts_can_set_the_scripture() {
+    use biblecompose_app::font::{characters, choices, Source};
+
+    let (_dir, doc) = tamil_scripture();
+    let characters = characters(&doc);
+    assert!(characters.len() > 50, "a real book, not a fixture");
+
+    // Both vendored directories, so the list has one font that covers the
+    // book and one that does not — and neither depends on this machine.
+    let dirs = [latin(), tamil()].concat();
+    let list = choices(Utf8Path::new("."), &dirs, &characters);
+
+    let latin_face = list
+        .iter()
+        .find(|c| c.family == "DejaVu Serif")
+        .expect("the Latin face is offered");
+    let tamil_face = list
+        .iter()
+        .find(|c| c.family == "Noto Serif Tamil")
+        .expect("the Tamil face is offered");
+
+    assert_eq!(tamil_face.missing, Some(0), "it can set the book");
+
+    // Exactly the Tamil letters, and not the punctuation and digits it shares
+    // with Latin — a count, not a guess at one.
+    let tamil_letters = characters
+        .iter()
+        .filter(|c| ('\u{0B80}'..='\u{0BFF}').contains(c))
+        .count();
+    assert!(tamil_letters > 30, "a real Tamil book: {tamil_letters}");
+    assert_eq!(
+        latin_face.missing,
+        Some(tamil_letters),
+        "the Latin face is missing the script and nothing else"
+    );
+
+    // Both came from the backend's directories rather than the project's,
+    // which is what decides whether they travel with the book.
+    assert_eq!(latin_face.source, Source::Backend);
+    assert_eq!(tamil_face.source, Source::Backend);
+}
+
+/// A font the project ships is offered first and marked as the project's, the
+/// same way `resolve` prefers it (FONT-003).
+#[test]
+fn a_project_font_is_offered_first() {
+    use biblecompose_app::font::{choices, Source};
+
+    let dir = tempfile::tempdir().expect("temp dir");
+    let root = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("UTF-8 path");
+    let fonts = root.join(font::PROJECT_FONTS);
+    std::fs::create_dir_all(fonts.as_std_path()).expect("mkdir");
+    std::fs::copy(
+        repo_root()
+            .join("spike/assets/fonts/NotoSerifTamil-Regular.ttf")
+            .as_std_path(),
+        fonts.join("NotoSerifTamil-Regular.ttf").as_std_path(),
+    )
+    .expect("copy");
+
+    let list = choices(&root, &latin(), &Default::default());
+    let first = list.first().expect("at least the project's own");
+
+    assert_eq!(first.source, Source::Project);
+    assert_eq!(first.family, "Noto Serif Tamil");
+    assert_eq!(
+        first.missing, None,
+        "no Scripture to check against is not the same as covering it"
+    );
+}

@@ -126,6 +126,137 @@ fn lookup(family: &str, dir: Option<&Utf8Path>, system: bool) -> Option<Resolved
     }
 }
 
+/// Where a font came from, which is the first thing a picker has to say about
+/// it: a family the project ships travels with the book, and one that is
+/// merely installed here does not.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Source {
+    Project,
+    Backend,
+    System,
+}
+
+impl Source {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Source::Project => "project",
+            Source::Backend => "backend",
+            Source::System => "system",
+        }
+    }
+}
+
+/// One font a person can pick, and whether it can set the book they have open.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Choice {
+    pub family: String,
+    pub source: Source,
+    /// How many of the Scripture's distinct characters this family cannot
+    /// draw. `Some(0)` means it can set the book; `None` means there was no
+    /// Scripture to check it against, or the file could not be read.
+    pub missing: Option<usize>,
+}
+
+/// The distinct characters a document sets.
+///
+/// Separated from [`codepoints`] because a picker wants to check three hundred
+/// families against one book, and re-walking the Scripture for each of them
+/// would turn opening a dialog into a build.
+pub fn characters(doc: &ScriptureDocument) -> std::collections::BTreeSet<char> {
+    codepoints(doc).into_keys().collect()
+}
+
+/// Every font family a build could resolve, in the order resolution would find
+/// them, each checked against the Scripture (FONT-002).
+///
+/// The check is the reason this exists rather than an operating-system font
+/// dialog. A publisher setting Tamil is choosing from a list of which perhaps
+/// four entries can draw the book, and the platform picker will happily hand
+/// back one of the other three hundred — which is the failure the pre-flight
+/// then has to explain. Better to answer the question in the list.
+pub fn choices(
+    project_root: &Utf8Path,
+    backend_dirs: &[Utf8PathBuf],
+    characters: &std::collections::BTreeSet<char>,
+) -> Vec<Choice> {
+    let mut db = fontdb::Database::new();
+
+    // Loaded in resolution order and recorded as first seen, so a family that
+    // exists in two places is attributed to the one a build would use.
+    let mut faces: BTreeMap<String, (Source, fontdb::ID)> = BTreeMap::new();
+    let mut sweep = |db: &fontdb::Database, source: Source| {
+        for face in db.faces() {
+            // The first name only. `families` also carries the localized ones,
+            // and a list showing a face twice under two spellings of the same
+            // family is a list that looks broken. Either name still resolves.
+            if let Some((name, _)) = face.families.first() {
+                faces
+                    .entry(name.clone())
+                    .or_insert_with(|| (source, face.id));
+            }
+        }
+    };
+
+    let project_dir = project_root.join(PROJECT_FONTS);
+    if project_dir.exists() {
+        db.load_fonts_dir(project_dir.as_std_path());
+        sweep(&db, Source::Project);
+    }
+    for dir in backend_dirs {
+        if dir.exists() {
+            db.load_fonts_dir(dir.as_std_path());
+        }
+    }
+    sweep(&db, Source::Backend);
+    db.load_system_fonts();
+    sweep(&db, Source::System);
+
+    let mut out: Vec<Choice> = faces
+        .into_iter()
+        .map(|(family, (source, id))| Choice {
+            family,
+            source,
+            missing: if characters.is_empty() {
+                None
+            } else {
+                missing_from(&db, id, characters)
+            },
+        })
+        .collect();
+
+    // Alphabetical, and not by coverage: a list that reorders itself when a
+    // different book is open is a list nobody can learn. The count is beside
+    // each name and the frontend can filter on it.
+    out.sort_by(|a, b| {
+        a.source
+            .cmp(&b.source)
+            .then_with(|| a.family.to_lowercase().cmp(&b.family.to_lowercase()))
+    });
+    out
+}
+
+/// How many of `characters` one face cannot draw.
+///
+/// Through `with_face_data` rather than reading the path, because a family can
+/// come from a collection or from memory and this is the only accessor that
+/// covers both.
+fn missing_from(
+    db: &fontdb::Database,
+    id: fontdb::ID,
+    characters: &std::collections::BTreeSet<char>,
+) -> Option<usize> {
+    db.with_face_data(id, |data, index| {
+        let face = ttf_parser::Face::parse(data, index).ok()?;
+        Some(
+            characters
+                .iter()
+                .filter(|c| face.glyph_index(**c).is_none())
+                .count(),
+        )
+    })
+    .flatten()
+}
+
 /// Every distinct character the document sets, and where each first appears.
 ///
 /// Distinct rather than every occurrence: a Bible is millions of characters

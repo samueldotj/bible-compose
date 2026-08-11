@@ -12,6 +12,7 @@
    * state to lose that way, and CFG-006's write-back is cheap enough that
    * batching buys nothing.
    */
+  import FontPicker from "./FontPicker.svelte";
   import { GROUPS, labelFor, PLACEHOLDERS } from "../lib/labels";
   import { session } from "../lib/session.svelte";
   import type { Setting } from "../lib/services/backend";
@@ -52,6 +53,9 @@
     }
     return groups;
   });
+
+  /** Which font setting has the picker open, if any. */
+  let picking = $state<string | null>(null);
 
   function commit(setting: Setting, value: string): void {
     if (value === setting.value) return;
@@ -99,6 +103,31 @@
                 disabled={!session.editable}
                 onchange={(e) => commit(setting, e.currentTarget.value)}
               />
+            {:else if setting.kind === "font"}
+              <!--
+                Typed as well as picked. The field stays editable because a
+                publisher may know the exact name of a font they are about to
+                install, and refusing to accept it until then would be the
+                dialog getting in the way rather than helping.
+              -->
+              <span class="font-field">
+                <input
+                  id={`set-${setting.key}`}
+                  type="text"
+                  value={setting.value}
+                  spellcheck="false"
+                  disabled={!session.editable}
+                  onchange={(e) => commit(setting, e.currentTarget.value)}
+                />
+                <button type="button" onclick={() => (picking = setting.key)}>Choose…</button>
+              </span>
+              {#if picking === setting.key}
+                <FontPicker
+                  current={setting.value}
+                  onchoose={(family) => commit(setting, family)}
+                  onclose={() => (picking = null)}
+                />
+              {/if}
             {:else}
               <input
                 id={`set-${setting.key}`}
@@ -173,6 +202,23 @@
   }
   input[type="checkbox"] {
     justify-self: start;
+  }
+  .font-field {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+  }
+  .font-field button {
+    flex: none;
+    padding-block: 0.2rem;
+    padding-inline: 0.5rem;
+    border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
   }
   .reset {
     font-size: 0.75rem;

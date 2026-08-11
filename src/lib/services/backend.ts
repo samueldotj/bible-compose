@@ -59,6 +59,8 @@ export interface BookSummary {
 /** Which control a setting needs, decided by the schema and not by the form. */
 export type SettingKind =
   | "text"
+  /** A font family, which the window offers as a list rather than a spelling. */
+  | "font"
   | "length"
   | "page_size"
   | "integer"
@@ -73,6 +75,20 @@ export interface Setting {
   /** The project file set it, so it can be reset (CFG-007). */
   readonly overridden: boolean;
   readonly location?: SourceLocation;
+}
+
+/** Where a build would find a font, which decides whether it travels with the book. */
+export type FontSource = "project" | "backend" | "system";
+
+/** One font the picker offers (GUI-003). */
+export interface FontChoice {
+  readonly family: string;
+  readonly source: FontSource;
+  /**
+   * How many of the open Scripture's distinct characters it cannot draw.
+   * Absent when no project is open to check against — not the same as zero.
+   */
+  readonly missing?: number;
 }
 
 export type StyleOrigin = "builtin" | "file" | "inherited";
@@ -164,6 +180,11 @@ export interface Backend {
   setStyle(root: string, selector: string, property: string, value: string): Promise<Project>;
   /** Remove one, so the cascade decides it again. */
   resetStyle(root: string, selector: string, property: string): Promise<Project>;
+  /**
+   * Every font a build could resolve, each with how much of the open
+   * Scripture it cannot draw (GUI-003).
+   */
+  fonts(root: string | null): Promise<readonly FontChoice[]>;
   /** Returns as soon as the build is handed to a thread (GUI-012). */
   startBuild(root: string): Promise<void>;
   /** Ask the running build to stop. `false` if there was not one. */
@@ -189,6 +210,7 @@ export const tauriBackend: Backend = {
     invoke("set_style", { root, selector, property, value }),
   resetStyle: (root, selector, property) =>
     invoke("reset_style", { root, selector, property }),
+  fonts: (root) => invoke("fonts", { root }),
   startBuild: (root) => invoke("start_build", { root }),
   cancelBuild: () => invoke("cancel_build"),
   onBuildEvent: async (handler) => {

@@ -64,6 +64,25 @@ pub fn backend_version() -> Result<String, Diagnostic> {
     backend.version().map(|v| v.raw)
 }
 
+/// Every font a build could resolve, checked against the Scripture (GUI-003).
+///
+/// Here rather than in the shell for the same reason [`build`] is: which
+/// directories count as the backend's is this crate's business, and a picker
+/// that listed a different set from the one the build resolves against would
+/// offer fonts the build then could not find.
+///
+/// A missing backend is not an error. Its bundled faces are then absent from
+/// the list, which is true — nothing can use them either.
+pub fn fonts(
+    project_root: &Utf8Path,
+    characters: &std::collections::BTreeSet<char>,
+) -> Vec<font::Choice> {
+    let dirs = SileBackend::discover()
+        .map(|b| b.font_dirs())
+        .unwrap_or_default();
+    font::choices(project_root, &dirs, characters)
+}
+
 /// Run a build against the backend this installation ships.
 ///
 /// Callers never name a backend. Which one is used, and how it is found, is

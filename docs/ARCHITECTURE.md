@@ -250,6 +250,8 @@ resolved font files
 coverage report → Error with an example reference for each gap
 ```
 
+The same machinery runs the other way for the settings form. Rather than a spelling of a family name, or the operating system's font dialog — which offers every face installed here, knows nothing about the ones the project or the backend ship, and has no opinion about whether any of them can draw the book — the window asks this crate for the list a build would resolve against, in resolution order, each already checked against the codepoint set above. A publisher setting Tamil sees which four of three hundred families can set it, and which ones travel with the book. A picker that let them choose one of the other two hundred and ninety-six would only be moving the coverage error later.
+
 Two details make it work in practice. Project-local fonts must be usable without installing them into the operating system (FONT-003), so the emitter refers to fonts by file path for anything under `assets/fonts/`, and only by family name for system fonts — S0.5 confirmed SILE loads a face by path that fontconfig has never heard of, and subsets and embeds it correctly. And the codepoint set is computed from the normalized model, per style, so a font used only for footnotes is checked only against footnote text — otherwise a project with a Latin-only note font and Tamil body text reports a false failure.
 
 ### 7.2 Hyphenation

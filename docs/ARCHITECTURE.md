@@ -274,7 +274,19 @@ So the defect is narrower and sharper than a missing-pattern table would address
 
 The script is read from the text rather than from the language tag, because the text is what gets set and a tag can be absent, wrong, or describe a book that is mostly in another script. Where the script does not hyphenate, the backend is told not to, and a project that asked for hyphenation is told why it is off — nothing is wrong with the project, but a setting that did nothing has to be mentioned. The language tag itself is passed through unchanged: it drives more than hyphenation, and rewriting it to encode a hyphenation decision would hide that decision in a value something else reads.
 
-### 7.4 Geometry and assets
+### 7.4 When a line cannot be broken
+
+Turning hyphenation off for a script that does not hyphenate removes the only flexibility inside a word, and the backend's answer to a paragraph it cannot break is an **overfull line** — text set past the measure, off the column and, in a narrow two-column Bible, off the paper.
+
+Measured on one book of Tamil in two columns: **20.6% of lines ended outside the column, the worst 113pt past it, on a page 432pt wide.** The same page in English never overflowed by a point, and the frames measured exactly the width they were meant to be — which is what makes this a breakpoint problem rather than a frame problem. Latin offers a break every five or six characters; Tamil offers one per word and the words are long.
+
+The fix is TeX's, and it is the reason TeX has it: a last-resort stretch the breaker may spend **only** on a paragraph that would otherwise fail. A quarter of the measure, because the measure is what it has to rescue — the same absolute stretch is nothing across a single-column page and a disfigurement in a narrow column. Latin setting is unchanged byte for byte, because the breaker never needed it.
+
+Whole-Bible result: **1 line of 114,630 outside the text block**, and that one is a running head on page one, which is laid out before the masters exist ([spike F-8](../spike/NOTES.md)).
+
+The cost is honest rather than free — that Bible went from 1511 pages to 1801. The 1511 was never real; it was text that had run off the page.
+
+### 7.5 Geometry and assets
 
 Resolved frame geometry is validated before emission — a frame whose computed height is zero or negative is a blocking diagnostic naming the margin settings that produced it, because user-supplied margins make that a reachable state and the backend only warns.
 

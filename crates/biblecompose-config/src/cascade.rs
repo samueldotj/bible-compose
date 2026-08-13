@@ -228,7 +228,7 @@ fn take(into: &mut ResolvedStyle, from: &Style, origin: impl Fn(&'static str) ->
         ($($field:ident = $name:literal),* $(,)?) => {
             $(
                 if into.style.$field.is_none() {
-                    if let Some(value) = from.$field {
+                    if let Some(value) = from.$field.clone() {
                         into.style.$field = Some(value);
                         into.provenance.record($name, origin($name));
                     }
@@ -244,6 +244,7 @@ fn take(into: &mut ResolvedStyle, from: &Style, origin: impl Fn(&'static str) ->
     }
 
     cascade! {
+        font_family = "font_family",
         font_size = "font_size",
         weight = "weight",
         italic = "italic",
@@ -253,6 +254,7 @@ fn take(into: &mut ResolvedStyle, from: &Style, origin: impl Fn(&'static str) ->
         indent = "indent",
         raise = "raise",
         align = "align",
+        color = "color",
     }
 }
 

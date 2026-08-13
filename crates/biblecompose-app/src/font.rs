@@ -391,6 +391,79 @@ pub fn preflight(
     }
 }
 
+/// Resolve every font a style names, and report the ones nobody has.
+///
+/// A style that names a font the machine does not have is the same failure as
+/// a body font nobody has (FONT-001), except that it used to arrive as
+/// `attempt to index local 'file' (a nil value)` from inside the shaper.
+/// Resolved here so it arrives as a sentence naming the style and the font.
+///
+/// Coverage is deliberately *not* checked per style yet. Doing it honestly
+/// means the codepoint set of the text each selector actually applies to, and
+/// that is a walk of the model this does not do — so a style font that
+/// resolves but cannot draw its own text still reaches the page. That is
+/// P5.2's remaining half, and it is now unblocked rather than done.
+pub fn preflight_styles(
+    styles: &biblecompose_config::ResolvedStyles,
+    project_root: &Utf8Path,
+    backend_dirs: &[Utf8PathBuf],
+    diagnostics: &mut Diagnostics,
+) -> BTreeMap<String, ResolvedFont> {
+    // Which selectors asked for each family, so one missing font is one
+    // diagnostic however many styles named it.
+    let mut wanted: BTreeMap<&str, Vec<String>> = BTreeMap::new();
+    for (selector, resolved) in styles.iter() {
+        if let Some(family) = resolved.style.font_family.as_deref() {
+            wanted.entry(family).or_default().push(selector.key());
+        }
+    }
+
+    let mut out = BTreeMap::new();
+    for (family, selectors) in wanted {
+        match resolve(family, project_root, backend_dirs) {
+            Some(found) => {
+                out.insert(family.to_owned(), found);
+            }
+            None => diagnostics.push(
+                Diagnostic::error(
+                    code::UNRESOLVED,
+                    format!(
+                        "no font called {family:?} is installed, and none is in the project — {} {} for it",
+                        list(&selectors),
+                        if selectors.len() == 1 { "asks" } else { "ask" },
+                    ),
+                )
+                .help(format!(
+                    "install it, choose another in the style editor, or put the font file in {PROJECT_FONTS}/"
+                )),
+            ),
+        }
+    }
+    out
+}
+
+/// The selectors that asked, read aloud.
+///
+/// Capped at three and then counted. Setting a font on `heading.s1` gives it
+/// to every deeper heading by inheritance, so one edit can produce a dozen
+/// selectors — and a diagnostic that lists all twelve buries the two facts
+/// that matter, which are the font's name and that nobody has it.
+fn list(items: &[String]) -> String {
+    const SHOWN: usize = 3;
+    let named: Vec<String> = items.iter().take(SHOWN).map(|s| format!("`{s}`")).collect();
+    let rest = items.len().saturating_sub(SHOWN);
+
+    match (named.as_slice(), rest) {
+        ([], _) => String::new(),
+        ([one], 0) => one.clone(),
+        (some, 0) => match some.split_last() {
+            Some((last, first)) => format!("{} and {last}", first.join(", ")),
+            None => String::new(),
+        },
+        (some, more) => format!("{} and {more} more", some.join(", ")),
+    }
+}
+
 /// A character, named so a person can find it.
 ///
 /// A combining mark has no standalone glyph and debug-formats as an escape,

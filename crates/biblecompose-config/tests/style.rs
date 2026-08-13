@@ -250,6 +250,8 @@ fn every_property_the_schema_lists_can_actually_be_set() {
             "weight" => "weight = 700\n".to_owned(),
             "italic" | "smallcaps" => format!("{p} = true\n"),
             "align" => "align = \"end\"\n".to_owned(),
+            "color" => "color = \"#c81414\"\n".to_owned(),
+            "font_family" => "font_family = \"Some Serif\"\n".to_owned(),
             _ => format!("{p} = \"3pt\"\n"),
         })
         .collect();
@@ -261,6 +263,11 @@ fn every_property_the_schema_lists_can_actually_be_set() {
     assert!(!chapter.is_empty());
     assert_eq!(chapter.align, Some(Align::End));
     assert_eq!(chapter.italic, Some(true));
+    assert_eq!(chapter.font_family.as_deref(), Some("Some Serif"));
+    assert_eq!(
+        chapter.color.map(|c| c.to_string()).as_deref(),
+        Some("#c81414")
+    );
 }
 
 // ---------------------------------------------------------------- cascade
@@ -274,7 +281,7 @@ fn overlaying_changes_only_what_the_other_names() {
         ..Style::default()
     };
 
-    let result = base.overlaid_with(over);
+    let result = base.clone().overlaid_with(over);
     assert_eq!(result.weight, Some(400), "named, so changed");
     assert_eq!(result.font_size, base.font_size, "unnamed, so untouched");
 }
@@ -282,5 +289,5 @@ fn overlaying_changes_only_what_the_other_names() {
 #[test]
 fn overlaying_nothing_changes_nothing() {
     let base = style::builtin().get(StyleSelector::Verse);
-    assert_eq!(base.overlaid_with(Style::default()), base);
+    assert_eq!(base.clone().overlaid_with(Style::default()), base);
 }

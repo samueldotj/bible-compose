@@ -15,7 +15,7 @@
  * by hand and the cascade will honour it.
  */
 
-export type PropertyKind = "length" | "integer" | "boolean" | "align";
+export type PropertyKind = "length" | "integer" | "boolean" | "align" | "font" | "color";
 
 export interface PropertyRow {
   readonly name: string;
@@ -35,6 +35,7 @@ export interface StyleGroup {
   readonly rows: readonly StyleRow[];
 }
 
+const FACE: PropertyRow = { name: "font_family", label: "Font", kind: "font" };
 const SIZE: PropertyRow = { name: "font_size", label: "Size", kind: "length" };
 const WEIGHT: PropertyRow = { name: "weight", label: "Weight", kind: "integer" };
 const ITALIC: PropertyRow = { name: "italic", label: "Italic", kind: "boolean" };
@@ -44,9 +45,13 @@ const BELOW: PropertyRow = { name: "space_below", label: "Space below", kind: "l
 const INDENT: PropertyRow = { name: "indent", label: "Indent", kind: "length" };
 const RAISE: PropertyRow = { name: "raise", label: "Raise", kind: "length" };
 const ALIGN: PropertyRow = { name: "align", label: "Alignment", kind: "align" };
+const COLOR: PropertyRow = { name: "color", label: "Colour", kind: "color" };
 
-const HEADING = [SIZE, WEIGHT, ITALIC, ABOVE, BELOW];
-const CHARACTER = [WEIGHT, ITALIC, SMALLCAPS];
+// Alignment was missing here while the schema, the cascade and the class all
+// supported it, so a centred section heading — one of the most ordinary
+// decisions in Bible design — could only be made by editing TOML.
+const HEADING = [FACE, SIZE, WEIGHT, ITALIC, ALIGN, ABOVE, BELOW, COLOR];
+const CHARACTER = [WEIGHT, ITALIC, SMALLCAPS, COLOR];
 
 export const ALIGNMENTS = ["start", "center", "end", "justify"] as const;
 
@@ -61,6 +66,7 @@ export const ALIGNMENTS = ["start", "center", "end", "justify"] as const;
  * whole set, in the order the schema lists them.
  */
 export const ALL_PROPERTIES: readonly PropertyRow[] = [
+  FACE,
   SIZE,
   WEIGHT,
   ITALIC,
@@ -70,6 +76,7 @@ export const ALL_PROPERTIES: readonly PropertyRow[] = [
   INDENT,
   RAISE,
   ALIGN,
+  COLOR,
 ];
 
 export const STYLE_GROUPS: readonly StyleGroup[] = [
@@ -109,16 +116,16 @@ export const STYLE_GROUPS: readonly StyleGroup[] = [
     id: "numbers",
     title: "Chapter and verse",
     rows: [
-      { selector: "chapter", label: "Chapter number", properties: [SIZE, WEIGHT, ITALIC] },
-      { selector: "verse", label: "Verse number", properties: [SIZE, WEIGHT, RAISE] },
+      { selector: "chapter", label: "Chapter number", properties: [FACE, SIZE, WEIGHT, ITALIC, COLOR] },
+      { selector: "verse", label: "Verse number", properties: [SIZE, WEIGHT, RAISE, COLOR] },
     ],
   },
   {
     id: "notes",
     title: "Notes",
     rows: [
-      { selector: "note.f", label: "Footnote", properties: [SIZE, ITALIC] },
-      { selector: "reference", label: "Cross-reference", properties: [SIZE, ITALIC] },
+      { selector: "note.f", label: "Footnote", properties: [FACE, SIZE, ITALIC] },
+      { selector: "reference", label: "Cross-reference", properties: [FACE, SIZE, ITALIC] },
     ],
   },
   {

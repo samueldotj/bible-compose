@@ -66,7 +66,10 @@ fn resolve(source: &str) -> ResolvedStyles {
 
 /// A value for every property, distinguishable from the built-in one.
 fn every_property() -> String {
-    "font_size = \"13.5pt\"\n\
+    // A font nobody has: this fixture never resolves a face, and naming a real
+    // one would make the test depend on the machine running it.
+    "font_family = \"Matrix Fixture Serif\"\n\
+     font_size = \"13.5pt\"\n\
      weight = 500\n\
      italic = true\n\
      smallcaps = true\n\
@@ -74,7 +77,8 @@ fn every_property() -> String {
      space_below = \"2.5pt\"\n\
      indent = \"7.5pt\"\n\
      raise = \"1.5pt\"\n\
-     align = \"center\"\n"
+     align = \"center\"\n\
+     color = \"#c81414\"\n"
         .to_owned()
 }
 

@@ -18,6 +18,8 @@
 //!
 //! [ADR-005]: ../../../docs/adr/005-provenance.md
 
+use std::collections::BTreeMap;
+
 use biblecompose_config::style::PROPERTIES;
 use biblecompose_config::{ResolvedStyles, Settings};
 use biblecompose_sile::StyleRule;
@@ -113,9 +115,29 @@ fn flag(on: bool) -> String {
 /// publisher writes and the table the class reads, and therefore nothing for
 /// the two to disagree about.
 pub fn style_rules(styles: &ResolvedStyles) -> Vec<StyleRule> {
+    style_rules_with(styles, &BTreeMap::new())
+}
+
+/// The same, told which file each font a style names resolved to.
+///
+/// A style's font crosses as a path when the project ships it, for exactly the
+/// reason the body font does (FONT-003): fontconfig has never heard of a file
+/// in `assets/fonts/`, so a family name would resolve to something else or to
+/// nothing at all — and "nothing at all" is a nil font handed to the shaper,
+/// which dies several frames from anything that names a font.
+///
+/// Two functions rather than one with an always-empty argument, so [`emit`]
+/// stays hermetic: the golden path must not depend on which fonts the machine
+/// running the test happens to have.
+///
+/// [`emit`]: crate::emit
+pub fn style_rules_with(
+    styles: &ResolvedStyles,
+    fonts: &BTreeMap<String, crate::font::ResolvedFont>,
+) -> Vec<StyleRule> {
     let mut out = Vec::new();
     for (selector, resolved) in styles.iter() {
-        let properties = properties_of(resolved);
+        let properties = properties_of(resolved, fonts);
         if properties.is_empty() {
             continue;
         }
@@ -132,7 +154,10 @@ pub fn style_rules(styles: &ResolvedStyles) -> Vec<StyleRule> {
 /// Lengths cross as points, for the same reason the class options do: the text
 /// has to be a function of the value alone, or two runs that resolved the same
 /// page by different routes would produce different bytes (DET-001).
-fn properties_of(resolved: &biblecompose_config::ResolvedStyle) -> Vec<(String, String)> {
+fn properties_of(
+    resolved: &biblecompose_config::ResolvedStyle,
+    fonts: &BTreeMap<String, crate::font::ResolvedFont>,
+) -> Vec<(String, String)> {
     let s = &resolved.style;
     let mut out: Vec<(String, String)> = Vec::new();
     let mut put = |name: &str, value: Option<String>| {
@@ -141,6 +166,15 @@ fn properties_of(resolved: &biblecompose_config::ResolvedStyle) -> Vec<(String, 
         }
     };
 
+    // One or the other, never both: the class would have to choose, and a
+    // class choosing between two ways of naming the same font is a second
+    // place for the answer to be decided.
+    if let Some(family) = s.font_family.as_deref() {
+        match fonts.get(family) {
+            Some(found) if found.from_project => put("font_file", Some(found.path.to_string())),
+            _ => put("font_family", Some(family.to_owned())),
+        }
+    }
     put("font_size", s.font_size.map(|l| l.to_sile()));
     put("weight", s.weight.map(|w| w.to_string()));
     put("italic", s.italic.map(flag));
@@ -150,6 +184,7 @@ fn properties_of(resolved: &biblecompose_config::ResolvedStyle) -> Vec<(String, 
     put("indent", s.indent.map(|l| l.to_sile()));
     put("raise", s.raise.map(|l| l.to_sile()));
     put("align", s.align.map(|a| a.as_str().to_owned()));
+    put("color", s.color.map(|c| c.to_string()));
 
     debug_assert!(
         out.len() <= PROPERTIES.len(),

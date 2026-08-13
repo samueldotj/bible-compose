@@ -305,3 +305,135 @@ fn a_project_font_is_offered_first() {
         "no Scripture to check against is not the same as covering it"
     );
 }
+
+// ------------------------------------------------- fonts a style names
+
+fn styles_from(toml: &str) -> biblecompose_config::ResolvedStyles {
+    let doc = biblecompose_config::ConfigDocument::parse("styles.toml", toml.to_owned())
+        .expect("valid fixture");
+    let (styles, d) = biblecompose_config::cascade::resolve(Some(&doc), false);
+    assert!(
+        d.is_empty(),
+        "{:?}",
+        d.iter().map(|d| d.to_string()).collect::<Vec<_>>()
+    );
+    styles
+}
+
+/// A style naming a font nobody has is a sentence, not a shaper crash.
+///
+/// Before this it reached SILE as a family fontconfig could not resolve, and
+/// died as `attempt to index local 'file' (a nil value)` from inside
+/// harfbuzz — a nil font file, several frames from anything that names one.
+#[test]
+fn a_style_font_nobody_has_is_reported_against_the_style() {
+    let mut d = Diagnostics::new();
+    let found = font::preflight_styles(
+        &styles_from("[heading.s1]\nfont_family = \"Nonesuch Display\"\n"),
+        Utf8Path::new("."),
+        &latin(),
+        &mut d,
+    );
+
+    assert!(found.is_empty(), "nothing resolved");
+    let only = d.iter().next().expect("reported");
+    assert_eq!(only.code.as_str(), "FONT-001");
+    assert_eq!(only.severity, Severity::Error);
+    assert!(
+        only.message.contains("Nonesuch Display"),
+        "{}",
+        only.message
+    );
+    assert!(
+        only.message.contains("heading.s1"),
+        "the style that asked is named: {}",
+        only.message
+    );
+}
+
+/// One missing font is one diagnostic, however many selectors inherit it.
+#[test]
+fn a_font_many_styles_inherit_is_reported_once() {
+    let mut d = Diagnostics::new();
+    font::preflight_styles(
+        &styles_from("[heading.s1]\nfont_family = \"Nonesuch Display\"\n"),
+        Utf8Path::new("."),
+        &latin(),
+        &mut d,
+    );
+
+    assert_eq!(
+        d.len(),
+        1,
+        "{:?}",
+        d.iter().map(|d| d.to_string()).collect::<Vec<_>>()
+    );
+    // s2, s3 and s4 inherit it, and naming all four buries the two facts that
+    // matter — the font's name, and that nobody has it.
+    let message = d.iter().next().expect("reported").message.clone();
+    assert!(message.contains("and 1 more"), "{message}");
+}
+
+/// A font a style names and the machine has resolves, and says where from.
+#[test]
+fn a_style_font_that_exists_resolves() {
+    let mut d = Diagnostics::new();
+    let found = font::preflight_styles(
+        &styles_from("[heading.s1]\nfont_family = \"DejaVu Serif\"\n"),
+        Utf8Path::new("."),
+        &latin(),
+        &mut d,
+    );
+
+    assert!(
+        d.is_empty(),
+        "{:?}",
+        d.iter().map(|d| d.to_string()).collect::<Vec<_>>()
+    );
+    let face = found.get("DejaVu Serif").expect("the vendored face");
+    assert!(!face.from_project);
+}
+
+/// A project font in a style crosses to the backend as a path, for the same
+/// reason the body font does: fontconfig has never heard of it (FONT-003).
+#[test]
+fn a_project_font_in_a_style_crosses_as_a_path() {
+    use biblecompose_app::backend_input::style_rules_with;
+
+    let dir = tempfile::tempdir().expect("temp dir");
+    let root = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("UTF-8 path");
+    let fonts = root.join(font::PROJECT_FONTS);
+    std::fs::create_dir_all(fonts.as_std_path()).expect("mkdir");
+    std::fs::copy(
+        repo_root()
+            .join("spike/assets/fonts/NotoSerifTamil-Regular.ttf")
+            .as_std_path(),
+        fonts.join("NotoSerifTamil-Regular.ttf").as_std_path(),
+    )
+    .expect("copy");
+
+    let styles = styles_from("[heading.s1]\nfont_family = \"Noto Serif Tamil\"\n");
+    let mut d = Diagnostics::new();
+    let resolved = font::preflight_styles(&styles, &root, &latin(), &mut d);
+    assert!(d.is_empty());
+
+    let rule = style_rules_with(&styles, &resolved)
+        .into_iter()
+        .find(|r| r.selector == "heading.s1")
+        .expect("a rule for the style");
+
+    let named: Vec<&str> = rule.properties.iter().map(|(k, _)| k.as_str()).collect();
+    assert!(named.contains(&"font_file"), "{named:?}");
+    assert!(
+        !named.contains(&"font_family"),
+        "one way of naming a font, not two: {named:?}"
+    );
+
+    // And without resolution — the golden path — it stays a family name, so
+    // the emitted document does not depend on this machine's fonts.
+    let hermetic = biblecompose_app::backend_input::style_rules(&styles)
+        .into_iter()
+        .find(|r| r.selector == "heading.s1")
+        .expect("a rule");
+    assert!(hermetic.properties.iter().any(|(k, _)| k == "font_family"));
+}

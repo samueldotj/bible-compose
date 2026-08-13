@@ -207,6 +207,14 @@ pub fn build_with(
         &backend.font_dirs(),
         &mut diagnostics,
     );
+    // And the fonts the styles name, for the same reason: a style font nobody
+    // has used to reach the shaper as a nil file rather than a sentence.
+    let style_fonts = font::preflight_styles(
+        &request.styles,
+        &request.project_root,
+        &backend.font_dirs(),
+        &mut diagnostics,
+    );
     // FONT-004, and for the same reason as the font check: the backend will
     // hyphenate a script that does not hyphenate and say nothing.
     let hyphenation = hyphenation::decide(
@@ -234,7 +242,10 @@ pub fn build_with(
 
     // ---- emit --------------------------------------------------------------
     reporter.advance(BuildState::Emitting);
-    let emitted = biblecompose_sile::emit(doc, &backend_input::style_rules(&request.styles));
+    let emitted = biblecompose_sile::emit(
+        doc,
+        &backend_input::style_rules_with(&request.styles, &style_fonts),
+    );
     for u in &emitted.dropped {
         let d = Diagnostic::warning(
             code::UNSUPPORTED_MARKER,

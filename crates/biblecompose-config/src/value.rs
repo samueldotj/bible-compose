@@ -369,6 +369,85 @@ fn suffix_of(text: &str) -> Option<&'static str> {
         .map(|(name, _)| *name)
 }
 
+/// An ink colour, as `#rrggbb`.
+///
+/// # Why hex and not names
+///
+/// A red-letter edition is the reason this type exists, and "red" is exactly
+/// the wrong way to ask for one: the red a Bible is printed in is a decision a
+/// publisher makes with a press, and there are as many of them as there are
+/// houses. A hex triple is the same colour every time, states it in the file,
+/// and does not quietly change when a backend revises its palette.
+///
+/// Stored as three bytes rather than as the text that was written, so
+/// `#FFF`, `#ffffff` and `#FFFFFF` are one value and produce one build
+/// (DET-001).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Color {
+    pub red: u8,
+    pub green: u8,
+    pub blue: u8,
+}
+
+impl std::fmt::Display for Color {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "#{:02x}{:02x}{:02x}", self.red, self.green, self.blue)
+    }
+}
+
+impl Color {
+    /// `#rgb` or `#rrggbb`, in either case.
+    ///
+    /// The short form is expanded the way CSS expands it — each digit doubled,
+    /// so `#f00` is `#ff0000` and not `#f00000`. That is what everyone who has
+    /// ever written a short hex colour expects, and getting it wrong would
+    /// darken every colour written that way by a hair nobody would trace.
+    pub fn parse(text: &str) -> Option<Color> {
+        let digits = text.trim().strip_prefix('#')?;
+        if !digits.chars().all(|c| c.is_ascii_hexdigit()) {
+            return None;
+        }
+        let byte = |s: &str| u8::from_str_radix(s, 16).ok();
+        match digits.len() {
+            3 => {
+                let mut c = digits.chars().map(|d| byte(&format!("{d}{d}")));
+                Some(Color {
+                    red: c.next()??,
+                    green: c.next()??,
+                    blue: c.next()??,
+                })
+            }
+            6 => Some(Color {
+                red: byte(&digits[0..2])?,
+                green: byte(&digits[2..4])?,
+                blue: byte(&digits[4..6])?,
+            }),
+            _ => None,
+        }
+    }
+}
+
+/// A colour, or a diagnostic saying what one looks like.
+pub fn color(node: &Node) -> Result<Located<Color>, Diagnostic> {
+    let text = node.string()?;
+    match Color::parse(&text.value) {
+        Some(value) => Ok(Located {
+            value,
+            loc: text.loc,
+        }),
+        None => Err(Diagnostic::error(
+            code::INVALID_VALUE,
+            format!(
+                "`{}` is {:?}, which is not a colour",
+                node.dotted_path(),
+                text.value.trim()
+            ),
+        )
+        .at(text.loc)
+        .help("write a colour as `#rrggbb` — `#c81414` is a typical red-letter red")),
+    }
+}
+
 /// One of a fixed set of spellings.
 ///
 /// The allowed values are listed in the diagnostic, and the nearest one is
@@ -473,4 +552,31 @@ pub(crate) fn distance(a: &str, b: &str) -> usize {
         std::mem::swap(&mut prev, &mut cur);
     }
     prev[b.len()]
+}
+
+#[cfg(test)]
+mod color_tests {
+    use super::Color;
+
+    #[test]
+    fn the_short_form_doubles_each_digit() {
+        // CSS's rule, and the one anyone writing `#f00` means. Padding with a
+        // zero instead would darken every short colour by a hair.
+        assert_eq!(Color::parse("#f00"), Color::parse("#ff0000"));
+        assert_eq!(Color::parse("#abc"), Color::parse("#aabbcc"));
+    }
+
+    #[test]
+    fn case_and_spacing_do_not_make_a_different_colour() {
+        let one = Color::parse("  #C81414 ").expect("a colour");
+        assert_eq!(one, Color::parse("#c81414").expect("a colour"));
+        assert_eq!(one.to_string(), "#c81414", "one spelling reaches the build");
+    }
+
+    #[test]
+    fn what_is_not_a_colour_is_refused() {
+        for text in ["red", "#12345", "#gg0000", "c81414", "", "#"] {
+            assert_eq!(Color::parse(text), None, "{text:?}");
+        }
+    }
 }

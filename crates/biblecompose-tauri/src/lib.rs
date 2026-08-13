@@ -678,6 +678,10 @@ fn style_kind(property: &str) -> form::Kind {
     match property {
         "weight" => form::Kind::Integer,
         "italic" | "smallcaps" => form::Kind::Boolean,
+        "font_family" => form::Kind::Font,
+        // Colour is text on the wire — `#c81414` is a string in TOML, and the
+        // reader in `biblecompose-config` is the one thing that decides
+        // whether it is a colour.
         _ => form::Kind::Text,
     }
 }
@@ -709,7 +713,8 @@ fn wire_styles(styles: &biblecompose_config::ResolvedStyles) -> Vec<WireStyle> {
 
 fn wire_style_properties(resolved: &biblecompose_config::ResolvedStyle) -> Vec<WireStyleProperty> {
     let s = &resolved.style;
-    let values: [(&'static str, Option<String>); 9] = [
+    let values: [(&'static str, Option<String>); PROPERTIES.len()] = [
+        ("font_family", s.font_family.clone()),
         ("font_size", s.font_size.map(|l| l.to_string())),
         ("weight", s.weight.map(|w| w.to_string())),
         ("italic", s.italic.map(|b| b.to_string())),
@@ -719,6 +724,7 @@ fn wire_style_properties(resolved: &biblecompose_config::ResolvedStyle) -> Vec<W
         ("indent", s.indent.map(|l| l.to_string())),
         ("raise", s.raise.map(|l| l.to_string())),
         ("align", s.align.map(|a| a.as_str().to_owned())),
+        ("color", s.color.map(|c| c.to_string())),
     ];
 
     values

@@ -12,12 +12,23 @@
    * from the built-in set or by inheritance is already what the cascade would
    * decide.
    */
+  import FontPicker from "./FontPicker.svelte";
   import { session } from "../lib/session.svelte";
   import { ALIGNMENTS, STYLE_GROUPS, type PropertyRow } from "../lib/styles";
   import type { StyleProperty } from "../lib/services/backend";
 
   /** Which of `STYLE_GROUPS` to show. The tab decides. */
   const { groups: show }: { groups: readonly string[] } = $props();
+
+  /** Which style's font is being picked, as `selector.property`. */
+  let picking = $state<string | null>(null);
+
+  /**
+   * A colour swatch needs something to show when nothing is set, and black is
+   * both the honest answer — unset ink is the body colour — and the one a
+   * publisher opening the control expects to see.
+   */
+  const UNSET_COLOR = "#000000";
 
   const shown = $derived(STYLE_GROUPS.filter((g) => show.includes(g.id)));
   const bySelector = $derived(new Map(session.styles.map((s) => [s.selector, s])));
@@ -86,6 +97,61 @@
                       <option value={option}>{option}</option>
                     {/each}
                   </select>
+                {:else if property.kind === "font"}
+                  <!--
+                    The body font when nothing is set, which is what the
+                    cascade means by unset — shown as a placeholder rather
+                    than as a value, so Reset stays meaningful.
+                  -->
+                  <span class="pair">
+                    <input
+                      {id}
+                      type="text"
+                      value={p?.value ?? ""}
+                      placeholder="the body font"
+                      spellcheck="false"
+                      disabled={!session.editable}
+                      onchange={(e) => commit(style.selector, property, e.currentTarget.value)}
+                    />
+                    <button
+                      type="button"
+                      onclick={() => (picking = key(style.selector, property.name))}
+                    >
+                      Choose…
+                    </button>
+                  </span>
+                  {#if picking === key(style.selector, property.name)}
+                    <FontPicker
+                      current={p?.value ?? ""}
+                      onchoose={(family) => commit(style.selector, property, family)}
+                      onclose={() => (picking = null)}
+                    />
+                  {/if}
+                {:else if property.kind === "color"}
+                  <!--
+                    Swatch and text together. The swatch is how a colour gets
+                    chosen; the text is how `#c81414` gets typed in from a
+                    brand sheet, and how it can be cleared back to unset.
+                  -->
+                  <span class="pair">
+                    <input
+                      type="color"
+                      class="swatch"
+                      value={p?.value ?? UNSET_COLOR}
+                      disabled={!session.editable}
+                      aria-label={`${property.label} swatch`}
+                      oninput={(e) => commit(style.selector, property, e.currentTarget.value)}
+                    />
+                    <input
+                      {id}
+                      type="text"
+                      value={p?.value ?? ""}
+                      placeholder="unset"
+                      spellcheck="false"
+                      disabled={!session.editable}
+                      onchange={(e) => commit(style.selector, property, e.currentTarget.value)}
+                    />
+                  </span>
                 {:else}
                   <input
                     {id}
@@ -167,6 +233,33 @@
   label {
     font-size: 0.85rem;
     opacity: 0.85;
+  }
+  .pair {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+  }
+  .pair button {
+    flex: none;
+    padding-block: 0.2rem;
+    padding-inline: 0.5rem;
+    border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .swatch {
+    flex: none;
+    inline-size: 2.2rem;
+    block-size: 1.5rem;
+    padding: 0;
+    border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
   }
   input[type="text"],
   select {

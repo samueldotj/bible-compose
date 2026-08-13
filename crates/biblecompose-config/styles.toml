@@ -14,8 +14,14 @@
 # chosen against; expressing them as ratios is worth doing, and is a change to
 # make deliberately with a look at the page rather than as a side effect.
 #
-# Properties: font_size, weight, italic, smallcaps, space_above, space_below,
-# indent, raise, align.
+# Properties: font_family, font_size, weight, italic, smallcaps, space_above,
+# space_below, indent, raise, align, color.
+#
+# Nothing here sets `font_family` or `color`, and that is the built-in answer
+# rather than an omission: an element with no font of its own is set in the
+# body font, and one with no colour is set in the body's ink. A display face
+# for headings and a red `[character.wj]` are decisions about one publication,
+# so they belong in a project's own sheet.
 
 # --------------------------------------------------------------- headings
 

@@ -19,7 +19,7 @@ use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, Severity, SourceLo
 
 use crate::document::{ConfigDocument, Node};
 use crate::selector::StyleSelector;
-use crate::value::{self, Length};
+use crate::value::{self, Color, Length};
 
 /// The built-in styles, as the TOML a project overrides.
 ///
@@ -63,8 +63,14 @@ impl Align {
 /// harm is bounded, because a property the class cannot use is a property the
 /// class ignores. STY-004 reports a *misspelled* property, which is the case
 /// that matters.
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Style {
+    /// The face this element is set in, when it is not the body font.
+    ///
+    /// Not `Copy` any more because of this field, which is the price of a
+    /// style being able to name a font at all. Everything else here is a
+    /// number.
+    pub font_family: Option<String>,
     pub font_size: Option<Length>,
     /// 400 is regular, 700 bold — the OpenType scale SILE takes.
     pub weight: Option<u16>,
@@ -77,6 +83,9 @@ pub struct Style {
     /// Vertical shift, for a verse number set as a superior figure.
     pub raise: Option<Length>,
     pub align: Option<Align>,
+    /// Ink. A red-letter edition is the reason this exists — `\wj` has always
+    /// parsed and always rendered in black, which is a Bible nobody asked for.
+    pub color: Option<Color>,
 }
 
 impl Style {
@@ -92,6 +101,7 @@ impl Style {
     /// state what "override" means.
     pub fn overlaid_with(self, other: Style) -> Style {
         Style {
+            font_family: other.font_family.or(self.font_family),
             font_size: other.font_size.or(self.font_size),
             weight: other.weight.or(self.weight),
             italic: other.italic.or(self.italic),
@@ -101,6 +111,7 @@ impl Style {
             indent: other.indent.or(self.indent),
             raise: other.raise.or(self.raise),
             align: other.align.or(self.align),
+            color: other.color.or(self.color),
         }
     }
 }
@@ -113,7 +124,8 @@ pub const INHERITS: &str = "inherits";
 ///
 /// Used to read a style and to detect a misspelled property, so the two
 /// cannot disagree about what is legal.
-pub const PROPERTIES: [&str; 9] = [
+pub const PROPERTIES: [&str; 11] = [
+    "font_family",
     "font_size",
     "weight",
     "italic",
@@ -123,6 +135,7 @@ pub const PROPERTIES: [&str; 9] = [
     "indent",
     "raise",
     "align",
+    "color",
 ];
 
 /// One selector's entry in a sheet: what it says, what it inherits from, and
@@ -154,7 +167,7 @@ impl StyleSheet {
     pub fn get(&self, selector: StyleSelector) -> Style {
         self.entries
             .get(&selector)
-            .map(|e| e.style)
+            .map(|e| e.style.clone())
             .unwrap_or_default()
     }
 
@@ -294,6 +307,23 @@ fn read_into(
         }
     };
 
+    read("font_family", &mut |n| {
+        let named = n.string()?;
+        let family = named.value.trim();
+        if family.is_empty() {
+            // An empty family is not "the body font" — it is a font call with
+            // nothing in it, which resolves to whatever the shaper feels like.
+            // Saying so beats setting the page in a surprise.
+            return Err(Diagnostic::error(
+                code::INVALID_VALUE,
+                format!("`{}` is empty", n.dotted_path()),
+            )
+            .at(named.loc)
+            .help("name a font, or remove the key to use the body font"));
+        }
+        style.font_family = Some(family.to_owned());
+        Ok(())
+    });
     read("font_size", &mut |n| {
         style.font_size = Some(value::length(n)?.value);
         Ok(())
@@ -328,6 +358,10 @@ fn read_into(
     });
     read("align", &mut |n| {
         style.align = Some(value::choice(n, &Align::NAMES)?.value);
+        Ok(())
+    });
+    read("color", &mut |n| {
+        style.color = Some(value::color(n)?.value);
         Ok(())
     });
 

@@ -252,9 +252,19 @@ coverage report → Error with an example reference for each gap
 
 The same machinery runs the other way for the settings form. Rather than a spelling of a family name, or the operating system's font dialog — which offers every face installed here, knows nothing about the ones the project or the backend ship, and has no opinion about whether any of them can draw the book — the window asks this crate for the list a build would resolve against, in resolution order, each already checked against the codepoint set above. A publisher setting Tamil sees which four of three hundred families can set it, and which ones travel with the book. A picker that let them choose one of the other two hundred and ninety-six would only be moving the coverage error later.
 
-Two details make it work in practice. Project-local fonts must be usable without installing them into the operating system (FONT-003), so the emitter refers to fonts by file path for anything under `assets/fonts/`, and only by family name for system fonts — S0.5 confirmed SILE loads a face by path that fontconfig has never heard of, and subsets and embeds it correctly. And the codepoint set is computed from the normalized model, per style, so a font used only for footnotes is checked only against footnote text — otherwise a project with a Latin-only note font and Tamil body text reports a false failure.
+Two details make it work in practice. Project-local fonts must be usable without installing them into the operating system (FONT-003), so the emitter refers to fonts by file path for anything under `assets/fonts/`, and only by family name for system fonts — S0.5 confirmed SILE loads a face by path that fontconfig has never heard of, and subsets and embeds it correctly. And a style may name a font of its own — a display face for headings, a Greek or Hebrew face for `	l` — which is resolved and reported the same way the body font is, because a style font nobody has used to reach the shaper as a nil file rather than as a sentence.
 
-### 7.2 Hyphenation
+**Per-style coverage is not done.** The codepoint set is computed for the whole document, not per selector, so a style font that resolves but cannot draw its own text still reaches the page. Doing it properly means the text each selector actually applies to — otherwise a project with a Latin-only note font and Tamil body text reports a false failure, which is worse than the gap. That is the remaining half of P5.2, now unblocked rather than done.
+
+### 7.2 Ink
+
+A style may set `color`, as `#rrggbb`. One reason: red-letter editions. `\wj` has parsed and rendered since M1 and has always come out black, which is a Bible nobody publishes.
+
+Hex rather than names, because "red" is the wrong way to ask for it — the red a Bible is printed in is a decision a publisher makes with a press, and there are as many of them as there are houses. Three bytes, stored normalized, so `#FFF` and `#ffffff` are one value and produce one build (DET-001).
+
+Colour is applied by wrapping the element rather than by setting it, so it ends where the element ends: red words of Jesus must not leave the rest of the verse red. There is no background colour and this is deliberate — it has no equivalent in the Paratext stylesheet, a tint behind text is a property of a *block* rather than of a run, and it belongs with frames if it is ever wanted for study-Bible sidebars.
+
+### 7.3 Hyphenation
 
 A Tamil Bible set through the backend carries hyphens in the middle of Tamil words throughout, and nothing reports it (FONT-004). [Spike F-11](../spike/NOTES.md) recorded the symptom and inferred the cause: that asking for a language the backend cannot hyphenate gets you *another language's* patterns.
 
@@ -264,7 +274,7 @@ So the defect is narrower and sharper than a missing-pattern table would address
 
 The script is read from the text rather than from the language tag, because the text is what gets set and a tag can be absent, wrong, or describe a book that is mostly in another script. Where the script does not hyphenate, the backend is told not to, and a project that asked for hyphenation is told why it is off — nothing is wrong with the project, but a setting that did nothing has to be mentioned. The language tag itself is passed through unchanged: it drives more than hyphenation, and rewriting it to encode a hyphenation decision would hide that decision in a value something else reads.
 
-### 7.3 Geometry and assets
+### 7.4 Geometry and assets
 
 Resolved frame geometry is validated before emission — a frame whose computed height is zero or negative is a blocking diagnostic naming the margin settings that produced it, because user-supplied margins make that a reachable state and the backend only warns.
 

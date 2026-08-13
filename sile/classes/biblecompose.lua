@@ -194,6 +194,11 @@ function class:_init (options)
    self.firstContentFrame = "contentA"
 
    plain._init(self, options)
+   -- `color` is loaded unconditionally rather than when a style asks for one:
+   -- styles are read after the class is initialised, and a package loaded
+   -- halfway through a document is a difference between two builds of the
+   -- same project (DET-001).
+   self:loadPackage("color")
    self:loadPackage("masters")
    self:loadPackage("infonode")
    self:loadPackage("chapterverse")
@@ -396,6 +401,13 @@ local function face (s)
          f[key] = value
       end
    end
+   -- One or the other. A project font arrives as a path because fontconfig
+   -- has never heard of it (FONT-003); anything else arrives as a family
+   -- name, so its bold and italic remain reachable.
+   want("filename", s.font_file)
+   if s.font_file == nil then
+      want("family", s.font_family)
+   end
    want("size", s.font_size)
    want("weight", s.weight and tonumber(s.weight) or nil)
    if SU.boolean(s.italic, false) then
@@ -407,13 +419,30 @@ local function face (s)
    return f
 end
 
---- Run `body` with a style's font applied, if it has one.
+--- Run `body` with a style's font and ink applied, if it asks for either.
+--
+-- Both are wrapped rather than set, so they end where the element ends: a
+-- red-letter `\wj` must not leave the rest of the verse red, and a heading in
+-- a display face must not carry it into the paragraph beneath.
+--
+-- Colour inside the font call rather than outside it because the font switch
+-- is what changes the shaping, and a colour that wrapped it would be a group
+-- around a group for nothing.
 local function styled (selector, body)
-   local f = face(style(selector))
+   local s = style(selector)
+   local f = face(s)
+
+   local inner = body
+   if s.color then
+      inner = function ()
+         SILE.call("color", { color = s.color }, body)
+      end
+   end
+
    if f then
-      SILE.call("font", f, body)
+      SILE.call("font", f, inner)
    else
-      body()
+      inner()
    end
 end
 
@@ -484,6 +513,7 @@ function class:registerXmlCommands ()
       -- here keeps the whole of it in one place rather than reaching into
       -- the hyphenator.
       SILE.settings:set("document.language", o.hyphenate and o.language or "und")
+
 
       elements(content)
    end)

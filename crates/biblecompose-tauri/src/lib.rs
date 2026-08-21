@@ -129,6 +129,53 @@ pub struct WireSetting {
     pub location: Option<WireLocation>,
 }
 
+/// The page, in points, for the window to draw (GUI-003).
+///
+/// Points and not the written units, and computed here rather than in the
+/// frontend, for the reason the canon order is: `biblecompose-config` already
+/// parses `0.55in`, `39.6pt` and `13.97mm` into one number, and a second
+/// parser in TypeScript would be a second answer to what a margin is. The
+/// drawing is then arithmetic on numbers somebody else has already agreed on.
+#[derive(Debug, Clone, Serialize)]
+pub struct WireGeometry {
+    #[serde(rename = "pageWidth")]
+    pub page_width: f64,
+    #[serde(rename = "pageHeight")]
+    pub page_height: f64,
+    #[serde(rename = "marginTop")]
+    pub margin_top: f64,
+    #[serde(rename = "marginBottom")]
+    pub margin_bottom: f64,
+    #[serde(rename = "marginInner")]
+    pub margin_inner: f64,
+    #[serde(rename = "marginOuter")]
+    pub margin_outer: f64,
+    #[serde(rename = "columnGap")]
+    pub column_gap: f64,
+    #[serde(rename = "headerGap")]
+    pub header_gap: f64,
+    #[serde(rename = "footerGap")]
+    pub footer_gap: f64,
+    pub columns: u8,
+}
+
+impl WireGeometry {
+    fn of(s: &Settings) -> WireGeometry {
+        WireGeometry {
+            page_width: s.page.size.width.points(),
+            page_height: s.page.size.height.points(),
+            margin_top: s.page.margin_top.points(),
+            margin_bottom: s.page.margin_bottom.points(),
+            margin_inner: s.page.margin_inner.points(),
+            margin_outer: s.page.margin_outer.points(),
+            column_gap: s.page.column_gap.points(),
+            header_gap: s.page.header_gap.points(),
+            footer_gap: s.page.footer_gap.points(),
+            columns: *s.page.columns,
+        }
+    }
+}
+
 /// One font the picker offers (GUI-003).
 #[derive(Debug, Clone, Serialize)]
 pub struct WireFont {
@@ -181,6 +228,8 @@ pub struct WireProject {
     /// canon knowledge, kept where it cannot be checked against the first.
     #[serde(rename = "canonicalOrder")]
     pub canonical_order: Vec<String>,
+    /// The page as numbers, for the diagram beside the page settings.
+    pub geometry: WireGeometry,
     /// Where a build would write, resolved against the project folder.
     pub output: String,
     /// Whether a build can start at all (DIA-002).
@@ -198,6 +247,9 @@ pub struct WireProject {
 pub struct WireDefaults {
     pub settings: Vec<WireSetting>,
     pub styles: Vec<WireStyle>,
+    /// So the page can be drawn before a folder is open, which is the same
+    /// reason the settings and styles are sent at all (CFG-001, STY-001).
+    pub geometry: WireGeometry,
 }
 
 /// What has changed on disk since the window last read the project.
@@ -315,13 +367,11 @@ fn defaults() -> WireDefaults {
 
 /// [`defaults`] without the Tauri binding.
 pub fn builtin_config() -> WireDefaults {
+    let builtin = Settings::builtin();
     WireDefaults {
-        settings: Settings::builtin()
-            .fields()
-            .into_iter()
-            .map(wire_field)
-            .collect(),
+        settings: builtin.fields().into_iter().map(wire_field).collect(),
         styles: wire_styles(&cascade::resolve(None, false).0),
+        geometry: WireGeometry::of(&builtin),
     }
 }
 
@@ -834,6 +884,7 @@ fn wire_project(root: &Utf8Path, opened: project::Opened) -> WireProject {
         root: root.to_string(),
         books,
         canonical_order: canonical_order.into_iter().map(|(_, code)| code).collect(),
+        geometry: WireGeometry::of(&opened.settings),
         diagnostics: wire_all(&opened.diagnostics),
         settings: opened
             .settings

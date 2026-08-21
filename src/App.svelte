@@ -3,6 +3,7 @@
   import BuildLog from "./components/BuildLog.svelte";
   import DiagnosticsPanel from "./components/DiagnosticsPanel.svelte";
   import ProjectPane from "./components/ProjectPane.svelte";
+  import PageDiagram from "./components/PageDiagram.svelte";
   import SettingsForm from "./components/SettingsForm.svelte";
   import StyleEditor from "./components/StyleEditor.svelte";
   import StyleInspector from "./components/StyleInspector.svelte";
@@ -132,6 +133,9 @@
           <StyleEditor groups={styleTab.styleGroups} />
         {/if}
       {:else}
+        {#if tab.diagram && session.geometry}
+          <PageDiagram geometry={session.geometry} highlight={session.hoveredSetting} />
+        {/if}
         <SettingsForm groups={tab.settingGroups} orphans={tab.orphans ?? false} />
       {/if}
     </div>

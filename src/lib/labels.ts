@@ -138,6 +138,13 @@ export interface Tab {
   /** Whether the style editor appears below them. */
   readonly styles?: boolean;
   /**
+   * Whether the page is drawn above them.
+   *
+   * Nine numbers in a column do not say which margin is against the spine,
+   * and that is the one thing about them a publisher has to get right.
+   */
+  readonly diagram?: boolean;
+  /**
    * Where a setting belonging to no group ends up. Exactly one tab claims
    * them, so a key added to the schema is visible somewhere rather than
    * nowhere.
@@ -152,7 +159,7 @@ export const TABS: readonly Tab[] = [
     settingGroups: ["project", "output"],
     orphans: true,
   },
-  { id: "page", title: "Page", settingGroups: ["page"] },
+  { id: "page", title: "Page", settingGroups: ["page"], diagram: true },
   { id: "appears", title: "What appears", settingGroups: ["content"] },
   { id: "styles", title: "Styles", settingGroups: ["typography"], styles: true },
 ];

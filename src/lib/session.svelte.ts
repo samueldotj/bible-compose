@@ -91,6 +91,17 @@ export class Session {
   /** The same, for style properties, keyed `selector.property`. */
   styleErrors = $state<Record<string, readonly Diagnostic[]>>({});
 
+  /**
+   * The setting the pointer or the keyboard is on, so the page diagram can
+   * light up the measurement being asked about.
+   *
+   * In the session rather than passed between the two components because they
+   * are siblings: the form knows which row is under the pointer and the
+   * drawing knows where that measurement is on the page, and neither owns the
+   * other.
+   */
+  hoveredSetting = $state<string | null>(null);
+
   /** Which configuration tab is showing. One of `TABS`. */
   pane = $state("project");
   /** And which section within the Styles tab. One of `STYLE_TABS`. */
@@ -139,6 +150,11 @@ export class Session {
 
   get styles() {
     return this.project?.styles ?? this.defaults?.styles ?? [];
+  }
+
+  /** The page as numbers: the project's, or the built-in ones before that. */
+  get geometry() {
+    return this.project?.geometry ?? this.defaults?.geometry ?? null;
   }
 
   /**

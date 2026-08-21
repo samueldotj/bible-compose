@@ -83,7 +83,20 @@
 
         {#each group.rows as setting (setting.key)}
           {@const errors = session.fieldErrors[setting.key] ?? []}
-          <div class="row" class:overridden={setting.overridden}>
+          <!--
+            Pointing at a row lights the measurement up on the page diagram.
+            `focusin` as well as the pointer, so tabbing through the fields
+            shows the same thing reaching for the mouse does.
+          -->
+          <div
+            class="row"
+            class:overridden={setting.overridden}
+            role="group"
+            onpointerenter={() => (session.hoveredSetting = setting.key)}
+            onpointerleave={() => (session.hoveredSetting = null)}
+            onfocusin={() => (session.hoveredSetting = setting.key)}
+            onfocusout={() => (session.hoveredSetting = null)}
+          >
             <label for={`set-${setting.key}`}>{labelFor(setting.key)}</label>
 
             {#if setting.kind === "boolean"}

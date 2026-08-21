@@ -99,6 +99,26 @@ export interface FontChoice {
   readonly missing?: number;
 }
 
+/**
+ * The page as numbers, in points, for the diagram beside the page settings.
+ *
+ * Points and not the written units: `biblecompose-config` already parses
+ * `0.55in`, `39.6pt` and `13.97mm` into one number, and a second unit parser
+ * here would be a second answer to what a margin is.
+ */
+export interface Geometry {
+  readonly pageWidth: number;
+  readonly pageHeight: number;
+  readonly marginTop: number;
+  readonly marginBottom: number;
+  readonly marginInner: number;
+  readonly marginOuter: number;
+  readonly columnGap: number;
+  readonly headerGap: number;
+  readonly footerGap: number;
+  readonly columns: number;
+}
+
 export type StyleOrigin = "builtin" | "file" | "inherited";
 
 export interface StyleProperty {
@@ -124,6 +144,7 @@ export interface Style {
 export interface Defaults {
   readonly settings: readonly Setting[];
   readonly styles: readonly Style[];
+  readonly geometry: Geometry;
 }
 
 /** What has changed on disk since the window last read the project. */
@@ -141,6 +162,7 @@ export interface Project {
   readonly styles: readonly Style[];
   /** The same books in canonical order, whatever `books.order` says. */
   readonly canonicalOrder: readonly string[];
+  readonly geometry: Geometry;
   readonly output: string;
   readonly blocked: boolean;
 }

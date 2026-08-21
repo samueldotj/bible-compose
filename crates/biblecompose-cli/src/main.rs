@@ -111,6 +111,9 @@ fn document(books: Option<&Utf8Path>, fixture: &str) -> Result<project::Opened, 
             styles: biblecompose_config::cascade::resolve(None, false).0,
             document: load(fixture)?,
             diagnostics: Diagnostics::new(),
+            // A fixture has no folder, so there is nothing on disk to leave
+            // out of it.
+            left_out: Vec::new(),
         });
     };
 

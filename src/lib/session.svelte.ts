@@ -92,7 +92,7 @@ export class Session {
   styleErrors = $state<Record<string, readonly Diagnostic[]>>({});
 
   /** Which configuration tab is showing. One of `TABS`. */
-  pane = $state("settings");
+  pane = $state("project");
   /** And which section within the Styles tab. One of `STYLE_TABS`. */
   stylePane = $state("typography");
   /** The selector the inspector is showing, and what is filtering the list. */
@@ -254,6 +254,44 @@ export class Session {
 
   async reopen(): Promise<void> {
     if (this.project) await this.open(this.project.root);
+  }
+
+  /**
+   * Which books are in the publication, and in what order (BOOK-003, BOOK-004).
+   *
+   * Both settings written from one place, because the book list asks one
+   * question: `books.include` when a tick changes, `books.order` when a row
+   * moves. In sequence rather than in parallel — each write reopens the
+   * project, and two reopenings racing would leave the window showing
+   * whichever finished last.
+   *
+   * Neither is written when the answer is the default. Every book ticked
+   * clears `books.include` rather than listing all sixty-six; the canonical
+   * arrangement clears `books.order` rather than writing an explicit copy of
+   * it. A settings file should record what a publisher decided.
+   */
+  async setBooks(order: string[], included: Set<string>): Promise<void> {
+    if (!this.project) return;
+
+    const canonical = this.project.canonicalOrder;
+
+    const writes: [string, string | null][] = [
+      ["books.order", order.join(",") === canonical.join(",") ? null : order.join(", ")],
+      [
+        "books.include",
+        included.size === this.books.length ? null : order.filter((c) => included.has(c)).join(", "),
+      ],
+    ];
+
+    for (const [key, value] of writes) {
+      const current = this.settings.find((s) => s.key === key);
+      if (!current) continue;
+      if (value === null) {
+        if (current.overridden) await this.resetSetting(key);
+      } else if (value !== current.value) {
+        await this.setSetting(key, value);
+      }
+    }
   }
 
   async setSetting(key: string, value: string): Promise<void> {

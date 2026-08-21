@@ -111,22 +111,31 @@ impl BookPlan {
     /// reorder a second collection to match — which is the kind of parallel
     /// bookkeeping that eventually disagrees with itself.
     pub fn arrange<T>(&self, items: Vec<T>, book_of: impl Fn(&T) -> BookCode) -> Vec<T> {
-        let mut kept: Vec<T> = items
+        let kept: Vec<T> = items
             .into_iter()
             .filter(|i| self.includes(book_of(i)))
             .collect();
+        self.in_order(kept, book_of)
+    }
 
+    /// The same order, without applying the selection.
+    ///
+    /// For the window, which has to show a book the settings leave out — one
+    /// that vanished from the list is one nobody can put back, and where it
+    /// sits among the others is the whole of what "order" means.
+    pub fn in_order<T>(&self, items: Vec<T>, book_of: impl Fn(&T) -> BookCode) -> Vec<T> {
+        let mut items = items;
         // Configured books first in the order given; everything else after,
         // canonically. `position` over a short explicit list is cheaper than
         // building a map, and keeps the rule visible.
-        kept.sort_by_key(|i| {
+        items.sort_by_key(|i| {
             let book = book_of(i);
             match self.order.iter().position(|b| *b == book) {
                 Some(rank) => (0usize, rank, 0u16),
                 None => (1, 0, book.order()),
             }
         });
-        kept
+        items
     }
 
     /// Books named in the order or the whitelist that the project does not

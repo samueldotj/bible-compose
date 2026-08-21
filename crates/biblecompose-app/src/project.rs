@@ -15,6 +15,7 @@ use biblecompose_diagnostics::{Diagnostic, Diagnostics};
 use biblecompose_project::discover;
 use biblecompose_scripture::normalize::normalize;
 use biblecompose_scripture::plan::BookPlan;
+use biblecompose_scripture::BookCode;
 use biblecompose_scripture::{BookSource, ScriptureDocument};
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -22,6 +23,28 @@ use camino::{Utf8Path, Utf8PathBuf};
 pub struct Loaded {
     pub document: ScriptureDocument,
     pub diagnostics: Diagnostics,
+    /// Books on disk that the settings leave out of the publication.
+    ///
+    /// Carried because a window has to show them: a book that vanishes from
+    /// the list is a book nobody can put back without editing TOML, and
+    /// "which books are in" is a question you answer by looking at all of
+    /// them. Not parsed — that is the point of leaving them out — so there is
+    /// nothing here but the identity and the file.
+    pub left_out: Vec<LeftOut>,
+}
+
+/// A book the project has but does not publish.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LeftOut {
+    pub code: BookCode,
+    pub path: Utf8PathBuf,
+    /// Where it sat in the full ordered list before it was left out.
+    ///
+    /// Kept because the window shows one list: a book that is out still has a
+    /// place among the ones that are in, and that place is what somebody is
+    /// deciding when they tick it back on. Without it the excluded books
+    /// could only be shown in a clump at the end, which is not where they are.
+    pub position: usize,
 }
 
 impl Loaded {
@@ -88,6 +111,8 @@ pub struct Opened {
     pub styles: ResolvedStyles,
     pub document: ScriptureDocument,
     pub diagnostics: Diagnostics,
+    /// Books the folder has and the settings leave out (see [`Loaded`]).
+    pub left_out: Vec<LeftOut>,
 }
 
 impl Opened {
@@ -126,6 +151,7 @@ pub fn open(root: &Utf8Path) -> Opened {
         styles,
         document: loaded.document,
         diagnostics,
+        left_out: loaded.left_out,
     }
 }
 
@@ -162,10 +188,25 @@ pub fn load(root: &Utf8Path, plan: &BookPlan) -> Loaded {
     let found = discover(root);
     let mut diagnostics = found.diagnostics;
 
-    // Selection before parsing: a book the project excludes should not spend
+    // Selection before parsing: a book the project leaves out should not spend
     // time being parsed, and should not contribute diagnostics about a file
-    // nobody asked to publish.
-    let selected = plan.arrange(found.books, |b| b.book);
+    // nobody asked to publish. Ordered first and partitioned second, so the
+    // ones left out keep their place among the rest for the window to show.
+    let ordered = plan.in_order(found.books, |b| b.book);
+    let left_out: Vec<LeftOut> = ordered
+        .iter()
+        .enumerate()
+        .filter(|(_, b)| !plan.includes(b.book))
+        .map(|(position, b)| LeftOut {
+            code: b.book,
+            path: b.path.clone(),
+            position,
+        })
+        .collect();
+    let selected: Vec<_> = ordered
+        .into_iter()
+        .filter(|b| plan.includes(b.book))
+        .collect();
 
     let present = selected.iter().map(|b| b.book).collect();
     for absent in plan.configured_but_absent(&present) {
@@ -201,5 +242,6 @@ pub fn load(root: &Utf8Path, plan: &BookPlan) -> Loaded {
     Loaded {
         document,
         diagnostics,
+        left_out,
     }
 }

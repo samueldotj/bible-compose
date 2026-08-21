@@ -54,6 +54,14 @@ export interface BookSummary {
   readonly chapters: number;
   readonly errors: number;
   readonly warnings: number;
+  /**
+   * Whether the book is in the publication (BOOK-003).
+   *
+   * A book that is out is still listed — it is on disk and it has a place in
+   * the order — but it is never parsed, so it has no chapters and no
+   * diagnostics.
+   */
+  readonly included: boolean;
 }
 
 /** Which control a setting needs, decided by the schema and not by the form. */
@@ -131,6 +139,8 @@ export interface Project {
   readonly diagnostics: readonly Diagnostic[];
   readonly settings: readonly Setting[];
   readonly styles: readonly Style[];
+  /** The same books in canonical order, whatever `books.order` says. */
+  readonly canonicalOrder: readonly string[];
   readonly output: string;
   readonly blocked: boolean;
 }

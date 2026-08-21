@@ -104,6 +104,12 @@ pub struct WireBook {
     /// diagnostics panel cannot disagree about which book owns a problem.
     pub errors: usize,
     pub warnings: usize,
+    /// Whether this book is in the publication (BOOK-003).
+    ///
+    /// A book that is out is still listed — it is on disk, it has a place in
+    /// the order, and a list that hid it would be a list you could not put it
+    /// back from. It is not parsed, so it has no chapters and no diagnostics.
+    pub included: bool,
 }
 
 /// One row of the settings form (GUI-002).
@@ -166,6 +172,15 @@ pub struct WireProject {
     /// any of it. The editor shows a curated few; the inspector needs them
     /// all, and sending the lot costs a few kilobytes once per open.
     pub styles: Vec<WireStyle>,
+    /// The same books in canonical order, whatever `books.order` says.
+    ///
+    /// Sent because the window needs to know when an arrangement is the
+    /// canonical one — that is when it clears `books.order` rather than
+    /// writing an explicit copy of it — and the canon table lives here.
+    /// Mirroring sixty-six rows into TypeScript would be a second copy of
+    /// canon knowledge, kept where it cannot be checked against the first.
+    #[serde(rename = "canonicalOrder")]
+    pub canonical_order: Vec<String>,
     /// Where a build would write, resolved against the project folder.
     pub output: String,
     /// Whether a build can start at all (DIA-002).
@@ -765,7 +780,7 @@ pub fn project_at(root: &Utf8Path) -> WireProject {
 /// as its wire form, and opening the folder twice to get both would parse
 /// every book twice.
 fn wire_project(root: &Utf8Path, opened: project::Opened) -> WireProject {
-    let books = opened
+    let mut books: Vec<WireBook> = opened
         .document
         .books
         .iter()
@@ -779,13 +794,46 @@ fn wire_project(root: &Utf8Path, opened: project::Opened) -> WireProject {
                 chapters: book.chapter_count(),
                 errors,
                 warnings,
+                included: true,
             }
         })
         .collect();
 
+    // The ones left out, put back where they sit in the order. Ascending, so
+    // each insertion lands before the later ones shift under it — which
+    // reconstructs exactly the list the plan produced before selection.
+    for out in &opened.left_out {
+        let at = out.position.min(books.len());
+        books.insert(
+            at,
+            WireBook {
+                code: out.code.as_str().to_owned(),
+                // The canon's name: there is no `\h` to read, because a book
+                // that is out is deliberately never parsed.
+                name: out.code.english_name().to_owned(),
+                path: out.path.to_string(),
+                chapters: 0,
+                errors: 0,
+                warnings: 0,
+                included: false,
+            },
+        );
+    }
+
+    // Canonical position, from the canon table rather than from the plan:
+    // this is the answer `books.order` is compared against.
+    let mut canonical_order: Vec<(u16, String)> = books
+        .iter()
+        .filter_map(|b| {
+            biblecompose_scripture::BookCode::parse(&b.code).map(|c| (c.order(), b.code.clone()))
+        })
+        .collect();
+    canonical_order.sort();
+
     WireProject {
         root: root.to_string(),
         books,
+        canonical_order: canonical_order.into_iter().map(|(_, code)| code).collect(),
         diagnostics: wire_all(&opened.diagnostics),
         settings: opened
             .settings

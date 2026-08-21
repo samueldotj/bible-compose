@@ -125,16 +125,22 @@ fn resetting_a_field_restores_the_default() {
 
 /// A setting that changes which books there are must change the pane too,
 /// which is why the command returns the whole project and not just the field.
+///
+/// The book left out stays *listed* and stops being *included*. It is still on
+/// disk and it still has a place in the order; a pane that hid it would be a
+/// pane you could not tick it back on from, which is where BOOK-004's
+/// checkboxes live.
 #[test]
-fn narrowing_the_book_list_changes_the_pane() {
+fn a_book_left_out_stays_listed_and_is_marked() {
     let (_dir, root) = project(None);
-    assert_eq!(project_at(&root).books.len(), 1);
+    let before = project_at(&root);
+    assert_eq!(before.books.len(), 1);
+    assert!(before.books[0].included);
 
     let p = write_setting(&root, "books.include", "MAT").expect("MAT is a book code");
-    assert!(
-        p.books.is_empty(),
-        "the only book on disk is not in the list, so it left the pane"
-    );
+    assert_eq!(p.books.len(), 1, "still on disk, still listed");
+    assert!(!p.books[0].included, "and no longer in the publication");
+    assert_eq!(p.books[0].chapters, 0, "a book left out is never parsed");
 }
 
 /// A file that will not parse blocks the build, and says so on the first line
@@ -468,8 +474,10 @@ fn an_external_settings_edit_is_reflected_after_reload() {
     )
     .expect("write");
 
+    let after = project_at(&root);
+    assert_eq!(after.books.len(), 1, "the book is still in the folder");
     assert!(
-        project_at(&root).books.is_empty(),
+        !after.books[0].included,
         "the reloaded project must honour the file as written"
     );
 }

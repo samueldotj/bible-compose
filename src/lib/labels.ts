@@ -15,14 +15,25 @@ export interface Group {
   readonly id: string;
   readonly title: string;
   readonly keys: readonly string[];
+  /**
+   * Rendered by one dedicated control rather than one row per key.
+   *
+   * The exception, not the rule: the form is generated from the schema and
+   * that is what keeps it from drifting. But `books.order` and `books.include`
+   * are two answers to one question a publisher asks once — which books, in
+   * what order — and two rows opening two dialogs over the same list is the
+   * schema's shape leaking onto the screen. The keys stay listed above, so the
+   * group still claims them and neither can go missing; if the control cannot
+   * find them it falls back to ordinary rows.
+   */
+  readonly combined?: "books";
 }
 
 export const LABELS: Readonly<Record<string, string>> = {
   "project.name": "Publication name",
   "project.language": "Language tag",
   "books.order": "Order",
-  "books.include": "Include only",
-  "books.exclude": "Exclude",
+  "books.include": "Books included",
   "page.size": "Trim size",
   "page.columns": "Columns",
   "page.margin_top": "Top margin",
@@ -54,12 +65,16 @@ export const PLACEHOLDERS: Readonly<Record<string, string>> = {
   "project.name": "the folder's name",
   "books.order": "canonical",
   "books.include": "every book found",
-  "books.exclude": "none",
 };
 
 export const GROUPS: readonly Group[] = [
   { id: "project", title: "Project", keys: ["project.name", "project.language"] },
-  { id: "books", title: "Books", keys: ["books.order", "books.include", "books.exclude"] },
+  {
+    id: "books",
+    title: "Books",
+    keys: ["books.order", "books.include"],
+    combined: "books",
+  },
   {
     id: "page",
     title: "Page",

@@ -19,7 +19,6 @@ leading = 13
 
 [books]
 order = [\"MAT\", \"MRK\", \"LUK\", \"JHN\"]
-exclude = []
 ";
 
 fn parse(source: &str) -> ConfigDocument {

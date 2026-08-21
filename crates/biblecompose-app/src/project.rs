@@ -71,7 +71,6 @@ pub fn plan(settings: &Settings) -> (BookPlan, Diagnostics) {
     BookPlan::from_settings(
         &settings.books.order,
         settings.books.include.as_ref().map(|i| i.as_slice()),
-        &settings.books.exclude,
     )
 }
 

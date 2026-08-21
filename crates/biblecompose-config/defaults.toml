@@ -28,7 +28,6 @@ language = "en"
 # that has deliberately selected nothing — a different thing, and one the
 # application reports rather than silently treats as "everything".
 order = []
-exclude = []
 
 [page]
 size = "6x9in"

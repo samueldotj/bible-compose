@@ -89,7 +89,6 @@ pub struct Books {
     /// selected nothing, which the caller reports rather than treats as the
     /// same thing.
     pub include: Option<Sourced<Vec<String>>>,
-    pub exclude: Sourced<Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -271,11 +270,14 @@ fn report_unknown_keys(
                     format!("`{path}` is not a setting this release recognises"),
                 )
                 .at(node.loc())
-                .help(match nearest_setting(&path, asked) {
-                    Some(near) => format!("did you mean `{near}`?"),
-                    None => "remove it, or check the spelling against the settings \
-                             documentation"
-                        .to_owned(),
+                .help(match REMOVED.iter().find(|(key, _)| *key == path) {
+                    Some((_, instead)) => (*instead).to_owned(),
+                    None => match nearest_setting(&path, asked) {
+                        Some(near) => format!("did you mean `{near}`?"),
+                        None => "remove it, or check the spelling against the settings \
+                                 documentation"
+                            .to_owned(),
+                    },
                 }),
             );
         }
@@ -288,6 +290,22 @@ fn report_unknown_keys(
         diagnostics,
     );
 }
+
+/// Keys this release used to have, and what to do instead.
+///
+/// A removed setting is not a misspelling, and "did you mean `books.include`?"
+/// is a poor answer to somebody who wrote exactly what the documentation said
+/// last release. It is still reported as an unknown key — because it is one,
+/// and because a setting silently ignored is a publication quietly losing a
+/// book — but the help says what actually happened.
+const REMOVED: [(&str, &str); 1] = [(
+    "books.exclude",
+    concat!(
+        "`books.exclude` was removed: name the books you want in ",
+        "`books.include` instead, which says the same thing without two ",
+        "settings that can disagree",
+    ),
+)];
 
 /// The closest known key, if it is close enough to be a slip. Compared on the
 /// whole dotted path, so `page.wdith` finds `page.width` and does not offer
@@ -317,7 +335,6 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
         books: Books {
             order: r.list("books.order"),
             include: r.optional_list("books.include"),
-            exclude: r.list("books.exclude"),
         },
         page: Page {
             size: r.value("page.size", value::page_size),

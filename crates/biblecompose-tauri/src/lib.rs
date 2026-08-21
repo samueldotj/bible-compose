@@ -395,7 +395,7 @@ fn name_of(path: &Utf8PathBuf) -> String {
 /// Write one setting and reopen the project (CFG-005).
 ///
 /// Reopening rather than patching a value in the frontend, because a setting
-/// can change what the project *is* — `books.exclude` removes a book from the
+/// can change what the project *is* — `books.include` decides which books are in the
 /// pane — and a form that updated only itself would leave the rest of the
 /// window describing the previous project.
 #[tauri::command]

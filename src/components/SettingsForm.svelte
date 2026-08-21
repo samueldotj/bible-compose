@@ -12,6 +12,7 @@
    * state to lose that way, and CFG-006's write-back is cheap enough that
    * batching buys nothing.
    */
+  import BookPicker from "./BookPicker.svelte";
   import FontPicker from "./FontPicker.svelte";
   import { GROUPS, labelFor, PLACEHOLDERS } from "../lib/labels";
   import { session } from "../lib/session.svelte";
@@ -39,7 +40,10 @@
           placed.add(key);
         }
       }
-      return { id: g.id, title: g.title, rows };
+      // Resolved here rather than in the markup: `{@const}` may only be the
+      // immediate child of a block, and this belongs with the grouping anyway.
+      const pair = g.combined === "books" ? bookPair(rows) : null;
+      return { id: g.id, title: g.title, pair, rows };
     }).filter((g) => g.rows.length > 0);
 
     if (orphans) {
@@ -48,7 +52,7 @@
       const homed = new Set(GROUPS.flatMap((g) => g.keys));
       const stray = settings.filter((s) => !homed.has(s.key));
       if (stray.length > 0) {
-        groups.push({ id: "other", title: "Other", rows: stray });
+        groups.push({ id: "other", title: "Other", pair: null, rows: stray });
       }
     }
     return groups;
@@ -56,6 +60,45 @@
 
   /** Which font setting has the picker open, if any. */
   let picking = $state<string | null>(null);
+  /** Whether the books dialog is open. */
+  let choosing = $state(false);
+
+  /** The two settings the books control edits, when the schema still has both. */
+  function bookPair(rows: Setting[]): { order: Setting; include: Setting } | null {
+    const order = rows.find((r) => r.key === "books.order");
+    const include = rows.find((r) => r.key === "books.include");
+    return order && include ? { order, include } : null;
+  }
+
+  /** What the pair says, in one line. */
+  function bookSummary(pair: { order: Setting; include: Setting }): string {
+    const listed = pair.include.value
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s !== "");
+    const which = listed.length === 0 ? "Every book found" : `${listed.length} books`;
+    return `${which}, ${pair.order.overridden ? "custom order" : "canonical order"}`;
+  }
+
+  /** `null` for either means the picker decided the default applies. */
+  async function applyBooks(
+    pair: { order: Setting; include: Setting },
+    next: { order: string | null; include: string | null },
+  ): Promise<void> {
+    // In sequence, not in parallel: each write reopens the project, and two
+    // reopenings racing would leave the window showing whichever finished
+    // last rather than the result of both.
+    for (const [setting, value] of [
+      [pair.order, next.order],
+      [pair.include, next.include],
+    ] as const) {
+      if (value === null) {
+        if (setting.overridden) await session.resetSetting(setting.key);
+      } else if (value !== setting.value) {
+        await session.setSetting(setting.key, value);
+      }
+    }
+  }
 
   function commit(setting: Setting, value: string): void {
     if (value === setting.value) return;
@@ -81,7 +124,56 @@
     {#each grouped as group (group.id)}
       <fieldset>
         <legend>{group.title}</legend>
-        {#each group.rows as setting (setting.key)}
+
+        {#if group.pair}
+          <!-- Narrowed once, so the callbacks below see the pair and not `| null`. -->
+          {@const pair = group.pair}
+          <!--
+            One row for two settings. "Which books, in what order" is one
+            question a publisher asks once, and splitting it across two rows
+            and two dialogs is the schema's shape showing through.
+          -->
+          <div class="row" class:overridden={pair.order.overridden || pair.include.overridden}>
+            <span class="pseudo-label">In the publication</span>
+            <span class="book-field">
+              <span
+                class="summary"
+                class:unset={!pair.order.overridden && !pair.include.overridden}
+                >{bookSummary(pair)}</span
+              >
+              <button type="button" disabled={!session.editable} onclick={() => (choosing = true)}>
+                Choose…
+              </button>
+            </span>
+            <button
+              type="button"
+              class="reset"
+              disabled={!session.editable || !(pair.order.overridden || pair.include.overridden)}
+              title="Every book found, in canonical order"
+              onclick={() => void applyBooks(pair, { order: null, include: null })}
+            >
+              Reset
+            </button>
+            <span class="origin">
+              {pair.order.overridden || pair.include.overridden
+                ? "set in this project"
+                : "built-in default"}
+            </span>
+            {#each [...(session.fieldErrors["books.order"] ?? []), ...(session.fieldErrors["books.include"] ?? [])] as error (error.code + error.message)}
+              <p class="error">{error.message}{error.help ? ` — ${error.help}` : ""}</p>
+            {/each}
+          </div>
+          {#if choosing}
+            <BookPicker
+              order={pair.order.value}
+              include={pair.include.value}
+              onapply={(next) => void applyBooks(pair, next)}
+              onclose={() => (choosing = false)}
+            />
+          {/if}
+        {/if}
+
+        {#each group.pair ? [] : group.rows as setting (setting.key)}
           {@const errors = session.fieldErrors[setting.key] ?? []}
           <div class="row" class:overridden={setting.overridden}>
             <label for={`set-${setting.key}`}>{labelFor(setting.key)}</label>
@@ -202,6 +294,37 @@
   }
   input[type="checkbox"] {
     justify-self: start;
+  }
+  .pseudo-label {
+    font-size: 0.9rem;
+  }
+  .book-field {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .book-field .summary {
+    overflow: hidden;
+    font-size: 0.88rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .book-field .summary.unset {
+    opacity: 0.55;
+    font-style: italic;
+  }
+  .book-field button {
+    flex: none;
+    padding-block: 0.2rem;
+    padding-inline: 0.5rem;
+    border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
   }
   .font-field {
     display: flex;

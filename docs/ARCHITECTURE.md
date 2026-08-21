@@ -171,6 +171,8 @@ Three properties of this model are load-bearing:
 
 **`Unsupported` is a variant, not an omission.** FUN-003 requires unknown markers to be diagnosed rather than discarded. Carrying them through with their source location means a marker can be supported later without touching the parser boundary, and means the emitter is where the decision to drop something is made and logged.
 
+**Book selection is one list, not two.** BOOK-003 asks that books be included or excluded without deleting files, and there were two settings for it — `books.include` and `books.exclude` — which meant a rule for what happens when both name the same book. A precedence rule is something a publisher has to learn in order to predict their own settings file, for no capability: `books.include` alone says which books are in the publication, and leaving one out is how it goes. Removing the second is what makes BOOK-004's checkboxes possible as a single control, since a tick can mean one thing.
+
 **The canon table is data, not code** — book code, canonical position, standard abbreviations, testament, deuterocanonical flag. Shipped as a table so that including the deuterocanon costs rows rather than a schema change, and so a project can override ordering (BOOK-002) without special cases.
 
 ## 6. Configuration and style resolution

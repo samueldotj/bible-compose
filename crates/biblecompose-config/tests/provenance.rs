@@ -26,7 +26,6 @@ language = \"ta\"
 [books]
 order = [\"MAT\"]
 include = [\"MAT\"]
-exclude = [\"GEN\"]
 
 [page]
 size = \"a5\"

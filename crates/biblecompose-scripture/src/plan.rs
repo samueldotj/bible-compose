@@ -36,7 +36,6 @@ pub struct BookPlan {
     /// `Some(empty)` is a project that has deliberately selected nothing,
     /// which is different and is left to the caller to notice.
     include: Option<BTreeSet<BookCode>>,
-    exclude: BTreeSet<BookCode>,
 }
 
 impl BookPlan {
@@ -53,14 +52,15 @@ impl BookPlan {
     /// and so is saying which ones do not exist.
     ///
     /// An unresolvable code is reported and dropped rather than failing the
-    /// whole plan: `exclude = ["MAT", "TYPO"]` should still exclude Matthew,
+    /// whole plan: `include = ["MAT", "TYPO"]` should still include Matthew,
     /// and a build blocked because one line of settings has a typo in it
     /// helps nobody.
-    pub fn from_settings(
-        order: &[String],
-        include: Option<&[String]>,
-        exclude: &[String],
-    ) -> (Self, Diagnostics) {
+    ///
+    /// There is no exclusion list. There was one, and two settings that can
+    /// contradict each other about the same book need a rule for which wins,
+    /// which is a rule a publisher has to learn for no benefit — the set of
+    /// books in the publication is one fact and `include` states it.
+    pub fn from_settings(order: &[String], include: Option<&[String]>) -> (Self, Diagnostics) {
         let mut diagnostics = Diagnostics::new();
 
         let mut resolve_all = |field: &str, raw: &[String]| -> Vec<BookCode> {
@@ -93,35 +93,11 @@ impl BookPlan {
         let order = resolve_all("order", order);
         let include: Option<BTreeSet<BookCode>> =
             include.map(|raw| resolve_all("include", raw).into_iter().collect());
-        let exclude: BTreeSet<BookCode> = resolve_all("exclude", exclude).into_iter().collect();
-
-        if let Some(included) = &include {
-            for book in included.intersection(&exclude) {
-                diagnostics.push(
-                    Diagnostic::warning(
-                        code::UNKNOWN_BOOK_CODE,
-                        format!("{book} is in both books.include and books.exclude"),
-                    )
-                    .help("exclude wins; remove it from one of the two to say what you mean"),
-                );
-            }
-        }
-
-        (
-            BookPlan {
-                order,
-                include,
-                exclude,
-            },
-            diagnostics,
-        )
+        (BookPlan { order, include }, diagnostics)
     }
 
     /// Whether this book belongs in the publication (BOOK-003).
     pub fn includes(&self, book: BookCode) -> bool {
-        if self.exclude.contains(&book) {
-            return false;
-        }
         match &self.include {
             Some(whitelist) => whitelist.contains(&book),
             None => true,
@@ -166,7 +142,7 @@ impl BookPlan {
             .iter()
             .chain(self.include.iter().flatten())
             .copied()
-            .filter(|b| !present.contains(b) && !self.exclude.contains(b))
+            .filter(|b| !present.contains(b))
             .collect();
         missing.sort();
         missing.dedup();

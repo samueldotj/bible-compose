@@ -131,7 +131,6 @@ impl Settings {
                 .map(|i| join(i))
                 .unwrap_or_default(),
         );
-        push("books.exclude", List, join(&self.books.exclude));
 
         push("page.size", PageSize, self.page.size.to_string());
         push("page.columns", Integer, self.page.columns.to_string());

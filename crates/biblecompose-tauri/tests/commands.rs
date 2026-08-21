@@ -126,12 +126,15 @@ fn resetting_a_field_restores_the_default() {
 /// A setting that changes which books there are must change the pane too,
 /// which is why the command returns the whole project and not just the field.
 #[test]
-fn excluding_a_book_removes_it_from_the_pane() {
+fn narrowing_the_book_list_changes_the_pane() {
     let (_dir, root) = project(None);
     assert_eq!(project_at(&root).books.len(), 1);
 
-    let p = write_setting(&root, "books.exclude", "JHN").expect("JHN is a book code");
-    assert!(p.books.is_empty(), "the excluded book left the pane");
+    let p = write_setting(&root, "books.include", "MAT").expect("MAT is a book code");
+    assert!(
+        p.books.is_empty(),
+        "the only book on disk is not in the list, so it left the pane"
+    );
 }
 
 /// A file that will not parse blocks the build, and says so on the first line
@@ -461,7 +464,7 @@ fn an_external_settings_edit_is_reflected_after_reload() {
 
     std::fs::write(
         root.join("biblecompose.toml").as_std_path(),
-        "schema_version = 1\n[books]\nexclude = [\"JHN\"]\n",
+        "schema_version = 1\n[books]\ninclude = [\"MAT\"]\n",
     )
     .expect("write");
 

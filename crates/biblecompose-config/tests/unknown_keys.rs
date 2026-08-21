@@ -107,7 +107,6 @@ fn no_supported_key_is_reported_as_unknown() {
          [books]\n\
          order = [\"MAT\"]\n\
          include = [\"MAT\"]\n\
-         exclude = []\n\
          \n\
          [page]\n\
          size = \"a5\"\n\
@@ -204,4 +203,31 @@ fn an_unknown_schema_version_suppresses_the_key_check() {
 
 fn messages(d: &Diagnostics) -> Vec<String> {
     d.iter().map(|d| d.to_string()).collect()
+}
+
+/// A setting that used to exist is not a misspelling, and the help should not
+/// pretend it is.
+///
+/// `books.exclude` was removed because two lists that can contradict each
+/// other about the same book need a precedence rule, which is a rule a
+/// publisher has to learn for no benefit. It is still reported — a setting
+/// silently ignored is a publication quietly losing a book — but the message
+/// says what happened and what to write instead.
+#[test]
+fn a_removed_setting_says_what_replaced_it() {
+    let (_, d) = resolve("schema_version = 1\n[books]\nexclude = [\"JHN\"]\n");
+
+    let stray = unknown(&d);
+    assert_eq!(stray.len(), 1, "{:?}", messages(&d));
+    assert!(stray[0].message.contains("books.exclude"), "{:?}", stray[0]);
+
+    let help = stray[0].help.as_deref().expect("a removed key needs help");
+    assert!(
+        help.contains("books.include"),
+        "the help must name the replacement rather than guess at a typo: {help}"
+    );
+    assert!(
+        !help.contains("did you mean"),
+        "they wrote exactly what the last release documented: {help}"
+    );
 }

@@ -37,7 +37,7 @@ fn canonical_order_beats_the_order_files_arrive_in() {
 /// BOOK-002.
 #[test]
 fn a_configured_order_is_reflected() {
-    let (plan, d) = BookPlan::from_settings(&strings(&["JHN", "LUK", "MRK", "MAT"]), None, &[]);
+    let (plan, d) = BookPlan::from_settings(&strings(&["JHN", "LUK", "MRK", "MAT"]), None);
     assert!(d.is_empty(), "{d:?}");
     assert_eq!(
         arranged(&plan, &["MAT", "MRK", "LUK", "JHN"]),
@@ -49,7 +49,7 @@ fn a_configured_order_is_reflected() {
 /// not have to list all 66 books to say so.
 #[test]
 fn a_partial_order_leaves_the_rest_canonical() {
-    let (plan, d) = BookPlan::from_settings(&strings(&["JHN"]), None, &[]);
+    let (plan, d) = BookPlan::from_settings(&strings(&["JHN"]), None);
     assert!(d.is_empty(), "{d:?}");
     assert_eq!(
         arranged(&plan, &["GEN", "MAT", "JHN", "REV"]),
@@ -57,11 +57,11 @@ fn a_partial_order_leaves_the_rest_canonical() {
     );
 }
 
-/// BOOK-003. The excluded book is still on disk; it is the settings that
+/// BOOK-003. The book left out is still on disk; it is the settings that
 /// changed, which is what makes a single-Gospel proof a one-line edit.
 #[test]
-fn an_excluded_book_does_not_appear() {
-    let (plan, d) = BookPlan::from_settings(&[], None, &strings(&["GEN"]));
+fn a_book_left_out_of_the_list_does_not_appear() {
+    let (plan, d) = BookPlan::from_settings(&[], Some(&strings(&["MAT"])));
     assert!(d.is_empty(), "{d:?}");
     assert_eq!(arranged(&plan, &["GEN", "MAT"]), ["MAT"]);
     assert!(!plan.includes(book("GEN")));
@@ -69,27 +69,16 @@ fn an_excluded_book_does_not_appear() {
 
 #[test]
 fn an_include_list_is_a_whitelist() {
-    let (plan, d) = BookPlan::from_settings(&[], Some(&strings(&["JHN"])), &[]);
+    let (plan, d) = BookPlan::from_settings(&[], Some(&strings(&["JHN"])));
     assert!(d.is_empty(), "{d:?}");
     assert_eq!(arranged(&plan, &["GEN", "MAT", "JHN", "REV"]), ["JHN"]);
-}
-
-#[test]
-fn exclude_wins_over_include_and_says_so() {
-    let (plan, d) =
-        BookPlan::from_settings(&[], Some(&strings(&["MAT", "JHN"])), &strings(&["JHN"]));
-    assert_eq!(arranged(&plan, &["MAT", "JHN"]), ["MAT"]);
-
-    let warned: Vec<&str> = d.iter().map(|x| x.code.as_str()).collect();
-    assert_eq!(warned, ["CFG-005"]);
-    assert!(d.blocking().next().is_none(), "a conflict is not fatal");
 }
 
 /// A typo in one entry must not discard the entries around it, and must not
 /// block a build.
 #[test]
 fn an_unknown_code_is_reported_and_skipped() {
-    let (plan, d) = BookPlan::from_settings(&[], None, &strings(&["MAT", "TYPO", "JHN"]));
+    let (plan, d) = BookPlan::from_settings(&[], Some(&strings(&["MAT", "TYPO", "JHN"])));
 
     assert_eq!(
         d.iter().map(|x| x.code.as_str()).collect::<Vec<_>>(),
@@ -97,12 +86,12 @@ fn an_unknown_code_is_reported_and_skipped() {
     );
     assert!(d.blocking().next().is_none(), "settings typos do not block");
     // The usable entries still took effect.
-    assert_eq!(arranged(&plan, &["MAT", "JHN", "LUK"]), ["LUK"]);
+    assert_eq!(arranged(&plan, &["MAT", "JHN", "LUK"]), ["MAT", "JHN"]);
 }
 
 #[test]
 fn a_repeated_book_is_placed_once() {
-    let (plan, d) = BookPlan::from_settings(&strings(&["JHN", "JHN", "MAT"]), None, &[]);
+    let (plan, d) = BookPlan::from_settings(&strings(&["JHN", "JHN", "MAT"]), None);
     assert_eq!(
         d.iter().map(|x| x.code.as_str()).collect::<Vec<_>>(),
         ["CFG-005"]
@@ -114,7 +103,7 @@ fn a_repeated_book_is_placed_once() {
 /// and building a Gospel is ordinary, not an error — but it is worth saying.
 #[test]
 fn books_configured_but_not_present_are_listed_without_blocking() {
-    let (plan, _) = BookPlan::from_settings(&strings(&["MAT", "MRK", "LUK", "JHN"]), None, &[]);
+    let (plan, _) = BookPlan::from_settings(&strings(&["MAT", "MRK", "LUK", "JHN"]), None);
     let present: BTreeSet<BookCode> = books(&["JHN"]).into_iter().collect();
 
     let absent: Vec<String> = plan
@@ -123,14 +112,6 @@ fn books_configured_but_not_present_are_listed_without_blocking() {
         .map(std::string::ToString::to_string)
         .collect();
     assert_eq!(absent, ["MAT", "MRK", "LUK"]);
-}
-
-/// An excluded book is not "missing" — it was asked to be gone.
-#[test]
-fn an_excluded_book_is_not_reported_as_absent() {
-    let (plan, _) = BookPlan::from_settings(&strings(&["MAT", "JHN"]), None, &strings(&["MAT"]));
-    let present: BTreeSet<BookCode> = books(&["JHN"]).into_iter().collect();
-    assert!(plan.configured_but_absent(&present).is_empty());
 }
 
 /// The reason SRS-REVIEW put the deuterocanon in the table rather than behind
@@ -146,7 +127,7 @@ fn deuterocanonical_books_order_like_any_other() {
 
     // And a project that wants them interleaved says so, without the table
     // having to have an opinion about which tradition is right.
-    let (plan, d) = BookPlan::from_settings(&strings(&["GEN", "TOB", "MAT"]), None, &[]);
+    let (plan, d) = BookPlan::from_settings(&strings(&["GEN", "TOB", "MAT"]), None);
     assert!(d.is_empty(), "{d:?}");
     assert_eq!(
         arranged(&plan, &["MAT", "TOB", "GEN"]),
@@ -163,7 +144,7 @@ fn arrange_carries_the_callers_own_type() {
         path: &'static str,
     }
 
-    let (plan, _) = BookPlan::from_settings(&strings(&["JHN"]), None, &strings(&["GEN"]));
+    let (plan, _) = BookPlan::from_settings(&strings(&["JHN"]), Some(&strings(&["JHN", "MAT"])));
     let items = vec![
         Discovered {
             book: book("GEN"),

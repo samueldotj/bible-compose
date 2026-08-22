@@ -5,10 +5,28 @@
   font-family: system-ui, sans-serif;
   color-scheme: light dark;
 }
+/* Padding counts inside a declared size, not on top of it.
+   Without this, `.app` at `block-size: 100%` plus its own top padding is
+   taller than the window by exactly that padding — which is where the
+   scrollbar on the whole layout was coming from. A layout that fills the
+   window cannot be written at all in the content-box world. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* The window is a layout, not a document: the build bar sits on the bottom
+   edge and everything above it divides what is left. Full height here so the
+   column in `App.svelte` has something to be a full height *of*, and no
+   padding, because a padded body would inset that bottom edge. */
+html,
+body,
+#app {
+  block-size: 100%;
+}
 body {
   margin: 0;
-  padding-block: 2rem;
-  padding-inline: 2rem;
 }
 h1 {
   margin-block-start: 0;

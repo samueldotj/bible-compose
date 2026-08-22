@@ -427,6 +427,9 @@ pub mod code {
             UNREADABLE_FILE = "002",
             NO_BOOKS_FOUND = "003",
             UNIDENTIFIED_BOOK = "004",
+            // Starting a project, rather than reading one: the folder could
+            // not be made, or the name given cannot be a folder's.
+            COULD_NOT_CREATE = "005",
         }
         Config "CFG" {
             INVALID_TOML = "001",

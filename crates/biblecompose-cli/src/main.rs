@@ -68,9 +68,9 @@ enum Command {
         fixture: String,
         /// Where the PDF goes. Never written until the build succeeds.
         ///
-        /// Defaults to what the project's settings say (`output.file`,
-        /// relative to the project root), which is `output/bible.pdf` unless
-        /// the project changes it.
+        /// Defaults to `output/bible.pdf` inside the project folder. An
+        /// argument to one command rather than a property of the project,
+        /// which is why this exists and the setting it replaced does not.
         #[arg(long, short)]
         output: Option<Utf8PathBuf>,
         /// Project root — relative asset paths resolve against it.
@@ -228,9 +228,9 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
                 eprintln!("{d}");
             }
 
-            // `--output` wins; otherwise the project's settings say, relative
-            // to the project root (CFG-002).
-            let output = output.unwrap_or_else(|| project.join(settings.output.file.as_path()));
+            // `--output` wins; otherwise the one place a project's PDF goes.
+            let output =
+                output.unwrap_or_else(|| project.join(biblecompose_app::project::OUTPUT_FILE));
             // The flag can turn keeping on but not off: a project that has
             // asked for intermediates is debugging something.
             let keep = keep_intermediates || *settings.output.keep_intermediates;

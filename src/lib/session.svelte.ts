@@ -12,6 +12,7 @@
 import {
   asDiagnostics,
   backend,
+  type Recent,
   type BuildEvent,
   type Changes,
   type BuildState,
@@ -59,6 +60,18 @@ export class Session {
   fault = $state<string | null>(null);
   opening = $state(false);
 
+  /** The projects this machine has opened, most recent first (PRJ-001). */
+  recent = $state<readonly Recent[]>([]);
+  /**
+   * The folder a new project was just made in.
+   *
+   * Held so the window can say what to do next. A project that has just been
+   * created has a settings file and no Scripture, and the one thing standing
+   * between it and a book is copying the USFM in — which nothing else on
+   * screen would tell anybody.
+   */
+  created = $state<string | null>(null);
+
   buildState = $state<BuildState>("idle");
   building = $state(false);
   /** Whether a build has run in this session, which decides which diagnostics to show. */
@@ -70,17 +83,15 @@ export class Session {
   /** Pages set so far, and what the last build of this project needed. */
   pagesDone = $state(0);
   pagesExpected = $state<number | null>(null);
-  /** Where the backend's output is being written (SILE-006). */
-  logFile = $state<string | null>(null);
   /**
-   * Whether the log pane is showing.
+   * Where the backend's own output is being written (SILE-006).
    *
-   * Hidden by default: it is the backend's own chatter, it is long, and the
-   * page counter beside the Build button now answers the question it used to
-   * be watched for. GUI-003 still holds — it is one click away and it is a
-   * file — but it no longer takes half the window to say "working".
+   * There is no log pane any more — the button that opened it is now the one
+   * that opens the folder. The file is still written, in full, and this is how
+   * the window can say where: it is on the Open folder button, which is the
+   * thing that gets you to it.
    */
-  showLog = $state(false);
+  logFile = $state<string | null>(null);
 
   selectedBook = $state<string | null>(null);
   severity = $state<SeverityFilter>("all");
@@ -102,8 +113,19 @@ export class Session {
    */
   hoveredSetting = $state<string | null>(null);
 
+  /**
+   * Whether the problems dialog is open.
+   *
+   * A dialog rather than a pane under the book list: most of the time there is
+   * nothing wrong, and a permanently reserved corner of the left column
+   * reading "0" is space taken from the thing being read. When something *is*
+   * wrong, a blocked build reports everything at once and that list wants more
+   * room than the corner ever had.
+   */
+  showProblems = $state(false);
+
   /** Which configuration tab is showing. One of `TABS`. */
-  pane = $state("project");
+  pane = $state("page");
   /** And which section within the Styles tab. One of `STYLE_TABS`. */
   stylePane = $state("typography");
   /** The selector the inspector is showing, and what is filtering the list. */
@@ -166,6 +188,11 @@ export class Session {
     return this.project !== null;
   }
 
+  /** Errors and warnings, which is what the Problems button counts. */
+  get problemCount(): number {
+    return this.diagnostics.filter((d) => d.severity !== "info").length;
+  }
+
   get errorCount(): number {
     return this.diagnostics.filter((d) => d.severity === "error").length;
   }
@@ -212,6 +239,50 @@ export class Session {
       this.#stop = await backend().onBuildEvent((event) => this.#receive(event));
     } catch (e: unknown) {
       this.fault = `no build events: ${String(e)}`;
+    }
+    await this.loadRecent();
+  }
+
+  /** Never rejects: a start screen with no list is still a start screen. */
+  async loadRecent(): Promise<void> {
+    try {
+      this.recent = await backend().recentProjects();
+    } catch {
+      this.recent = [];
+    }
+  }
+
+  async forget(root: string): Promise<void> {
+    try {
+      this.recent = await backend().forgetProject(root);
+    } catch {
+      /* The list is a convenience; failing to shorten it is not a fault. */
+    }
+  }
+
+  /**
+   * Start a project and open it.
+   *
+   * Returns the diagnostics that refused it, or nothing when it was made.
+   * Refusals come back rather than landing in the fault banner because they
+   * belong beside the field that caused them — a name with a slash in it is
+   * something to correct, not a failure of the application.
+   */
+  async create(parent: string, name: string, language: string): Promise<Diagnostic[]> {
+    this.opening = true;
+    try {
+      this.project = await backend().createProject(parent, name, language);
+      this.changes = null;
+      this.#startWatching();
+      this.#forgetBuild();
+      this.selectedBook = null;
+      this.created = this.project.root;
+      await this.loadRecent();
+      return [];
+    } catch (e: unknown) {
+      return asDiagnostics(e);
+    } finally {
+      this.opening = false;
     }
   }
 
@@ -261,10 +332,65 @@ export class Session {
       // about this folder and would be read as if they were.
       this.#forgetBuild();
       this.selectedBook = this.project.books[0]?.code ?? null;
+      // A folder opened deliberately is no longer the one just created, even
+      // when it is the same folder: the instruction has been read.
+      this.created = null;
+      await this.loadRecent();
     } catch (e: unknown) {
       this.fault = String(e);
     } finally {
       this.opening = false;
+    }
+  }
+
+  /**
+   * Put the project down and go back to the start screen.
+   *
+   * Nothing on disk is touched — this closes a view of a folder that was there
+   * before the window opened it. The build log and diagnostics go with it:
+   * they are about a publication that is no longer on screen, and leaving them
+   * would have the next project inherit the last one's problems.
+   */
+  async close(): Promise<void> {
+    try {
+      await backend().closeProject();
+    } catch {
+      /* The window can let go of a project the shell failed to forget. */
+    }
+    this.project = null;
+    this.changes = null;
+    this.created = null;
+    this.selectedBook = null;
+    this.#forgetBuild();
+    await this.loadRecent();
+  }
+
+  /**
+   * The folder worth showing right now (GUI-009).
+   *
+   * Where the PDF landed once there is one, and the project itself before
+   * that. One button rather than two, because "open the output folder" before
+   * anything has been built points at a folder that does not exist yet.
+   */
+  get folderToOpen(): string | null {
+    if (!this.project) return null;
+    const pdf = this.output;
+    if (pdf) {
+      const at = Math.max(pdf.lastIndexOf("/"), pdf.lastIndexOf("\\"));
+      if (at > 0) return pdf.slice(0, at);
+    }
+    return this.project.root;
+  }
+
+  async showFolder(): Promise<void> {
+    const path = this.folderToOpen;
+    if (!path) return;
+    try {
+      await backend().openFolder(path);
+    } catch (e: unknown) {
+      this.fault = asDiagnostics(e)
+        .map((d) => d.message)
+        .join(" ");
     }
   }
 

@@ -18,8 +18,8 @@ export interface Group {
 }
 
 export const LABELS: Readonly<Record<string, string>> = {
-  "project.name": "Publication name",
-  "project.language": "Language tag",
+  "project.name": "Publication",
+  "project.language": "Language",
   "page.size": "Trim size",
   "page.columns": "Columns",
   "page.margin_top": "Top margin",
@@ -41,7 +41,6 @@ export const LABELS: Readonly<Record<string, string>> = {
   "headers.show_book_name": "Book name in head",
   "headers.show_reference_range": "Reference range in head",
   "headers.show_page_number": "Page numbers",
-  "output.file": "Output file",
   "output.keep_intermediates": "Keep intermediates",
   strict: "Strict settings",
 };
@@ -52,7 +51,6 @@ export const PLACEHOLDERS: Readonly<Record<string, string>> = {
 };
 
 export const GROUPS: readonly Group[] = [
-  { id: "project", title: "Project", keys: ["project.name", "project.language"] },
   {
     id: "page",
     title: "Page",
@@ -92,11 +90,6 @@ export const GROUPS: readonly Group[] = [
       "headers.show_page_number",
     ],
   },
-  {
-    id: "output",
-    title: "Output",
-    keys: ["output.file", "output.keep_intermediates", "strict"],
-  },
 ];
 
 /**
@@ -112,7 +105,19 @@ export const GROUPS: readonly Group[] = [
  * claims, precisely so a setting added to the schema is visible somewhere
  * rather than nowhere, and an exception to that has to be written down.
  */
-export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set(["books.order", "books.include"]);
+export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
+  // The ticks and the drag handles on the book list are the control.
+  "books.order",
+  "books.include",
+  // What the publication is called and what language it is in: set once, when
+  // the folder is opened, so they sit under the button that opens it.
+  "project.name",
+  "project.language",
+  // Questions about the build you are about to run, which belong beside the
+  // button that runs it rather than three tabs away from it.
+  "output.keep_intermediates",
+  "strict",
+]);
 
 export function labelFor(key: string): string {
   return LABELS[key] ?? key;
@@ -153,14 +158,10 @@ export interface Tab {
 }
 
 export const TABS: readonly Tab[] = [
-  {
-    id: "project",
-    title: "Project",
-    settingGroups: ["project", "output"],
-    orphans: true,
-  },
   { id: "page", title: "Page", settingGroups: ["page"], diagram: true },
-  { id: "appears", title: "What appears", settingGroups: ["content"] },
+  // Claims the strays now that the Project tab is gone. Exactly one tab does,
+  // so a key added to the schema is visible somewhere rather than nowhere.
+  { id: "appears", title: "What appears", settingGroups: ["content"], orphans: true },
   { id: "styles", title: "Styles", settingGroups: ["typography"], styles: true },
 ];
 

@@ -30,7 +30,7 @@ use biblecompose_config::{
 };
 use biblecompose_diagnostics::{Diagnostic as AppDiagnostic, Diagnostics, Severity};
 use camino::{Utf8Path, Utf8PathBuf};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
 
 /// The name every build event is emitted under. One channel rather than one
@@ -127,6 +127,22 @@ pub struct WireSetting {
     /// ADR-005 refuses to invent a location.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub location: Option<WireLocation>,
+}
+
+/// A project the window has opened before (GUI-001).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct WireRecent {
+    pub root: String,
+    /// The publication's name if its settings give one, else the folder's.
+    ///
+    /// Read from the settings file rather than remembered, so a project
+    /// renamed since it was last opened is listed under the name it has now.
+    pub name: String,
+    /// Whether the folder is still there. A project moved or deleted stays on
+    /// the list, greyed, because the useful thing to do with it is forget it
+    /// deliberately — and a row that silently disappeared would leave somebody
+    /// wondering whether they had imagined it.
+    pub missing: bool,
 }
 
 /// The page, in points, for the window to draw (GUI-003).
@@ -344,6 +360,99 @@ pub struct Session {
     characters: Mutex<BTreeSet<char>>,
 }
 
+// ------------------------------------------------------------ recent projects
+
+/// How many projects the start screen remembers.
+///
+/// Ten: enough that a publisher working on a handful of publications never has
+/// to go looking for one, few enough that the list stays a list rather than a
+/// history to be searched.
+const REMEMBERED: usize = 10;
+
+/// Where the list lives.
+///
+/// The application's own config directory, not the project folders — which
+/// projects this machine has opened is a fact about this machine, and writing
+/// it into a publication would put one person's habits into everybody's
+/// repository.
+fn recents_path(app: &tauri::AppHandle) -> Option<Utf8PathBuf> {
+    let dir = app.path().app_config_dir().ok()?;
+    let dir = Utf8PathBuf::from_path_buf(dir).ok()?;
+    Some(dir.join("recent.json"))
+}
+
+fn read_recents(app: &tauri::AppHandle) -> Vec<Utf8PathBuf> {
+    let Some(path) = recents_path(app) else {
+        return Vec::new();
+    };
+    let Ok(text) = std::fs::read_to_string(path.as_std_path()) else {
+        return Vec::new();
+    };
+    // A list that will not parse is a list worth discarding: it is a
+    // convenience, and the cost of losing it is one folder picker.
+    serde_json::from_str::<Vec<String>>(&text)
+        .unwrap_or_default()
+        .into_iter()
+        .map(Utf8PathBuf::from)
+        .collect()
+}
+
+fn write_recents(app: &tauri::AppHandle, roots: &[Utf8PathBuf]) {
+    let Some(path) = recents_path(app) else {
+        return;
+    };
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent.as_std_path());
+    }
+    let text: Vec<&str> = roots.iter().map(|r| r.as_str()).collect();
+    if let Ok(json) = serde_json::to_string_pretty(&text) {
+        // Best-effort throughout. A machine that cannot write this still opens
+        // projects; it just does not offer them back.
+        let _ = std::fs::write(path.as_std_path(), json);
+    }
+}
+
+/// Put a project at the top of the list, and keep it there once.
+fn remember(app: &tauri::AppHandle, root: &Utf8Path) {
+    let mut roots = read_recents(app);
+    roots.retain(|r| r != root);
+    roots.insert(0, root.to_owned());
+    roots.truncate(REMEMBERED);
+    write_recents(app, &roots);
+}
+
+/// What the start screen shows.
+#[tauri::command]
+fn recent_projects(app: tauri::AppHandle) -> Vec<WireRecent> {
+    read_recents(&app).into_iter().map(describe).collect()
+}
+
+/// Drop one from the list. The folder is not touched.
+#[tauri::command]
+fn forget_project(app: tauri::AppHandle, root: String) -> Vec<WireRecent> {
+    let mut roots = read_recents(&app);
+    roots.retain(|r| r.as_str() != root);
+    write_recents(&app, &roots);
+    roots.into_iter().map(describe).collect()
+}
+
+/// A remembered folder, as a row.
+fn describe(root: Utf8PathBuf) -> WireRecent {
+    let missing = !root.is_dir();
+    // The settings file is read directly rather than through `project::open`:
+    // this runs for every row on the start screen, and opening ten projects to
+    // draw a list of ten names would parse every book in all of them.
+    let named = (!missing)
+        .then(|| project::settings(&root).0.project.name.as_deref().cloned())
+        .flatten();
+
+    WireRecent {
+        name: named.unwrap_or_else(|| root.file_name().unwrap_or_else(|| root.as_str()).to_owned()),
+        root: root.to_string(),
+        missing,
+    }
+}
+
 // ---------------------------------------------------------------- commands
 
 #[tauri::command]
@@ -376,8 +485,113 @@ pub fn builtin_config() -> WireDefaults {
 }
 
 #[tauri::command]
-fn open_project(session: tauri::State<'_, Arc<Session>>, root: String) -> WireProject {
-    observe(&session, &Utf8PathBuf::from(root))
+fn open_project(
+    app: tauri::AppHandle,
+    session: tauri::State<'_, Arc<Session>>,
+    root: String,
+) -> WireProject {
+    let root = Utf8PathBuf::from(root);
+    remember(&app, &root);
+    grow_to_workspace(&app);
+    name_the_window(&app, Some(&root));
+    observe(&session, &root)
+}
+
+/// Show a folder in the platform's own file manager (GUI-009).
+///
+/// A spawn rather than a plugin. The three commands below are the whole of
+/// what a file-manager plugin would do here, and a dependency that has to be
+/// kept current, audited and given a capability in order to run `explorer` is
+/// a poor trade for three lines.
+///
+/// The path is one this application produced — a project root or a build
+/// directory — and never text from a document, which is what makes handing it
+/// to a shell-adjacent program reasonable.
+#[tauri::command]
+fn open_folder(path: String) -> Result<(), Vec<WireDiagnostic>> {
+    let path = Utf8PathBuf::from(path);
+    if !path.is_dir() {
+        return Err(vec![WireDiagnostic::from(
+            &AppDiagnostic::error(
+                biblecompose_diagnostics::code::COULD_NOT_CREATE,
+                format!("{path} is not a folder that exists"),
+            )
+            .help("build first, or the folder was moved since it was opened"),
+        )]);
+    }
+
+    let (program, args): (&str, &[&str]) = if cfg!(windows) {
+        ("explorer", &[])
+    } else if cfg!(target_os = "macos") {
+        ("open", &[])
+    } else {
+        ("xdg-open", &[])
+    };
+
+    // `explorer` reports failure through its exit code even when it worked, so
+    // what is checked is whether the program could be started at all — which
+    // is the failure worth reporting anyway: a machine with no file manager
+    // where this application expects one.
+    std::process::Command::new(program)
+        .args(args)
+        .arg(path.as_std_path())
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| {
+            vec![WireDiagnostic::from(
+                &AppDiagnostic::error(
+                    biblecompose_diagnostics::code::COULD_NOT_CREATE,
+                    format!("could not open {path} in a file manager"),
+                )
+                .detail(e.to_string()),
+            )]
+        })
+}
+
+/// Put the project down and go back to the start screen.
+///
+/// The window forgets what it was watching, so the change detector stops
+/// comparing a folder nobody is looking at, and the font picker stops holding
+/// a closed publication's alphabet.
+///
+/// Nothing on disk is touched: this closes a *view*, and the project is a
+/// folder that was there before the window opened it.
+#[tauri::command]
+fn close_project(app: tauri::AppHandle, session: tauri::State<'_, Arc<Session>>) {
+    *session
+        .watched
+        .lock()
+        .expect("the session lock is not poisoned") = None;
+    session
+        .characters
+        .lock()
+        .expect("the session lock is not poisoned")
+        .clear();
+    shrink_to_launcher(&app);
+    name_the_window(&app, None);
+}
+
+/// Start a new project and open it (PRJ-001).
+///
+/// Creating and opening in one command rather than two, because a folder with
+/// a settings file in it and no Scripture is not a state anybody wants to be
+/// left holding: the window that made it should be showing it, with the empty
+/// book list that tells the publisher what to do next.
+#[tauri::command]
+fn create_project(
+    app: tauri::AppHandle,
+    session: tauri::State<'_, Arc<Session>>,
+    parent: String,
+    name: String,
+    language: String,
+) -> Result<WireProject, Vec<WireDiagnostic>> {
+    let root = project::create(Utf8Path::new(&parent), &name, &language)
+        .map_err(|d| vec![WireDiagnostic::from(&d)])?;
+    remember(&app, &root);
+    grow_to_workspace(&app);
+    name_the_window(&app, Some(&root));
+    let project = observe(&session, &root);
+    Ok(project)
 }
 
 /// Read the project and remember what it looked like.
@@ -975,12 +1189,119 @@ fn wire_event(event: BuildEvent) -> WireBuildEvent {
     }
 }
 
+/// How much of the screen the window takes, before a project and after one.
+///
+/// A launcher and a workspace are different windows wearing one frame. The
+/// start screen is two buttons and a short list, and eight tenths of a large
+/// monitor to hold them is a lot of nothing; a project is a book list, a
+/// diagnostics panel and a page of settings meant to be read at once.
+const OPENING_SHARE: f64 = 0.5;
+const WORKING_SHARE: f64 = 0.8;
+
+/// A share of the screen's work area, in physical pixels.
+///
+/// The *work area* rather than the whole monitor, so a share of the screen
+/// means a share of the part not already spoken for by a taskbar.
+fn share_of_screen(window: &tauri::WebviewWindow, share: f64) -> Option<tauri::PhysicalSize<u32>> {
+    let monitor = match window.current_monitor() {
+        Ok(Some(m)) => Some(m),
+        // A window that has not been shown yet may belong to no monitor.
+        _ => window.primary_monitor().ok().flatten(),
+    }?;
+
+    let area = monitor.work_area().size;
+    Some(tauri::PhysicalSize::new(
+        (f64::from(area.width) * share).round() as u32,
+        (f64::from(area.height) * share).round() as u32,
+    ))
+}
+
+/// Resize to a share of the screen and centre what is left.
+///
+/// A size computed here rather than a number in `tauri.conf.json`, because the
+/// config takes only absolute pixels and a number chosen at packaging time is
+/// a number chosen for somebody else's monitor.
+///
+/// Everything is best-effort. A monitor that cannot be identified leaves the
+/// configured size in place, which is a reasonable window, and the configured
+/// minimum still floors it on a small screen.
+fn take_share_of_screen(window: &tauri::WebviewWindow, share: f64) {
+    let Some(size) = share_of_screen(window, share) else {
+        return;
+    };
+    let _ = window.set_size(size);
+    // The remainder, split evenly, rather than wherever the previous size
+    // happened to leave it.
+    let _ = window.center();
+}
+
+/// What the title bar says.
+///
+/// The window's own chrome is where an application says which one it is and
+/// which document it is holding — which is why the folder name is here and no
+/// longer inside the page. Two places saying it is one place too many, and the
+/// one the operating system puts in the task bar is the one that identifies
+/// this window among others.
+fn name_the_window(app: &tauri::AppHandle, root: Option<&Utf8Path>) {
+    let Some(window) = app.get_webview_window("main") else {
+        return;
+    };
+    let base = concat!("BibleCompose ", env!("CARGO_PKG_VERSION"));
+    // The whole path, not the folder's name. Two projects called `usfm` are
+    // the ordinary case — one per translation, each in its own tree — and the
+    // task bar is where you tell two windows apart.
+    let title = match root {
+        Some(root) => format!("{base} - {root}"),
+        None => base.to_owned(),
+    };
+    let _ = window.set_title(&title);
+}
+
+/// Grow from launcher to workspace when a project is opened.
+fn grow_to_workspace(app: &tauri::AppHandle) {
+    resize_between(app, OPENING_SHARE, WORKING_SHARE);
+}
+
+/// And back, when it is put down. The same rule in reverse.
+fn shrink_to_launcher(app: &tauri::AppHandle) {
+    resize_between(app, WORKING_SHARE, OPENING_SHARE);
+}
+
+/// Move from one share of the screen to the other — but only from the size
+/// this application set.
+///
+/// Somebody who has sized the window by hand has said what they want it to be,
+/// and opening or closing a project is not new information about that. So the
+/// window moves if it is still where the application put it, and is left alone
+/// otherwise. That also makes each move happen once without remembering it:
+/// after growing, the window is no longer at the opening size.
+fn resize_between(app: &tauri::AppHandle, from: f64, to: f64) {
+    let Some(window) = app.get_webview_window("main") else {
+        return;
+    };
+    let (Some(expected), Ok(current)) = (share_of_screen(&window, from), window.inner_size())
+    else {
+        return;
+    };
+
+    // A few pixels of tolerance: the size that comes back has been through a
+    // rounding and a window manager since it was set.
+    let same = |a: u32, b: u32| a.abs_diff(b) <= 8;
+    if same(current.width, expected.width) && same(current.height, expected.height) {
+        take_share_of_screen(&window, to);
+    }
+}
+
 /// Build and run the window.
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             app.manage(Arc::new(Session::default()));
+            if let Some(window) = app.get_webview_window("main") {
+                take_share_of_screen(&window, OPENING_SHARE);
+            }
+            name_the_window(app.handle(), None);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -993,6 +1314,11 @@ pub fn run() {
             set_style,
             reset_style,
             fonts,
+            recent_projects,
+            forget_project,
+            create_project,
+            close_project,
+            open_folder,
             start_build,
             cancel_build,
             is_building,

@@ -44,7 +44,7 @@ fn a_folder_with_no_settings_file_gets_a_complete_set() {
     assert_eq!(*s.typography.font_family, "DejaVu Serif");
     assert_eq!(s.typography.font_size.to_sile(), "9.2pt");
     assert!(*s.numbering.show_verse_numbers);
-    assert_eq!(s.output.file.as_str(), "output/bible.pdf");
+    assert!(!*s.output.keep_intermediates);
 
     // There is no publication name that is right for everyone, so there is
     // none — the caller uses the folder's.

@@ -59,7 +59,6 @@ show_reference_range = false
 show_page_number = false
 
 [output]
-file = \"out/bible.pdf\"
 keep_intermediates = true
 ";
 

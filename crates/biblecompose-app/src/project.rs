@@ -10,8 +10,8 @@
 //! is. [ARCHITECTURE §2](../../../docs/ARCHITECTURE.md) puts the arrow from
 //! `biblecompose-app` to both of them and nowhere else.
 
-use biblecompose_config::{cascade, ConfigDocument, ResolvedStyles, Settings};
-use biblecompose_diagnostics::{Diagnostic, Diagnostics};
+use biblecompose_config::{cascade, ConfigDocument, ResolvedStyles, Settings, TomlFile};
+use biblecompose_diagnostics::{Diagnostic, Diagnostics, SourceLoc};
 use biblecompose_project::discover;
 use biblecompose_scripture::normalize::normalize;
 use biblecompose_scripture::plan::BookPlan;
@@ -59,6 +59,89 @@ pub const SETTINGS_FILE: &str = "biblecompose.toml";
 
 /// And its style sheet.
 pub const STYLES_FILE: &str = "styles.toml";
+
+/// Where the finished PDF goes, relative to the project folder.
+///
+/// A constant and not a setting. It was one, and it bought a publisher the
+/// ability to move their own output somewhere the application then had to
+/// reason about — an absolute path onto another volume, a path inside the
+/// source tree, a path that changes between two machines sharing one project
+/// — in exchange for a decision nobody was asking to make. The PDF belongs
+/// with the book it was made from.
+///
+/// A subfolder rather than the root, so the one generated file in a folder of
+/// Scripture is not sitting among the Scripture. `--output` on the CLI still
+/// overrides it: that is an argument to one command, not a property of the
+/// project, and a build script redirecting its own output is reasonable.
+pub const OUTPUT_FILE: &str = "output/bible.pdf";
+
+/// Start a project: a folder with a settings file in it and nothing else.
+///
+/// A project is a folder of USFM, so there is nothing to create but the folder
+/// and the one file that says what the publication is. Everything else has a
+/// built-in answer (CFG-001), which is why a new project is two keys and not a
+/// template — a `styles.toml` full of the defaults would be a file a publisher
+/// has to maintain in order to change nothing.
+///
+/// The folder is created inside `parent` and named after the publication.
+/// Refuses rather than merges when something is already there: "new project"
+/// over an existing folder is either a mistake or a different verb.
+pub fn create(parent: &Utf8Path, name: &str, language: &str) -> Result<Utf8PathBuf, Diagnostic> {
+    let name = name.trim();
+    let language = language.trim();
+
+    if name.is_empty() {
+        return Err(Diagnostic::error(
+            biblecompose_diagnostics::code::COULD_NOT_CREATE,
+            "a publication needs a name",
+        )
+        .help("the folder is named after it"));
+    }
+
+    // The name doubles as a folder name, so it has to survive being one.
+    // Checked rather than sanitised: quietly turning "1 & 2 Kings" into
+    // "1 _ 2 Kings" is a folder the publisher did not ask for and will not
+    // find.
+    const RESERVED: [char; 9] = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
+    if let Some(bad) = name.chars().find(|c| RESERVED.contains(c)) {
+        return Err(Diagnostic::error(
+            biblecompose_diagnostics::code::COULD_NOT_CREATE,
+            format!("a publication name cannot contain {bad:?}"),
+        )
+        .help("the name is also the folder's, and this character cannot be in one"));
+    }
+
+    let root = parent.join(name);
+    if root.exists() {
+        return Err(Diagnostic::error(
+            biblecompose_diagnostics::code::COULD_NOT_CREATE,
+            format!("{root} already exists"),
+        )
+        .at(SourceLoc::file(root.clone()))
+        .help("choose another name, or open the folder that is already there"));
+    }
+
+    std::fs::create_dir_all(root.as_std_path()).map_err(|e| {
+        Diagnostic::error(
+            biblecompose_diagnostics::code::COULD_NOT_CREATE,
+            format!("could not create {root}"),
+        )
+        .at(SourceLoc::file(root.clone()))
+        .detail(e.to_string())
+    })?;
+
+    let mut file = TomlFile::create(
+        root.join(SETTINGS_FILE),
+        &TomlFile::settings_header(biblecompose_config::SCHEMA_VERSION),
+    );
+    file.set("project.name", name.to_owned());
+    if !language.is_empty() {
+        file.set("project.language", language.to_owned());
+    }
+    file.save()?;
+
+    Ok(root)
+}
 
 /// Read the project's settings.
 ///
@@ -123,7 +206,7 @@ impl Opened {
 
     /// Where the PDF goes unless the caller says otherwise (CFG-002).
     pub fn output(&self) -> Utf8PathBuf {
-        self.root.join(self.settings.output.file.as_path())
+        self.root.join(OUTPUT_FILE)
     }
 }
 

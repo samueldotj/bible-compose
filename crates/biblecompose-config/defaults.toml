@@ -73,7 +73,4 @@ show_reference_range = true
 show_page_number = true
 
 [output]
-# Relative to the project folder. The stem is replaced with the publication
-# name when one is set.
-file = "output/bible.pdf"
 keep_intermediates = false

@@ -6,7 +6,21 @@
    * because only one of them is ever meaningful and a disabled Cancel beside
    * an enabled Build is a thing to read before acting.
    */
+  import QuickSettings from "./QuickSettings.svelte";
   import { session } from "../lib/session.svelte";
+
+  /**
+   * What hovering Open folder says.
+   *
+   * The backend's full output is still written to a file every build
+   * (SILE-006); with the log pane gone, this is where the window says so.
+   */
+  function folderHint(): string {
+    const where = session.folderToOpen;
+    if (!where) return "No project open";
+    return session.logFile ? `${where}
+Backend log: ${session.logFile}` : where;
+  }
   import type { BuildState } from "../lib/services/backend";
 
   /** GUI-006's wording, which is also what the CLI prints. */
@@ -91,22 +105,31 @@
     </span>
   {/if}
 
-  <button
-    type="button"
-    class="log-toggle"
-    class:on={session.showLog}
-    aria-pressed={session.showLog}
-    title={session.logFile ?? "The backend's own output"}
-    onclick={() => (session.showLog = !session.showLog)}
-  >
-    Log
-  </button>
 
   {#if session.output}
     <span class="output" title={session.output}>wrote {session.output}</span>
   {:else if session.project}
     <span class="output muted" title={session.project.output}>→ {session.project.output}</span>
   {/if}
+
+  <!-- GUI-009. The PDF's folder once there is one, the project's before
+       that: opening the output folder before anything has been built points
+       at a folder that does not exist. -->
+  <button
+    type="button"
+    class="open-folder"
+    disabled={!session.project}
+    title={folderHint()}
+    onclick={() => void session.showFolder()}
+  >
+    Open folder
+  </button>
+
+  <!-- Questions about the build that is about to run: whether it keeps what
+       it wrote on the way, and whether a setting this release does not
+       recognise stops it. Beside the button rather than behind a tab, because
+       they are decided while looking at this one. -->
+  <QuickSettings keys={["output.keep_intermediates", "strict"]} />
 
   {#if session.backendVersion}
     <span class="backend" title={session.backendVersion}>{session.backendVersion}</span>
@@ -115,6 +138,22 @@
 
 <style>
   .bar {
+    /* The bottom edge of the window. It never shrinks — the Build button is
+       the control you reach for after changing something, and it should not be
+       somewhere you have to go looking.
+       
+       A tenth of the window exactly, rather than as much as its contents want.
+       Everything in here wraps, and a bar that grew to three lines on a narrow
+       window would take those lines from the panes above — or, once the column
+       adds up to more than the window, put a scrollbar on the whole layout. A
+       fixed share makes the arithmetic hold: this tenth, the panes the other
+       nine, and nothing left over to scroll. Content past it scrolls in here,
+       which is the right trade for a strip of controls against the list of
+       books being published. */
+    flex: none;
+    block-size: 10%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem 0.9rem;
@@ -206,7 +245,7 @@
     font-size: 0.8rem;
     color: #c0392b;
   }
-  .log-toggle {
+  .open-folder {
     padding-block: 0.15rem;
     padding-inline: 0.5rem;
     border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
@@ -217,10 +256,6 @@
     font-size: 0.75rem;
     opacity: 0.7;
     cursor: pointer;
-  }
-  .log-toggle.on {
-    background: color-mix(in oklab, currentColor 12%, transparent);
-    opacity: 1;
   }
   .output,
   .backend {

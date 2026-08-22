@@ -22,6 +22,10 @@ pub enum Kind {
     /// can offer the ones that exist rather than asking a person to spell one,
     /// and this is where it learns that it may.
     Font,
+    /// A BCP-47 language tag. Text too, and for the same reason: a form can
+    /// offer the languages people publish in rather than asking for a tag
+    /// from memory.
+    Language,
     /// A length with a unit — `"0.55in"`.
     Length,
     /// `"6x9in"`, or a named size.
@@ -39,6 +43,7 @@ impl Kind {
         match self {
             Kind::Text => "text",
             Kind::Font => "font",
+            Kind::Language => "language",
             Kind::Length => "length",
             Kind::PageSize => "page_size",
             Kind::Integer => "integer",
@@ -119,7 +124,11 @@ impl Settings {
                 .map(|n| n.to_string())
                 .unwrap_or_default(),
         );
-        push("project.language", Text, self.project.language.to_string());
+        push(
+            "project.language",
+            Language,
+            self.project.language.to_string(),
+        );
 
         push("books.order", List, join(&self.books.order));
         push(
@@ -214,7 +223,6 @@ impl Settings {
             self.headers.show_page_number.to_string(),
         );
 
-        push("output.file", Path, self.output.file.to_string());
         push(
             "output.keep_intermediates",
             Boolean,

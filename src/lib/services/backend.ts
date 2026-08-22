@@ -69,6 +69,8 @@ export type SettingKind =
   | "text"
   /** A font family, which the window offers as a list rather than a spelling. */
   | "font"
+  /** A BCP-47 language tag, likewise. */
+  | "language"
   | "length"
   | "page_size"
   | "integer"
@@ -117,6 +119,15 @@ export interface Geometry {
   readonly headerGap: number;
   readonly footerGap: number;
   readonly columns: number;
+}
+
+/** A project the window has opened before (GUI-001). */
+export interface Recent {
+  readonly root: string;
+  /** The publication's name if its settings give one, else the folder's. */
+  readonly name: string;
+  /** The folder is gone. The row stays, so it can be forgotten deliberately. */
+  readonly missing: boolean;
 }
 
 export type StyleOrigin = "builtin" | "file" | "inherited";
@@ -199,6 +210,19 @@ export interface Backend {
   defaults(): Promise<Defaults>;
   /** Discover and validate a project folder without building it. */
   openProject(root: string): Promise<Project>;
+  /** Stop watching the open project. Nothing on disk is touched. */
+  closeProject(): Promise<void>;
+  /** Show a folder in the platform's own file manager (GUI-009). */
+  openFolder(path: string): Promise<void>;
+  /** The projects this machine has opened, most recent first. */
+  recentProjects(): Promise<readonly Recent[]>;
+  /** Drop one from that list. The folder is not touched. */
+  forgetProject(root: string): Promise<readonly Recent[]>;
+  /**
+   * Make a folder named after the publication inside `parent`, write its
+   * settings, and open it. Rejects with the reason, having created nothing.
+   */
+  createProject(parent: string, name: string, language: string): Promise<Project>;
   /** What has changed on disk since then (FUN-007). */
   changedFiles(): Promise<Changes>;
   /**
@@ -235,6 +259,12 @@ export const tauriBackend: Backend = {
   },
   defaults: () => invoke("defaults"),
   openProject: (root) => invoke("open_project", { root }),
+  closeProject: () => invoke("close_project"),
+  openFolder: (path) => invoke("open_folder", { path }),
+  recentProjects: () => invoke("recent_projects"),
+  forgetProject: (root) => invoke("forget_project", { root }),
+  createProject: (parent, name, language) =>
+    invoke("create_project", { parent, name, language }),
   changedFiles: () => invoke("changed_files"),
   setSetting: (root, key, value) => invoke("set_setting", { root, key, value }),
   resetSetting: (root, key) => invoke("reset_setting", { root, key }),

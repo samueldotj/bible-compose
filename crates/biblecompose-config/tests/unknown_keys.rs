@@ -140,7 +140,6 @@ fn no_supported_key_is_reported_as_unknown() {
          show_page_number = true\n\
          \n\
          [output]\n\
-         file = \"out/bible.pdf\"\n\
          keep_intermediates = true\n",
     );
 
@@ -230,4 +229,16 @@ fn a_removed_setting_says_what_replaced_it() {
         !help.contains("did you mean"),
         "they wrote exactly what the last release documented: {help}"
     );
+}
+
+/// The other removed key, for the same reason and with the same manners.
+#[test]
+fn the_output_path_is_no_longer_a_setting() {
+    let (_, d) = resolve("schema_version = 1\n[output]\nfile = \"elsewhere/book.pdf\"\n");
+
+    let stray = unknown(&d);
+    assert_eq!(stray.len(), 1, "{:?}", messages(&d));
+    let help = stray[0].help.as_deref().expect("a removed key needs help");
+    assert!(help.contains("output/bible.pdf"), "{help}");
+    assert!(!help.contains("did you mean"), "{help}");
 }

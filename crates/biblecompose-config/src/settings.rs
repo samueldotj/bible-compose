@@ -21,7 +21,6 @@
 use std::collections::BTreeSet;
 
 use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, Severity, SourceLoc};
-use camino::Utf8PathBuf;
 
 use crate::document::{ConfigDocument, Located, Node};
 use crate::provenance::{Provenance, Sourced};
@@ -134,8 +133,6 @@ pub struct Headers {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Output {
-    /// Relative to the project folder.
-    pub file: Sourced<Utf8PathBuf>,
     pub keep_intermediates: Sourced<bool>,
 }
 
@@ -298,14 +295,24 @@ fn report_unknown_keys(
 /// last release. It is still reported as an unknown key — because it is one,
 /// and because a setting silently ignored is a publication quietly losing a
 /// book — but the help says what actually happened.
-const REMOVED: [(&str, &str); 1] = [(
-    "books.exclude",
-    concat!(
-        "`books.exclude` was removed: name the books you want in ",
-        "`books.include` instead, which says the same thing without two ",
-        "settings that can disagree",
+const REMOVED: [(&str, &str); 2] = [
+    (
+        "books.exclude",
+        concat!(
+            "`books.exclude` was removed: name the books you want in ",
+            "`books.include` instead, which says the same thing without two ",
+            "settings that can disagree",
+        ),
     ),
-)];
+    (
+        "output.file",
+        concat!(
+            "`output.file` was removed: the PDF is always written to ",
+            "`output/bible.pdf` inside the project folder, so that it stays ",
+            "with the book it was made from",
+        ),
+    ),
+];
 
 /// The closest known key, if it is close enough to be a slip. Compared on the
 /// whole dotted path, so `page.wdith` finds `page.width` and does not offer
@@ -370,9 +377,6 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             show_page_number: r.value("headers.show_page_number", |n| n.boolean()),
         },
         output: Output {
-            file: r.value("output.file", |n| {
-                n.string().map(|l| l.map(Utf8PathBuf::from))
-            }),
             keep_intermediates: r.value("output.keep_intermediates", |n| n.boolean()),
         },
     }

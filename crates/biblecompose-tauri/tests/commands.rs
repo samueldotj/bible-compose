@@ -518,3 +518,96 @@ fn the_windows_own_write_is_not_a_change() {
         "a file we just wrote is not somebody else's edit"
     );
 }
+
+/// The PDF goes in the project folder, and nothing in the settings moves it.
+#[test]
+fn the_output_path_is_the_project_folder() {
+    let (_dir, root) = project(None);
+    let expected = root.join(biblecompose_app::project::OUTPUT_FILE);
+    assert_eq!(project_at(&root).output, expected.to_string());
+
+    // Even for a project that tries. `output.file` was a setting once, and a
+    // file still carrying it is told so rather than quietly obeyed.
+    let (_dir2, opinionated) = project(Some(
+        "schema_version = 1\n[output]\nfile = \"somewhere/else.pdf\"\n",
+    ));
+    let p = project_at(&opinionated);
+    assert_eq!(
+        p.output,
+        opinionated
+            .join(biblecompose_app::project::OUTPUT_FILE)
+            .to_string()
+    );
+    assert!(
+        p.diagnostics.iter().any(|d| d.code == "CFG-002"),
+        "the key that no longer works says so"
+    );
+}
+
+// ------------------------------------------------- PRJ-001: a new project
+
+use biblecompose_app::project as app_project;
+
+/// A new project is a folder and one settings file, and it opens.
+#[test]
+fn creating_a_project_writes_a_folder_and_its_settings() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let parent = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("UTF-8 temp path");
+
+    let root = app_project::create(&parent, "Tamil Bible", "ta").expect("a new project");
+    assert_eq!(
+        root,
+        parent.join("Tamil Bible"),
+        "named after the publication"
+    );
+
+    let written = std::fs::read_to_string(root.join("biblecompose.toml").as_std_path())
+        .expect("the settings file was written");
+    assert!(written.contains("schema_version = 1"), "{written}");
+    assert!(written.contains("\"Tamil Bible\""), "{written}");
+    assert!(written.contains("\"ta\""), "{written}");
+    // Two keys and no more: everything else has a built-in answer, and a file
+    // full of defaults is a file somebody has to maintain to change nothing.
+    assert!(!written.contains("page"), "{written}");
+
+    // And it is a project: it opens, with no books yet and nothing blocking.
+    let p = project_at(&root);
+    assert!(p.books.is_empty());
+    let name = p.settings.iter().find(|s| s.key == "project.name").unwrap();
+    assert_eq!(name.value, "Tamil Bible");
+    assert!(name.overridden);
+}
+
+/// The name is a folder name, so it is checked rather than quietly mangled.
+#[test]
+fn a_name_that_cannot_be_a_folder_is_refused() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let parent = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("UTF-8 temp path");
+
+    let refused =
+        app_project::create(&parent, "Acts 1/2", "en").expect_err("a slash is not a name");
+    assert_eq!(refused.code.as_str(), "PRJ-005");
+    assert!(refused.help.is_some());
+
+    let empty = app_project::create(&parent, "   ", "en").expect_err("nor is nothing");
+    assert_eq!(empty.code.as_str(), "PRJ-005");
+}
+
+/// Over an existing folder it refuses rather than merges: "new project" onto
+/// somebody's work is either a mistake or a different verb.
+#[test]
+fn an_existing_folder_is_not_taken_over() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let parent = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("UTF-8 temp path");
+    let taken = parent.join("Already Here");
+    std::fs::create_dir(taken.as_std_path()).expect("mkdir");
+    std::fs::write(taken.join("JHN.usfm").as_std_path(), "\\id JHN\n").expect("write");
+
+    let refused =
+        app_project::create(&parent, "Already Here", "en").expect_err("something is there");
+    assert_eq!(refused.code.as_str(), "PRJ-005");
+    assert!(
+        taken.join("JHN.usfm").exists(),
+        "and nothing of theirs was touched"
+    );
+}

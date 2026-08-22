@@ -215,14 +215,25 @@
 </section>
 
 <style>
-  /* A whole Bible is sixty-six rows, and the pane sits above the diagnostics
-     panel — so the list scrolls rather than pushing everything else off the
-     window. Tall enough that a Gospel-sized project never scrolls at all. */
+  /* The pane fills its column so the list can. */
+  .pane {
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
+  }
+  h2,
+  .hint {
+    flex: none;
+  }
   ul {
     list-style: none;
     margin: 0;
     padding: 0;
-    max-block-size: 22rem;
+    /* Whatever the column has left after the heading and the summary. A
+       whole Bible is sixty-six rows and a Gospel is four; a fixed height was
+       either too much for one or too little for the other. */
+    flex: 1;
+    min-block-size: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
   }

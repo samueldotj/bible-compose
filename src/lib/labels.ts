@@ -61,20 +61,6 @@ export const GROUPS: readonly Group[] = [
       "typography.hyphenation",
     ],
   },
-  {
-    id: "content",
-    title: "What appears",
-    keys: [
-      "numbering.show_chapter_numbers",
-      "numbering.show_verse_numbers",
-      "notes.show_footnotes",
-      "notes.show_cross_references",
-      "headers.enabled",
-      "headers.show_book_name",
-      "headers.show_reference_range",
-      "headers.show_page_number",
-    ],
-  },
 ];
 
 /**
@@ -98,6 +84,17 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   // the folder is opened, so they sit under the button that opens it.
   "project.name",
   "project.language",
+  // And every one of these is a switch beside the thing it turns on, on the
+  // example page. Same reason as the measurements below: a name in a list and
+  // a picture are two places to look, and one of them is the control.
+  "numbering.show_chapter_numbers",
+  "numbering.show_verse_numbers",
+  "notes.show_footnotes",
+  "notes.show_cross_references",
+  "headers.enabled",
+  "headers.show_book_name",
+  "headers.show_reference_range",
+  "headers.show_page_number",
   // Every page measurement is a field *on the page diagram*, sitting on the
   // thing it measures. A second list of the same nine numbers underneath it
   // would be the drawing and the form disagreeing about which is the control.
@@ -147,6 +144,14 @@ export interface Tab {
    */
   readonly diagram?: boolean;
   /**
+   * Whether a page of Scripture is set above them, with the switches that
+   * decide what is on it.
+   *
+   * "Reference range in head" names a thing without showing it. A publisher
+   * who has not seen one cannot tell from the words whether they want it.
+   */
+  readonly example?: boolean;
+  /**
    * Where a setting belonging to no group ends up. Exactly one tab claims
    * them, so a key added to the schema is visible somewhere rather than
    * nowhere.
@@ -158,7 +163,7 @@ export const TABS: readonly Tab[] = [
   { id: "page", title: "Page", settingGroups: [], diagram: true },
   // Claims the strays now that the Project tab is gone. Exactly one tab does,
   // so a key added to the schema is visible somewhere rather than nowhere.
-  { id: "appears", title: "What appears", settingGroups: ["content"], orphans: true },
+  { id: "appears", title: "What appears", settingGroups: [], example: true, orphans: true },
   { id: "styles", title: "Styles", settingGroups: ["typography"], styles: true },
 ];
 

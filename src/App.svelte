@@ -3,6 +3,7 @@
   import DiagnosticsPanel from "./components/DiagnosticsPanel.svelte";
   import ProjectPane from "./components/ProjectPane.svelte";
   import QuickSettings from "./components/QuickSettings.svelte";
+  import AppearsExample from "./components/AppearsExample.svelte";
   import PageDiagram from "./components/PageDiagram.svelte";
   import SettingsForm from "./components/SettingsForm.svelte";
   import StartScreen from "./components/StartScreen.svelte";
@@ -156,6 +157,9 @@
         {:else}
           {#if tab.diagram && session.geometry}
             <PageDiagram geometry={session.geometry} />
+          {/if}
+          {#if tab.example}
+            <AppearsExample />
           {/if}
           {#if tab.settingGroups.length > 0 || tab.orphans}
             <SettingsForm groups={tab.settingGroups} orphans={tab.orphans ?? false} />

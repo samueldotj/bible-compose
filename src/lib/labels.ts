@@ -52,21 +52,6 @@ export const PLACEHOLDERS: Readonly<Record<string, string>> = {
 
 export const GROUPS: readonly Group[] = [
   {
-    id: "page",
-    title: "Page",
-    keys: [
-      "page.size",
-      "page.columns",
-      "page.margin_top",
-      "page.margin_bottom",
-      "page.margin_inner",
-      "page.margin_outer",
-      "page.column_gap",
-      "page.header_gap",
-      "page.footer_gap",
-    ],
-  },
-  {
     id: "typography",
     title: "Typography",
     keys: [
@@ -113,6 +98,18 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   // the folder is opened, so they sit under the button that opens it.
   "project.name",
   "project.language",
+  // Every page measurement is a field *on the page diagram*, sitting on the
+  // thing it measures. A second list of the same nine numbers underneath it
+  // would be the drawing and the form disagreeing about which is the control.
+  "page.size",
+  "page.columns",
+  "page.margin_top",
+  "page.margin_bottom",
+  "page.margin_inner",
+  "page.margin_outer",
+  "page.column_gap",
+  "page.header_gap",
+  "page.footer_gap",
   // Questions about the build you are about to run, which belong beside the
   // button that runs it rather than three tabs away from it.
   "output.keep_intermediates",
@@ -158,7 +155,7 @@ export interface Tab {
 }
 
 export const TABS: readonly Tab[] = [
-  { id: "page", title: "Page", settingGroups: ["page"], diagram: true },
+  { id: "page", title: "Page", settingGroups: [], diagram: true },
   // Claims the strays now that the Project tab is gone. Exactly one tab does,
   // so a key added to the schema is visible somewhere rather than nowhere.
   { id: "appears", title: "What appears", settingGroups: ["content"], orphans: true },

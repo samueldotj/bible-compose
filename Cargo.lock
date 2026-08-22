@@ -259,6 +259,7 @@ dependencies = [
  "biblecompose-config",
  "biblecompose-diagnostics",
  "biblecompose-scripture",
+ "biblecompose-testkit",
  "camino",
  "serde",
  "serde_json",

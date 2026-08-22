@@ -103,17 +103,6 @@ export class Session {
   styleErrors = $state<Record<string, readonly Diagnostic[]>>({});
 
   /**
-   * The setting the pointer or the keyboard is on, so the page diagram can
-   * light up the measurement being asked about.
-   *
-   * In the session rather than passed between the two components because they
-   * are siblings: the form knows which row is under the pointer and the
-   * drawing knows where that measurement is on the page, and neither owns the
-   * other.
-   */
-  hoveredSetting = $state<string | null>(null);
-
-  /**
    * Whether the problems dialog is open.
    *
    * A dialog rather than a pane under the book list: most of the time there is

@@ -155,9 +155,11 @@
           {/if}
         {:else}
           {#if tab.diagram && session.geometry}
-            <PageDiagram geometry={session.geometry} highlight={session.hoveredSetting} />
+            <PageDiagram geometry={session.geometry} />
           {/if}
-          <SettingsForm groups={tab.settingGroups} orphans={tab.orphans ?? false} />
+          {#if tab.settingGroups.length > 0 || tab.orphans}
+            <SettingsForm groups={tab.settingGroups} orphans={tab.orphans ?? false} />
+          {/if}
         {/if}
       </div>
     </div>

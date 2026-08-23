@@ -68,7 +68,7 @@ That aside was later examined properly, because a single-file installation is wa
 
 **The class is where Bible typesetting lives.** Two-column frames, note placement, cross-reference placement, running heads carrying a verse range, chapter-opening treatment. The Rust side decides *what* and the class decides *how*, which is the boundary that lets layout improve without recompiling and lets Spike 0 explore it before any Rust exists.
 
-That class now exists: [`sile/classes/biblecompose.lua`](../../sile/classes/biblecompose.lua), 298 lines out of S0. It is not a subclass of SILE's bundled `bible` class and deliberately so — that class typesets only when passed no options at all, and its two-column mode has never run ([spike/NOTES.md](../../spike/NOTES.md) F-5, F-6). Ours keeps upstream's architecture (`masters`, `twoside`, `infonode` + `chapterverse`, `footnotes`, `balanced-frames`) and none of its hardcoding.
+That class now exists: [`sile/classes/biblecompose.lua`](../../sile/classes/biblecompose.lua), 298 lines out of S0. It is not a subclass of SILE's bundled `bible` class and deliberately so — that class typesets only when passed no options at all, and its two-column mode has never run ([spike/NOTES.md](../../spike/NOTES.md) F-5, F-6). Ours keeps upstream's architecture (`masters`, `twoside`, `infonode` + `chapterverse`, `insertions` for the note area) and none of its hardcoding. It does **not** load `balanced-frames`, which P4.1 found reads the page-break penalty `insertions` uses after splitting a note as a request to balance the columns, and loops ([spike/NOTES.md](../../spike/NOTES.md) F-10).
 
 ## What the spike proved
 

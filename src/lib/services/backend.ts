@@ -71,8 +71,8 @@ export type SettingKind =
   | "font"
   /** A BCP-47 language tag, likewise. */
   | "language"
-  /** One of the seven things a running head or a footer slot can hold. */
-  | "head_slot"
+  /** One of a closed set of spellings, which `Setting.choices` lists. */
+  | "choice"
   | "length"
   | "page_size"
   | "integer"
@@ -84,6 +84,14 @@ export interface Setting {
   readonly key: string;
   readonly kind: SettingKind;
   readonly value: string;
+  /**
+   * For `choice`, every spelling the resolver accepts, in the order to offer
+   * them.
+   *
+   * From the schema rather than written here, so a dropdown cannot offer a
+   * value the settings file would reject, nor miss one it would accept.
+   */
+  readonly choices?: readonly string[];
   /** The project file set it, so it can be reset (CFG-007). */
   readonly overridden: boolean;
   readonly location?: SourceLocation;

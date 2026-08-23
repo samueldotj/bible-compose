@@ -43,6 +43,10 @@ export const LABELS: Readonly<Record<string, string>> = {
   "typography.keep_poetry_indentation": "Keep poetry indentation",
   "notes.show_footnotes": "Footnotes",
   "notes.show_cross_references": "Cross-references",
+  "notes.footnote_callers": "Footnote marks",
+  "notes.cross_reference_callers": "Reference marks",
+  "notes.restart_numbering": "Marks start again",
+  "notes.cross_reference_placement": "References go",
   "headers.header_left": "Left",
   "headers.header_center": "Centre",
   "headers.header_right": "Right",
@@ -105,6 +109,10 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   "typography.keep_poetry_indentation",
   "notes.show_footnotes",
   "notes.show_cross_references",
+  "notes.footnote_callers",
+  "notes.cross_reference_callers",
+  "notes.restart_numbering",
+  "notes.cross_reference_placement",
   "headers.header_left",
   "headers.header_center",
   "headers.header_right",
@@ -131,6 +139,35 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
 
 export function labelFor(key: string): string {
   return LABELS[key] ?? key;
+}
+
+/**
+ * The words for one option of a `choice` setting.
+ *
+ * The spellings themselves are the schema's and are not translated — they are
+ * what goes in the file. These are what a person reads in a dropdown, so they
+ * live here with the rest of the words.
+ *
+ * Only the ones a rule would get wrong are listed. Everything else falls
+ * through to un-snaking, which turns `first_reference` into "First reference"
+ * and is right far more often than it is worth an entry.
+ */
+const CHOICE_WORDS: Readonly<Record<string, string>> = {
+  note_area: "In the note area",
+  inline: "In the text",
+  end_of_paragraph: "Under the paragraph",
+  none: "No mark",
+  numbers: "1, 2, 3",
+  letters: "a, b, c",
+  symbols: "*, †, ‡",
+  alt_book_name: "Alt book name",
+};
+
+export function wordsFor(choice: string): string {
+  const known = CHOICE_WORDS[choice];
+  if (known !== undefined) return known;
+  const words = choice.replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 /**

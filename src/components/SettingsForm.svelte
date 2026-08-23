@@ -13,7 +13,7 @@
    * batching buys nothing.
    */
   import FontPicker from "./FontPicker.svelte";
-  import { EDITED_ELSEWHERE, GROUPS, labelFor, PLACEHOLDERS } from "../lib/labels";
+  import { EDITED_ELSEWHERE, GROUPS, labelFor, PLACEHOLDERS, wordsFor } from "../lib/labels";
   import { session } from "../lib/session.svelte";
   import type { Setting } from "../lib/services/backend";
 
@@ -103,6 +103,22 @@
                 disabled={!session.editable}
                 onchange={(e) => commit(setting, e.currentTarget.value)}
               />
+            {:else if setting.kind === "choice"}
+              <!--
+                The options come with the setting, from the same table the
+                resolver parses with — so this control cannot offer a value
+                the file would then reject.
+              -->
+              <select
+                id={`set-${setting.key}`}
+                value={setting.value}
+                disabled={!session.editable}
+                onchange={(e) => commit(setting, e.currentTarget.value)}
+              >
+                {#each setting.choices ?? [] as choice (choice)}
+                  <option value={choice}>{wordsFor(choice)}</option>
+                {/each}
+              </select>
             {:else if setting.kind === "font"}
               <!--
                 Typed as well as picked. The field stays editable because a

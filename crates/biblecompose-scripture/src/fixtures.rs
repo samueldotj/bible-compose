@@ -271,6 +271,97 @@ pub fn adversarial() -> ScriptureDocument {
     )])
 }
 
+/// Two chapters carrying every question the apparatus has to answer (P4.1,
+/// P4.2).
+///
+/// Built for the layout, not for the model — [`kitchen_sink`] already proves a
+/// note and a cross-reference normalize and emit. What this one is for is what
+/// only a real page can show: that two sequences run side by side without
+/// interleaving, that an editor's own caller is printed and skipped over, that
+/// a note longer than the note area splits across pages, and that a caller
+/// sequence starts again at a chapter.
+///
+/// Deliberately in one book with two chapters, because the restart boundary is
+/// the chapter and a fixture with one chapter cannot show it.
+pub fn apparatus() -> ScriptureDocument {
+    // Long enough that the note area cannot hold it, so the insertion splits
+    // and continues on the next page. Assembled rather than written out: the
+    // property that matters is the length, and 6,000 characters of prose in a
+    // source file would bury the fixture it belongs to.
+    let long = format!(
+        "A note too long for one page's note area, so that it has to split. {}",
+        "Repeated filler that carries the note past the foot of the page. ".repeat(90)
+    );
+
+    let reference = |origin: &str, body: &str| {
+        Inline::Ref(CrossReference {
+            caller: "+".to_owned(),
+            origin: Some(origin.to_owned()),
+            content: vec![Inline::Char {
+                style: CharStyle::Xt,
+                content: vec![text(body)],
+            }],
+        })
+    };
+
+    ScriptureDocument::new(vec![Book::new(
+        book("1JN"),
+        BookNames::named("1 John"),
+        vec![
+            Block::Paragraph {
+                style: ParaStyle::P,
+                content: vec![
+                    chapter(1),
+                    verse(1),
+                    text("That which was from the beginning"),
+                    reference("1:1", "John 1:1; John 1:14"),
+                    text(", which we have heard, which we have seen with our own eyes. "),
+                    verse(2),
+                    text("And this is the life that was revealed"),
+                    footnote("1:2", "Or everlasting life."),
+                    text("; we have seen it and testified to it. "),
+                    verse(3),
+                    text("We proclaim to you what we have seen and heard"),
+                    reference("1:3", "Acts 4:20"),
+                    text(", so that you also may have fellowship with us. "),
+                    verse(4),
+                    text("We write these things so that our"),
+                    // An editor's own caller: printed as written, and it does
+                    // not take a place in the sequence.
+                    Inline::Note(Note {
+                        kind: NoteKind::Footnote,
+                        caller: "*".to_owned(),
+                        origin: Some("1:4".to_owned()),
+                        content: vec![Block::Paragraph {
+                            style: ParaStyle::P,
+                            content: vec![text("BYZ and TR read "), text("your.")],
+                        }],
+                    }),
+                    text(" joy may be complete. "),
+                    verse(5),
+                    text("And this is the message we have heard from Him"),
+                    footnote("1:5", &long),
+                    text(": God is light, and in Him there is no darkness at all."),
+                ],
+            },
+            Block::Paragraph {
+                style: ParaStyle::P,
+                content: vec![
+                    chapter(2),
+                    verse(1),
+                    text("My little children, I am writing these things to you"),
+                    footnote("2:1", "The first note of a new chapter."),
+                    text(" so that you will not sin. "),
+                    verse(2),
+                    text("He Himself is the atoning sacrifice for our sins"),
+                    reference("2:2", "John 14:15"),
+                    text(", and not only for ours but also for the whole world."),
+                ],
+            },
+        ],
+    )])
+}
+
 /// Every fixture, for tests that should run over all of them.
 pub fn all() -> Vec<(&'static str, ScriptureDocument)> {
     vec![
@@ -278,6 +369,7 @@ pub fn all() -> Vec<(&'static str, ScriptureDocument)> {
         ("two_books", two_books()),
         ("kitchen_sink", kitchen_sink()),
         ("adversarial", adversarial()),
+        ("apparatus", apparatus()),
     ]
 }
 

@@ -31,6 +31,7 @@
     SAMPLE_INTRO,
     SAMPLE_OUTLINE,
   } from "../lib/sample";
+  import { wordsFor } from "../lib/labels";
   import { session } from "../lib/session.svelte";
 
   /** Which set of switches to put beside the page. */
@@ -159,7 +160,25 @@
       title: "Notes",
       switches: [
         { key: "notes.show_footnotes", label: "Footnotes" },
+        { key: "notes.footnote_callers", label: "Footnote marks", under: "notes.show_footnotes" },
         { key: "notes.show_cross_references", label: "Cross-references" },
+        {
+          key: "notes.cross_reference_callers",
+          label: "Reference marks",
+          under: "notes.show_cross_references",
+        },
+        {
+          key: "notes.cross_reference_placement",
+          label: "References go",
+          under: "notes.show_cross_references",
+        },
+        {
+          key: "notes.restart_numbering",
+          label: "Marks start again",
+          // Both sequences, and the only boundary this passage has is the
+          // chapter — so say which one the example can actually show.
+          note: "at chapter 2, in this passage",
+        },
       ],
     },
   ];
@@ -176,16 +195,17 @@
     { key: "headers.footer_right", label: "Right" },
   ] as const;
 
-  /** What a slot may hold. The order the list is offered in. */
-  const CHOICES: readonly { value: string; label: string }[] = [
-    { value: "empty", label: "Empty" },
-    { value: "page_number", label: "Page number" },
-    { value: "reference_range", label: "Reference range" },
-    { value: "first_reference", label: "First reference" },
-    { value: "last_reference", label: "Last reference" },
-    { value: "book_name", label: "Book name" },
-    { value: "alt_book_name", label: "Alt book name" },
-  ];
+  /**
+   * What a slot may hold, from the schema rather than from a list here.
+   *
+   * There used to be a list here, and it was a second statement of
+   * `HeadSlot::NAMES` in a language that cannot be checked against the first —
+   * so an eighth thing a head could hold would have reached the file format
+   * and not this dropdown, or, worse, the other way round.
+   */
+  function choicesFor(key: string): readonly string[] {
+    return session.settings.find((s) => s.key === key)?.choices ?? [];
+  }
 
   function chosen(key: string): string {
     return session.settings.find((s) => s.key === key)?.value ?? "empty";
@@ -218,8 +238,8 @@
               disabled={!session.editable}
               onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}
             >
-              {#each CHOICES as choice (choice.value)}
-                <option value={choice.value}>{choice.label}</option>
+              {#each choicesFor(s.key) as choice (choice)}
+                <option value={choice}>{wordsFor(choice)}</option>
               {/each}
             </select>
           </label>
@@ -335,8 +355,8 @@
               disabled={!session.editable}
               onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}
             >
-              {#each CHOICES as choice (choice.value)}
-                <option value={choice.value}>{choice.label}</option>
+              {#each choicesFor(s.key) as choice (choice)}
+                <option value={choice}>{wordsFor(choice)}</option>
               {/each}
             </select>
           </label>
@@ -352,6 +372,7 @@
           <ul class="switches">
             {#each group.switches as s (s.key)}
               {@const idle = s.under !== undefined && !on(s.under)}
+              {@const setting = session.settings.find((x) => x.key === s.key)}
               <li class:nested={s.under !== undefined} class:idle>
                 <label
                   onpointerenter={() => (lit = s.key)}
@@ -359,13 +380,31 @@
                   onfocusin={() => (lit = s.key)}
                   onfocusout={() => (lit = null)}
                 >
-                  <input
-                    type="checkbox"
-                    checked={on(s.key)}
-                    disabled={!session.editable || idle}
-                    onchange={(e) => toggle(s.key, e.currentTarget.checked)}
-                  />
-                  {s.label}
+                  <!--
+                    Which control this is is the schema's answer and not a
+                    field in the list above, so a setting that becomes a choice
+                    gets a dropdown here without anyone remembering to say so.
+                  -->
+                  {#if setting?.kind === "choice"}
+                    {s.label}
+                    <select
+                      value={setting.value}
+                      disabled={!session.editable || idle}
+                      onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}
+                    >
+                      {#each setting.choices ?? [] as choice (choice)}
+                        <option value={choice}>{wordsFor(choice)}</option>
+                      {/each}
+                    </select>
+                  {:else}
+                    <input
+                      type="checkbox"
+                      checked={on(s.key)}
+                      disabled={!session.editable || idle}
+                      onchange={(e) => toggle(s.key, e.currentTarget.checked)}
+                    />
+                    {s.label}
+                  {/if}
                 </label>
                 {#if s.note}
                   <span class="note">{s.note}</span>

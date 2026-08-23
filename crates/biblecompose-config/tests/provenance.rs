@@ -59,6 +59,10 @@ hide_first_verse_number = true
 [notes]
 show_footnotes = false
 show_cross_references = false
+footnote_callers = \"symbols\"
+cross_reference_callers = \"none\"
+restart_numbering = \"per_book\"
+cross_reference_placement = \"inline\"
 
 [headers]
 header_left = \"alt_book_name\"

@@ -18,6 +18,8 @@
 //! fine, because the codepoints are present even where no glyph is
 //! (spike/NOTES.md F-12). FONT-002's coverage pre-flight is the only defence.
 
+use std::collections::BTreeMap;
+
 use camino::Utf8Path;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -42,10 +44,17 @@ impl Pdf {
     /// SILE's libtexpdf backend writes cross-reference and object streams, so
     /// the objects recording page count and fonts are Flate-compressed and
     /// invisible to a plain byte search. Everything is inflated first.
+    ///
+    /// **Through the object table, not by walking for `stream` in the bytes.**
+    /// The blind walk finds the first `stream` keyword and the next `endstream`
+    /// after it, which lines up on a large file and does not on a small one: on
+    /// a one-page document it skipped the object stream entirely, `pages` came
+    /// back as 0, and `every_fixture_typesets_to_a_pdf` failed on the smallest
+    /// fixture in the set while passing on the rest.
     pub fn parse(raw: &[u8]) -> Pdf {
         let mut blob = raw.to_vec();
-        for chunk in inflate_streams(raw) {
-            blob.extend_from_slice(&chunk);
+        for body in objects(raw).values() {
+            blob.extend_from_slice(body);
         }
 
         Pdf {
@@ -166,30 +175,6 @@ fn find(hay: &[u8], needle: &[u8]) -> Option<usize> {
         return None;
     }
     hay.windows(needle.len()).position(|w| w == needle)
-}
-
-/// Inflate every zlib stream in the file, skipping the ones that are not.
-fn inflate_streams(raw: &[u8]) -> Vec<Vec<u8>> {
-    let mut out = Vec::new();
-    let mut i = 0;
-    while let Some(pos) = find(&raw[i..], b"stream") {
-        let mut start = i + pos + b"stream".len();
-        if raw.get(start) == Some(&b'\r') {
-            start += 1;
-        }
-        if raw.get(start) == Some(&b'\n') {
-            start += 1;
-        }
-        let Some(end_rel) = find(&raw[start..], b"endstream") else {
-            break;
-        };
-        let end = start + end_rel;
-        if let Some(data) = inflate(&raw[start..end]) {
-            out.push(data);
-        }
-        i = end;
-    }
-    out
 }
 
 /// A minimal raw-DEFLATE/zlib reader.
@@ -425,6 +410,508 @@ mod miniz {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Where the ink is
+//
+// [`Pdf`] above answers questions about the file. What follows answers
+// questions about the *page*: which glyphs were set, at what size, and where.
+//
+// It exists because the defects this project has actually shipped were all of
+// that kind and none of them were visible from the file's structure. Lines that
+// ran past the measure, and notes typeset over the last lines of a column, both
+// produced a PDF with the right page count, the right page size and every font
+// embedded. Only the coordinates said anything was wrong.
+//
+// This is a reader for what SILE writes and not a PDF library. It handles the
+// operators libtexpdf emits — `Tf`, `Td`, `TD`, `Tm`, `BT`, and hex strings
+// inside `Tj` and `TJ` — and ignores the rest of the imaging model, including
+// `T*`, `'`, `"`, and text rendering matrices other than the translation.
+// ---------------------------------------------------------------------------
+
+/// One run of text, as it was placed.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Mark {
+    /// 1-based, in reading order.
+    pub page: usize,
+    pub x: f64,
+    /// **Top-down, and negative.** SILE flips the page transform, so the top of
+    /// the page is 0 and further down is further negative. Comparisons read the
+    /// other way round from PDF's own convention: `a.y < b.y` means a is lower.
+    pub y: f64,
+    /// Points, as the `Tf` operator gave it. This is how the note area is told
+    /// apart from the body without knowing the frame geometry.
+    pub size: f64,
+    /// The characters, through the font's `/ToUnicode` map. A glyph the map
+    /// does not cover becomes `U+FFFD`, so a broken subset is visible rather
+    /// than silently short.
+    pub text: String,
+}
+
+/// One baseline's worth of marks, in the order they were placed.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Line {
+    pub page: usize,
+    pub y: f64,
+    pub marks: Vec<Mark>,
+}
+
+impl Line {
+    /// The line's text, with nothing between the runs.
+    ///
+    /// SILE places each word as its own run and spaces them by moving the pen,
+    /// so there are no space glyphs to recover — `"in the beginning"` comes back
+    /// as `"inthebeginning"`. Assert with [`str::contains`] on a word, or on a
+    /// run of words spelled the same way.
+    pub fn text(&self) -> String {
+        self.marks.iter().map(|m| m.text.as_str()).collect()
+    }
+
+    /// The sizes on this line, so a note line can be told from a body line.
+    pub fn sizes(&self) -> Vec<f64> {
+        let mut out: Vec<f64> = Vec::new();
+        for m in &self.marks {
+            if !out.contains(&m.size) {
+                out.push(m.size);
+            }
+        }
+        out
+    }
+
+    pub fn left(&self) -> f64 {
+        self.marks.iter().map(|m| m.x).fold(f64::MAX, f64::min)
+    }
+}
+
+impl Pdf {
+    /// Every mark in the file, in page order and then in placement order.
+    pub fn marks(raw: &[u8]) -> Vec<Mark> {
+        let objects = objects(raw);
+        let mut out = Vec::new();
+        for (index, page) in page_order(&objects).into_iter().enumerate() {
+            let Some(body) = objects.get(&page) else {
+                continue;
+            };
+            let fonts = page_fonts(&objects, body);
+            let Some(content) = reference(body, b"/Contents").and_then(|n| stream(&objects, n))
+            else {
+                continue;
+            };
+            read_content(&content, &fonts, index + 1, &mut out);
+        }
+        out
+    }
+
+    /// The same, gathered into baselines.
+    ///
+    /// Two marks are on the same line when they share a `y` exactly, which is
+    /// what SILE produces for a line of type: every run on it is placed from the
+    /// same baseline.
+    pub fn lines(raw: &[u8]) -> Vec<Line> {
+        let mut out: Vec<Line> = Vec::new();
+        for mark in Pdf::marks(raw) {
+            match out
+                .iter_mut()
+                .find(|l| l.page == mark.page && l.y.to_bits() == mark.y.to_bits())
+            {
+                Some(line) => line.marks.push(mark),
+                None => out.push(Line {
+                    page: mark.page,
+                    y: mark.y,
+                    marks: vec![mark],
+                }),
+            }
+        }
+        // Down the page within a page, which is what a reader would expect from
+        // something called `lines` and is not the order the operators arrive in.
+        out.sort_by(|a, b| {
+            a.page
+                .cmp(&b.page)
+                .then(b.y.partial_cmp(&a.y).unwrap_or(std::cmp::Ordering::Equal))
+        });
+        out
+    }
+}
+
+/// Every indirect object, including the ones inside object streams.
+fn objects(raw: &[u8]) -> BTreeMap<u32, Vec<u8>> {
+    let mut out: BTreeMap<u32, Vec<u8>> = BTreeMap::new();
+    let mut i = 0;
+    while let Some(pos) = find(&raw[i..], b" obj") {
+        let at = i + pos;
+        // Back up over `N G ` to the object number.
+        let head = &raw[..at];
+        let start = head
+            .iter()
+            .rposition(|c| *c == b'\n' || *c == b'\r')
+            .map_or(0, |p| p + 1);
+        let words: Vec<&[u8]> = head[start..].split(|c| *c == b' ').collect();
+        // Both the number and the generation, or a `" obj"` that happened to
+        // land inside a compressed stream would overwrite a real object.
+        let number = match words.as_slice() {
+            [n, g] if ascii_u32(g).is_some() => ascii_u32(n),
+            _ => None,
+        };
+        if let Some(number) = number {
+            if let Some(end) = find(&raw[at..], b"endobj") {
+                out.insert(number, raw[at + b" obj".len()..at + end].to_vec());
+            }
+        }
+        i = at + b" obj".len();
+    }
+
+    // Object streams hold the page and font dictionaries, so nothing above is
+    // visible until they are unpacked.
+    for body in out.clone().values() {
+        if find(body, b"/ObjStm").is_none() {
+            continue;
+        }
+        let (Some(count), Some(first), Some(data)) = (
+            integer(body, b"/N"),
+            integer(body, b"/First"),
+            inflate_body(body),
+        ) else {
+            continue;
+        };
+        let header: Vec<u32> = String::from_utf8_lossy(&data[..first.min(data.len())])
+            .split_whitespace()
+            .filter_map(|w| w.parse().ok())
+            .collect();
+        for pair in 0..count {
+            let Some(&number) = header.get(pair * 2) else {
+                break;
+            };
+            let Some(&offset) = header.get(pair * 2 + 1) else {
+                break;
+            };
+            let start = first + offset as usize;
+            let end = header
+                .get(pair * 2 + 3)
+                .map_or(data.len(), |o| first + *o as usize);
+            if start <= end && end <= data.len() {
+                out.insert(number, data[start..end].to_vec());
+            }
+        }
+    }
+    out
+}
+
+/// The pages, in reading order, by walking the page tree from the catalog.
+///
+/// Not by sorting object numbers, which happens to work for a SILE document
+/// written straight through and would quietly stop working for one that is not.
+fn page_order(objects: &BTreeMap<u32, Vec<u8>>) -> Vec<u32> {
+    let root = objects
+        .iter()
+        .find(|(_, b)| find(b, b"/Type/Catalog").is_some() || find(b, b"/Type /Catalog").is_some())
+        .and_then(|(_, b)| reference(b, b"/Pages"));
+    let mut out = Vec::new();
+    if let Some(root) = root {
+        walk_pages(objects, root, &mut out, 0);
+    }
+    out
+}
+
+fn walk_pages(objects: &BTreeMap<u32, Vec<u8>>, node: u32, out: &mut Vec<u32>, depth: usize) {
+    // A malformed file could make the tree a cycle; a page tree deeper than
+    // this is not one this reader is going to make sense of anyway.
+    if depth > 32 {
+        return;
+    }
+    let Some(body) = objects.get(&node) else {
+        return;
+    };
+    if let Some(kids) = between(body, b"/Kids", b'[', b']') {
+        for child in references_in(&kids) {
+            walk_pages(objects, child, out, depth + 1);
+        }
+    } else {
+        out.push(node);
+    }
+}
+
+/// `/Font << /F1 5 0 R >>` on a page's resources, each with its decoded map.
+fn page_fonts(objects: &BTreeMap<u32, Vec<u8>>, page: &[u8]) -> BTreeMap<String, ToUnicode> {
+    let mut out = BTreeMap::new();
+    let Some(resources) = reference(page, b"/Resources").and_then(|n| objects.get(&n)) else {
+        return out;
+    };
+    let Some(fonts) = between(resources, b"/Font", b'<', b'>') else {
+        return out;
+    };
+    let text = String::from_utf8_lossy(&fonts).into_owned();
+    let mut rest = text.as_str();
+    while let Some(at) = rest.find('/') {
+        rest = &rest[at + 1..];
+        let name: String = rest.chars().take_while(|c| !c.is_whitespace()).collect();
+        let after = &rest[name.len()..];
+        let number: Option<u32> = after.split_whitespace().next().and_then(|w| w.parse().ok());
+        if let Some(number) = number {
+            let map = objects
+                .get(&number)
+                .and_then(|f| reference(f, b"/ToUnicode"))
+                .and_then(|n| stream(objects, n))
+                .map(|cmap| to_unicode(&cmap))
+                .unwrap_or_default();
+            out.insert(name, map);
+        }
+    }
+    out
+}
+
+type ToUnicode = BTreeMap<u32, String>;
+
+/// A `/ToUnicode` CMap, as far as `bfchar` and `bfrange` go.
+fn to_unicode(cmap: &[u8]) -> ToUnicode {
+    let text = String::from_utf8_lossy(cmap);
+    let mut out = BTreeMap::new();
+
+    for block in sections(&text, "beginbfchar", "endbfchar") {
+        let codes = hex_groups(block);
+        for pair in codes.chunks(2) {
+            if let [src, dst] = pair {
+                if let Some(code) = hex_u32(src) {
+                    out.insert(code, utf16_be(dst));
+                }
+            }
+        }
+    }
+    for block in sections(&text, "beginbfrange", "endbfrange") {
+        let codes = hex_groups(block);
+        for triple in codes.chunks(3) {
+            if let [lo, hi, dst] = triple {
+                let (Some(lo), Some(hi), Some(base)) = (hex_u32(lo), hex_u32(hi), hex_u32(dst))
+                else {
+                    continue;
+                };
+                for (step, code) in (lo..=hi).enumerate() {
+                    if let Some(ch) = char::from_u32(base + step as u32) {
+                        out.insert(code, ch.to_string());
+                    }
+                }
+            }
+        }
+    }
+    out
+}
+
+fn sections<'a>(text: &'a str, open: &str, close: &str) -> Vec<&'a str> {
+    let mut out = Vec::new();
+    let mut rest = text;
+    while let Some(start) = rest.find(open) {
+        let after = &rest[start + open.len()..];
+        let Some(end) = after.find(close) else { break };
+        out.push(&after[..end]);
+        rest = &after[end..];
+    }
+    out
+}
+
+fn hex_groups(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut rest = text;
+    while let Some(start) = rest.find('<') {
+        let after = &rest[start + 1..];
+        let Some(end) = after.find('>') else { break };
+        out.push(after[..end].to_owned());
+        rest = &after[end + 1..];
+    }
+    out
+}
+
+fn hex_u32(text: &str) -> Option<u32> {
+    u32::from_str_radix(text.trim(), 16).ok()
+}
+
+/// A CMap destination is UTF-16BE, and may be a surrogate pair or a sequence.
+fn utf16_be(hex: &str) -> String {
+    let units: Vec<u16> = hex
+        .as_bytes()
+        .chunks(4)
+        .filter_map(|c| u16::from_str_radix(&String::from_utf8_lossy(c), 16).ok())
+        .collect();
+    String::from_utf16_lossy(&units)
+}
+
+fn read_content(
+    data: &[u8],
+    fonts: &BTreeMap<String, ToUnicode>,
+    page: usize,
+    out: &mut Vec<Mark>,
+) {
+    let text = String::from_utf8_lossy(data);
+    let words = Tokens { rest: &text };
+    let mut stack: Vec<&str> = Vec::new();
+    let empty = ToUnicode::new();
+    let mut map = &empty;
+    let (mut size, mut x, mut y) = (0.0f64, 0.0f64, 0.0f64);
+
+    for token in words {
+        match token {
+            "Tf" => {
+                if let [name, points] = tail(&stack, 2) {
+                    size = points.parse().unwrap_or(size);
+                    map = fonts.get(name.trim_start_matches('/')).unwrap_or(&empty);
+                }
+            }
+            // Both are a translation of the text line matrix; SILE emits one
+            // per `BT`, so treating them as absolute and relative alike is the
+            // same answer here and the relative reading is the safer one.
+            "Td" | "TD" => {
+                if let [dx, dy] = tail(&stack, 2) {
+                    x += dx.parse().unwrap_or(0.0);
+                    y += dy.parse().unwrap_or(0.0);
+                }
+            }
+            "Tm" => {
+                if let [.., ex, ey] = tail(&stack, 6) {
+                    x = ex.parse().unwrap_or(x);
+                    y = ey.parse().unwrap_or(y);
+                }
+            }
+            "BT" => {
+                x = 0.0;
+                y = 0.0;
+            }
+            _ => {
+                if let Some(hex) = token.strip_prefix('<').and_then(|t| t.strip_suffix('>')) {
+                    let decoded: String = hex
+                        .as_bytes()
+                        .chunks(4)
+                        .filter_map(|c| hex_u32(&String::from_utf8_lossy(c)))
+                        .map(|code| map.get(&code).cloned().unwrap_or('\u{fffd}'.to_string()))
+                        .collect();
+                    out.push(Mark {
+                        page,
+                        x,
+                        y,
+                        size,
+                        text: decoded,
+                    });
+                }
+            }
+        }
+        stack.push(token);
+        if stack.len() > 8 {
+            stack.remove(0);
+        }
+    }
+}
+
+/// The last `n` tokens, or fewer — an operator given too few operands simply
+/// fails to match the pattern the caller destructures with.
+fn tail<'s, 'a>(stack: &'s [&'a str], n: usize) -> &'s [&'a str] {
+    &stack[stack.len().saturating_sub(n)..]
+}
+
+/// Content-stream tokens: hex strings whole, everything else on whitespace and
+/// on the array brackets that wrap a `TJ`.
+struct Tokens<'a> {
+    rest: &'a str,
+}
+
+impl<'a> Iterator for Tokens<'a> {
+    type Item = &'a str;
+
+    fn next(&mut self) -> Option<&'a str> {
+        self.rest = self
+            .rest
+            .trim_start_matches(|c: char| c.is_whitespace() || c == '[' || c == ']');
+        if self.rest.is_empty() {
+            return None;
+        }
+        let end = if self.rest.starts_with('<') {
+            self.rest.find('>').map_or(self.rest.len(), |i| i + 1)
+        } else {
+            self.rest
+                .find(|c: char| c.is_whitespace() || c == '[' || c == ']' || c == '<')
+                .unwrap_or(self.rest.len())
+        };
+        let (token, rest) = self.rest.split_at(end);
+        self.rest = rest;
+        Some(token)
+    }
+}
+
+/// `/Key 12 0 R` → `12`, and `/Key[12 0 R]` too.
+fn reference(body: &[u8], key: &[u8]) -> Option<u32> {
+    let at = find(body, key)? + key.len();
+    let text = String::from_utf8_lossy(&body[at..body.len().min(at + 64)]).into_owned();
+    digits(text.trim_start().trim_start_matches('['))
+}
+
+/// Every `N 0 R` inside a slice, in order.
+fn references_in(body: &[u8]) -> Vec<u32> {
+    let text = String::from_utf8_lossy(body);
+    let words: Vec<&str> = text.split_whitespace().collect();
+    words
+        .windows(3)
+        .filter(|w| w[2] == "R")
+        .filter_map(|w| w[0].parse().ok())
+        .collect()
+}
+
+/// `/Key 42` → `42`.
+fn integer(body: &[u8], key: &[u8]) -> Option<usize> {
+    let at = find(body, key)? + key.len();
+    let text = String::from_utf8_lossy(&body[at..body.len().min(at + 32)]).into_owned();
+    digits(text.trim_start())
+}
+
+/// The leading run of digits, and nothing after it.
+///
+/// Not `split_whitespace`, because PDF puts no space before the next key:
+/// `/N 111/First 907` gives `111/First` to anything that splits on space, and
+/// that parses as nothing at all.
+fn digits<T: std::str::FromStr>(text: &str) -> Option<T> {
+    let run: String = text.chars().take_while(char::is_ascii_digit).collect();
+    run.parse().ok()
+}
+
+/// The balanced `open`…`close` run that follows `key`.
+fn between(body: &[u8], key: &[u8], open: u8, close: u8) -> Option<Vec<u8>> {
+    let at = find(body, key)? + key.len();
+    let start = body[at..].iter().position(|c| *c == open)? + at;
+    let mut depth = 0i32;
+    for (i, c) in body[start..].iter().enumerate() {
+        if *c == open {
+            depth += 1;
+        } else if *c == close {
+            depth -= 1;
+            if depth == 0 {
+                return Some(body[start + 1..start + i].to_vec());
+            }
+        }
+    }
+    None
+}
+
+/// The decoded stream of an object, if it has one.
+fn stream(objects: &BTreeMap<u32, Vec<u8>>, number: u32) -> Option<Vec<u8>> {
+    inflate_body(objects.get(&number)?)
+}
+
+fn inflate_body(body: &[u8]) -> Option<Vec<u8>> {
+    let at = find(body, b"stream")? + b"stream".len();
+    let mut start = at;
+    if body.get(start) == Some(&b'\r') {
+        start += 1;
+    }
+    if body.get(start) == Some(&b'\n') {
+        start += 1;
+    }
+    let end = start + find(&body[start..], b"endstream")?;
+    let data = &body[start..end];
+    match find(&body[..at], b"/FlateDecode") {
+        Some(_) => inflate(data),
+        None => Some(data.to_vec()),
+    }
+}
+
+fn ascii_u32(word: &[u8]) -> Option<u32> {
+    let text = std::str::from_utf8(word).ok()?;
+    text.trim().parse().ok()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -476,12 +963,29 @@ mod tests {
         z.extend_from_slice(&(!(payload.len() as u16)).to_le_bytes());
         z.extend_from_slice(payload);
 
-        let mut raw = b"%PDF-1.5\nstream\n".to_vec();
+        let mut raw = b"%PDF-1.5\n1 0 obj\n<</Filter/FlateDecode>>\nstream\n".to_vec();
         raw.extend_from_slice(&z);
-        raw.extend_from_slice(b"endstream\n");
+        raw.extend_from_slice(b"\nendstream\nendobj\n");
 
-        let streams = inflate_streams(&raw);
-        assert_eq!(streams.len(), 1);
-        assert_eq!(streams[0], payload);
+        let objects = objects(&raw);
+        assert_eq!(
+            inflate_body(objects.get(&1).expect("object 1")),
+            Some(payload.to_vec())
+        );
+    }
+
+    /// `/N 111/First 907` — no space before the next key, which is legal and is
+    /// what libtexpdf writes.
+    #[test]
+    fn a_number_ends_where_the_next_key_begins() {
+        assert_eq!(
+            integer(b"<</Type/ObjStm/N 111/First 907>>", b"/N"),
+            Some(111)
+        );
+        assert_eq!(reference(b"<</Contents[8 0 R]>>", b"/Contents"), Some(8));
+        assert_eq!(
+            reference(b"<</Pages 158 0 R/Type/Catalog>>", b"/Pages"),
+            Some(158)
+        );
     }
 }

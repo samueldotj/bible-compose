@@ -24,7 +24,9 @@ use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, Severity, SourceLo
 
 use crate::document::{ConfigDocument, Located, Node};
 use crate::provenance::{Provenance, Sourced};
-use crate::value::{self, HeadSlot, Length, PageSize};
+use crate::value::{
+    self, CallerStyle, HeadSlot, Length, PageSize, ReferencePlacement, RestartNumbering,
+};
 
 /// The settings vocabulary this release speaks.
 pub const SCHEMA_VERSION: i64 = 1;
@@ -142,10 +144,25 @@ pub struct Contents {
     pub show_section_headings: Sourced<bool>,
 }
 
+/// Footnotes and cross-references: whether, how marked, and — for references —
+/// where (SCR-003 – SCR-005).
+///
+/// The two kinds keep separate caller settings on purpose. A page carrying both
+/// needs to say which mark belongs to which apparatus, and the way editions do
+/// that is by giving them different sequences — numbers against letters — not
+/// by interleaving one sequence between them. That is the whole of what P4.2's
+/// "styled independently of footnotes" asks for at the level of the mark.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Notes {
     pub show_footnotes: Sourced<bool>,
     pub show_cross_references: Sourced<bool>,
+    pub footnote_callers: Sourced<CallerStyle>,
+    pub cross_reference_callers: Sourced<CallerStyle>,
+    /// Applies to both sequences, because a page whose footnotes restart at a
+    /// chapter and whose references do not is a page with two different
+    /// answers to the same question.
+    pub restart_numbering: Sourced<RestartNumbering>,
+    pub cross_reference_placement: Sourced<ReferencePlacement>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -165,7 +182,19 @@ pub struct Output {
 
 /// One of the seven things a head or a footer can hold.
 fn slot(n: &Node) -> Result<Located<HeadSlot>, Diagnostic> {
-    value::choice(n, &HeadSlot::NAMES)
+    value::choice(n, HeadSlot::NAMES)
+}
+
+fn caller_style(n: &Node) -> Result<Located<CallerStyle>, Diagnostic> {
+    value::choice(n, CallerStyle::NAMES)
+}
+
+fn restart(n: &Node) -> Result<Located<RestartNumbering>, Diagnostic> {
+    value::choice(n, RestartNumbering::NAMES)
+}
+
+fn placement(n: &Node) -> Result<Located<ReferencePlacement>, Diagnostic> {
+    value::choice(n, ReferencePlacement::NAMES)
 }
 
 /// The maximum a page can be divided into before a column is too narrow to
@@ -441,6 +470,10 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
         notes: Notes {
             show_footnotes: r.value("notes.show_footnotes", |n| n.boolean()),
             show_cross_references: r.value("notes.show_cross_references", |n| n.boolean()),
+            footnote_callers: r.value("notes.footnote_callers", caller_style),
+            cross_reference_callers: r.value("notes.cross_reference_callers", caller_style),
+            restart_numbering: r.value("notes.restart_numbering", restart),
+            cross_reference_placement: r.value("notes.cross_reference_placement", placement),
         },
         headers: Headers {
             header_left: r.value("headers.header_left", slot),

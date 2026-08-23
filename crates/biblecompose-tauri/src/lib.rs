@@ -117,9 +117,18 @@ pub struct WireBook {
 pub struct WireSetting {
     pub key: String,
     /// Which control to render: `text`, `length`, `page_size`, `integer`,
-    /// `boolean`, `path`, `list`.
+    /// `boolean`, `path`, `list`, `choice`.
     pub kind: &'static str,
     pub value: String,
+    /// For `choice`, every spelling the resolver accepts, in the order to offer
+    /// them; empty for every other kind.
+    ///
+    /// Sent rather than restated in TypeScript, because a list of head slots or
+    /// caller styles kept in the window is a list that drifts from the one the
+    /// resolver parses with — and the failure is a dropdown offering a value
+    /// that gets rejected the moment it is chosen.
+    #[serde(skip_serializing_if = "<[_]>::is_empty")]
+    pub choices: &'static [&'static str],
     /// `true` when the project file set it — what the reset control reads
     /// (CFG-007).
     pub overridden: bool,
@@ -1151,6 +1160,7 @@ fn wire_field(f: form::Field) -> WireSetting {
     WireSetting {
         key: f.key.to_owned(),
         kind: f.kind.as_str(),
+        choices: f.kind.choices(),
         value: f.value,
         overridden: !f.origin.is_builtin(),
         // Through `location()` rather than matching the variants here: it is

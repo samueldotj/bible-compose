@@ -78,6 +78,25 @@ hide_first_verse_number = false
 show_footnotes = true
 show_cross_references = true
 
+# What USFM's `\f +` asks for: the next mark in a sequence. `numbers`,
+# `letters`, `symbols`, or `none`. A note that names its own caller — `\f *` —
+# keeps it, and does not take a place in the sequence.
+#
+# Different sequences for the two kinds, so a page carrying both says which
+# mark belongs to which without a legend.
+footnote_callers = "numbers"
+cross_reference_callers = "letters"
+
+# Where a sequence starts again: `per_chapter`, `per_book` or `never`.
+# Per chapter, because that is the common Bible convention and because it keeps
+# the marks short — a book-long sequence of footnotes reaches three digits.
+restart_numbering = "per_chapter"
+
+# Where a `\x` reference is set: `note_area` beside the footnotes, `inline` in
+# brackets where it was called, or `end_of_paragraph` gathered under the
+# paragraph that called it (SCR-005). Centre-column is post-MVP.
+cross_reference_placement = "note_area"
+
 # Three slots at the top of the page and three at the foot, each holding one
 # of: empty, page_number, reference_range, first_reference, last_reference,
 # book_name, alt_book_name.

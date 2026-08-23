@@ -369,55 +369,126 @@ fn suffix_of(text: &str) -> Option<&'static str> {
         .map(|(name, _)| *name)
 }
 
-/// What goes in one of the six places a running head or a footer has.
+/// A closed set of spellings, its table, and the two impls every one of them
+/// needs.
 ///
-/// Positions rather than switches. `show_book_name` and its neighbours could
-/// say *whether* a book name appeared but never *where*, so the arrangement
-/// was the class's to decide and a publisher wanting the page number outside
-/// and the book inside had nowhere to say so. Three slots a side says it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum HeadSlot {
-    /// Nothing. The default for five of the six.
-    Empty,
-    PageNumber,
-    /// The span of Scripture on the page — `1:1–2:6`.
-    ReferenceRange,
-    /// Where the page starts, and where it ends.
-    FirstReference,
-    LastReference,
-    /// The name a running head is for: USFM's `\h`.
-    BookName,
-    /// The fuller form: `\toc1`, or the title.
-    AltBookName,
+/// Written once because [`HeadSlot`] was the first of five and the fifth would
+/// have been the fifth hand-kept `NAMES` table, `as_str` and `Display` — three
+/// places per type where a variant can be added to one and forgotten in the
+/// others. The table is the single statement of the vocabulary: `as_str` reads
+/// it, `Display` defers to `as_str`, and [`choice`] both parses from it and
+/// lists it in the diagnostic when a file says something else.
+macro_rules! spelled {
+    (
+        $(#[$outer:meta])*
+        $name:ident { $( $(#[$inner:meta])* $variant:ident => $text:literal ),* $(,)? }
+    ) => {
+        $(#[$outer])*
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+        pub enum $name {
+            $( $(#[$inner])* $variant, )*
+        }
+
+        impl $name {
+            pub const NAMES: &'static [(&'static str, $name)] =
+                &[ $( ($text, $name::$variant) ),* ];
+
+            /// The same vocabulary without the values, for a form to offer.
+            pub const SPELLINGS: &'static [&'static str] = &[ $( $text ),* ];
+
+            pub const fn as_str(self) -> &'static str {
+                match self {
+                    $( $name::$variant => $text, )*
+                }
+            }
+        }
+
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str(self.as_str())
+            }
+        }
+    };
 }
 
-impl HeadSlot {
-    pub const NAMES: [(&'static str, HeadSlot); 7] = [
-        ("empty", HeadSlot::Empty),
-        ("page_number", HeadSlot::PageNumber),
-        ("reference_range", HeadSlot::ReferenceRange),
-        ("first_reference", HeadSlot::FirstReference),
-        ("last_reference", HeadSlot::LastReference),
-        ("book_name", HeadSlot::BookName),
-        ("alt_book_name", HeadSlot::AltBookName),
-    ];
-
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HeadSlot::Empty => "empty",
-            HeadSlot::PageNumber => "page_number",
-            HeadSlot::ReferenceRange => "reference_range",
-            HeadSlot::FirstReference => "first_reference",
-            HeadSlot::LastReference => "last_reference",
-            HeadSlot::BookName => "book_name",
-            HeadSlot::AltBookName => "alt_book_name",
-        }
+spelled! {
+    /// What goes in one of the six places a running head or a footer has.
+    ///
+    /// Positions rather than switches. `show_book_name` and its neighbours
+    /// could say *whether* a book name appeared but never *where*, so the
+    /// arrangement was the class's to decide and a publisher wanting the page
+    /// number outside and the book inside had nowhere to say so. Three slots a
+    /// side says it.
+    HeadSlot {
+        /// Nothing. The default for five of the six.
+        Empty => "empty",
+        PageNumber => "page_number",
+        /// The span of Scripture on the page — `1:1–2:6`.
+        ReferenceRange => "reference_range",
+        /// Where the page starts, and where it ends.
+        FirstReference => "first_reference",
+        LastReference => "last_reference",
+        /// The name a running head is for: USFM's `\h`.
+        BookName => "book_name",
+        /// The fuller form: `\toc1`, or the title.
+        AltBookName => "alt_book_name",
     }
 }
 
-impl std::fmt::Display for HeadSlot {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.as_str())
+spelled! {
+    /// The marks that key a note to the place it belongs to (SCR-003).
+    ///
+    /// USFM's `\f` carries a caller of its own — `+` asks for the next mark in
+    /// the sequence, `-` asks for none, and anything else is the mark the
+    /// editor chose and is printed as written. This setting is what `+` means,
+    /// and it is a setting because the answer differs by house and by how many
+    /// notes a page carries: a page with three notes reads well with symbols
+    /// and a page with thirty does not.
+    CallerStyle {
+        /// `1`, `2`, `3`.
+        Numbers => "numbers",
+        /// `a`, `b`, `c`, and `aa` after `z`.
+        Letters => "letters",
+        /// `*`, `†`, `‡`, `§`, `‖`, `¶`, then doubled.
+        Symbols => "symbols",
+        /// No mark at all. The note is keyed by the reference it carries,
+        /// which is what an edition setting notes in a column of their own
+        /// does.
+        None => "none",
+    }
+}
+
+spelled! {
+    /// Where a caller sequence starts again.
+    ///
+    /// Not per page, and the omission is deliberate. A caller is typeset into
+    /// the paragraph that calls it, and SILE breaks a page only after that
+    /// whole paragraph is set — so at the moment the mark is drawn, which page
+    /// it will land on is not yet decided. A per-page policy would therefore be
+    /// right in the middle of a page and wrong at both its edges, which is
+    /// worse than not offering it. Per chapter is the common Bible convention
+    /// and is exactly determined at the point the mark is made.
+    RestartNumbering {
+        PerChapter => "per_chapter",
+        PerBook => "per_book",
+        /// One sequence for the whole publication.
+        Never => "never",
+    }
+}
+
+spelled! {
+    /// Where a cross-reference is set (SCR-005).
+    ///
+    /// The MVP's two answers, and no third: centre-column references are
+    /// explicitly post-MVP, and a gutter is a page-geometry decision rather
+    /// than a note one.
+    ReferencePlacement {
+        /// At the foot, beside the footnotes and styled apart from them.
+        NoteArea => "note_area",
+        /// In the text, where the reference was called, in brackets.
+        Inline => "inline",
+        /// Gathered and set as a line under the paragraph that called them.
+        EndOfParagraph => "end_of_paragraph",
     }
 }
 

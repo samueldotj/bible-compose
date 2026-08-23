@@ -91,6 +91,16 @@ pub fn class_options_with(
     put("poetryindent", flag(*s.typography.keep_poetry_indentation));
     put("footnotes", flag(*s.notes.show_footnotes));
     put("crossrefs", flag(*s.notes.show_cross_references));
+    put("footnotecallers", s.notes.footnote_callers.to_string());
+    put(
+        "crossrefcallers",
+        s.notes.cross_reference_callers.to_string(),
+    );
+    put("restartnotes", s.notes.restart_numbering.to_string());
+    put(
+        "crossrefplacement",
+        s.notes.cross_reference_placement.to_string(),
+    );
     // Six slots rather than four switches: where a thing goes is as much a
     // decision as whether it is there, and the class can only honour what it
     // is told.

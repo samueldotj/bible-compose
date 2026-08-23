@@ -47,6 +47,7 @@
   }
 
   const chapters = on("numbering.show_chapter_numbers");
+  const labels = $derived(on("numbering.show_chapter_labels"));
   const verses = $derived(on("numbering.show_verse_numbers"));
   const footnotes = $derived(on("notes.show_footnotes"));
   const refs = $derived(on("notes.show_cross_references"));
@@ -147,6 +148,13 @@
       title: "Numbering",
       switches: [
         { key: "numbering.show_chapter_numbers", label: "Chapter numbers" },
+        {
+          key: "numbering.show_chapter_labels",
+          label: "Chapter labels",
+          // A translation either carries `\cl` or it does not, and most do
+          // not — so say that this switch may have nothing to act on.
+          note: "USFM's \\cl, where a translation has it",
+        },
         { key: "numbering.show_verse_numbers", label: "Verse numbers" },
         {
           key: "numbering.hide_first_verse_number",
@@ -297,6 +305,15 @@
             {#if i === 0 && chapters}
               <span class="chapter" class:lit={shows("numbering.show_chapter_numbers")}>
                 {chapter.number}
+              </span>
+            {/if}
+            <!-- Beside the figure and not instead of it, which is where the
+                 backend puts it: `\cl` is its own paragraph and the chapter
+                 anchor sits inside it, so the number is set and then the
+                 label. An edition that wants one or the other turns one off. -->
+            {#if i === 0 && chapter.label && labels}
+              <span class="label" class:lit={shows("numbering.show_chapter_labels")}>
+                {chapter.label}
               </span>
             {/if}
             {#each section.verses as verse (verse.number)}
@@ -572,6 +589,11 @@
   .outline .ref {
     opacity: 0.65;
     font-variant-numeric: tabular-nums;
+  }
+  /* Beside the drop figure, at body size: it is a line of the translation's
+     own words, not a display element of ours. */
+  .label {
+    margin-inline-end: 0.35em;
   }
   .chapter {
     float: inline-start;

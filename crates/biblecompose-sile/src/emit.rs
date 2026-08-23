@@ -266,12 +266,23 @@ fn emit_book(w: &mut Writer<Cursor<Vec<u8>>>, book: &Book, state: &mut EmitState
 /// costs a re-emission, and re-emission costs nothing here: every build emits
 /// from the model anyway.
 ///
+/// The chapter label joined them for a different reason: `\cl` is where the
+/// chapter anchor lives. USJ puts the `\c` inside the label's paragraph —
+/// `<para style="cl"><chapter n="1"/>Chapter One</para>` — so hiding the
+/// paragraph anywhere except here would take the chapter with it, and every
+/// running head asking for a reference would go blank. [`emit_anchors`] is
+/// what makes that safe, and it is only reachable from this side.
+///
 /// [ADR-002]: ../../../docs/adr/002-sile-interface.md
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Hidden {
     pub book_introductions: bool,
     pub introductory_outlines: bool,
     pub section_headings: bool,
+    /// USFM's `\cl` — the words an edition prints for a chapter, either
+    /// before the first `\c` to name every chapter or after one to name that
+    /// chapter alone.
+    pub chapter_labels: bool,
 }
 
 impl Hidden {
@@ -286,6 +297,7 @@ impl Hidden {
         const OUTLINE: [&str; 6] = ["io1", "io2", "io3", "io4", "ili1", "ili2"];
         (self.book_introductions && INTRO.contains(&marker))
             || (self.introductory_outlines && OUTLINE.contains(&marker))
+            || (self.chapter_labels && marker == "cl")
     }
 
     /// And a heading marker. `\s` is the section heading; the parallel
@@ -716,5 +728,154 @@ mod tests {
         let gen = out.xml.find("GEN").unwrap();
         let jhn = out.xml.find("JHN").unwrap();
         assert!(gen < jhn);
+    }
+
+    // ----------------------------------------------------------- hiding
+    //
+    // What a project chooses not to print, and the one property every one of
+    // these has to keep: the Scripture anchors stay. A hidden part that took
+    // its `\c` with it would empty the running head of every page it fell on,
+    // and would do it silently.
+
+    /// A book shaped the way USJ delivers one: an introduction, an outline, a
+    /// chapter label with the chapter anchor *inside* it, a section heading,
+    /// and a verse.
+    fn withholdable() -> biblecompose_scripture::ScriptureDocument {
+        use biblecompose_scripture::{
+            canon::BookCode, Block, Book, BookNames, HeadingStyle, Inline, ParaStyle, VerseId,
+        };
+        let words = |s: &str| Inline::Text(s.to_owned());
+        biblecompose_scripture::ScriptureDocument::new(vec![Book::new(
+            BookCode::parse("1JN").expect("a real book code"),
+            BookNames::named("1 John"),
+            vec![
+                Block::Heading {
+                    style: HeadingStyle::Is,
+                    level: 1,
+                    content: vec![words("Introduction")],
+                },
+                Block::Paragraph {
+                    style: ParaStyle::Ip,
+                    content: vec![words("Written to assure believers.")],
+                },
+                Block::Heading {
+                    style: HeadingStyle::Iot,
+                    level: 1,
+                    content: vec![words("Outline")],
+                },
+                Block::Paragraph {
+                    style: ParaStyle::Io1,
+                    content: vec![words("Fellowship with God")],
+                },
+                Block::Paragraph {
+                    style: ParaStyle::Cl,
+                    content: vec![
+                        Inline::Chapter {
+                            number: 1,
+                            published: None,
+                            alternate: None,
+                        },
+                        words("Chapter One"),
+                    ],
+                },
+                Block::Heading {
+                    style: HeadingStyle::S,
+                    level: 1,
+                    content: vec![words("The Word of Life")],
+                },
+                Block::Paragraph {
+                    style: ParaStyle::P,
+                    content: vec![
+                        Inline::Verse {
+                            id: VerseId::single(1),
+                            published: None,
+                            alternate: None,
+                        },
+                        words("That which was from the beginning."),
+                    ],
+                },
+            ],
+        )])
+    }
+
+    #[test]
+    fn nothing_is_withheld_by_default() {
+        let out = emit(&withholdable(), &[]);
+        for kept in ["Introduction", "Outline", "Chapter One", "The Word of Life"] {
+            assert!(out.xml.contains(kept), "{kept} should be printed");
+        }
+    }
+
+    #[test]
+    fn each_part_can_be_withheld_on_its_own() {
+        let cases: [(Hidden, &str, &str); 4] = [
+            (
+                Hidden {
+                    book_introductions: true,
+                    ..Hidden::nothing()
+                },
+                "Written to assure believers.",
+                "Outline",
+            ),
+            (
+                Hidden {
+                    introductory_outlines: true,
+                    ..Hidden::nothing()
+                },
+                "Fellowship with God",
+                "Written to assure believers.",
+            ),
+            (
+                Hidden {
+                    section_headings: true,
+                    ..Hidden::nothing()
+                },
+                "The Word of Life",
+                "Chapter One",
+            ),
+            (
+                Hidden {
+                    chapter_labels: true,
+                    ..Hidden::nothing()
+                },
+                "Chapter One",
+                "The Word of Life",
+            ),
+        ];
+
+        for (hidden, gone, kept) in cases {
+            let out = emit_hiding(&withholdable(), &[], hidden);
+            assert!(
+                !out.xml.contains(gone),
+                "{hidden:?} left {gone:?} on the page"
+            );
+            assert!(out.xml.contains(kept), "{hidden:?} also took {kept:?}");
+        }
+    }
+
+    /// The reason `emit_anchors` exists, asserted rather than remembered.
+    ///
+    /// The chapter anchor is inside the label's paragraph and the verse anchor
+    /// is inside the ordinary one; withholding everything must leave both.
+    #[test]
+    fn withholding_a_part_keeps_the_anchors_inside_it() {
+        let all = Hidden {
+            book_introductions: true,
+            introductory_outlines: true,
+            section_headings: true,
+            chapter_labels: true,
+        };
+        let out = emit_hiding(&withholdable(), &[], all);
+        assert!(
+            out.xml.contains(r#"<chapter n="1"/>"#),
+            "the chapter anchor went with the label: {}",
+            out.xml
+        );
+        assert!(
+            out.xml.contains(r#"<verse n="1""#),
+            "the verse anchor is gone too: {}",
+            out.xml
+        );
+        assert!(!out.xml.contains("Chapter One"), "{}", out.xml);
     }
 }

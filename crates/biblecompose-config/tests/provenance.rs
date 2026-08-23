@@ -55,6 +55,7 @@ show_section_headings = false
 show_chapter_numbers = false
 show_verse_numbers = false
 hide_first_verse_number = true
+show_chapter_labels = false
 
 [notes]
 show_footnotes = false

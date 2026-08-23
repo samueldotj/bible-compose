@@ -228,6 +228,11 @@ impl Settings {
             Boolean,
             self.numbering.hide_first_verse_number.to_string(),
         );
+        push(
+            "numbering.show_chapter_labels",
+            Boolean,
+            self.numbering.show_chapter_labels.to_string(),
+        );
 
         push(
             "contents.show_book_introductions",

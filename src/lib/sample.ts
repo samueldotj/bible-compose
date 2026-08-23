@@ -36,6 +36,17 @@ export interface SampleSection {
 
 export interface SampleChapter {
   readonly number: number;
+  /**
+   * USFM's `\cl` — the words a translation gives the chapter, beside or
+   * instead of the figure.
+   *
+   * Illustrative, like the introduction and the outline below: BSB carries no
+   * `\cl`. It is here because `numbering.show_chapter_labels` governs it, and
+   * a switch with nothing to switch teaches the wrong thing about itself. A
+   * translation that has them usually has them in its own language —
+   * `அத்தியாயம் 1` — and this page is in English throughout.
+   */
+  readonly label?: string;
   readonly sections: readonly SampleSection[];
 }
 
@@ -78,6 +89,7 @@ export const SAMPLE_OUTLINE = {
 export const SAMPLE: readonly SampleChapter[] = [
   {
     number: 1,
+    label: "Chapter One",
     sections: [
       {
         heading: "The Word of Life",
@@ -167,6 +179,7 @@ export const SAMPLE: readonly SampleChapter[] = [
   },
   {
     number: 2,
+    label: "Chapter Two",
     sections: [
       {
         heading: "Jesus Our Advocate",

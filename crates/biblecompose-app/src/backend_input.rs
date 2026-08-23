@@ -125,6 +125,10 @@ pub fn hidden(s: &Settings) -> biblecompose_sile::Hidden {
         book_introductions: !*s.contents.show_book_introductions,
         introductory_outlines: !*s.contents.show_introductory_outlines,
         section_headings: !*s.contents.show_section_headings,
+        // The one that is a `numbering` setting rather than a `contents` one:
+        // it is hidden here because of where the chapter anchor lives, not
+        // because of which group a publisher finds it under.
+        chapter_labels: !*s.numbering.show_chapter_labels,
     }
 }
 

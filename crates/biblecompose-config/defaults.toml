@@ -74,6 +74,11 @@ show_verse_numbers = true
 # Off by default: it is a common Bible convention rather than a universal one.
 hide_first_verse_number = false
 
+# USFM's `\cl` — the words a translation gives a chapter, such as
+# `\cl அத்தியாயம் 1` beside `\c 1`. On, because a translation that carries them
+# wrote them deliberately; off for an edition that wants the figure alone.
+show_chapter_labels = true
+
 [notes]
 show_footnotes = true
 show_cross_references = true

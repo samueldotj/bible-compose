@@ -129,6 +129,14 @@ pub struct Numbering {
     /// the place. A common setting in Bible typography and an odd one
     /// everywhere else, which is why it is a setting and not a style.
     pub hide_first_verse_number: Sourced<bool>,
+    /// Whether USFM's `\cl` is printed — the words an edition gives a chapter,
+    /// such as `\cl அத்தியாயம் 1` beside `\c 1`.
+    ///
+    /// Here rather than under `contents` because what a publisher is deciding
+    /// is how a chapter is announced, and the number beside it is the other
+    /// half of that decision. A translation that carries labels and an edition
+    /// that wants only figures are both ordinary, and the file says which.
+    pub show_chapter_labels: Sourced<bool>,
 }
 
 /// Which parts of a book are printed at all.
@@ -460,6 +468,7 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             show_chapter_numbers: r.value("numbering.show_chapter_numbers", |n| n.boolean()),
             show_verse_numbers: r.value("numbering.show_verse_numbers", |n| n.boolean()),
             hide_first_verse_number: r.value("numbering.hide_first_verse_number", |n| n.boolean()),
+            show_chapter_labels: r.value("numbering.show_chapter_labels", |n| n.boolean()),
         },
         contents: Contents {
             show_book_introductions: r.value("contents.show_book_introductions", |n| n.boolean()),

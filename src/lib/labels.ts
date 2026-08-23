@@ -226,11 +226,17 @@ export interface Tab {
   readonly books?: boolean;
 }
 
+/**
+ * Outward from the words.
+ *
+ * Which books there are, then what is printed in the text, then what surrounds
+ * it, then the shape of the sheet it all sits on, and last how it is set. Each
+ * one is a smaller decision than the one before it and is easier to make once
+ * the earlier ones are made — the page size is worth arguing about after you
+ * know whether the edition carries footnotes, not before.
+ */
 export const TABS: readonly Tab[] = [
-  // First, because it is the first question: which books, and in what order.
-  // Everything after it is about how they look.
   { id: "scripture", title: "Scripture", settingGroups: [], books: true },
-  { id: "page", title: "Page", settingGroups: [], diagram: true },
   // Claims the strays now that the Project tab is gone. Exactly one tab does,
   // so a key added to the schema is visible somewhere rather than nowhere.
   { id: "contents", title: "Contents", settingGroups: [], example: "contents", orphans: true },
@@ -240,6 +246,7 @@ export const TABS: readonly Tab[] = [
     settingGroups: [],
     example: "headers",
   },
+  { id: "page", title: "Page", settingGroups: [], diagram: true },
   { id: "styles", title: "Styles", settingGroups: ["typography"], styles: true },
 ];
 

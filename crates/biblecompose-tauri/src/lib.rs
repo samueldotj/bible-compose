@@ -110,6 +110,9 @@ pub struct WireBook {
     /// the order, and a list that hid it would be a list you could not put it
     /// back from. It is not parsed, so it has no chapters and no diagnostics.
     pub included: bool,
+    /// `old`, `new` or `deuterocanon`, from the canon table — so the window can
+    /// group the list without a second copy of which book is where.
+    pub testament: &'static str,
 }
 
 /// One row of the settings form (GUI-002).
@@ -1068,6 +1071,7 @@ fn wire_project(root: &Utf8Path, opened: project::Opened) -> WireProject {
                 errors,
                 warnings,
                 included: true,
+                testament: book.code.testament().as_str(),
             }
         })
         .collect();
@@ -1089,6 +1093,7 @@ fn wire_project(root: &Utf8Path, opened: project::Opened) -> WireProject {
                 errors: 0,
                 warnings: 0,
                 included: false,
+                testament: out.code.testament().as_str(),
             },
         );
     }

@@ -213,9 +213,23 @@ export interface Tab {
    * nowhere.
    */
   readonly orphans?: boolean;
+  /**
+   * The books, which are a tab of their own rather than a column beside every
+   * other one.
+   *
+   * They were in a permanent left-hand pane, and it cost the whole window a
+   * third of its width on every tab — including the ones where the answer to
+   * "which books" has already been given and the question is what the page
+   * looks like. A whole Bible is sixty-six rows and wants the width; a settings
+   * form beside it had none to spare.
+   */
+  readonly books?: boolean;
 }
 
 export const TABS: readonly Tab[] = [
+  // First, because it is the first question: which books, and in what order.
+  // Everything after it is about how they look.
+  { id: "scripture", title: "Scripture", settingGroups: [], books: true },
   { id: "page", title: "Page", settingGroups: [], diagram: true },
   // Claims the strays now that the Project tab is gone. Exactly one tab does,
   // so a key added to the schema is visible somewhere rather than nowhere.

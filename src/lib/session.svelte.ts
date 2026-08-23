@@ -122,8 +122,14 @@ export class Session {
    */
   showProblems = $state(false);
 
-  /** Which configuration tab is showing. One of `TABS`. */
-  pane = $state("page");
+  /**
+   * Which configuration tab is showing. One of `TABS`.
+   *
+   * The books, because opening a project is a thing you do to look at what is
+   * in it, and because "which books, in what order" is the question every
+   * other tab assumes an answer to.
+   */
+  pane = $state("scripture");
   /** And which section within the Styles tab. One of `STYLE_TABS`. */
   stylePane = $state("typography");
   /** The selector the inspector is showing, and what is filtering the list. */

@@ -105,6 +105,24 @@ Backend log: ${session.logFile}` : where;
     </span>
   {/if}
 
+  <!--
+    Here rather than under the book list, which is where it was until the books
+    became a tab of their own. The count is a standing fact about the project
+    and the reason to open the panel at all; behind a tab it would be invisible
+    from the four tabs where a publisher is most likely to introduce a problem.
+    Beside the build state, because that is what most problems are about.
+  -->
+  <button
+    type="button"
+    class="problems"
+    class:bad={session.errorCount > 0}
+    disabled={!session.project}
+    onclick={() => (session.showProblems = true)}
+  >
+    Problems
+    <span class="tally">{session.problemCount}</span>
+  </button>
+
 
   {#if session.output}
     <span class="output" title={session.output}>wrote {session.output}</span>
@@ -245,7 +263,8 @@ Backend log: ${session.logFile}` : where;
     font-size: 0.8rem;
     color: #c0392b;
   }
-  .open-folder {
+  .open-folder,
+  .problems {
     padding-block: 0.15rem;
     padding-inline: 0.5rem;
     border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
@@ -256,6 +275,34 @@ Backend log: ${session.logFile}` : where;
     font-size: 0.75rem;
     opacity: 0.7;
     cursor: pointer;
+  }
+  .problems {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    flex: none;
+  }
+  .problems:hover:not(:disabled) {
+    background: color-mix(in oklab, currentColor 8%, transparent);
+    opacity: 1;
+  }
+  /* An error is the one thing here that stops a build, so it is the one thing
+     that stops being quiet. */
+  .problems.bad {
+    border-color: #c0392b;
+    color: #c0392b;
+    font-weight: 600;
+    opacity: 1;
+  }
+  .problems .tally {
+    padding-inline: 0.35rem;
+    border-radius: 999px;
+    background: color-mix(in oklab, currentColor 15%, transparent);
+    font-variant-numeric: tabular-nums;
+  }
+  .problems:disabled {
+    opacity: 0.35;
+    cursor: default;
   }
   .output,
   .backend {

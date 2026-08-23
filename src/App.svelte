@@ -95,20 +95,6 @@
     {/if}
 
     <main>
-      <div class="left">
-        <ProjectPane />
-        <!-- Under the books, because that is what most of them are about, and
-             because the count is the reason to open it at all. -->
-        <button
-          type="button"
-          class="problems"
-          class:bad={session.errorCount > 0}
-          onclick={() => (session.showProblems = true)}
-        >
-          Problems
-          <span class="tally">{session.problemCount}</span>
-        </button>
-      </div>
       <div class="right">
       <!-- One tab at a time: each is long on its own, and the page geometry, what
            appears on it, and how it is set are three decisions a publisher makes
@@ -161,6 +147,13 @@
           </nav>
         {/if}
 
+        {#if tab.books}
+          <!-- Outside the scroller, because this pane does its own: a whole
+               Bible is two columns of rows that each scroll, and a scroller
+               around a scroller gives you two bars and no way to know which
+               one you are dragging. -->
+          <ProjectPane />
+        {:else}
         <div class="scroller">
           {#if tab.styles}
             {#if styleTab.inspector}
@@ -184,6 +177,7 @@
             {/if}
           {/if}
         </div>
+        {/if}
       </div>
     </div>
     </main>
@@ -228,35 +222,6 @@
     font-size: 0.78rem;
     color: #8a6100;
     cursor: pointer;
-  }
-  .problems {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-    justify-content: center;
-    padding-block: 0.4rem;
-    border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
-    border-radius: 5px;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    font-size: 0.88rem;
-    cursor: pointer;
-  }
-  .problems:hover {
-    background: color-mix(in oklab, currentColor 8%, transparent);
-  }
-  .problems.bad {
-    border-color: #c0392b;
-    color: #c0392b;
-    font-weight: 600;
-  }
-  .problems .tally {
-    padding-inline: 0.4rem;
-    border-radius: 999px;
-    background: color-mix(in oklab, currentColor 15%, transparent);
-    font-size: 0.78rem;
-    font-variant-numeric: tabular-nums;
   }
   .fault {
     flex: none;
@@ -399,11 +364,12 @@
     padding-inline: 1rem;
     padding-block-start: 0.75rem;
   }
+  /* The whole width now. The books used to hold a permanent column beside
+     this, which cost every other tab a third of the window for a question
+     already answered — and left the book list itself too narrow to put the
+     two testaments side by side. They are a tab of their own instead. */
   main {
-    display: grid;
-    grid-template-columns: minmax(16rem, 22rem) 1fr;
-    gap: 1rem;
-    align-items: start;
+    display: flex;
     /* Takes the space the strips and the bar leave. `min-block-size: 0` is
        what lets it *shrink* too — without it a flex child refuses to go below
        its content, and a long book list would push the build bar off the
@@ -412,23 +378,6 @@
     min-block-size: 0;
     padding-block-end: 0.75rem;
   }
-  .left,
-  .right {
-    display: grid;
-    gap: 1rem;
-    min-inline-size: 0;
-    /* Each column keeps to its own space, so a hundred diagnostics do not
-       decide how much of the settings form is visible. */
-    min-block-size: 0;
-    max-block-size: 100%;
-  }
-  /* The book list takes the column and the Problems button sits under it,
-     rather than the list stopping at some height and leaving the rest of the
-     column empty. The list scrolls inside what it is given. */
-  .left {
-    grid-template-rows: 1fr auto;
-    overflow: hidden;
-  }
   /* A column of rows that do not grow — the tabs, the hint — and one that
      does. The pane scrolls inside itself rather than the whole side
      scrolling, which is what keeps the section list beside the Styles pane
@@ -436,13 +385,11 @@
   .right {
     display: flex;
     flex-direction: column;
+    flex: 1;
+    gap: 1rem;
+    min-inline-size: 0;
+    min-block-size: 0;
+    max-block-size: 100%;
     overflow: hidden;
-  }
-  /* One column below the two-pane threshold, which is also where a settings
-     form stops fitting beside a book list. */
-  @media (width < 62rem) {
-    main {
-      grid-template-columns: 1fr;
-    }
   }
 </style>

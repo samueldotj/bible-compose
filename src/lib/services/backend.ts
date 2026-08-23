@@ -47,6 +47,14 @@ export interface Diagnostic {
   readonly detail?: string;
 }
 
+/**
+ * Which part of the canon a book belongs to, from the canon table.
+ *
+ * Sent with each book rather than derived here: sixty-six codes divided into
+ * testaments is exactly the sort of list that drifts when it is written twice.
+ */
+export type Testament = "old" | "new" | "deuterocanon";
+
 export interface BookSummary {
   readonly code: string;
   readonly name: string;
@@ -62,6 +70,7 @@ export interface BookSummary {
    * diagnostics.
    */
   readonly included: boolean;
+  readonly testament: Testament;
 }
 
 /** Which control a setting needs, decided by the schema and not by the form. */

@@ -60,3 +60,44 @@ fn every_suggested_language_is_a_plain_tag() {
         .is_empty());
     }
 }
+
+/// The window groups the book list by testament, and the names it groups into
+/// are the canon's.
+///
+/// Two lists that have to agree: the `Testament` union in `backend.ts` is what
+/// the wire is typed as, and `TESTAMENTS` in the pane is what actually gets a
+/// column. A testament added to the table and to neither would be a book with
+/// nowhere to go — silently absent from a list whose whole job is to be
+/// complete.
+#[test]
+fn every_testament_the_canon_has_gets_a_column() {
+    use biblecompose_scripture::BookCode;
+
+    let spellings: std::collections::BTreeSet<&str> =
+        BookCode::all().map(|c| c.testament().as_str()).collect();
+    assert_eq!(spellings.len(), 3, "the canon's testaments: {spellings:?}");
+
+    let typed = std::fs::read_to_string(
+        repo_root()
+            .join("src/lib/services/backend.ts")
+            .as_std_path(),
+    )
+    .expect("the wire types");
+    let pane = std::fs::read_to_string(
+        repo_root()
+            .join("src/components/ProjectPane.svelte")
+            .as_std_path(),
+    )
+    .expect("the book list");
+
+    for spelling in spellings {
+        assert!(
+            typed.contains(&format!("\"{spelling}\"")),
+            "`Testament` in backend.ts does not include {spelling:?}"
+        );
+        assert!(
+            pane.contains(&format!("id: \"{spelling}\"")),
+            "the book list has no column for {spelling:?}"
+        );
+    }
+}

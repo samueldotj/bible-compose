@@ -1,5 +1,5 @@
 <biblecompose version="1" class="biblecompose">
-<book code="MRK" name="Mark">
+<book code="MRK" name="Mark" altname="The Gospel according to Mark">
 <heading style="is" level="1">Introduction</heading>
 <para style="ip">An introduction paragraph with <char style="iqt">quoted words</char> in it.</para>
 <heading style="iot" level="1">Outline</heading>

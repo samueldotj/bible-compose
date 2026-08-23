@@ -71,6 +71,8 @@ export type SettingKind =
   | "font"
   /** A BCP-47 language tag, likewise. */
   | "language"
+  /** One of the seven things a running head or a footer slot can hold. */
+  | "head_slot"
   | "length"
   | "page_size"
   | "integer"

@@ -1,5 +1,5 @@
 <biblecompose version="1" class="biblecompose">
-<book code="PSA" name="Psalms">
+<book code="PSA" name="Psalms" altname="The Book of Psalms">
 <heading style="s" level="1">A heading</heading>
 <heading style="r" level="1">(Genesis 1:1-2)</heading>
 <para style="p"><chapter n="23"/><verse n="1" start="1" end="1"/>Plain text, then <char style="nd">the LORD</char>, then <char style="wj">words of Jesus with <char style="it">nesting</char></char>.<note style="f" caller="+" origin="23:1">

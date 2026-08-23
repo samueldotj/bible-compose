@@ -369,6 +369,58 @@ fn suffix_of(text: &str) -> Option<&'static str> {
         .map(|(name, _)| *name)
 }
 
+/// What goes in one of the six places a running head or a footer has.
+///
+/// Positions rather than switches. `show_book_name` and its neighbours could
+/// say *whether* a book name appeared but never *where*, so the arrangement
+/// was the class's to decide and a publisher wanting the page number outside
+/// and the book inside had nowhere to say so. Three slots a side says it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum HeadSlot {
+    /// Nothing. The default for five of the six.
+    Empty,
+    PageNumber,
+    /// The span of Scripture on the page — `1:1–2:6`.
+    ReferenceRange,
+    /// Where the page starts, and where it ends.
+    FirstReference,
+    LastReference,
+    /// The name a running head is for: USFM's `\h`.
+    BookName,
+    /// The fuller form: `\toc1`, or the title.
+    AltBookName,
+}
+
+impl HeadSlot {
+    pub const NAMES: [(&'static str, HeadSlot); 7] = [
+        ("empty", HeadSlot::Empty),
+        ("page_number", HeadSlot::PageNumber),
+        ("reference_range", HeadSlot::ReferenceRange),
+        ("first_reference", HeadSlot::FirstReference),
+        ("last_reference", HeadSlot::LastReference),
+        ("book_name", HeadSlot::BookName),
+        ("alt_book_name", HeadSlot::AltBookName),
+    ];
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            HeadSlot::Empty => "empty",
+            HeadSlot::PageNumber => "page_number",
+            HeadSlot::ReferenceRange => "reference_range",
+            HeadSlot::FirstReference => "first_reference",
+            HeadSlot::LastReference => "last_reference",
+            HeadSlot::BookName => "book_name",
+            HeadSlot::AltBookName => "alt_book_name",
+        }
+    }
+}
+
+impl std::fmt::Display for HeadSlot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// An ink colour, as `#rrggbb`.
 ///
 /// # Why hex and not names

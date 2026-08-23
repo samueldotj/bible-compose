@@ -35,12 +35,20 @@ export const LABELS: Readonly<Record<string, string>> = {
   "typography.hyphenation": "Hyphenate",
   "numbering.show_chapter_numbers": "Chapter numbers",
   "numbering.show_verse_numbers": "Verse numbers",
+  "numbering.hide_first_verse_number": "Hide first verse number",
+  "contents.show_book_introductions": "Book introductions",
+  "contents.show_introductory_outlines": "Introductory outlines",
+  "contents.show_section_headings": "Section headings",
+  "typography.justify": "Justify paragraphs",
+  "typography.keep_poetry_indentation": "Keep poetry indentation",
   "notes.show_footnotes": "Footnotes",
   "notes.show_cross_references": "Cross-references",
-  "headers.enabled": "Running heads",
-  "headers.show_book_name": "Book name in head",
-  "headers.show_reference_range": "Reference range in head",
-  "headers.show_page_number": "Page numbers",
+  "headers.header_left": "Left",
+  "headers.header_center": "Centre",
+  "headers.header_right": "Right",
+  "headers.footer_left": "Left",
+  "headers.footer_center": "Centre",
+  "headers.footer_right": "Right",
   "output.keep_intermediates": "Keep intermediates",
   strict: "Strict settings",
 };
@@ -89,12 +97,20 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   // a picture are two places to look, and one of them is the control.
   "numbering.show_chapter_numbers",
   "numbering.show_verse_numbers",
+  "numbering.hide_first_verse_number",
+  "contents.show_book_introductions",
+  "contents.show_introductory_outlines",
+  "contents.show_section_headings",
+  "typography.justify",
+  "typography.keep_poetry_indentation",
   "notes.show_footnotes",
   "notes.show_cross_references",
-  "headers.enabled",
-  "headers.show_book_name",
-  "headers.show_reference_range",
-  "headers.show_page_number",
+  "headers.header_left",
+  "headers.header_center",
+  "headers.header_right",
+  "headers.footer_left",
+  "headers.footer_center",
+  "headers.footer_right",
   // Every page measurement is a field *on the page diagram*, sitting on the
   // thing it measures. A second list of the same nine numbers underneath it
   // would be the drawing and the form disagreeing about which is the control.
@@ -144,13 +160,14 @@ export interface Tab {
    */
   readonly diagram?: boolean;
   /**
-   * Whether a page of Scripture is set above them, with the switches that
-   * decide what is on it.
+   * Which set of switches the example page carries, if this tab has one.
    *
    * "Reference range in head" names a thing without showing it. A publisher
-   * who has not seen one cannot tell from the words whether they want it.
+   * who has not seen one cannot tell from the words whether they want it — so
+   * the page is the control, and the two tabs that use it take a switch set
+   * each: what is in the text, and what surrounds it.
    */
-  readonly example?: boolean;
+  readonly example?: "contents" | "headers";
   /**
    * Where a setting belonging to no group ends up. Exactly one tab claims
    * them, so a key added to the schema is visible somewhere rather than
@@ -163,7 +180,13 @@ export const TABS: readonly Tab[] = [
   { id: "page", title: "Page", settingGroups: [], diagram: true },
   // Claims the strays now that the Project tab is gone. Exactly one tab does,
   // so a key added to the schema is visible somewhere rather than nowhere.
-  { id: "appears", title: "What appears", settingGroups: [], example: true, orphans: true },
+  { id: "contents", title: "Contents", settingGroups: [], example: "contents", orphans: true },
+  {
+    id: "headers",
+    title: "Headers & Footers",
+    settingGroups: [],
+    example: "headers",
+  },
   { id: "styles", title: "Styles", settingGroups: ["typography"], styles: true },
 ];
 

@@ -151,6 +151,22 @@ impl BookNames {
             .or(self.long.as_deref())
             .or_else(|| self.title.first().map(String::as_str))
     }
+
+    /// The other name, for a head that wants the fuller form.
+    ///
+    /// The reverse precedence: `\toc1`'s long name first, then the title, and
+    /// only then the short forms [`for_running_head`] prefers. A book that
+    /// gives one name gets the same string from both — which is right, and is
+    /// why the two are separate settings rather than one with a switch.
+    ///
+    /// [`for_running_head`]: Self::for_running_head
+    pub fn for_alternate_head(&self) -> Option<&str> {
+        self.long
+            .as_deref()
+            .or_else(|| self.title.first().map(String::as_str))
+            .or(self.short.as_deref())
+            .or(self.running.as_deref())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -3,7 +3,7 @@
   import DiagnosticsPanel from "./components/DiagnosticsPanel.svelte";
   import ProjectPane from "./components/ProjectPane.svelte";
   import QuickSettings from "./components/QuickSettings.svelte";
-  import AppearsExample from "./components/AppearsExample.svelte";
+  import ExamplePage from "./components/ExamplePage.svelte";
   import PageDiagram from "./components/PageDiagram.svelte";
   import SettingsForm from "./components/SettingsForm.svelte";
   import StartScreen from "./components/StartScreen.svelte";
@@ -117,13 +117,6 @@
         {/each}
       </nav>
 
-      {#if !session.editable}
-        <p class="hint">
-          The built-in defaults, which is what a folder with no project files gets. Open a project to
-          change them.
-        </p>
-      {/if}
-
       {#if tab.styles}
         <nav class="tabs subtabs" aria-label="Styles sections">
           {#each STYLE_TABS as s (s.id)}
@@ -139,32 +132,39 @@
         </nav>
       {/if}
 
+      {#if !session.editable}
+        <p class="hint">
+          The built-in defaults, which is what a folder with no project files gets. Open a project to
+          change them.
+        </p>
+      {/if}
+
       <!-- The tabs stay put and the form moves under them. Outside a scroller
            the Page section alone pushes the Build button off the bottom of the
            window, and the control you press after changing something should not
            be the one you have to go looking for. -->
-      <div class="scroller">
-        {#if tab.styles}
-          {#if styleTab.inspector}
-            <StyleInspector />
+        <div class="scroller">
+          {#if tab.styles}
+            {#if styleTab.inspector}
+              <StyleInspector />
+            {/if}
+            {#if styleTab.settingGroups.length > 0}
+              <SettingsForm groups={styleTab.settingGroups} />
+            {/if}
+            {#if styleTab.styleGroups.length > 0}
+              <StyleEditor groups={styleTab.styleGroups} />
+            {/if}
+          {:else}
+            {#if tab.diagram && session.geometry}
+              <PageDiagram geometry={session.geometry} />
+            {/if}
+            {#if tab.example}
+              <ExamplePage which={tab.example} />
+            {/if}
+            {#if tab.settingGroups.length > 0 || tab.orphans}
+              <SettingsForm groups={tab.settingGroups} orphans={tab.orphans ?? false} />
+            {/if}
           {/if}
-          {#if styleTab.settingGroups.length > 0}
-            <SettingsForm groups={styleTab.settingGroups} />
-          {/if}
-          {#if styleTab.styleGroups.length > 0}
-            <StyleEditor groups={styleTab.styleGroups} />
-          {/if}
-        {:else}
-          {#if tab.diagram && session.geometry}
-            <PageDiagram geometry={session.geometry} />
-          {/if}
-          {#if tab.example}
-            <AppearsExample />
-          {/if}
-          {#if tab.settingGroups.length > 0 || tab.orphans}
-            <SettingsForm groups={tab.settingGroups} orphans={tab.orphans ?? false} />
-          {/if}
-        {/if}
       </div>
     </div>
     </main>

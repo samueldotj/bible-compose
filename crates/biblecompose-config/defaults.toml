@@ -56,21 +56,43 @@ font_size = "9.2pt"
 # wants to offer "1.2×" can multiply and write the length.
 leading = "11.2pt"
 
+justify = true
+keep_poetry_indentation = true
 hyphenation = true
+
+# Which parts of a book are printed. Everything is in the document either way;
+# these decide what reaches the page (ADR-002).
+[contents]
+show_book_introductions = true
+show_introductory_outlines = true
+show_section_headings = true
 
 [numbering]
 show_chapter_numbers = true
 show_verse_numbers = true
+# Verse 1 goes unnumbered where the chapter number already marks the place.
+# Off by default: it is a common Bible convention rather than a universal one.
+hide_first_verse_number = false
 
 [notes]
 show_footnotes = true
 show_cross_references = true
 
+# Three slots at the top of the page and three at the foot, each holding one
+# of: empty, page_number, reference_range, first_reference, last_reference,
+# book_name, alt_book_name.
+#
+# The arrangement below is the one this application had when the same thing was
+# four switches — the book on the left of the head, the range on the right, the
+# page number centred at the foot — so a project that never touches these gets
+# the page it always got.
 [headers]
-enabled = true
-show_book_name = true
-show_reference_range = true
-show_page_number = true
+header_left = "book_name"
+header_center = "empty"
+header_right = "reference_range"
+footer_left = "empty"
+footer_center = "page_number"
+footer_right = "empty"
 
 [output]
 keep_intermediates = false

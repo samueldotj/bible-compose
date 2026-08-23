@@ -1,5 +1,5 @@
 /**
- * The passage the "What appears" tab sets as an example.
+ * The passage the Contents tab sets as an example.
  *
  * 1 John 1 and the opening of 2, in the Berean Standard Bible — public domain,
  * and the same translation the fixtures in `biblecompose-scripture` use, so
@@ -40,6 +40,40 @@ export interface SampleChapter {
 }
 
 export const SAMPLE_BOOK = "1 John";
+/** USFM's `\toc1` — the fuller form, for a head slot that asks for it. */
+export const SAMPLE_ALT_BOOK = "The First Epistle of John";
+
+/**
+ * The book's front matter: an introduction and an outline.
+ *
+ * Editorial rather than Scripture, and written for this preview rather than
+ * taken from an edition — BSB ships no book introductions, and the point here
+ * is to have something for `contents.show_book_introductions` and
+ * `contents.show_introductory_outlines` to act on. A switch with nothing to
+ * switch teaches the wrong thing about itself, which is the whole reason this
+ * tab is a page and not a list of names.
+ *
+ * `\is` and `\ip` are the introduction's heading and prose; `\iot` and `\io`
+ * are the outline's. They are separate settings because they are separate
+ * markers, and an edition that wants the outline without the essay is asking
+ * for exactly that.
+ */
+export const SAMPLE_INTRO = {
+  heading: "Introduction",
+  paragraphs: [
+    "This letter was written to assure believers of eternal life and to warn " +
+      "them against teachers who denied that Christ had come in the flesh.",
+  ],
+} as const;
+
+export const SAMPLE_OUTLINE = {
+  heading: "Outline",
+  entries: [
+    { level: 1, text: "Fellowship with God", reference: "1:1–2:6" },
+    { level: 2, text: "Walking in the light", reference: "1:5–10" },
+    { level: 1, text: "Love and obedience", reference: "2:7–17" },
+  ],
+} as const;
 
 export const SAMPLE: readonly SampleChapter[] = [
   {

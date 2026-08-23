@@ -24,7 +24,7 @@ use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, Severity, SourceLo
 
 use crate::document::{ConfigDocument, Located, Node};
 use crate::provenance::{Provenance, Sourced};
-use crate::value::{self, Length, PageSize};
+use crate::value::{self, HeadSlot, Length, PageSize};
 
 /// The settings vocabulary this release speaks.
 pub const SCHEMA_VERSION: i64 = 1;
@@ -67,6 +67,7 @@ pub struct Settings {
     pub page: Page,
     pub typography: Typography,
     pub numbering: Numbering,
+    pub contents: Contents,
     pub notes: Notes,
     pub headers: Headers,
     pub output: Output,
@@ -109,12 +110,36 @@ pub struct Typography {
     pub font_size: Sourced<Length>,
     pub leading: Sourced<Length>,
     pub hyphenation: Sourced<bool>,
+    /// Justified, or ragged at the outer edge. Justified is what a Bible is
+    /// normally set in and what the backend does by default.
+    pub justify: Sourced<bool>,
+    /// Whether a poetry line keeps the indent its level asks for. Off sets
+    /// every line flush, which some editions want and which is otherwise a
+    /// style override per level.
+    pub keep_poetry_indentation: Sourced<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Numbering {
     pub show_chapter_numbers: Sourced<bool>,
     pub show_verse_numbers: Sourced<bool>,
+    /// Whether verse 1 goes unnumbered where a chapter number already marks
+    /// the place. A common setting in Bible typography and an odd one
+    /// everywhere else, which is why it is a setting and not a style.
+    pub hide_first_verse_number: Sourced<bool>,
+}
+
+/// Which parts of a book are printed at all.
+///
+/// Everything here is in the document either way: turning an introduction off
+/// hides it, it does not drop it (ADR-002). A project that prints a Gospel
+/// without its introduction for a school edition and with it for the study
+/// edition is one setting, not two files.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Contents {
+    pub show_book_introductions: Sourced<bool>,
+    pub show_introductory_outlines: Sourced<bool>,
+    pub show_section_headings: Sourced<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -125,15 +150,22 @@ pub struct Notes {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Headers {
-    pub enabled: Sourced<bool>,
-    pub show_book_name: Sourced<bool>,
-    pub show_reference_range: Sourced<bool>,
-    pub show_page_number: Sourced<bool>,
+    pub header_left: Sourced<HeadSlot>,
+    pub header_center: Sourced<HeadSlot>,
+    pub header_right: Sourced<HeadSlot>,
+    pub footer_left: Sourced<HeadSlot>,
+    pub footer_center: Sourced<HeadSlot>,
+    pub footer_right: Sourced<HeadSlot>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Output {
     pub keep_intermediates: Sourced<bool>,
+}
+
+/// One of the seven things a head or a footer can hold.
+fn slot(n: &Node) -> Result<Located<HeadSlot>, Diagnostic> {
+    value::choice(n, &HeadSlot::NAMES)
 }
 
 /// The maximum a page can be divided into before a column is too narrow to
@@ -295,13 +327,44 @@ fn report_unknown_keys(
 /// last release. It is still reported as an unknown key — because it is one,
 /// and because a setting silently ignored is a publication quietly losing a
 /// book — but the help says what actually happened.
-const REMOVED: [(&str, &str); 2] = [
+const REMOVED: [(&str, &str); 6] = [
     (
         "books.exclude",
         concat!(
             "`books.exclude` was removed: name the books you want in ",
             "`books.include` instead, which says the same thing without two ",
             "settings that can disagree",
+        ),
+    ),
+    (
+        "headers.enabled",
+        concat!(
+            "`headers.enabled` was removed: a head is now what its three slots ",
+            "hold, so an empty head is `headers.header_left`, `header_center` ",
+            "and `header_right` all set to \"empty\"",
+        ),
+    ),
+    (
+        "headers.show_book_name",
+        concat!(
+            "`headers.show_book_name` was removed: put \"book_name\" in whichever ",
+            "of `headers.header_left`, `header_center` or `header_right` it ",
+            "should occupy — which is the part the old setting could not say",
+        ),
+    ),
+    (
+        "headers.show_reference_range",
+        concat!(
+            "`headers.show_reference_range` was removed: put \"reference_range\" ",
+            "in one of `headers.header_left`, `header_center` or `header_right`",
+        ),
+    ),
+    (
+        "headers.show_page_number",
+        concat!(
+            "`headers.show_page_number` was removed: put \"page_number\" in one ",
+            "of the header or footer slots — `headers.footer_center` is where ",
+            "it used to be",
         ),
     ),
     (
@@ -361,20 +424,31 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             font_size: r.value("typography.font_size", value::length),
             leading: r.value("typography.leading", value::length),
             hyphenation: r.value("typography.hyphenation", |n| n.boolean()),
+            justify: r.value("typography.justify", |n| n.boolean()),
+            keep_poetry_indentation: r.value("typography.keep_poetry_indentation", |n| n.boolean()),
         },
         numbering: Numbering {
             show_chapter_numbers: r.value("numbering.show_chapter_numbers", |n| n.boolean()),
             show_verse_numbers: r.value("numbering.show_verse_numbers", |n| n.boolean()),
+            hide_first_verse_number: r.value("numbering.hide_first_verse_number", |n| n.boolean()),
+        },
+        contents: Contents {
+            show_book_introductions: r.value("contents.show_book_introductions", |n| n.boolean()),
+            show_introductory_outlines: r
+                .value("contents.show_introductory_outlines", |n| n.boolean()),
+            show_section_headings: r.value("contents.show_section_headings", |n| n.boolean()),
         },
         notes: Notes {
             show_footnotes: r.value("notes.show_footnotes", |n| n.boolean()),
             show_cross_references: r.value("notes.show_cross_references", |n| n.boolean()),
         },
         headers: Headers {
-            enabled: r.value("headers.enabled", |n| n.boolean()),
-            show_book_name: r.value("headers.show_book_name", |n| n.boolean()),
-            show_reference_range: r.value("headers.show_reference_range", |n| n.boolean()),
-            show_page_number: r.value("headers.show_page_number", |n| n.boolean()),
+            header_left: r.value("headers.header_left", slot),
+            header_center: r.value("headers.header_center", slot),
+            header_right: r.value("headers.header_right", slot),
+            footer_left: r.value("headers.footer_left", slot),
+            footer_center: r.value("headers.footer_center", slot),
+            footer_right: r.value("headers.footer_right", slot),
         },
         output: Output {
             keep_intermediates: r.value("output.keep_intermediates", |n| n.boolean()),

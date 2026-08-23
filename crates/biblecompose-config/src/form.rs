@@ -34,6 +34,8 @@ pub enum Kind {
     Boolean,
     /// A path relative to the project folder.
     Path,
+    /// One of the seven things a running head or a footer can hold.
+    HeadSlot,
     /// Book codes, comma-separated in the form.
     List,
 }
@@ -49,6 +51,7 @@ impl Kind {
             Kind::Integer => "integer",
             Kind::Boolean => "boolean",
             Kind::Path => "path",
+            Kind::HeadSlot => "head_slot",
             Kind::List => "list",
         }
     }
@@ -183,6 +186,16 @@ impl Settings {
             Boolean,
             self.typography.hyphenation.to_string(),
         );
+        push(
+            "typography.justify",
+            Boolean,
+            self.typography.justify.to_string(),
+        );
+        push(
+            "typography.keep_poetry_indentation",
+            Boolean,
+            self.typography.keep_poetry_indentation.to_string(),
+        );
 
         push(
             "numbering.show_chapter_numbers",
@@ -193,6 +206,27 @@ impl Settings {
             "numbering.show_verse_numbers",
             Boolean,
             self.numbering.show_verse_numbers.to_string(),
+        );
+        push(
+            "numbering.hide_first_verse_number",
+            Boolean,
+            self.numbering.hide_first_verse_number.to_string(),
+        );
+
+        push(
+            "contents.show_book_introductions",
+            Boolean,
+            self.contents.show_book_introductions.to_string(),
+        );
+        push(
+            "contents.show_introductory_outlines",
+            Boolean,
+            self.contents.show_introductory_outlines.to_string(),
+        );
+        push(
+            "contents.show_section_headings",
+            Boolean,
+            self.contents.show_section_headings.to_string(),
         );
 
         push(
@@ -206,22 +240,16 @@ impl Settings {
             self.notes.show_cross_references.to_string(),
         );
 
-        push("headers.enabled", Boolean, self.headers.enabled.to_string());
-        push(
-            "headers.show_book_name",
-            Boolean,
-            self.headers.show_book_name.to_string(),
-        );
-        push(
-            "headers.show_reference_range",
-            Boolean,
-            self.headers.show_reference_range.to_string(),
-        );
-        push(
-            "headers.show_page_number",
-            Boolean,
-            self.headers.show_page_number.to_string(),
-        );
+        for (key, slot) in [
+            ("headers.header_left", &self.headers.header_left),
+            ("headers.header_center", &self.headers.header_center),
+            ("headers.header_right", &self.headers.header_right),
+            ("headers.footer_left", &self.headers.footer_left),
+            ("headers.footer_center", &self.headers.footer_center),
+            ("headers.footer_right", &self.headers.footer_right),
+        ] {
+            push(key, HeadSlot, slot.to_string());
+        }
 
         push(
             "output.keep_intermediates",

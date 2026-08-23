@@ -134,10 +134,12 @@ fn no_supported_key_is_reported_as_unknown() {
          show_cross_references = false\n\
          \n\
          [headers]\n\
-         enabled = true\n\
-         show_book_name = true\n\
-         show_reference_range = true\n\
-         show_page_number = true\n\
+         header_left = \"book_name\"\n\
+         header_center = \"empty\"\n\
+         header_right = \"reference_range\"\n\
+         footer_left = \"empty\"\n\
+         footer_center = \"page_number\"\n\
+         footer_right = \"empty\"\n\
          \n\
          [output]\n\
          keep_intermediates = true\n",

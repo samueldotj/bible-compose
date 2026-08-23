@@ -43,20 +43,30 @@ font_family = \"Gentium Plus\"
 font_size = \"11pt\"
 leading = \"13pt\"
 hyphenation = false
+justify = false
+keep_poetry_indentation = false
+
+[contents]
+show_book_introductions = false
+show_introductory_outlines = false
+show_section_headings = false
 
 [numbering]
 show_chapter_numbers = false
 show_verse_numbers = false
+hide_first_verse_number = true
 
 [notes]
 show_footnotes = false
 show_cross_references = false
 
 [headers]
-enabled = false
-show_book_name = false
-show_reference_range = false
-show_page_number = false
+header_left = \"alt_book_name\"
+header_center = \"empty\"
+header_right = \"empty\"
+footer_left = \"first_reference\"
+footer_center = \"empty\"
+footer_right = \"last_reference\"
 
 [output]
 keep_intermediates = true

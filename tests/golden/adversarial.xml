@@ -1,5 +1,5 @@
 <biblecompose version="1" class="biblecompose">
-<book code="MAT" name="Matthew {literal} \bd">
+<book code="MAT" name="Matthew {literal} \bd" altname="Matthew {literal} \bd">
 <para style="p"><chapter n="1"/><verse n="1" start="1" end="1"/>Backslash \bd and \par and \skip[height=40pt] are text. Braces {like this} and 100% and an ampersand &amp; and &lt;angle&gt; brackets. <char style="bd">Even \em{inside} a character style.</char><note style="f" caller="+" origin="1:1">
 <para style="p">A note with \footnote{nested} and % a comment marker.</para></note></para>
 </book></biblecompose>

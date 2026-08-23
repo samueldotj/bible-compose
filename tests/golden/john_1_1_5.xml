@@ -1,5 +1,5 @@
 <biblecompose version="1" class="biblecompose">
-<book code="JHN" name="John">
+<book code="JHN" name="John" altname="John">
 <heading style="s" level="1">The Beginning</heading>
 <para style="m"><chapter n="1"/><verse n="1" start="1" end="1"/>In the beginning was the Word, and the Word was with God, and the Word was God.<verse n="2" start="2" end="2"/>He was with God in the beginning.<verse n="3" start="3" end="3"/>Through Him all things were made, and without Him nothing was made that has been made.<verse n="4" start="4" end="4"/>In Him was life, and that life was the light of men.<verse n="5" start="5" end="5"/>The Light shines in the darkness, and the darkness has not overcome<note style="f" caller="+" origin="1:5">
 <para style="p">Or comprehended</para></note> it.</para>

@@ -63,12 +63,24 @@ local OPTIONS = {
    -- with verse numbers back on needs no re-emission.
    { key = "chapternumbers", kind = "boolean", default = true },
    { key = "versenumbers", kind = "boolean", default = true },
+   -- Verse 1 goes unnumbered where the chapter number already marks it.
+   { key = "hidefirstverse", kind = "boolean", default = false },
+   -- How a paragraph and a line of verse are set.
+   { key = "justify", kind = "boolean", default = true },
+   { key = "poetryindent", kind = "boolean", default = true },
    { key = "footnotes", kind = "boolean", default = true },
    { key = "crossrefs", kind = "boolean", default = true },
-   { key = "runningheads", kind = "boolean", default = true },
-   { key = "headbook", kind = "boolean", default = true },
-   { key = "headref", kind = "boolean", default = true },
-   { key = "folio", kind = "boolean", default = true },
+   -- Six slots, three at the top of the page and three at the foot. Each
+   -- holds one of: empty, page_number, reference_range, first_reference,
+   -- last_reference, book_name, alt_book_name. Positions rather than
+   -- switches, because where a thing goes is as much a decision as whether
+   -- it is there, and only the settings layer can make it.
+   { key = "headerleft", kind = "string", default = "book_name" },
+   { key = "headercenter", kind = "string", default = "empty" },
+   { key = "headerright", kind = "string", default = "reference_range" },
+   { key = "footerleft", kind = "string", default = "empty" },
+   { key = "footercenter", kind = "string", default = "page_number" },
+   { key = "footerright", kind = "string", default = "empty" },
 }
 
 -- Option values arrive as strings. `SU.boolean` is the coercion upstream is
@@ -238,55 +250,29 @@ function class:_init (options)
       SILE.settings:set("linebreak.tolerance", 9000)
    end
 
-   -- `folio` is loaded by plain, and the package's own way of being silent is
-   -- this counter flag rather than an option — so turning page numbers off is
-   -- setting it, not skipping the frame. The frame stays: the text block's
-   -- bottom is derived from it, and removing it would move type on the page
-   -- as a side effect of hiding a number.
-   if not self._bcopts.folio then
-      SILE.scratch.counters.folio.off = true
-   end
+   -- The folio package prints the page number into the folio frame by itself
+   -- and centred. That frame is now three slots wide and the number is only
+   -- one of the things that can go in it, so the package is silenced and this
+   -- class fills the frame in `endPage`. The frame stays either way: the text
+   -- block's bottom is derived from it, and removing it would move type on the
+   -- page as a side effect of hiding a number.
+   SILE.scratch.counters.folio.off = true
 end
 
--- Upstream writes this table but never creates it.
-local function headers ()
-   if not SILE.scratch.headers then
-      SILE.scratch.headers = {}
-   end
-   return SILE.scratch.headers
-end
+-- Declared here and defined below `style` and `face`, which they need and
+-- which are locals further down the file. `endPage` closes over these two
+-- names, so the names have to exist before it does.
+local slot_content, set_line
 
 function class:endPage ()
-   local h = headers()
-   local content = self:oddPage() and h.right or h.left
-   if content then
-      SILE.typesetNaturally(SILE.getFrame("runningHead"), function ()
-         SILE.settings:set("current.parindent", SILE.types.node.glue())
-         SILE.settings:set("document.lskip", SILE.types.node.glue())
-         SILE.settings:set("document.rskip", SILE.types.node.glue())
-         SILE.process(content)
-         SILE.call("par")
-      end)
-   end
+   local o = self._bcopts
+   set_line(SILE.getFrame("runningHead"), { o.headerleft, o.headercenter, o.headerright })
+   set_line(SILE.getFrame("folio"), { o.footerleft, o.footercenter, o.footerright })
    return plain.endPage(self)
 end
 
 function class:registerCommands ()
    plain.registerCommands(self)
-
-   self:registerCommand("left-running-head", function (_, content)
-      local closure = SILE.settings:wrap()
-      headers().left = function ()
-         closure(content)
-      end
-   end)
-
-   self:registerCommand("right-running-head", function (_, content)
-      local closure = SILE.settings:wrap()
-      headers().right = function ()
-         closure(content)
-      end
-   end)
 
    -- The range of references actually present on this page. `first-reference`
    -- and `last-reference` read infonode's per-page collection, so this is the
@@ -309,11 +295,14 @@ function class:registerCommands ()
    -- optional: the running head's reference range is a different setting, and
    -- a page whose verse numbers are hidden still knows which verses are on it.
    self:registerCommand("bc:verse", function (options, content)
-      if self._bcopts.versenumbers then
+      -- The number is withheld, never the verse: `save-verse-number` still
+      -- runs below, so a running head asking for the reference range on a page
+      -- that starts at verse 1 still knows where it starts.
+      local first = self._bcopts.hidefirstverse and tostring(options.start) == "1"
+      if self._bcopts.versenumbers and not first then
          SILE.call("bc:verse-number", options, content)
       end
       SILE.call("save-verse-number", options, flat(content))
-      self:_setheads()
    end)
 
    self:registerCommand("bc:chapter", function (options, content)
@@ -321,7 +310,6 @@ function class:registerCommands ()
       if self._bcopts.chapternumbers then
          SILE.call("bc:chapter-number", options, content)
       end
-      self:_setheads()
    end)
 
    self:registerCommand("bc:book", function (options, content)
@@ -428,6 +416,74 @@ end
 -- Colour inside the font call rather than outside it because the font switch
 -- is what changes the shaping, and a colour that wrapped it would be a group
 -- around a group for nothing.
+--- What one slot puts on the page.
+--
+-- Nothing at all for `empty`, and nothing for a slot whose content this page
+-- does not have — a page with no verse on it has no reference range, and a
+-- head reading "–" would be worse than a head reading nothing.
+function slot_content (slot)
+   local s = scratch()
+   if slot == "page_number" then
+      -- Through the counters package rather than the raw value, so a project
+      -- numbering its front matter in roman gets roman here too.
+      local counters = SILE.documentState.documentClass.packages.counters
+      SILE.typesetter:typeset(counters:formatCounter(SILE.scratch.counters.folio))
+   elseif slot == "reference_range" then
+      SILE.call("page-reference-range")
+   elseif slot == "first_reference" then
+      SILE.call("first-reference", { showbook = false })
+   elseif slot == "last_reference" then
+      SILE.call("last-reference", { showbook = false })
+   elseif slot == "book_name" then
+      local book = SILE.scratch.chapterverse and SILE.scratch.chapterverse.book
+      if book then
+         SILE.typesetter:typeset(tostring(book))
+      end
+   elseif slot == "alt_book_name" then
+      if s.altbook and s.altbook ~= "" then
+         SILE.typesetter:typeset(s.altbook)
+      end
+   end
+end
+
+--- Set one line of three slots into a frame.
+--
+-- `\hfill` between the parts is what makes three slots out of one line: the
+-- left one starts at the margin, the right one ends at it, and the middle one
+-- lands between them wherever they leave it. An empty slot contributes
+-- nothing but its glue, so two empties and a centre still centre.
+function set_line (frame, slots)
+   if not frame then
+      return
+   end
+   local anything = false
+   for _, slot in ipairs(slots) do
+      if slot ~= "empty" then
+         anything = true
+      end
+   end
+   if not anything then
+      return
+   end
+
+   SILE.typesetNaturally(frame, function ()
+      SILE.settings:set("current.parindent", SILE.types.node.glue())
+      SILE.settings:set("document.lskip", SILE.types.node.glue())
+      SILE.settings:set("document.rskip", SILE.types.node.glue())
+      SILE.settings:set("typesetter.parfillskip", SILE.types.node.glue())
+      SILE.call("font", face(style("head")) or {}, function ()
+         for i, slot in ipairs(slots) do
+            if i > 1 then
+               SILE.call("hfill")
+            end
+            slot_content(slot)
+         end
+      end)
+      SILE.call("par")
+   end)
+end
+
+
 local function styled (selector, body)
    local s = style(selector)
    local f = face(s)
@@ -457,6 +513,12 @@ local ALIGNMENT = {
 }
 
 local function alignment (s)
+   -- A project set ragged overrides nothing a style says about centring: a
+   -- centred line is still centred, and only the ones that would have been
+   -- justified become ragged.
+   if s.align == nil and not SILE.documentState.documentClass._bcopts.justify then
+      return ALIGNMENT.start
+   end
    if s.align == "center" then
       return ALIGNMENT.center
    elseif s.align == "end" then
@@ -573,6 +635,7 @@ function class:registerXmlCommands ()
       s.books = s.books + 1
 
       SILE.call("bc:book", {}, { options.name or options.code or "" })
+      scratch().altbook = options.altname or options.name or options.code or ""
       if options.name then
          SILE.call("center", {}, function ()
             SILE.call("font", { size = "16pt", weight = 600 }, function ()
@@ -636,7 +699,7 @@ function class:registerXmlCommands ()
       -- An indent on a poetry line is a first-line indent of the whole line,
       -- so it is glue at the start rather than a left skip: a line that wraps
       -- should hang, which is what a reader expects of verse.
-      if s.indent and not align then
+      if s.indent and not align and self._bcopts.poetryindent then
          SILE.call("glue", { width = s.indent })
       end
       styled(selector, function ()
@@ -711,7 +774,7 @@ function class:registerXmlCommands ()
    end)
 
    self:registerCommand("verse", function (options, _)
-      SILE.call("bc:verse", {}, { tostring(options.n or "") })
+      SILE.call("bc:verse", { start = options.start }, { tostring(options.n or "") })
    end)
 
    self:registerCommand("bc:verse-number", function (_, content)
@@ -786,51 +849,6 @@ function class:registerXmlCommands ()
    -- about it (FUN-003); showing nothing here would make the warning look
    -- wrong to anyone comparing the log against the page.
    self:registerCommand("unsupported", function (_, _) end)
-end
-
-function class:_setheads ()
-   local o = self._bcopts
-   -- Nothing is registered at all when running heads are off, so `endPage`
-   -- has no content to typeset and the frame is simply never filled.
-   if not o.runningheads then
-      return
-   end
-
-   local book = o.headbook and SILE.scratch.chapterverse and SILE.scratch.chapterverse.book
-   local headfont = face(style("head")) or {}
-   SILE.call("left-running-head", {}, function ()
-      SILE.settings:temporarily(function ()
-         SILE.settings:set("document.lskip", SILE.types.node.glue())
-         SILE.settings:set("document.rskip", SILE.types.node.glue())
-         SILE.call("font", headfont, function ()
-            if o.headref then
-               SILE.call("page-reference-range")
-            end
-            SILE.call("hfill")
-            if book then
-               SILE.typesetter:typeset(tostring(book))
-            end
-         end)
-         SILE.typesetter:leaveHmode()
-      end)
-   end)
-   SILE.call("right-running-head", {}, function ()
-      SILE.settings:temporarily(function ()
-         SILE.settings:set("document.lskip", SILE.types.node.glue())
-         SILE.settings:set("document.rskip", SILE.types.node.glue())
-         SILE.settings:set("typesetter.parfillskip", SILE.types.node.glue())
-         SILE.call("font", headfont, function ()
-            if book then
-               SILE.typesetter:typeset(tostring(book))
-            end
-            SILE.call("hfill")
-            if o.headref then
-               SILE.call("page-reference-range")
-            end
-         end)
-         SILE.typesetter:leaveHmode()
-      end)
-   end)
 end
 
 return class

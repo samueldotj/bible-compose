@@ -242,9 +242,10 @@ pub fn build_with(
 
     // ---- emit --------------------------------------------------------------
     reporter.advance(BuildState::Emitting);
-    let emitted = biblecompose_sile::emit(
+    let emitted = biblecompose_sile::emit_hiding(
         doc,
         &backend_input::style_rules_with(&request.styles, &style_fonts),
+        backend_input::hidden(&request.settings),
     );
     for u in &emitted.dropped {
         let d = Diagnostic::warning(

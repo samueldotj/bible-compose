@@ -86,14 +86,36 @@ pub fn class_options_with(
     // What appears on the page.
     put("chapternumbers", flag(*s.numbering.show_chapter_numbers));
     put("versenumbers", flag(*s.numbering.show_verse_numbers));
+    put("hidefirstverse", flag(*s.numbering.hide_first_verse_number));
+    put("justify", flag(*s.typography.justify));
+    put("poetryindent", flag(*s.typography.keep_poetry_indentation));
     put("footnotes", flag(*s.notes.show_footnotes));
     put("crossrefs", flag(*s.notes.show_cross_references));
-    put("runningheads", flag(*s.headers.enabled));
-    put("headbook", flag(*s.headers.show_book_name));
-    put("headref", flag(*s.headers.show_reference_range));
-    put("folio", flag(*s.headers.show_page_number));
+    // Six slots rather than four switches: where a thing goes is as much a
+    // decision as whether it is there, and the class can only honour what it
+    // is told.
+    put("headerleft", s.headers.header_left.to_string());
+    put("headercenter", s.headers.header_center.to_string());
+    put("headerright", s.headers.header_right.to_string());
+    put("footerleft", s.headers.footer_left.to_string());
+    put("footercenter", s.headers.footer_center.to_string());
+    put("footerright", s.headers.footer_right.to_string());
 
     out
+}
+
+/// The parts of a book this project does not print.
+///
+/// Emission rather than a class option, which every other "what appears"
+/// setting is — see [`Hidden`] for the measurement that decided it.
+///
+/// [`Hidden`]: biblecompose_sile::Hidden
+pub fn hidden(s: &Settings) -> biblecompose_sile::Hidden {
+    biblecompose_sile::Hidden {
+        book_introductions: !*s.contents.show_book_introductions,
+        introductory_outlines: !*s.contents.show_introductory_outlines,
+        section_headings: !*s.contents.show_section_headings,
+    }
 }
 
 /// `"true"` / `"false"`, which is what the class's `SU.boolean` reads. Spelled

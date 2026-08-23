@@ -80,8 +80,16 @@ pub struct Emitted {
 ///
 /// [ADR-005]: ../../../docs/adr/005-provenance.md
 pub fn emit(doc: &ScriptureDocument, styles: &[StyleRule]) -> Emitted {
+    emit_hiding(doc, styles, Hidden::nothing())
+}
+
+/// The same, with parts of each book withheld (see [`Hidden`]).
+pub fn emit_hiding(doc: &ScriptureDocument, styles: &[StyleRule], hidden: Hidden) -> Emitted {
     let mut w = Writer::new(Cursor::new(Vec::new()));
-    let mut state = EmitState::default();
+    let mut state = EmitState {
+        hidden,
+        ..EmitState::default()
+    };
 
     let mut root = BytesStart::new("biblecompose");
     root.push_attribute(("version", CONTRACT_VERSION));
@@ -169,6 +177,8 @@ struct EmitState {
     dropped: Vec<Unsupported>,
     book: String,
     chapter: u16,
+    /// Parts of each book this project does not print.
+    hidden: Hidden,
 }
 
 impl EmitState {
@@ -221,6 +231,12 @@ fn emit_book(w: &mut Writer<Cursor<Vec<u8>>>, book: &Book, state: &mut EmitState
     if let Some(name) = book.names.for_running_head() {
         el.push_attribute(("name", name));
     }
+    // The fuller form, for a running head configured to want it. Emitted even
+    // when it is the same string: which name a head shows is the class's
+    // decision to make, and a missing attribute would make it the emitter's.
+    if let Some(name) = book.names.for_alternate_head() {
+        el.push_attribute(("altname", name));
+    }
     write(w, Event::Start(el), state);
 
     for block in &book.blocks {
@@ -231,10 +247,65 @@ fn emit_book(w: &mut Writer<Cursor<Vec<u8>>>, book: &Book, state: &mut EmitState
     write(w, Event::End(BytesEnd::new("book")), state);
 }
 
+/// Parts of a book a project has chosen not to print.
+///
+/// # Why this is emission and not the class
+///
+/// [ADR-002] puts the division at "the document says what, the class says
+/// how", and every other thing that can be turned off — verse numbers,
+/// footnotes, the running head — is hidden by the class from a document that
+/// still carries it. These three are not, and the reason is measured rather
+/// than aesthetic: a class that returns without typesetting a section heading
+/// leaves two balanced columns that SILE cannot resolve, and it does not fail
+/// — it spins. Three ways of writing that hide were tried (a bare return, one
+/// that closes the paragraph, one that keeps the break penalties) and all
+/// three hang; the same document with the headings absent from the XML sets
+/// in seconds.
+///
+/// So the choice is between a setting that hangs the backend and one that
+/// costs a re-emission, and re-emission costs nothing here: every build emits
+/// from the model anyway.
+///
+/// [ADR-002]: ../../../docs/adr/002-sile-interface.md
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Hidden {
+    pub book_introductions: bool,
+    pub introductory_outlines: bool,
+    pub section_headings: bool,
+}
+
+impl Hidden {
+    /// Everything printed, which is what a golden file wants.
+    pub fn nothing() -> Hidden {
+        Hidden::default()
+    }
+
+    /// Whether a paragraph marker is one of the parts being withheld.
+    fn hides_para(&self, marker: &str) -> bool {
+        const INTRO: [&str; 9] = ["ip", "ipi", "im", "imi", "ipq", "imq", "ipr", "iex", "ie"];
+        const OUTLINE: [&str; 6] = ["io1", "io2", "io3", "io4", "ili1", "ili2"];
+        (self.book_introductions && INTRO.contains(&marker))
+            || (self.introductory_outlines && OUTLINE.contains(&marker))
+    }
+
+    /// And a heading marker. `\s` is the section heading; the parallel
+    /// reference line, a psalm's superscription and a speaker are in the same
+    /// family and are not what that setting is about.
+    fn hides_heading(&self, marker: &str) -> bool {
+        (self.book_introductions && matches!(marker, "is" | "imt"))
+            || (self.introductory_outlines && marker == "iot")
+            || (self.section_headings && marker == "s")
+    }
+}
+
 fn emit_block(w: &mut Writer<Cursor<Vec<u8>>>, block: &Block, state: &mut EmitState) {
     newline(w, state);
     match block {
         Block::Paragraph { style, content } => {
+            if state.hidden.hides_para(style.marker()) {
+                emit_anchors(w, content, state);
+                return;
+            }
             let mut el = BytesStart::new("para");
             el.push_attribute(("style", style.marker()));
             write(w, Event::Start(el), state);
@@ -258,6 +329,10 @@ fn emit_block(w: &mut Writer<Cursor<Vec<u8>>>, block: &Block, state: &mut EmitSt
             level,
             content,
         } => {
+            if state.hidden.hides_heading(style.marker()) {
+                emit_anchors(w, content, state);
+                return;
+            }
             let mut el = BytesStart::new("heading");
             el.push_attribute(("style", style.marker()));
             el.push_attribute(("level", level.to_string().as_str()));
@@ -338,6 +413,26 @@ fn emit_figure(w: &mut Writer<Cursor<Vec<u8>>>, f: &FigureRef, state: &mut EmitS
 fn emit_inlines(w: &mut Writer<Cursor<Vec<u8>>>, items: &[Inline], state: &mut EmitState) {
     for item in items {
         emit_inline(w, item, state);
+    }
+}
+
+/// The anchors from a block that is not being printed.
+///
+/// Normalization tucks a chapter marker inside the heading it falls before —
+/// `<heading style="s"><chapter n="1"/>The Beginning</heading>` — so dropping
+/// the heading whole would drop chapter 1 with it. The book would then be set
+/// with no chapter recorded anywhere, and a running head asking for its
+/// reference range would be asking about a page that does not know where it
+/// is. Measured consequence: the backend does not fail, it spins.
+///
+/// So a hidden block still gives up its chapter and verse anchors. They set
+/// no type; they are what tells the page where it is.
+fn emit_anchors(w: &mut Writer<Cursor<Vec<u8>>>, items: &[Inline], state: &mut EmitState) {
+    for item in items {
+        match item {
+            Inline::Chapter { .. } | Inline::Verse { .. } => emit_inline(w, item, state),
+            _ => {}
+        }
     }
 }
 
@@ -599,11 +694,24 @@ mod tests {
         }
     }
 
+    /// Both names, because a running head slot can ask for either.
     #[test]
-    fn book_name_is_carried_for_the_running_head() {
+    fn book_names_are_carried_for_the_running_head() {
         let out = emit(&fixtures::two_books(), &[]);
-        assert!(out.xml.contains(r#"<book code="GEN" name="Genesis">"#));
-        assert!(out.xml.contains(r#"<book code="JHN" name="John">"#));
+        assert!(
+            out.xml.contains(r#"<book code="GEN" name="Genesis""#),
+            "{}",
+            out.xml
+        );
+        assert!(
+            out.xml.contains(r#"<book code="JHN" name="John""#),
+            "{}",
+            out.xml
+        );
+        // A book that gives one name gives the same string to both slots, which
+        // is right: the alternative is a head that empties when a project has
+        // no `\toc1`.
+        assert_eq!(out.xml.matches("altname=").count(), 2, "{}", out.xml);
         // Canonical order, not insertion order.
         let gen = out.xml.find("GEN").unwrap();
         let jhn = out.xml.find("JHN").unwrap();

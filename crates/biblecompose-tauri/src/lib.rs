@@ -1198,6 +1198,19 @@ fn wire_event(event: BuildEvent) -> WireBuildEvent {
 const OPENING_SHARE: f64 = 0.5;
 const WORKING_SHARE: f64 = 0.8;
 
+/// The widest this window is allowed to be, in logical pixels.
+///
+/// A share of the screen stops making sense past a point. Eight tenths of an
+/// ultrawide monitor is nearly three thousand pixels of window holding a book
+/// list, a page of settings and a great deal of nothing — and a line of type
+/// that long is unreadable even when it is only a diagnostic. This is a
+/// measure, in the typographic sense, rather than a preference.
+///
+/// Logical and not physical pixels: on a display at 150% this is 1500 of the
+/// pixels the layout inside is written in, which is the number that decides
+/// whether the two panes fit side by side.
+const MAX_WIDTH: f64 = 1500.0;
+
 /// A share of the screen's work area, in physical pixels.
 ///
 /// The *work area* rather than the whole monitor, so a share of the screen
@@ -1210,8 +1223,9 @@ fn share_of_screen(window: &tauri::WebviewWindow, share: f64) -> Option<tauri::P
     }?;
 
     let area = monitor.work_area().size;
+    let cap = MAX_WIDTH * monitor.scale_factor();
     Some(tauri::PhysicalSize::new(
-        (f64::from(area.width) * share).round() as u32,
+        (f64::from(area.width) * share).min(cap).round() as u32,
         (f64::from(area.height) * share).round() as u32,
     ))
 }
@@ -1299,6 +1313,9 @@ pub fn run() {
         .setup(|app| {
             app.manage(Arc::new(Session::default()));
             if let Some(window) = app.get_webview_window("main") {
+                // Enforced by the window manager as well as by the arithmetic
+                // above, so dragging the edge cannot go past it either.
+                let _ = window.set_max_size(Some(tauri::LogicalSize::new(MAX_WIDTH, 100_000.0)));
                 take_share_of_screen(&window, OPENING_SHARE);
             }
             name_the_window(app.handle(), None);

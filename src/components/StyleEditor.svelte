@@ -268,8 +268,6 @@
     padding-inline: 0.35rem;
     border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
     border-radius: 4px;
-    background: transparent;
-    color: inherit;
     font: inherit;
     font-size: 0.85rem;
   }

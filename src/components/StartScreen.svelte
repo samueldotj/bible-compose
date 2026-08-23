@@ -25,13 +25,8 @@
 
 <section class="start">
   <div class="actions">
-    <button
-      type="button"
-      class="primary"
-      disabled={session.opening}
-      onclick={() => void session.choose()}
-    >
-      {session.opening ? "Opening…" : "Open a project…"}
+    <button type="button" class="primary" onclick={() => void session.choose()}>
+      Open a project…
     </button>
     <button type="button" onclick={() => (starting = true)}>New project…</button>
   </div>
@@ -49,7 +44,7 @@
           <button
             type="button"
             class="row"
-            disabled={item.missing || session.opening}
+            disabled={item.missing}
             title={item.root}
             onclick={() => void session.open(item.root)}
           >

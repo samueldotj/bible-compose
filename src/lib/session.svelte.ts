@@ -59,6 +59,15 @@ export class Session {
   /** A failure that is not about the project — the shell itself. */
   fault = $state<string | null>(null);
   opening = $state(false);
+  /**
+   * The folder being opened, while it is being opened.
+   *
+   * Reading a whole Bible is seconds of parsing, and for those seconds the
+   * window has a folder but no project. Held so the wait can name what it is
+   * waiting for: "Loading" over a start screen offering the same folder again
+   * is the application looking like it did not hear.
+   */
+  openingWhat = $state<string | null>(null);
 
   /** The projects this machine has opened, most recent first (PRJ-001). */
   recent = $state<readonly Recent[]>([]);
@@ -312,6 +321,7 @@ export class Session {
 
   async open(root: string): Promise<void> {
     this.opening = true;
+    this.openingWhat = root;
     this.fault = null;
     try {
       this.project = await backend().openProject(root);
@@ -329,6 +339,7 @@ export class Session {
       this.fault = String(e);
     } finally {
       this.opening = false;
+      this.openingWhat = null;
     }
   }
 

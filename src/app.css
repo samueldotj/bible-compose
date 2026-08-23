@@ -46,3 +46,21 @@ h2 {
 .pane {
   min-inline-size: 0;
 }
+
+/*
+ * A dropdown's list is drawn by the platform, not by the page — and it takes
+ * its colours from the control. `background: transparent` on a `<select>`
+ * leaves that list with no background of its own, so it comes up white while
+ * the text stays the page's colour: in dark mode, white on white.
+ *
+ * Both stated explicitly, and on the options as well as the control, because
+ * on Windows the popup is a separate surface that inherits neither.
+ */
+select {
+  background-color: Canvas;
+  color: CanvasText;
+}
+option {
+  background-color: Canvas;
+  color: CanvasText;
+}

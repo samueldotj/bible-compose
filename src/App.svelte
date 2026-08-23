@@ -71,7 +71,18 @@
     <p class="fault" role="alert">{session.fault}</p>
   {/if}
 
-  {#if !session.project}
+  {#if session.openingWhat}
+    <!--
+      The start screen goes the moment a folder is chosen, not when it has
+      finished being read. Reading a whole Bible is seconds of parsing, and a
+      start screen still offering the folder you just clicked is the
+      application looking like it did not hear you.
+    -->
+    <section class="loading">
+      <p class="what">Loading…</p>
+      <p class="where">{session.openingWhat}</p>
+    </section>
+  {:else if !session.project}
     <StartScreen />
   {:else}
     {#if session.created}
@@ -117,21 +128,6 @@
         {/each}
       </nav>
 
-      {#if tab.styles}
-        <nav class="tabs subtabs" aria-label="Styles sections">
-          {#each STYLE_TABS as s (s.id)}
-            <button
-              type="button"
-              class:active={session.stylePane === s.id}
-              aria-current={session.stylePane === s.id ? "true" : undefined}
-              onclick={() => (session.stylePane = s.id)}
-            >
-              {s.title}
-            </button>
-          {/each}
-        </nav>
-      {/if}
-
       {#if !session.editable}
         <p class="hint">
           The built-in defaults, which is what a folder with no project files gets. Open a project to
@@ -143,6 +139,28 @@
            the Page section alone pushes the Build button off the bottom of the
            window, and the control you press after changing something should not
            be the one you have to go looking for. -->
+      <div class="body" class:sectioned={tab.styles}>
+        {#if tab.styles}
+          <!-- Down the side rather than across the top: there are seven of
+               them, they are nouns rather than steps, and a row of seven wraps
+               to two lines at any width this window is likely to be — which
+               moves the section you are reading every time the window is
+               resized. A column also leaves the names left-aligned, so they
+               read as a list of what can be styled. -->
+          <nav class="subtabs" aria-label="Styles sections">
+            {#each STYLE_TABS as s (s.id)}
+              <button
+                type="button"
+                class:active={session.stylePane === s.id}
+                aria-current={session.stylePane === s.id ? "true" : undefined}
+                onclick={() => (session.stylePane = s.id)}
+              >
+                {s.title}
+              </button>
+            {/each}
+          </nav>
+        {/if}
+
         <div class="scroller">
           {#if tab.styles}
             {#if styleTab.inspector}
@@ -165,6 +183,7 @@
               <SettingsForm groups={tab.settingGroups} orphans={tab.orphans ?? false} />
             {/if}
           {/if}
+        </div>
       </div>
     </div>
     </main>
@@ -257,6 +276,25 @@
     padding-inline: 1rem;
     border-block-end: 1px solid color-mix(in oklab, currentColor 12%, transparent);
   }
+  .loading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+  .what {
+    margin: 0;
+    font-size: 1rem;
+  }
+  .where {
+    overflow-wrap: anywhere;
+    margin: 0;
+    font-size: 0.8rem;
+    opacity: 0.55;
+  }
   .next-step {
     flex: none;
     margin: 0;
@@ -287,15 +325,50 @@
   }
   /* Quieter than the tabs above them, so the two rows read as a hierarchy
      rather than as eleven equal choices. */
+  /* The pane, and — on the Styles tab — the list of sections beside it. */
+  .body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-block-size: 0;
+  }
+  .body.sectioned {
+    flex-direction: row;
+    gap: 0.9rem;
+  }
   .subtabs {
-    flex-wrap: wrap;
-    border-block-end-style: dashed;
-    margin-block-start: -0.4rem;
+    display: flex;
+    flex-direction: column;
+    flex: none;
+    gap: 0.1rem;
+    min-inline-size: 8rem;
+    padding-inline-end: 0.6rem;
+    border-inline-end: 1px solid color-mix(in oklab, currentColor 15%, transparent);
+    overflow-y: auto;
   }
   .subtabs button {
-    padding-block: 0.2rem;
-    padding-inline: 0.55rem;
-    font-size: 0.78rem;
+    padding-block: 0.25rem;
+    padding-inline: 0.5rem;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: 0.82rem;
+    /* Left-aligned, because down the side they read as a list of what can be
+       styled rather than as a row of buttons. */
+    text-align: start;
+    cursor: pointer;
+    opacity: 0.75;
+  }
+  .subtabs button:hover {
+    background: color-mix(in oklab, currentColor 8%, transparent);
+    opacity: 1;
+  }
+  .subtabs button.active {
+    background: color-mix(in oklab, currentColor 14%, transparent);
+    font-weight: 600;
+    opacity: 1;
   }
   .scroller {
     /* Bounded by the column now rather than by a share of the viewport, which
@@ -356,10 +429,14 @@
     grid-template-rows: 1fr auto;
     overflow: hidden;
   }
+  /* A column of rows that do not grow — the tabs, the hint — and one that
+     does. The pane scrolls inside itself rather than the whole side
+     scrolling, which is what keeps the section list beside the Styles pane
+     from scrolling away with the form it chooses. */
   .right {
-    align-content: start;
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
   /* One column below the two-pane threshold, which is also where a settings
      form stops fitting beside a book list. */

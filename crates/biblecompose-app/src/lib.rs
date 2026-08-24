@@ -155,6 +155,18 @@ pub struct BuildRequest {
     /// Deterministic, so the build directory name does not vary between two
     /// otherwise identical runs.
     pub build_id: String,
+    /// What opening the project already found.
+    ///
+    /// Included in the build's own diagnostics, and therefore in its own
+    /// blocking check — which is the point. A settings file that will not
+    /// parse, a book claimed by two files, a style sheet with a cycle: all of
+    /// those are found by `project::open` and none of them is found again
+    /// here, so a build handed them and told nothing would report the error
+    /// and then produce a PDF from the defaults (SRS §16.2 scenario H).
+    ///
+    /// The CLI guarded itself against this and the window did not, which is
+    /// the argument for it living here rather than in either of them.
+    pub prior: Diagnostics,
     /// Ignore the fingerprint and run the backend regardless (BLD-007).
     ///
     /// The escape hatch, and the reason one is needed: the fingerprint is a
@@ -182,6 +194,7 @@ impl BuildRequest {
             settings: Settings::builtin(),
             styles: biblecompose_config::cascade::resolve(None, false).0,
             build_id: "current".to_owned(),
+            prior: Diagnostics::new(),
             clean: false,
             draft: None,
         }
@@ -247,7 +260,9 @@ pub fn build_with(
     cancel: &CancelToken,
     reporter: &mut BuildReporter,
 ) -> BuildReport {
-    let mut diagnostics = Diagnostics::new();
+    // Everything opening the project found, so this build's blocking check
+    // covers it too. Nothing below rediscovers a bad settings file.
+    let mut diagnostics = request.prior.clone();
 
     reporter.advance(BuildState::Loading);
     reporter.advance(BuildState::Loaded);

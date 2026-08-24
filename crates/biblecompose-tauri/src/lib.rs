@@ -937,6 +937,9 @@ fn start_build(
             .with_settings(opened.settings.clone())
             .with_styles(opened.styles.clone());
         request.clean = clean;
+        // Handed to the build rather than only announced, so a project that
+        // cannot be opened cannot be built (SRS §16.2 scenario H).
+        request.prior = opened.diagnostics.clone();
         if draft {
             request.draft = Some(biblecompose_app::draft_note(opened.document.books.len()));
         }

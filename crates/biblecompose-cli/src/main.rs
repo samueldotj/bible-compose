@@ -251,6 +251,7 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
                 .with_settings(settings)
                 .with_styles(opened.styles.clone());
             request.clean = clean;
+            request.prior = opened.diagnostics.clone();
             if draft {
                 request.draft = Some(biblecompose_app::draft_note(doc.books.len()));
             }

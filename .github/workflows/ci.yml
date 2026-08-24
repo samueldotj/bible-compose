@@ -70,6 +70,19 @@ jobs:
   # ADR-004's boundary and SILE-005's ordered-map rule. Both are the kind that
   # erode one convenient import at a time, so they are asserted rather than
   # reviewed. Broken out as its own job so a failure names itself in the UI.
+  traceability:
+    name: every MUST is answered
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # Fails on a requirement nothing points at, and on a table that has
+      # drifted from the tests it describes. Both are cheap to fix and
+      # impossible to notice by eye.
+      - run: node scripts/traceability.mjs --check
+
   architecture:
     name: architectural rules
     runs-on: ubuntu-latest

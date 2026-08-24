@@ -68,9 +68,11 @@ enum Command {
         fixture: String,
         /// Where the PDF goes. Never written until the build succeeds.
         ///
-        /// Defaults to `output/bible.pdf` inside the project folder. An
-        /// argument to one command rather than a property of the project,
-        /// which is why this exists and the setting it replaced does not.
+        /// Defaults to the project's own answer — `output/` inside the folder,
+        /// named after the publication (BLD-003). A *path* is an argument to
+        /// one command rather than a property of the project, which is why
+        /// this exists and `output.file` does not; `output.name` in the
+        /// settings decides what the file is called.
         #[arg(long, short)]
         output: Option<Utf8PathBuf>,
         /// Project root — relative asset paths resolve against it.

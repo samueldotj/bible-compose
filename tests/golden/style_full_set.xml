@@ -18,8 +18,8 @@
 <style for="poetry.qa4" italic="true" space_above="4pt" space_below="1pt"/>
 <style for="heading.s1" font_size="10.2pt" weight="600" space_above="7pt" space_below="1pt"/>
 <style for="heading.s2" font_size="9.6pt" weight="600" space_above="5pt" space_below="1pt"/>
-<style for="heading.s3" font_size="9.6pt" weight="600" space_above="5pt" space_below="1pt"/>
-<style for="heading.s4" font_size="9.6pt" weight="600" space_above="5pt" space_below="1pt"/>
+<style for="heading.s3" font_size="9.2pt" weight="600" space_above="4pt" space_below="1pt"/>
+<style for="heading.s4" font_size="8.8pt" weight="600" italic="true" space_above="3pt" space_below="1pt"/>
 <style for="heading.sr1" font_size="7.6pt" italic="true" space_above="1pt" space_below="3pt"/>
 <style for="heading.sr2" font_size="7.6pt" italic="true" space_above="1pt" space_below="3pt"/>
 <style for="heading.sr3" font_size="7.6pt" italic="true" space_above="1pt" space_below="3pt"/>

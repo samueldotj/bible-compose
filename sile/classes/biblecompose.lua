@@ -1129,9 +1129,26 @@ function class:registerXmlCommands ()
             SILE.process(content)
          end
       end)
+      -- A heading is not left standing at the foot of a column (SCR-011), and
+      -- the order of these five calls is the whole of how that is arranged.
+      --
+      -- `\novbreak` comes *before* `\par`, which looks redundant and is not.
+      -- It ends the paragraph itself, by way of `leaveHmode`, and then pushes
+      -- its penalty — so the penalty is the node immediately after the heading
+      -- box. `\par` then sees vertical mode with a penalty on the end of the
+      -- queue and returns without doing anything, and that is the point:
+      -- reaching it the other way round lets `\par` push `document.parskip`
+      -- first, and glue directly after a box is a legal break, so the page
+      -- would divide under the heading no matter how many penalties followed.
+      --
+      -- The penalty after the skip matters for the same reason, one node
+      -- further on. `vertical` is what makes both of them land in the
+      -- page-breaking list rather than the line-breaking one.
+      SILE.call("novbreak")
       SILE.call("par")
-      SILE.call("nobreak")
+      SILE.call("novbreak")
       skip(s.space_below)
+      SILE.call("novbreak")
    end)
 
    self:registerCommand("para", function (options, content)

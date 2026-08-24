@@ -398,6 +398,95 @@ pub fn long_verse() -> ScriptureDocument {
     )])
 }
 
+/// Every kind of heading USFM has, in one psalm (P4.6).
+///
+/// Six of them share the `heading` element and differ only by the style they
+/// resolve to, so this is the fixture that shows whether a reader can tell them
+/// apart. A psalm, because `\d` and `\sp` belong to psalms and to Job and the
+/// Song, and putting them anywhere else would be a fixture nobody recognises.
+pub fn headings() -> ScriptureDocument {
+    let says = |style: HeadingStyle, level: u8, words: &str| Block::Heading {
+        style,
+        level,
+        content: vec![text(words)],
+    };
+    let verse_of = |n: u16, words: &str| Block::Paragraph {
+        style: ParaStyle::P,
+        content: vec![verse(n), text(words)],
+    };
+
+    ScriptureDocument::new(vec![Book::new(
+        book("PSA"),
+        BookNames::named("Psalms"),
+        vec![
+            // The chapter anchor lives in the superscription, which is where
+            // USJ puts it when a psalm has one.
+            Block::Heading {
+                style: HeadingStyle::D,
+                level: 1,
+                content: vec![
+                    chapter(3),
+                    text("A Psalm of David, when he fled from Absalom his son."),
+                ],
+            },
+            says(HeadingStyle::S, 1, "A first-level heading"),
+            says(HeadingStyle::R, 1, "(2 Samuel 15:13-30)"),
+            verse_of(1, "O LORD, how many are my foes!"),
+            says(HeadingStyle::S, 2, "A second-level heading"),
+            verse_of(2, "Many are saying of me."),
+            says(HeadingStyle::S, 3, "A third-level heading"),
+            verse_of(3, "But You, O LORD, are a shield around me."),
+            says(HeadingStyle::S, 4, "A fourth-level heading"),
+            verse_of(4, "To the LORD I cry aloud."),
+            says(HeadingStyle::Sp, 1, "The Beloved"),
+            verse_of(5, "I lie down and sleep."),
+            says(HeadingStyle::Sr, 1, "(3:1-8)"),
+            verse_of(6, "I will not fear the tens of thousands."),
+        ],
+    )])
+}
+
+/// Enough prose to fill a column, then a heading — so that, laid out without
+/// care, the heading is the last line the column can hold (P4.6).
+///
+/// The lengths are chosen against the built-in page rather than guessed: a
+/// heading that landed comfortably mid-column would make the test pass without
+/// testing anything, so the paragraph before each one is sized to run the
+/// column out.
+pub fn orphan_heading() -> ScriptureDocument {
+    let sentence = "and they went out and preached everywhere while the Lord \
+                    worked with them and confirmed the word by the signs that \
+                    accompanied it. ";
+    let mut blocks = vec![Block::Paragraph {
+        style: ParaStyle::P,
+        content: vec![chapter(1), verse(1), text(sentence)],
+    }];
+
+    // Several headings at different depths into the column, so at least one of
+    // them lands where a break would want to be whatever the exact measure.
+    for (n, fill) in [(2u16, 11usize), (3, 13), (4, 15), (5, 17)] {
+        blocks.push(Block::Paragraph {
+            style: ParaStyle::P,
+            content: vec![verse(n), text(&sentence.repeat(fill))],
+        });
+        blocks.push(Block::Heading {
+            style: HeadingStyle::S,
+            level: 1,
+            content: vec![text(&format!("Heading {n}"))],
+        });
+        blocks.push(Block::Paragraph {
+            style: ParaStyle::P,
+            content: vec![verse(n + 100), text(sentence)],
+        });
+    }
+
+    ScriptureDocument::new(vec![Book::new(
+        book("MRK"),
+        BookNames::named("Mark"),
+        blocks,
+    )])
+}
+
 /// Every fixture, for tests that should run over all of them.
 pub fn all() -> Vec<(&'static str, ScriptureDocument)> {
     vec![
@@ -407,6 +496,8 @@ pub fn all() -> Vec<(&'static str, ScriptureDocument)> {
         ("adversarial", adversarial()),
         ("apparatus", apparatus()),
         ("long_verse", long_verse()),
+        ("headings", headings()),
+        ("orphan_heading", orphan_heading()),
     ]
 }
 

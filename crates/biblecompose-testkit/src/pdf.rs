@@ -445,6 +445,12 @@ pub struct Mark {
     /// does not cover becomes `U+FFFD`, so a broken subset is visible rather
     /// than silently short.
     pub text: String,
+    /// The face, with the random subset prefix stripped — `DejaVuSerif-Bold`.
+    ///
+    /// Size alone cannot tell two styles apart once a hierarchy runs out of
+    /// sizes and starts using weight, which is what the third and fourth
+    /// heading levels do.
+    pub face: String,
 }
 
 /// One baseline's worth of marks, in the order they were placed.
@@ -464,6 +470,21 @@ impl Line {
     /// run of words spelled the same way.
     pub fn text(&self) -> String {
         self.marks.iter().map(|m| m.text.as_str()).collect()
+    }
+
+    /// The faces on this line, in first-seen order.
+    ///
+    /// What separates two styles that share a size. A heading hierarchy runs
+    /// out of sizes before it runs out of levels and starts using weight, and
+    /// bold against italic is invisible to [`Line::sizes`].
+    pub fn faces(&self) -> Vec<String> {
+        let mut out: Vec<String> = Vec::new();
+        for m in &self.marks {
+            if !out.contains(&m.face) {
+                out.push(m.face.clone());
+            }
+        }
+        out
     }
 
     /// The sizes on this line, so a note line can be told from a body line.
@@ -630,7 +651,7 @@ fn walk_pages(objects: &BTreeMap<u32, Vec<u8>>, node: u32, out: &mut Vec<u32>, d
 }
 
 /// `/Font << /F1 5 0 R >>` on a page's resources, each with its decoded map.
-fn page_fonts(objects: &BTreeMap<u32, Vec<u8>>, page: &[u8]) -> BTreeMap<String, ToUnicode> {
+fn page_fonts(objects: &BTreeMap<u32, Vec<u8>>, page: &[u8]) -> BTreeMap<String, Face> {
     let mut out = BTreeMap::new();
     let Some(resources) = reference(page, b"/Resources").and_then(|n| objects.get(&n)) else {
         return out;
@@ -646,19 +667,28 @@ fn page_fonts(objects: &BTreeMap<u32, Vec<u8>>, page: &[u8]) -> BTreeMap<String,
         let after = &rest[name.len()..];
         let number: Option<u32> = after.split_whitespace().next().and_then(|w| w.parse().ok());
         if let Some(number) = number {
-            let map = objects
-                .get(&number)
+            let font = objects.get(&number);
+            let map = font
                 .and_then(|f| reference(f, b"/ToUnicode"))
                 .and_then(|n| stream(objects, n))
                 .map(|cmap| to_unicode(&cmap))
                 .unwrap_or_default();
-            out.insert(name, map);
+            let named = font.map(|f| base_font(f)).unwrap_or_default();
+            out.insert(name, Face { map, name: named });
         }
     }
     out
 }
 
 type ToUnicode = BTreeMap<u32, String>;
+
+/// What a page's resources say about one font: how to read its codes, and what
+/// it is called.
+#[derive(Debug, Clone, Default)]
+struct Face {
+    map: ToUnicode,
+    name: String,
+}
 
 /// A `/ToUnicode` CMap, as far as `bfchar` and `bfrange` go.
 fn to_unicode(cmap: &[u8]) -> ToUnicode {
@@ -732,17 +762,27 @@ fn utf16_be(hex: &str) -> String {
     String::from_utf16_lossy(&units)
 }
 
-fn read_content(
-    data: &[u8],
-    fonts: &BTreeMap<String, ToUnicode>,
-    page: usize,
-    out: &mut Vec<Mark>,
-) {
+/// `/BaseFont /AYABNL+DejaVuSerif-Bold` → `DejaVuSerif-Bold`.
+fn base_font(font: &[u8]) -> String {
+    let Some(at) = find(font, b"/BaseFont") else {
+        return String::new();
+    };
+    let text = String::from_utf8_lossy(&font[at + b"/BaseFont".len()..]);
+    let name: String = text
+        .trim_start()
+        .trim_start_matches('/')
+        .chars()
+        .take_while(|c| c.is_ascii_alphanumeric() || "+-_.".contains(*c))
+        .collect();
+    strip_subset_prefix(&name)
+}
+
+fn read_content(data: &[u8], fonts: &BTreeMap<String, Face>, page: usize, out: &mut Vec<Mark>) {
     let text = String::from_utf8_lossy(data);
     let words = Tokens { rest: &text };
     let mut stack: Vec<&str> = Vec::new();
-    let empty = ToUnicode::new();
-    let mut map = &empty;
+    let empty = Face::default();
+    let mut face = &empty;
     let (mut size, mut x, mut y) = (0.0f64, 0.0f64, 0.0f64);
 
     for token in words {
@@ -750,7 +790,7 @@ fn read_content(
             "Tf" => {
                 if let [name, points] = tail(&stack, 2) {
                     size = points.parse().unwrap_or(size);
-                    map = fonts.get(name.trim_start_matches('/')).unwrap_or(&empty);
+                    face = fonts.get(name.trim_start_matches('/')).unwrap_or(&empty);
                 }
             }
             // Both are a translation of the text line matrix; SILE emits one
@@ -778,7 +818,12 @@ fn read_content(
                         .as_bytes()
                         .chunks(4)
                         .filter_map(|c| hex_u32(&String::from_utf8_lossy(c)))
-                        .map(|code| map.get(&code).cloned().unwrap_or('\u{fffd}'.to_string()))
+                        .map(|code| {
+                            face.map
+                                .get(&code)
+                                .cloned()
+                                .unwrap_or('\u{fffd}'.to_string())
+                        })
                         .collect();
                     out.push(Mark {
                         page,
@@ -786,6 +831,7 @@ fn read_content(
                         y,
                         size,
                         text: decoded,
+                        face: face.name.clone(),
                     });
                 }
             }

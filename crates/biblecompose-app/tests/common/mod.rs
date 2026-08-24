@@ -152,3 +152,33 @@ pub fn text_at(lines: &[Line], size: f64) -> String {
         .collect::<Vec<_>>()
         .join("\n")
 }
+
+/// The same text with the Latin f-ligatures written out.
+///
+/// A PDF search for "first" does not find it, because the font shaped `fi`
+/// into one glyph and its `/ToUnicode` map honestly reports that glyph as
+/// U+FB01. The page is right and the assertion would be wrong, so the
+/// assertion is the thing that gives.
+pub fn unligature(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for c in text.chars() {
+        match c {
+            '\u{fb00}' => out.push_str("ff"),
+            '\u{fb01}' => out.push_str("fi"),
+            '\u{fb02}' => out.push_str("fl"),
+            '\u{fb03}' => out.push_str("ffi"),
+            '\u{fb04}' => out.push_str("ffl"),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+/// Every line whose size and face are exactly these — how one style is picked
+/// out of a page when several share a size.
+pub fn lines_set_in<'a>(lines: &'a [Line], size: f64, face: &str) -> Vec<&'a Line> {
+    lines
+        .iter()
+        .filter(|l| l.sizes() == vec![size] && l.faces() == vec![face.to_owned()])
+        .collect()
+}

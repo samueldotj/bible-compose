@@ -1,0 +1,201 @@
+name: Release artefacts
+
+# P5.7 and P6.1: build the typesetter, stage it, bake it into one executable,
+# and prove that executable typesets on a machine with no SILE on it.
+#
+# **The acceptance criterion is the smoke test at the end of each job**, not
+# the fact that the build succeeded. A binary that compiles and cannot set a
+# page is the failure this exists to catch, and it is the failure that a
+# packaging change produces: a missing shared library, a Lua module that did
+# not get copied, a class shadowed by a stale one. So every job ends by
+# building a PDF from a folder holding one book, with the environment scrubbed
+# of anything that could point at another SILE.
+#
+# Run it from the Actions tab, or by pushing a tag.
+#
+# Signing is deliberately not here yet; P6.1's note below says what it needs.
+on:
+  workflow_dispatch:
+    inputs:
+      sile_ref:
+        description: The SILE tag to build
+        default: v0.15.13
+  push:
+    tags: ["v*"]
+
+env:
+  CARGO_TERM_COLOR: always
+  SILE_REF: ${{ inputs.sile_ref || 'v0.15.13' }}
+
+jobs:
+  bundle:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Every platform's answer is wanted, including when one of them is no.
+      # NFR-001 names three targets and a failure here lands on that
+      # requirement rather than on the release date.
+      fail-fast: false
+      matrix:
+        # Windows is not here. It is cross-built from a container in the
+        # job below, which is what S1 proved works — the native MSYS2 route
+        # was never made to configure (S1-NOTES P-9).
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # ---------------------------------------------------------------- SILE
+      #
+      # The prerequisites and flags are S1's, one refusal at a time; see
+      # `.github/workflows/packaging-spike.yml`, which is where they were
+      # found, and `spike/S1-NOTES.md`, which says why each is there.
+
+      - name: dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential autoconf automake libtool pkg-config \
+            libharfbuzz-dev libfontconfig1-dev libicu-dev libfreetype-dev \
+            libpng-dev zlib1g-dev libexpat1-dev \
+            luajit libluajit-5.1-dev luarocks \
+            jq poppler-utils fonts-sil-gentiumplus
+
+      - name: dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install autoconf automake libtool pkg-config \
+            harfbuzz fontconfig icu4c freetype libpng expat \
+            luajit luarocks jq poppler
+          echo "PKG_CONFIG_PATH=$(brew --prefix icu4c)/lib/pkgconfig:$PKG_CONFIG_PATH" >> "$GITHUB_ENV"
+
+      - name: build SILE
+        shell: bash
+        run: |
+          git clone --depth 1 --branch "$SILE_REF" --recurse-submodules \
+            https://github.com/sile-typesetter/sile.git sile-src
+          cd sile-src
+          ./bootstrap.sh
+          ./configure --prefix="$PWD/../runtime" --with-system-luarocks=no
+          make -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
+          make install
+
+      # ------------------------------------------------------------- staging
+      #
+      # One script for every platform, because the one thing that must be
+      # identical across three build recipes is what gets *removed*.
+
+      - name: stage the runtime
+        shell: bash
+        run: node scripts/stage-backend.mjs runtime stage
+
+      - name: the stage carries no networking code
+        shell: bash
+        run: node scripts/stage-backend.mjs --verify stage
+
+      # --------------------------------------------------------- the binary
+
+      - name: build with the runtime embedded
+        shell: bash
+        env:
+          BIBLECOMPOSE_SILE_BUNDLE: ${{ github.workspace }}/stage
+        run: cargo build --release --bin biblecompose --features biblecompose-sile/embedded-sile
+
+      # -------------------------------------------------------- the criterion
+      #
+      # "A fresh machine with no SILE installed builds a PDF from the installer
+      # artefact." The runner has no SILE outside the tree we just built, and
+      # the environment is scrubbed of every variable that could point at one,
+      # so what produces this PDF is the executable and nothing else.
+
+      - name: a fresh machine builds a PDF
+        shell: bash
+        run: |
+          mkdir -p smoke
+          printf '%s\n' '\id JHN' '\h John' '\c 1' '\p' \
+            '\v 1 In the beginning was the Word.' > smoke/JHN.usfm
+          printf 'schema_version = 1\n' > smoke/biblecompose.toml
+          env -u BIBLECOMPOSE_SILE -u BIBLECOMPOSE_SILE_PATH \
+              -u BIBLECOMPOSE_SILE_BUNDLE \
+            ./target/release/biblecompose build \
+              --books smoke --project smoke --output smoke/out.pdf
+          test -s smoke/out.pdf
+          head -c 8 smoke/out.pdf | grep -q '%PDF' || {
+            echo "the file produced is not a PDF"; exit 1; }
+          echo "smoke: $(wc -c < smoke/out.pdf) bytes from a machine with no SILE"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: biblecompose-${{ matrix.os }}
+          path: target/release/biblecompose
+          if-no-files-found: error
+
+  windows:
+    name: windows (cross-built)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Fedora, because it is the only distribution checked that packages the
+      # whole mingw-w64 stack SILE needs (S1-NOTES P-9).
+      - name: cross-build SILE for Windows
+        run: |
+          docker run --rm -v "$PWD:/out" -e SILE_REF="$SILE_REF" fedora:41 \
+            bash /out/spike/s1-windows-cross.sh
+          sudo chown -R "$USER" work/stage
+
+      - name: stage the runtime
+        run: node scripts/stage-backend.mjs work/stage stage
+
+      - name: the stage carries no networking code
+        run: node scripts/stage-backend.mjs --verify stage
+
+      - name: build with the runtime embedded
+        env:
+          BIBLECOMPOSE_SILE_BUNDLE: ${{ github.workspace }}/stage
+        run: |
+          cargo build --release --target x86_64-pc-windows-gnu \
+            --bin biblecompose --features biblecompose-sile/embedded-sile
+
+      # The smoke test cannot run here — the binary is for another operating
+      # system — so it runs on a Windows runner against the artefact, which is
+      # a truer test anyway: it is the file a publisher would download.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: biblecompose-windows
+          path: target/x86_64-pc-windows-gnu/release/biblecompose.exe
+          if-no-files-found: error
+
+  windows-smoke:
+    name: windows · a fresh machine builds a PDF
+    needs: windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: biblecompose-windows
+      - name: build a PDF with nothing installed
+        shell: bash
+        run: |
+          mkdir -p smoke
+          printf '%s\n' '\id JHN' '\h John' '\c 1' '\p' \
+            '\v 1 In the beginning was the Word.' > smoke/JHN.usfm
+          printf 'schema_version = 1\n' > smoke/biblecompose.toml
+          env -u BIBLECOMPOSE_SILE -u BIBLECOMPOSE_SILE_PATH \
+              -u BIBLECOMPOSE_SILE_BUNDLE \
+            ./biblecompose.exe build \
+              --books smoke --project smoke --output smoke/out.pdf
+          test -s smoke/out.pdf
+          head -c 8 smoke/out.pdf | grep -q '%PDF' || {
+            echo "the file produced is not a PDF"; exit 1; }
+          echo "smoke: $(wc -c < smoke/out.pdf) bytes from a machine with no SILE"

@@ -42,14 +42,23 @@ Backend log: ${session.logFile}` : where;
 </script>
 
 <div class="bar">
-  <span class="state {tone}">{locale().states[session.buildState]}</span>
+  <!--
+    The state is the announcement, and the page count is deliberately not.
+    A live region that fires once per page would read a thousand times
+    through a Bible; the state changes eight times a build and is the thing
+    a person waiting for the PDF is waiting to hear. The bar keeps its
+    `progressbar` role, so the count is there for anyone who asks for it.
+  -->
+  <span class="state {tone}" role="status" aria-live="polite">
+    {locale().states[session.buildState]}
+  </span>
 
   {#if session.building}
     <!-- A real count, always; a bar with an end only when there is an honest
          one to give. The estimate is the previous build's page count, which is
          the only thing that knows how long this document is — a typesetter
          does not, until it has set it. -->
-    <div class="progress" role="status" aria-live="polite">
+    <div class="progress" aria-live="off">
       <div
         class="track"
         role="progressbar"

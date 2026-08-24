@@ -17,7 +17,7 @@
   import { LANGUAGES } from "../lib/languages";
   import { session } from "../lib/session.svelte";
   import type { Setting } from "../lib/services/backend";
-  import { t } from "../lib/i18n";
+  import { phrases, t } from "../lib/i18n";
 
   const { keys, width = "8rem" }: { keys: readonly string[]; width?: string } = $props();
 
@@ -81,6 +81,7 @@
         <input
           id={`quick-${setting.key}`}
           type="text"
+          dir="auto"
           style:inline-size={width}
           class:bad={errors.length > 0}
           value={setting.value}
@@ -99,7 +100,7 @@
           type="button"
           class="reset"
           title={t("restoreHint")}
-          aria-label={`Reset ${labelFor(setting.key)}`}
+          aria-label={phrases().resetSetting(labelFor(setting.key))}
           onclick={() => void session.resetSetting(setting.key)}
         >
           ×

@@ -97,6 +97,25 @@ export interface Chrome {
   readonly noProjectToCheckAgainst: string;
 }
 
+/**
+ * The labels a template builds, as functions.
+ *
+ * `Include GEN` is two words and a book code, and a locale needs both the
+ * words *and* where the code goes — Tamil does not put it where English does.
+ * A function is the only shape that carries that, which is why these are not
+ * in the flat table above.
+ */
+export interface Phrases {
+  readonly includeBook: (code: string) => string;
+  readonly moveEarlier: (code: string) => string;
+  readonly moveLater: (code: string) => string;
+  readonly resetSetting: (label: string) => string;
+  readonly forgetProject: (name: string) => string;
+  readonly headerSlot: (slot: string) => string;
+  readonly footerSlot: (slot: string) => string;
+  readonly colourSwatch: (property: string) => string;
+}
+
 /** What the build is doing, in words (GUI-006). */
 export interface StateWords {
   readonly idle: string;
@@ -114,6 +133,7 @@ export interface StateWords {
 
 export interface Catalogue {
   readonly chrome: Chrome;
+  readonly phrases: Phrases;
   readonly states: StateWords;
   /** Settings keys to their words. A key with no entry renders as itself. */
   readonly labels: Readonly<Record<string, string>>;
@@ -289,6 +309,16 @@ export const EN: Catalogue = {
     noProjectToCheckAgainst:
       "No project is open, so nothing has been checked against Scripture.",
   },
+  phrases: {
+    includeBook: (code) => `Include ${code}`,
+    moveEarlier: (code) => `Move ${code} earlier`,
+    moveLater: (code) => `Move ${code} later`,
+    resetSetting: (label) => `Reset ${label}`,
+    forgetProject: (name) => `Forget ${name}`,
+    headerSlot: (slot) => `Header ${slot}`,
+    footerSlot: (slot) => `Footer ${slot}`,
+    colourSwatch: (property) => `${property} swatch`,
+  },
   states: {
     idle: "idle",
     loading: "loading",
@@ -324,6 +354,11 @@ export function setLocale(catalogue: Catalogue): void {
 /** The catalogue in force. */
 export function locale(): Catalogue {
   return active;
+}
+
+/** The phrases a template builds. */
+export function phrases(): Phrases {
+  return active.phrases;
 }
 
 /** One word of chrome. The common case, so it gets the short name. */

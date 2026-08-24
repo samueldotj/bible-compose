@@ -131,6 +131,7 @@
                 <input
                   id={`set-${setting.key}`}
                   type="text"
+                  dir="auto"
                   value={setting.value}
                   spellcheck="false"
                   disabled={!session.editable}
@@ -149,6 +150,7 @@
               <input
                 id={`set-${setting.key}`}
                 type="text"
+                dir="auto"
                 value={setting.value}
                 placeholder={placeholderFor(setting.key) ?? ""}
                 spellcheck="false"

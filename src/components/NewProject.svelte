@@ -18,6 +18,7 @@
   import { backend, type Diagnostic } from "../lib/services/backend";
   import { session } from "../lib/session.svelte";
   import { t } from "../lib/i18n";
+  import { modal } from "../lib/modal";
 
   const { onclose }: { onclose: () => void } = $props();
 
@@ -61,7 +62,14 @@
     if (e.target === e.currentTarget) onclose();
   }}
 >
-  <div class="dialog" role="dialog" aria-modal="true" aria-label={t("newProject")}>
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-label={t("newProject")}
+    tabindex="-1"
+    use:modal
+  >
     <h2>{t("newProject")}</h2>
 
     <div class="body">
@@ -76,7 +84,14 @@
       <label class="field">
         <span>{t("publicationName")}</span>
         <!-- svelte-ignore a11y_autofocus -->
-        <input type="text" autofocus bind:value={name} placeholder={t("exampleName")} spellcheck="false" />
+        <input
+          type="text"
+          autofocus
+          dir="auto"
+          bind:value={name}
+          placeholder={t("exampleName")}
+          spellcheck="false"
+        />
       </label>
 
       <label class="field">

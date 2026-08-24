@@ -18,6 +18,7 @@
   import { backend, type FontChoice } from "../lib/services/backend";
   import { session } from "../lib/session.svelte";
   import { t } from "../lib/i18n";
+  import { modal } from "../lib/modal";
 
   const {
     current,
@@ -119,7 +120,14 @@
     if (e.target === e.currentTarget) onclose();
   }}
 >
-  <div class="dialog" role="dialog" aria-modal="true" aria-label={t("chooseFont")}>
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-label={t("chooseFont")}
+    tabindex="-1"
+    use:modal
+  >
     <header>
       <h2>{t("chooseFont")}</h2>
       <!-- svelte-ignore a11y_autofocus -->

@@ -15,7 +15,7 @@
    */
   import { session } from "../lib/session.svelte";
   import type { Testament } from "../lib/services/backend";
-  import { t } from "../lib/i18n";
+  import { phrases, t } from "../lib/i18n";
 
   let dragging = $state<string | null>(null);
   /** The arrangement being dragged, before it is committed on drop. */
@@ -265,7 +265,7 @@
                   type="checkbox"
                   checked={book.included}
                   disabled={!session.editable}
-                  aria-label={`Include ${book.code}`}
+                  aria-label={phrases().includeBook(book.code)}
                   onchange={(e) => toggle(book.code, e.currentTarget.checked)}
                 />
                 <button
@@ -295,7 +295,7 @@
                   <button
                     type="button"
                     disabled={!session.editable || i === 0}
-                    aria-label={`Move ${book.code} earlier`}
+                    aria-label={phrases().moveEarlier(book.code)}
                     onclick={() => {
                       move(book.code, i - 1, codes);
                       commitOrder();
@@ -304,7 +304,7 @@
                   <button
                     type="button"
                     disabled={!session.editable || i === column.books.length - 1}
-                    aria-label={`Move ${book.code} later`}
+                    aria-label={phrases().moveLater(book.code)}
                     onclick={() => {
                       move(book.code, i + 1, codes);
                       commitOrder();

@@ -33,7 +33,7 @@
   } from "../lib/sample";
   import { wordsFor } from "../lib/labels";
   import { session } from "../lib/session.svelte";
-  import { t } from "../lib/i18n";
+  import { phrases, t } from "../lib/i18n";
 
   /** Which set of switches to put beside the page. */
   const { which }: { which: "contents" | "headers" } = $props();
@@ -242,7 +242,7 @@
             onfocusout={() => (lit = null)}
           >
             <select
-              aria-label={`Header ${s.label.toLowerCase()}`}
+              aria-label={phrases().headerSlot(s.label.toLowerCase())}
               value={chosen(s.key)}
               disabled={!session.editable}
               onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}
@@ -368,7 +368,7 @@
             onfocusout={() => (lit = null)}
           >
             <select
-              aria-label={`Footer ${s.label.toLowerCase()}`}
+              aria-label={phrases().footerSlot(s.label.toLowerCase())}
               value={chosen(s.key)}
               disabled={!session.editable}
               onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}

@@ -12,7 +12,7 @@
    */
   import NewProject from "./NewProject.svelte";
   import { session } from "./../lib/session.svelte";
-  import { t } from "../lib/i18n";
+  import { phrases, t } from "../lib/i18n";
 
   let starting = $state(false);
 
@@ -59,7 +59,7 @@
             type="button"
             class="forget"
             title={t("forgetHint")}
-            aria-label={`Forget ${item.name}`}
+            aria-label={phrases().forgetProject(item.name)}
             onclick={() => void session.forget(item.root)}
           >
             ×

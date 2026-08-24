@@ -15,6 +15,7 @@
    */
   import { session } from "../lib/session.svelte";
   import type { Diagnostic, Severity } from "../lib/services/backend";
+  import { modal } from "../lib/modal";
 
   const { onclose }: { onclose: () => void } = $props();
 
@@ -56,7 +57,14 @@
     if (e.target === e.currentTarget) onclose();
   }}
 >
-  <div class="pane" role="dialog" aria-modal="true" aria-labelledby="diagnostics-heading">
+  <div
+    class="pane"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="diagnostics-heading"
+    tabindex="-1"
+    use:modal
+  >
     <header>
       <h2 id="diagnostics-heading">
         Problems

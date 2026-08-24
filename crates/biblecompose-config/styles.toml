@@ -150,18 +150,37 @@ space_above = "4pt"
 space_below = "1pt"
 
 # ------------------------------------------------------------------ lists
+#
+# `indent` on a list item indents the *whole* item, continuation lines
+# included, which is what makes a wrapped item read as one item. Nine points
+# per level, matching poetry, so a list and a poem at the same depth line up.
 
-[list.1]
+[list.li1]
 indent = "9pt"
 
-[list.2]
+[list.li2]
 indent = "18pt"
 
-[list.3]
+[list.li3]
 indent = "27pt"
 
-[list.4]
+[list.li4]
 indent = "36pt"
+
+# `\lim` is a list embedded in a paragraph, so it starts one step in from
+# where a free-standing list of the same level would, and every level below it
+# keeps that offset.
+[list.lim1]
+indent = "18pt"
+
+[list.lim2]
+indent = "27pt"
+
+[list.lim3]
+indent = "36pt"
+
+[list.lim4]
+indent = "45pt"
 
 # ------------------------------------------------------ chapter and verse
 

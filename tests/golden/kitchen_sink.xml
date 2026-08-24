@@ -7,10 +7,10 @@
 <poetry style="q" level="1"><verse n="2" start="2" end="2"/>A line of poetry,</poetry>
 <poetry style="q" level="2">indented further.</poetry>
 <break/>
-<item level="1"><verse n="3" start="3" end="3"/>A list item.</item>
+<item style="li" level="1"><verse n="3" start="3" end="3"/>A list item.</item>
 <table>
-<row header="true"><cell align="start">Tribe</cell><cell align="end">Number</cell></row>
-<row header="false"><cell align="start">Reuben</cell><cell align="end">46,500</cell></row>
+<row header="true"><cell align="start" span="1">Tribe</cell><cell align="end" span="1">Number</cell></row>
+<row header="false"><cell align="start" span="1">Reuben</cell><cell align="end" span="1">46,500</cell></row>
 </table>
 <figure src="assets/images/map.png" size="col" alt="A map" copy="Public domain">The land, as divided.</figure>
 </book></biblecompose>

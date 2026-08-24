@@ -1,0 +1,20 @@
+<biblecompose version="1" class="biblecompose">
+<book code="EZR" name="Ezra" altname="Ezra">
+<para style="p"><chapter n="2"/><verse n="1" start="1" end="1"/>Now these are the people of the province who came up.</para>
+<para style="lh">The number of the men of the people of Israel:</para>
+<item style="li" level="1">the descendants of Parosh</item>
+<item style="li" level="2">the descendants of Shephatiah</item>
+<item style="li" level="3">the descendants of Arah</item>
+<item style="li" level="4">the descendants of Pahath-Moab</item>
+<item style="li" level="1">the descendants of Elam, and of Zattu, and of Zaccai, and of Bani, and of Bebai, and of Azgad, and of Adonikam, whose number ran on far enough to need a second line of its own</item>
+<item style="lim" level="1">an item embedded in the paragraph</item>
+<item style="lim" level="2">and one a level deeper</item>
+<para style="lf">The whole assembly together.</para>
+<table>
+<row header="true"><cell align="start" span="1">Family</cell><cell align="end" span="1">Number</cell></row>
+<row header="false"><cell align="start" span="1">Parosh</cell><cell align="end" span="1">2,172</cell></row>
+<row header="false"><cell align="start" span="1">Shephatiah</cell><cell align="end" span="1">372</cell></row>
+<row header="false"><cell align="start" span="1">Arah</cell><cell align="end" span="1">775</cell></row>
+<row header="false"><cell align="start" span="2">and the rest of them</cell></row>
+</table>
+</book></biblecompose>

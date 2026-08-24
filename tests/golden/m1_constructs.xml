@@ -14,11 +14,11 @@
 <break/>
 <para style="m">A continuation paragraph with no indent.</para>
 <para style="pi1">An indented paragraph.</para>
-<item level="1">A list item</item>
-<item level="2">A nested list item</item>
+<item style="li" level="1">A list item</item>
+<item style="li" level="2">A nested list item</item>
 <table>
-<row header="true"><cell align="start">Name </cell><cell align="start">Count</cell></row>
-<row header="false"><cell align="start">Levi </cell><cell align="start">3</cell></row>
+<row header="true"><cell align="start" span="1">Name </cell><cell align="start" span="1">Count</cell></row>
+<row header="false"><cell align="start" span="1">Levi </cell><cell align="start" span="1">3</cell></row>
 </table>
 <para style="p"><verse n="4" start="4" end="4"/> A word with attributes: <char style="w">baptism</char>, and a nested marker: <char style="add">supplied <char style="bd">bold</char></char>. <verse n="5" start="5" end="5" alt="5b"/> Alternate numbering, and a figure: </para>
 <figure src="jordan.png" size="span" ref="1:5">The Jordan</figure>

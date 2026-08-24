@@ -806,6 +806,172 @@ local function skip (height)
 end
 
 -- ---------------------------------------------------------------------------
+-- Tables (SCR-009).
+--
+-- A table is set in two passes, which is the fewest that can produce a column:
+-- measure every cell, then set every cell to the width of the widest one in
+-- its column. There is no way to know a column's width from the first cell in
+-- it, so nothing can be typeset until the last row has been read.
+--
+-- Cells are measured as hboxes and therefore never wrap. That is a deliberate
+-- limit rather than an oversight: a wrapping cell needs a nested typesetter
+-- with its own measure, and the tables USFM carries are genealogies and
+-- censuses -- a name and a number. What a too-wide table gets instead is a
+-- warning on the backend's stderr, which reaches the build log, and a row that
+-- visibly runs past the measure rather than one that silently looks fine.
+-- ---------------------------------------------------------------------------
+
+local TABLE = {
+   -- Between columns. Enough to read as a division without becoming one.
+   gutter = SILE.types.measurement("9pt"),
+   -- Between rows.
+   leading = "2pt",
+   -- Above and below the whole table.
+   around = "5pt",
+}
+
+--- The measured cells of one table, row by row.
+---
+--- Each cell keeps its natural hbox, so the second pass sets what the first
+--- pass measured and no content is shaped twice.
+local function measure_table (content)
+   local rows = {}
+   for _, node in ipairs(content) do
+      if type(node) == "table" and node.command == "row" then
+         local header = node.options and node.options.header == "true"
+         local cells = {}
+         for _, child in ipairs(node) do
+            if type(child) == "table" and child.command == "cell" then
+               local options = child.options or {}
+               local hbox
+               local weight = header and 600 or nil
+               SILE.settings:temporarily(function ()
+                  -- The cell's own typography, and the header's emphasis over
+                  -- it. Measuring in a different font from the one it is set
+                  -- in would produce columns that do not line up, so the
+                  -- switch has to be inside the measurement.
+                  styled("cell", function ()
+                     if weight then
+                        SILE.call("font", { weight = weight }, function ()
+                           hbox = SILE.typesetter:makeHbox(child)
+                        end)
+                     else
+                        hbox = SILE.typesetter:makeHbox(child)
+                     end
+                  end)
+               end)
+               cells[#cells + 1] = {
+                  hbox = hbox,
+                  align = options.align or "start",
+                  span = math.max(1, math.floor(tonumber(options.span) or 1)),
+               }
+            end
+         end
+         rows[#rows + 1] = { header = header, cells = cells }
+      end
+   end
+   return rows
+end
+
+--- The width of each column, in points.
+---
+--- Single-column cells set the widths. A cell that spans several is fitted
+--- afterwards and only if it does not already fit: the columns it covers are
+--- already as wide as their own contents need, and widening them for a
+--- spanning cell that fits would push every row apart for nothing. The
+--- shortfall goes to the last column it covers, which is the one choice that
+--- leaves the columns to its left where the rest of the table put them.
+local function column_widths (rows)
+   local widths = {}
+   local function at (col)
+      return widths[col] or 0
+   end
+
+   for _, row in ipairs(rows) do
+      local col = 1
+      for _, cell in ipairs(row.cells) do
+         if cell.span == 1 then
+            local w = cell.hbox.width:tonumber()
+            if w > at(col) then
+               widths[col] = w
+            end
+         end
+         col = col + cell.span
+      end
+   end
+
+   local gutter = TABLE.gutter:tonumber()
+   for _, row in ipairs(rows) do
+      local col = 1
+      for _, cell in ipairs(row.cells) do
+         if cell.span > 1 then
+            local have = (cell.span - 1) * gutter
+            for i = col, col + cell.span - 1 do
+               widths[i] = at(i)
+               have = have + widths[i]
+            end
+            local want = cell.hbox.width:tonumber()
+            if want > have then
+               local last = col + cell.span - 1
+               widths[last] = at(last) + (want - have)
+            end
+         end
+         col = col + cell.span
+      end
+   end
+
+   -- A column nothing landed in still has a width, so the arithmetic below
+   -- does not have to care whether a row was short.
+   local count = 0
+   for _, row in ipairs(rows) do
+      local n = 0
+      for _, cell in ipairs(row.cells) do
+         n = n + cell.span
+      end
+      count = math.max(count, n)
+   end
+   for i = 1, count do
+      widths[i] = at(i)
+   end
+   return widths, count
+end
+
+--- Set one row, every cell padded out to its column.
+---
+--- Padding is a kern rather than glue on purpose. Glue between the cells would
+--- be a legal line break, and a row broken in half is worse than a row that
+--- runs wide; a kern makes the row a single unbreakable object, which is what
+--- a row is.
+local function set_row (row, widths)
+   local gutter = TABLE.gutter
+   local col = 1
+   for index, cell in ipairs(row.cells) do
+      local width = 0
+      for i = col, col + cell.span - 1 do
+         width = width + (widths[i] or 0)
+      end
+      width = width + (cell.span - 1) * gutter:tonumber()
+
+      local slack = width - cell.hbox.width:tonumber()
+      if slack < 0 then
+         slack = 0
+      end
+      if cell.align == "end" then
+         SILE.typesetter:pushHorizontal(SILE.types.node.kern(slack))
+         SILE.typesetter:pushHbox(cell.hbox)
+      else
+         SILE.typesetter:pushHbox(cell.hbox)
+         SILE.typesetter:pushHorizontal(SILE.types.node.kern(slack))
+      end
+      if index < #row.cells then
+         SILE.typesetter:pushHorizontal(SILE.types.node.kern(gutter))
+      end
+      col = col + cell.span
+   end
+   SILE.typesetter:leaveHmode()
+end
+
+-- ---------------------------------------------------------------------------
 -- Notes and cross-references (SCR-003 – SCR-005, USFM-002).
 --
 -- Two apparatus, kept apart at every level a reader can see: their own caller
@@ -1201,43 +1367,80 @@ function class:registerXmlCommands ()
       skip(s.space_below)
    end)
 
+   -- A list item is indented as a block, not as a first line. `\li2` inside a
+   -- narrow column wraps, and a wrapped item whose second line returns to the
+   -- margin has lost the only thing its indent was saying. So this is `lskip`
+   -- and not the leading glue poetry uses, where hanging is the point.
    self:registerCommand("item", function (options, content)
-      local level = tonumber(options.level) or 1
-      local s = style("list." .. level)
-      if s.indent then
-         SILE.call("glue", { width = s.indent })
-      end
-      SILE.process(content)
-      SILE.call("par")
-   end)
-
-   -- Tables are laid out as simple tab-separated rows at M0. Real column
-   -- measurement is P4.7; emitting the structure now means the contract does
-   -- not change when the layout improves.
-   self:registerCommand("table", function (_, content)
-      skip("3pt")
-      elements(content)
-      skip("3pt")
-   end)
-
-   self:registerCommand("row", function (options, content)
-      if options.header == "true" then
-         SILE.call("font", { weight = 700 }, function ()
-            elements(content)
+      local selector = "list." .. (options.style or "li") .. (options.level or "1")
+      local s = style(selector)
+      skip(s.space_above)
+      SILE.settings:temporarily(function ()
+         if s.indent then
+            SILE.settings:set("document.lskip", SILE.types.node.glue(s.indent))
+         end
+         -- No first-line indent on top of the left skip: an item's first line
+         -- starts where the rest of it does.
+         SILE.settings:set("current.parindent", SILE.types.node.glue())
+         SILE.settings:set("document.parindent", SILE.types.node.glue())
+         styled(selector, function ()
+            SILE.process(content)
+            SILE.call("par")
          end)
-      else
-         elements(content)
-      end
+      end)
+      flush_pending_refs()
+      skip(s.space_below)
+   end)
+
+   self:registerCommand("table", function (_, content)
+      skip(TABLE.around)
+      SILE.settings:temporarily(function ()
+         SILE.settings:set("document.lskip", SILE.types.node.glue())
+         SILE.settings:set("document.rskip", SILE.types.node.glue())
+         SILE.settings:set("document.parindent", SILE.types.node.glue())
+         SILE.settings:set("current.parindent", SILE.types.node.glue())
+         -- Nothing in a row stretches, so justification has nothing to do and
+         -- would only report the row as underfull on every line.
+         SILE.settings:set("document.spaceskip", nil)
+
+         local rows = measure_table(content)
+         local widths, columns = column_widths(rows)
+
+         local total = (columns - 1) * TABLE.gutter:tonumber()
+         for i = 1, columns do
+            total = total + widths[i]
+         end
+         local measure = SILE.typesetter.frame:width():tonumber()
+         if total > measure then
+            SU.warn(
+               ("table is %.1fpt wide in a %.1fpt column and will run past it; "):format(
+                  total,
+                  measure
+               ) .. "shorten a cell or set the book in one column"
+            )
+         end
+
+         for index, row in ipairs(rows) do
+            set_row(row, widths)
+            if index < #rows then
+               skip(TABLE.leading)
+            end
+         end
+      end)
+      skip(TABLE.around)
+   end)
+
+   -- `row` and `cell` are read by `measure_table` rather than processed, so
+   -- they are registered only to keep SILE from reporting them unknown if one
+   -- ever reaches the processor on its own. A cell outside a table has no
+   -- column to belong to, and setting its text is the most honest thing left.
+   self:registerCommand("row", function (_, content)
+      elements(content)
       SILE.call("par")
    end)
 
-   self:registerCommand("cell", function (options, content)
+   self:registerCommand("cell", function (_, content)
       SILE.process(content)
-      if options.align == "end" then
-         SILE.call("hfill")
-      else
-         SILE.call("qquad")
-      end
    end)
 
    self:registerCommand("break", function (_, _)

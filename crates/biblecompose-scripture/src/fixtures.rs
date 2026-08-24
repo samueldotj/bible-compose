@@ -12,8 +12,8 @@ use camino::Utf8PathBuf;
 
 use crate::{
     canon::BookCode, Align, Attribute, Block, Book, BookNames, Cell, CharStyle, CrossReference,
-    FigureRef, HeadingStyle, Inline, Milestone, Note, NoteKind, ParaStyle, PoetryStyle, Row,
-    ScriptureDocument, Unsupported, VerseId,
+    FigureRef, HeadingStyle, Inline, ListStyle, Milestone, Note, NoteKind, ParaStyle, PoetryStyle,
+    Row, ScriptureDocument, Unsupported, VerseId,
 };
 
 fn book(code: &str) -> BookCode {
@@ -194,6 +194,7 @@ pub fn kitchen_sink() -> ScriptureDocument {
             },
             Block::Break,
             Block::ListItem {
+                style: ListStyle::Li,
                 level: 1,
                 content: vec![verse(3), text("A list item.")],
             },
@@ -204,10 +205,12 @@ pub fn kitchen_sink() -> ScriptureDocument {
                         cells: vec![
                             Cell {
                                 align: Align::Start,
+                                span: 1,
                                 content: vec![text("Tribe")],
                             },
                             Cell {
                                 align: Align::End,
+                                span: 1,
                                 content: vec![text("Number")],
                             },
                         ],
@@ -217,10 +220,12 @@ pub fn kitchen_sink() -> ScriptureDocument {
                         cells: vec![
                             Cell {
                                 align: Align::Start,
+                                span: 1,
                                 content: vec![text("Reuben")],
                             },
                             Cell {
                                 align: Align::End,
+                                span: 1,
                                 content: vec![text("46,500")],
                             },
                         ],
@@ -487,6 +492,82 @@ pub fn orphan_heading() -> ScriptureDocument {
     )])
 }
 
+/// Lists at both families and every level, and a table whose columns can only
+/// line up if they were measured (P4.7).
+///
+/// The numbers in the second column are deliberately of different widths, and
+/// the names in the first deliberately of different lengths: a table set by
+/// putting a fixed gap after each cell looks perfectly reasonable until the
+/// cells differ, which is exactly when a reader needs the column.
+///
+/// One list item is long enough to wrap in a single column, which is the only
+/// way to see whether an item is indented as a block or only on its first
+/// line.
+pub fn lists_and_tables() -> ScriptureDocument {
+    let cell = |align: Align, span: u8, body: &str| Cell {
+        align,
+        span,
+        content: vec![text(body)],
+    };
+    let row = |header: bool, name: &str, number: &str| Row {
+        header,
+        cells: vec![cell(Align::Start, 1, name), cell(Align::End, 1, number)],
+    };
+    let item = |style: ListStyle, level: u8, body: &str| Block::ListItem {
+        style,
+        level,
+        content: vec![text(body)],
+    };
+
+    ScriptureDocument::new(vec![Book::new(
+        book("EZR"),
+        BookNames::named("Ezra"),
+        vec![
+            Block::Paragraph {
+                style: ParaStyle::P,
+                content: vec![
+                    chapter(2),
+                    verse(1),
+                    text("Now these are the people of the province who came up."),
+                ],
+            },
+            Block::Paragraph {
+                style: ParaStyle::Lh,
+                content: vec![text("The number of the men of the people of Israel:")],
+            },
+            item(ListStyle::Li, 1, "the descendants of Parosh"),
+            item(ListStyle::Li, 2, "the descendants of Shephatiah"),
+            item(ListStyle::Li, 3, "the descendants of Arah"),
+            item(ListStyle::Li, 4, "the descendants of Pahath-Moab"),
+            item(
+                ListStyle::Li,
+                1,
+                "the descendants of Elam, and of Zattu, and of Zaccai, and of \
+                 Bani, and of Bebai, and of Azgad, and of Adonikam, whose \
+                 number ran on far enough to need a second line of its own",
+            ),
+            item(ListStyle::Lim, 1, "an item embedded in the paragraph"),
+            item(ListStyle::Lim, 2, "and one a level deeper"),
+            Block::Paragraph {
+                style: ParaStyle::Lf,
+                content: vec![text("The whole assembly together.")],
+            },
+            Block::Table {
+                rows: vec![
+                    row(true, "Family", "Number"),
+                    row(false, "Parosh", "2,172"),
+                    row(false, "Shephatiah", "372"),
+                    row(false, "Arah", "775"),
+                    Row {
+                        header: false,
+                        cells: vec![cell(Align::Start, 2, "and the rest of them")],
+                    },
+                ],
+            },
+        ],
+    )])
+}
+
 /// Every fixture, for tests that should run over all of them.
 pub fn all() -> Vec<(&'static str, ScriptureDocument)> {
     vec![
@@ -498,6 +579,7 @@ pub fn all() -> Vec<(&'static str, ScriptureDocument)> {
         ("long_verse", long_verse()),
         ("headings", headings()),
         ("orphan_heading", orphan_heading()),
+        ("lists_and_tables", lists_and_tables()),
     ]
 }
 

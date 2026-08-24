@@ -63,10 +63,14 @@
 <style for="character.fqa" italic="true"/>
 <style for="character.fk" weight="600"/>
 <style for="character.iqt" italic="true"/>
-<style for="list.1" indent="9pt"/>
-<style for="list.2" indent="18pt"/>
-<style for="list.3" indent="27pt"/>
-<style for="list.4" indent="36pt"/>
+<style for="list.li1" indent="9pt"/>
+<style for="list.li2" indent="18pt"/>
+<style for="list.li3" indent="27pt"/>
+<style for="list.li4" indent="36pt"/>
+<style for="list.lim1" indent="18pt"/>
+<style for="list.lim2" indent="27pt"/>
+<style for="list.lim3" indent="36pt"/>
+<style for="list.lim4" indent="45pt"/>
 <style for="chapter" font_size="18pt" weight="700" italic="true" smallcaps="true" space_above="6pt" space_below="3pt" indent="36pt" raise="2pt" align="center"/>
 <style for="verse" font_size="6.4pt" weight="600" raise="2.8pt"/>
 <style for="note.f" font_size="7.4pt"/>

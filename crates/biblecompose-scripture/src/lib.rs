@@ -186,6 +186,7 @@ pub enum Block {
         content: Vec<Inline>,
     },
     ListItem {
+        style: ListStyle,
         level: u8,
         content: Vec<Inline>,
     },
@@ -272,6 +273,11 @@ pub struct Row {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Cell {
     pub align: Align,
+    /// How many columns this cell covers — `\\tc1-2` is two.
+    ///
+    /// Never zero. A cell that covers no column is not a cell, and a layout
+    /// that divides by this number should not have to ask.
+    pub span: u8,
     pub content: Vec<Inline>,
 }
 
@@ -520,12 +526,25 @@ styles! {
         Ie => "ie",
         /// `\\cl` — a chapter label, printed in place of or beside the number.
         Cl => "cl",
+        /// `\\lh`, `\\lf` — the line above a list and the line below it. Part
+        /// of the list in USFM and an ordinary paragraph on the page, which is
+        /// why they are here and not in `ListStyle`.
+        Lh => "lh", Lf => "lf",
     }
 
     /// Poetry. The `level` on `Block::Poetry` carries the digit; this is the
     /// family.
     PoetryStyle {
         Q => "q", Qr => "qr", Qc => "qc", Qa => "qa", Qm => "qm", Qd => "qd",
+    }
+
+    /// List items. `\\li` is a list in its own right; `\\lim` is one embedded
+    /// in a paragraph, and is indented further to show that it is inside
+    /// something. Separate families rather than one with a flag, because they
+    /// take separate styles — which is the whole reason USFM spells them
+    /// differently.
+    ListStyle {
+        Li => "li", Lim => "lim",
     }
 
     /// Section headings and their relatives.

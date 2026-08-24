@@ -370,8 +370,13 @@ fn emit_block(w: &mut Writer<Cursor<Vec<u8>>>, block: &Block, state: &mut EmitSt
             emit_inlines(w, content, state);
             write(w, Event::End(BytesEnd::new("heading")), state);
         }
-        Block::ListItem { level, content } => {
+        Block::ListItem {
+            style,
+            level,
+            content,
+        } => {
             let mut el = BytesStart::new("item");
+            el.push_attribute(("style", style.marker()));
             el.push_attribute(("level", level.to_string().as_str()));
             write(w, Event::Start(el), state);
             emit_inlines(w, content, state);
@@ -416,6 +421,7 @@ fn emit_cell(w: &mut Writer<Cursor<Vec<u8>>>, cell: &Cell, state: &mut EmitState
             Align::End => "end",
         },
     ));
+    el.push_attribute(("span", cell.span.max(1).to_string().as_str()));
     write(w, Event::Start(el), state);
     emit_inlines(w, &cell.content, state);
     write(w, Event::End(BytesEnd::new("cell")), state);

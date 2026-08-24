@@ -64,10 +64,14 @@
 <style for="character.fqa" italic="true"/>
 <style for="character.fk" weight="600"/>
 <style for="character.iqt" italic="true"/>
-<style for="list.1" font_family="Matrix Fixture Serif" font_size="13.5pt" weight="500" italic="true" smallcaps="true" space_above="3.5pt" space_below="2.5pt" indent="7.5pt" raise="1.5pt" align="center" color="#c81414"/>
-<style for="list.2" font_family="Matrix Fixture Serif" font_size="13.5pt" weight="500" italic="true" smallcaps="true" space_above="3.5pt" space_below="2.5pt" indent="18pt" raise="1.5pt" align="center" color="#c81414"/>
-<style for="list.3" font_family="Matrix Fixture Serif" font_size="13.5pt" weight="500" italic="true" smallcaps="true" space_above="3.5pt" space_below="2.5pt" indent="27pt" raise="1.5pt" align="center" color="#c81414"/>
-<style for="list.4" font_family="Matrix Fixture Serif" font_size="13.5pt" weight="500" italic="true" smallcaps="true" space_above="3.5pt" space_below="2.5pt" indent="36pt" raise="1.5pt" align="center" color="#c81414"/>
+<style for="list.li1" font_family="Matrix Fixture Serif" font_size="13.5pt" weight="500" italic="true" smallcaps="true" space_above="3.5pt" space_below="2.5pt" indent="7.5pt" raise="1.5pt" align="center" color="#c81414"/>
+<style for="list.li2" font_family="Matrix Fixture Serif" font_size="13.5pt" weight="500" italic="true" smallcaps="true" space_above="3.5pt" space_below="2.5pt" indent="18pt" raise="1.5pt" align="center" color="#c81414"/>
+<style for="list.li3" font_family="Matrix Fixture Serif" font_size="13.5pt" weight="500" italic="true" smallcaps="true" space_above="3.5pt" space_below="2.5pt" indent="27pt" raise="1.5pt" align="center" color="#c81414"/>
+<style for="list.li4" font_family="Matrix Fixture Serif" font_size="13.5pt" weight="500" italic="true" smallcaps="true" space_above="3.5pt" space_below="2.5pt" indent="36pt" raise="1.5pt" align="center" color="#c81414"/>
+<style for="list.lim1" indent="18pt"/>
+<style for="list.lim2" indent="27pt"/>
+<style for="list.lim3" indent="36pt"/>
+<style for="list.lim4" indent="45pt"/>
 <style for="chapter" font_family="Matrix Fixture Serif" font_size="13.5pt" weight="500" italic="true" smallcaps="true" space_above="3.5pt" space_below="2.5pt" indent="7.5pt" raise="1.5pt" align="center" color="#c81414"/>
 <style for="verse" font_family="Matrix Fixture Serif" font_size="13.5pt" weight="500" italic="true" smallcaps="true" space_above="3.5pt" space_below="2.5pt" indent="7.5pt" raise="1.5pt" align="center" color="#c81414"/>
 <style for="note.f" font_family="Matrix Fixture Serif" font_size="13.5pt" weight="500" italic="true" smallcaps="true" space_above="3.5pt" space_below="2.5pt" indent="7.5pt" raise="1.5pt" align="center" color="#c81414"/>

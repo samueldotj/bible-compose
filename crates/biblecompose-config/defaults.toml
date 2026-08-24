@@ -118,5 +118,16 @@ footer_left = "empty"
 footer_center = "page_number"
 footer_right = "empty"
 
+# Figures and anything else a project points at that is not Scripture.
+[assets]
+# What to do about a figure whose file is not there: `stop` refuses to build,
+# `omit` leaves it out and warns. Stop, because a printed book with a hole
+# where an illustration should be is worse than a build that says why — and
+# because the backend will happily produce that book without mentioning it.
+#
+# A figure pointing outside the project folder is refused whatever this says,
+# and so is one in a format the backend cannot read.
+missing_figure = "stop"
+
 [output]
 keep_intermediates = false

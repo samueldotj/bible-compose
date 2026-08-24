@@ -459,6 +459,18 @@ pub mod code {
             MISSING = "001",
             OUTSIDE_PROJECT = "002",
             UNSUPPORTED_FORMAT = "003",
+            // A PDF placed as artwork brings its whole page box and its
+            // embedded font subsets with it. Measured, not feared: a plate
+            // taken from a Tamil publication took a two-font output to four
+            // (P4.3). Not a defect and not refusable — a note, because the
+            // fonts in a finished book are a licensing fact and a printer's
+            // pre-flight will list them whether the publisher expected them
+            // or not.
+            PDF_ARTWORK = "004",
+            // `size="span"` where the page has more than one column. The
+            // figure sets at column width, which is a reasonable answer and
+            // a silent one.
+            SIZE_UNSUPPORTED = "005",
         }
         Font "FONT" {
             UNRESOLVED = "001",

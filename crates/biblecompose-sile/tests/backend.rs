@@ -37,12 +37,16 @@ fn tmp() -> (tempfile::TempDir, Utf8PathBuf) {
 
 fn job_for(name: &str, work: &Utf8PathBuf) -> BackendJob {
     let doc = fixtures::by_name(name).expect("a known fixture");
+    // The work directory and not the repository: it is the folder the backend
+    // runs in and therefore what a figure's relative `src` resolves against,
+    // so it is where the fixture's artwork has to be.
+    biblecompose_testkit::place_fixture_assets(work);
     BackendJob {
         xml: emit(&doc, &[]).xml,
         work_dir: work.clone(),
         pdf_name: format!("{name}.pdf"),
         sile_path: vec![class_dir()],
-        project_root: biblecompose_testkit::repo_root(),
+        project_root: work.clone(),
         class: "biblecompose".to_owned(),
         class_options: Vec::new(),
     }

@@ -73,6 +73,9 @@ footer_left = \"first_reference\"
 footer_center = \"empty\"
 footer_right = \"last_reference\"
 
+[assets]
+missing_figure = \"omit\"
+
 [output]
 keep_intermediates = true
 ";

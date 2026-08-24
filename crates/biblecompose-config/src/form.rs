@@ -13,7 +13,7 @@
 use crate::edit::SettingValue;
 use crate::provenance::Origin;
 use crate::settings::Settings;
-use crate::value::{CallerStyle, HeadSlot, ReferencePlacement, RestartNumbering};
+use crate::value::{CallerStyle, HeadSlot, MissingAsset, ReferencePlacement, RestartNumbering};
 
 /// What kind of control a key needs, and how its text is to be read back.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -291,6 +291,12 @@ impl Settings {
         ] {
             push(key, Choice(HeadSlot::SPELLINGS), slot.to_string());
         }
+
+        push(
+            "assets.missing_figure",
+            Choice(MissingAsset::SPELLINGS),
+            self.assets.missing_figure.to_string(),
+        );
 
         push(
             "output.keep_intermediates",

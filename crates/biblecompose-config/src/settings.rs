@@ -25,7 +25,8 @@ use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, Severity, SourceLo
 use crate::document::{ConfigDocument, Located, Node};
 use crate::provenance::{Provenance, Sourced};
 use crate::value::{
-    self, CallerStyle, HeadSlot, Length, PageSize, ReferencePlacement, RestartNumbering,
+    self, CallerStyle, HeadSlot, Length, MissingAsset, PageSize, ReferencePlacement,
+    RestartNumbering,
 };
 
 /// The settings vocabulary this release speaks.
@@ -72,6 +73,7 @@ pub struct Settings {
     pub contents: Contents,
     pub notes: Notes,
     pub headers: Headers,
+    pub assets: Assets,
     pub output: Output,
 }
 
@@ -183,6 +185,12 @@ pub struct Headers {
     pub footer_right: Sourced<HeadSlot>,
 }
 
+/// The files a project points at that are not Scripture (SCR-006).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Assets {
+    pub missing_figure: Sourced<MissingAsset>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Output {
     pub keep_intermediates: Sourced<bool>,
@@ -203,6 +211,10 @@ fn restart(n: &Node) -> Result<Located<RestartNumbering>, Diagnostic> {
 
 fn placement(n: &Node) -> Result<Located<ReferencePlacement>, Diagnostic> {
     value::choice(n, ReferencePlacement::NAMES)
+}
+
+fn missing_asset(n: &Node) -> Result<Located<MissingAsset>, Diagnostic> {
+    value::choice(n, MissingAsset::NAMES)
 }
 
 /// The maximum a page can be divided into before a column is too narrow to
@@ -491,6 +503,9 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             footer_left: r.value("headers.footer_left", slot),
             footer_center: r.value("headers.footer_center", slot),
             footer_right: r.value("headers.footer_right", slot),
+        },
+        assets: Assets {
+            missing_figure: r.value("assets.missing_figure", missing_asset),
         },
         output: Output {
             keep_intermediates: r.value("output.keep_intermediates", |n| n.boolean()),

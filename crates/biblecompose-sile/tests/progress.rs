@@ -17,6 +17,10 @@ fn backend() -> Option<SileBackend> {
 }
 
 fn job(work: &Utf8PathBuf) -> BackendJob {
+    // The fixture names a figure, and since P4.3 the class no longer swallows
+    // a draw that fails — so the artwork has to be where a relative `src`
+    // resolves from, which is the folder the backend runs in.
+    biblecompose_testkit::place_fixture_assets(work);
     BackendJob {
         xml: emit(&fixtures::kitchen_sink(), &[]).xml,
         work_dir: work.clone(),
@@ -24,7 +28,7 @@ fn job(work: &Utf8PathBuf) -> BackendJob {
         sile_path: vec![biblecompose_sile::class_dir(
             &biblecompose_testkit::repo_root(),
         )],
-        project_root: biblecompose_testkit::repo_root(),
+        project_root: work.clone(),
         class: "biblecompose".to_owned(),
         class_options: Vec::new(),
     }

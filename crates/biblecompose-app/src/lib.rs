@@ -5,6 +5,7 @@
 //! the only thing that orchestrates — `biblecompose-core` from SRS §12.1 is
 //! gone because its stated job had exactly one caller.
 
+pub mod asset;
 pub mod backend_input;
 pub mod font;
 pub mod hyphenation;
@@ -223,6 +224,17 @@ pub fn build_with(
         doc,
         &mut diagnostics,
     );
+    // SCR-006 and SRS §15. The backend checks a figure's *format* and never
+    // its provenance: an absolute path to artwork outside the project embeds
+    // silently (spike F-14), and a missing one used to be swallowed by the
+    // class and produce a hole in a finished book.
+    let assets = asset::preflight(
+        doc,
+        &request.project_root,
+        *request.settings.assets.missing_figure,
+        *request.settings.page.columns,
+        &mut diagnostics,
+    );
     publish::preflight_destination(&request.output, &mut diagnostics);
     for d in diagnostics.iter() {
         reporter.diagnostic(d.clone());
@@ -245,7 +257,7 @@ pub fn build_with(
     let emitted = biblecompose_sile::emit_hiding(
         doc,
         &backend_input::style_rules_with(&request.styles, &style_fonts),
-        backend_input::hidden(&request.settings),
+        backend_input::hidden(&request.settings).without_figures(assets.omitted),
     );
     for u in &emitted.dropped {
         let d = Diagnostic::warning(
@@ -781,6 +793,7 @@ mod tests {
     #[test]
     fn unsupported_markers_warn_without_blocking() {
         let (_g, root) = tmp();
+        biblecompose_testkit::place_fixture_assets(&root);
         let req = BuildRequest::new(&root, root.join("out.pdf"));
         let (mut r, _rx) = BuildReporter::new();
         let report = build_with(

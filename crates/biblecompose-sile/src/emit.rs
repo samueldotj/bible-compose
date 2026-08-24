@@ -274,7 +274,7 @@ fn emit_book(w: &mut Writer<Cursor<Vec<u8>>>, book: &Book, state: &mut EmitState
 /// what makes that safe, and it is only reachable from this side.
 ///
 /// [ADR-002]: ../../../docs/adr/002-sile-interface.md
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Hidden {
     pub book_introductions: bool,
     pub introductory_outlines: bool,
@@ -283,12 +283,30 @@ pub struct Hidden {
     /// before the first `\c` to name every chapter or after one to name that
     /// chapter alone.
     pub chapter_labels: bool,
+    /// Figures the backend must not be asked to draw, by their `src`.
+    ///
+    /// Named one at a time rather than switched as a class, because this is
+    /// not a decision about what a publication contains: each of these is a
+    /// figure the project does want and whose file is not there yet. The
+    /// application has already said so, once each (SCR-006); withholding them
+    /// here is what stops the backend dying on the first one.
+    pub figures: Vec<camino::Utf8PathBuf>,
 }
 
 impl Hidden {
     /// Everything printed, which is what a golden file wants.
     pub fn nothing() -> Hidden {
         Hidden::default()
+    }
+
+    /// The same, with named figures withheld.
+    pub fn without_figures(mut self, figures: Vec<camino::Utf8PathBuf>) -> Hidden {
+        self.figures = figures;
+        self
+    }
+
+    fn hides_figure(&self, src: &camino::Utf8Path) -> bool {
+        self.figures.iter().any(|f| f == src)
     }
 
     /// Whether a paragraph marker is one of the parts being withheld.
@@ -367,7 +385,11 @@ fn emit_block(w: &mut Writer<Cursor<Vec<u8>>>, block: &Block, state: &mut EmitSt
             newline(w, state);
             write(w, Event::End(BytesEnd::new("table")), state);
         }
-        Block::Figure(f) => emit_figure(w, f, state),
+        Block::Figure(f) => {
+            if !state.hidden.hides_figure(&f.src) {
+                emit_figure(w, f, state);
+            }
+        }
         Block::Break => {
             write(w, Event::Empty(BytesStart::new("break")), state);
         }
@@ -844,7 +866,7 @@ mod tests {
         ];
 
         for (hidden, gone, kept) in cases {
-            let out = emit_hiding(&withholdable(), &[], hidden);
+            let out = emit_hiding(&withholdable(), &[], hidden.clone());
             assert!(
                 !out.xml.contains(gone),
                 "{hidden:?} left {gone:?} on the page"
@@ -864,6 +886,7 @@ mod tests {
             introductory_outlines: true,
             section_headings: true,
             chapter_labels: true,
+            figures: Vec::new(),
         };
         let out = emit_hiding(&withholdable(), &[], all);
         assert!(

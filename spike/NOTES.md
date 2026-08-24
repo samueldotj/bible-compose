@@ -291,6 +291,10 @@ But **location is not checked**. An absolute path to a valid image well outside 
 
 SRS §15 already requires relative asset references to resolve inside the project directory. The spike confirms the requirement cannot be delegated: the containment check is BibleCompose's, performed after canonicalization so that `..` and symlinks are both covered, and it is the only such check in the pipeline. P4.3.
 
+**Closed at P4.3**, and the spike understated it in one place and overstated it in another. Understated: the class wrapped the draw in a `pcall`, so the loud failures were swallowed too — a project naming two absent figures built to `[completed]` and wrote a PDF with two holes. Overstated: canonicalization alone is not enough, because a `..` naming a file that does not exist has nothing to canonicalize; the check is lexical first and canonical second.
+
+Two things were measured while closing it, and neither can be refused. A PDF placed as artwork becomes a Form XObject with the plate's **whole page box** — `/BBox [0 0 432 648]` for a six-by-nine plate, margins, running head and folio included — and its **embedded font subsets join the output's**: a Tamil plate took a two-font PDF to four. The fonts in a finished book are a licensing fact and a printer's pre-flight will list them, so a build that places a PDF says so once.
+
 ---
 
 ## S0.8 — Write-up

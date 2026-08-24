@@ -492,6 +492,24 @@ spelled! {
     }
 }
 
+spelled! {
+    /// What a build does about a figure whose file is not there.
+    ///
+    /// Only this one question is a policy. A figure pointing *outside* the
+    /// project is refused whatever this says, because that is a rule about
+    /// what a project is rather than a preference about drafts (SRS §15); and
+    /// a format the backend cannot read is refused too, because it is a
+    /// mistake in the project rather than an asset that has not arrived yet.
+    MissingAsset {
+        /// Refuse to build. The default: a printed book with a hole where an
+        /// illustration should be is worse than a build that says why.
+        Stop => "stop",
+        /// Leave the figure out, warn, and carry on — which is what a draft
+        /// wants while the artwork is still being drawn.
+        Omit => "omit",
+    }
+}
+
 /// An ink colour, as `#rrggbb`.
 ///
 /// # Why hex and not names

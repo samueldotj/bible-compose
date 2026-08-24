@@ -129,6 +129,9 @@ pub fn hidden(s: &Settings) -> biblecompose_sile::Hidden {
         // it is hidden here because of where the chapter anchor lives, not
         // because of which group a publisher finds it under.
         chapter_labels: !*s.numbering.show_chapter_labels,
+        // Filled in by the caller from the asset pre-flight, which is the only
+        // thing that knows which files are actually there.
+        figures: Vec::new(),
     }
 }
 

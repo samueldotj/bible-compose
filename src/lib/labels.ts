@@ -54,6 +54,7 @@ export const LABELS: Readonly<Record<string, string>> = {
   "headers.footer_left": "Left",
   "headers.footer_center": "Centre",
   "headers.footer_right": "Right",
+  "assets.missing_figure": "A figure with no file",
   "output.keep_intermediates": "Keep intermediates",
   strict: "Strict settings",
 };
@@ -155,6 +156,8 @@ export function labelFor(key: string): string {
  * and is right far more often than it is worth an entry.
  */
 const CHOICE_WORDS: Readonly<Record<string, string>> = {
+  stop: "Stops the build",
+  omit: "Is left out",
   note_area: "In the note area",
   inline: "In the text",
   end_of_paragraph: "Under the paragraph",

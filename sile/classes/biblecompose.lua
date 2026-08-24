@@ -1218,12 +1218,24 @@ function class:registerXmlCommands ()
       SILE.call("par")
       skip("4pt")
       -- S0.7 established that PNG, JPG and vector PDF all place, and that an
-      -- included PDF brings its whole page box. Width is bounded to the
-      -- measure so a large asset cannot overflow the column.
-      local width = options.size == "span" and "100%fw" or "100%fw"
-      pcall(function ()
-         SILE.call("img", { src = options.src, width = width })
-      end)
+      -- included PDF brings its whole page box with it.
+      --
+      -- **One width, and no branch on `size`.** USFM's two values are `col`
+      -- and `span`, and `100%fw` is the frame the text is flowing through — so
+      -- in a single column it is the measure, which is what `span` asks for,
+      -- and in two it is the column, which is what `col` asks for. There is no
+      -- mid-flow way to reach across a gutter, so a two-column `span` cannot
+      -- be honoured; the application says so once, in pre-flight, rather than
+      -- this file quietly setting it narrow. The branch that used to be here
+      -- had the same value on both sides.
+      --
+      -- **And no `pcall`.** It used to wrap this, and a project naming two
+      -- figures that did not exist built to "completed" with two holes in the
+      -- PDF. Every reason a figure will not draw — absent, outside the
+      -- project, not an image — is now a diagnostic before the backend is
+      -- started, so anything that fails here is a surprise and should behave
+      -- like one.
+      SILE.call("img", { src = options.src, width = "100%fw" })
       if content and #content > 0 then
          SILE.call("par")
          styled("caption", function ()

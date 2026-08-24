@@ -16,6 +16,14 @@ description = "The desktop shell: window, dialogs, file I/O, and the command bri
 name = "biblecompose_tauri_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
 
+[features]
+# The last link in ADR-006's chain. The shipped desktop application carries its
+# own typesetter; a dev build does not, so this is off by default and
+# `scripts/release.mjs` turns it on. Without it the window is a shell that
+# expects to find SILE on the machine, which is the right thing for a
+# developer and the wrong thing for a publisher.
+embedded-sile = ["biblecompose-app/embedded-sile"]
+
 [dependencies]
 biblecompose-scripture.workspace = true
 biblecompose-app.workspace = true

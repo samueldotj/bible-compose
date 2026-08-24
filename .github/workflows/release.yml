@@ -13,7 +13,12 @@ name: Release artefacts
 #
 # Run it from the Actions tab, or by pushing a tag.
 #
-# Signing is deliberately not here yet; P6.1's note below says what it needs.
+# Signing is driven entirely by repository secrets, and no certificate, key or
+# password appears in this file or anywhere else in the repository. If the
+# secrets are absent the jobs still run and produce **unsigned** artefacts,
+# which is the right default: an unsigned build that works is more useful than
+# a failed one, and a signed build is a release decision rather than a CI
+# detail. `docs/RELEASING.md` lists what has to be supplied and how.
 on:
   workflow_dispatch:
     inputs:
@@ -134,6 +139,15 @@ jobs:
           path: target/release/biblecompose
           if-no-files-found: error
 
+      # The staged runtime, for the installer job on this platform. Uploaded
+      # rather than rebuilt, because building SILE twice for one release is
+      # half an hour spent proving the same thing.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stage-${{ matrix.os }}
+          path: stage
+          if-no-files-found: error
+
   windows:
     name: windows (cross-built)
     runs-on: ubuntu-latest
@@ -174,6 +188,81 @@ jobs:
         with:
           name: biblecompose-windows
           path: target/x86_64-pc-windows-gnu/release/biblecompose.exe
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stage-windows-latest
+          path: stage
+          if-no-files-found: error
+
+  installers:
+    name: installers (${{ matrix.os }})
+    needs: [bundle, windows]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # The staged runtime this platform's `bundle` job produced. The installer
+      # carries the typesetter inside the executable (ADR-006), so there is
+      # nothing to install alongside it and nothing for the `.deb` to depend on.
+      - uses: actions/download-artifact@v4
+        with:
+          name: stage-${{ matrix.os }}
+          path: stage
+
+      - name: webkit (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - run: npm ci
+
+      - name: build the installers
+        env:
+          BIBLECOMPOSE_SILE_BUNDLE: ${{ github.workspace }}/stage
+          # Apple's are read by Tauri directly; absent means unsigned.
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Windows: a thumbprint of a certificate already in the runner's
+          # store. The certificate itself is never written to disk here.
+          TAURI_WINDOWS_CERT_THUMBPRINT: ${{ secrets.WINDOWS_CERT_THUMBPRINT }}
+        run: npx tauri build --features embedded-sile
+
+      - name: say whether the artefacts are signed
+        shell: bash
+        run: |
+          # Stated rather than assumed. An unsigned release that everyone
+          # believed was signed is the failure worth one line of output.
+          if [ -n "${{ secrets.APPLE_SIGNING_IDENTITY }}${{ secrets.WINDOWS_CERT_THUMBPRINT }}" ]; then
+            echo "signing credentials were present for this platform"
+          else
+            echo "::warning::no signing credentials — these artefacts are UNSIGNED"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.os }}
+          path: |
+            target/release/bundle/msi/*.msi
+            target/release/bundle/nsis/*.exe
+            target/release/bundle/dmg/*.dmg
+            target/release/bundle/deb/*.deb
+            target/release/bundle/appimage/*.AppImage
           if-no-files-found: error
 
   windows-smoke:

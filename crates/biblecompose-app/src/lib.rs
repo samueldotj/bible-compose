@@ -106,6 +106,36 @@ pub fn build(
     build_with(doc, request, &backend, cancel, reporter)
 }
 
+/// The name a draft of `output` is published under.
+///
+/// `Bible.pdf` becomes `Bible-draft.pdf`, in the same folder, so a publisher
+/// looking for their proof finds it next to the real thing rather than
+/// wondering which of the two they are holding.
+pub fn draft_path(output: &Utf8Path) -> Utf8PathBuf {
+    let stem = output.file_stem().unwrap_or("output");
+    let name = match output.extension() {
+        Some(ext) => format!("{stem}-draft.{ext}"),
+        None => format!("{stem}-draft"),
+    };
+    output.with_file_name(name)
+}
+
+/// What a draft says about itself on the page.
+///
+/// The book count, because that is what a proof is usually missing and the one
+/// thing a reader of a stray PDF cannot tell by looking. **No date**: two runs
+/// of the same build have to produce the same bytes (DET-001), and a timestamp
+/// is the shortest route to breaking that.
+///
+/// Here rather than in either front end, so the CLI and the window stamp the
+/// same words.
+pub fn draft_note(books: usize) -> String {
+    match books {
+        1 => "DRAFT - 1 book".to_owned(),
+        n => format!("DRAFT - {n} books"),
+    }
+}
+
 /// What a build needs to know that is not in the document.
 #[derive(Debug, Clone)]
 pub struct BuildRequest {
@@ -124,6 +154,14 @@ pub struct BuildRequest {
     /// Deterministic, so the build directory name does not vary between two
     /// otherwise identical runs.
     pub build_id: String,
+    /// A draft, and what to say about it on the page.
+    ///
+    /// `None` is a real build. `Some(note)` stamps the note across the top of
+    /// every page **and publishes beside `output` rather than to it**: a draft
+    /// of two books must not replace the finished PDF of sixty-six, and the
+    /// only reliable way to guarantee that is for a draft to be unable to
+    /// name it.
+    pub draft: Option<String>,
 }
 
 impl BuildRequest {
@@ -136,6 +174,15 @@ impl BuildRequest {
             settings: Settings::builtin(),
             styles: biblecompose_config::cascade::resolve(None, false).0,
             build_id: "current".to_owned(),
+            draft: None,
+        }
+    }
+
+    /// Where this request actually writes.
+    pub fn destination(&self) -> Utf8PathBuf {
+        match &self.draft {
+            Some(_) => draft_path(&self.output),
+            None => self.output.clone(),
         }
     }
 
@@ -235,7 +282,8 @@ pub fn build_with(
         *request.settings.page.columns,
         &mut diagnostics,
     );
-    publish::preflight_destination(&request.output, &mut diagnostics);
+    let destination = request.destination();
+    publish::preflight_destination(&destination, &mut diagnostics);
     for d in diagnostics.iter() {
         reporter.diagnostic(d.clone());
     }
@@ -292,15 +340,25 @@ pub fn build_with(
     let job = BackendJob {
         xml: emitted.xml,
         work_dir: build_dir.path().to_owned(),
-        pdf_name: output_file_name(&request.output),
+        pdf_name: output_file_name(&destination),
         sile_path: request.sile_path.clone(),
         project_root: request.project_root.clone(),
         class: "biblecompose".to_owned(),
-        class_options: backend_input::class_options_with(
-            &request.settings,
-            body_font.as_ref(),
-            Some(&hyphenation),
-        ),
+        class_options: {
+            // The draft mark is not a setting — it is what this one run is —
+            // so it is appended here rather than resolved with the rest.
+            // Appended, so a real build's argument list is byte-for-byte what
+            // it was before drafts existed (DET-001).
+            let mut options = backend_input::class_options_with(
+                &request.settings,
+                body_font.as_ref(),
+                Some(&hyphenation),
+            );
+            if let Some(note) = &request.draft {
+                options.push(("draftmark".to_owned(), note.clone()));
+            }
+            options
+        },
     };
 
     if cancel.is_cancelled() {
@@ -375,7 +433,7 @@ pub fn build_with(
     remember_pages(&request.project_root, pages.load(Ordering::Relaxed));
 
     reporter.advance(BuildState::Publishing);
-    if let Err(e) = publish(&outcome.pdf, &request.output) {
+    if let Err(e) = publish(&outcome.pdf, &destination) {
         build_dir.keep();
         return failed(reporter, diagnostics, e);
     }
@@ -384,11 +442,11 @@ pub fn build_with(
     }
 
     reporter.advance(BuildState::Succeeded);
-    reporter.output(request.output.clone());
+    reporter.output(destination.clone());
     BuildReport {
         state: BuildState::Succeeded,
         diagnostics,
-        output: Some(request.output.clone()),
+        output: Some(destination),
         backend: backend_version,
     }
 }

@@ -492,6 +492,15 @@ export class Session {
     }
   }
 
+  /**
+   * Whether the next build is a proof.
+   *
+   * Lives here and not in the settings file on purpose: it describes one
+   * run rather than the publication, so reopening the project starts you
+   * on a real build again (P5.4).
+   */
+  draft = $state(false);
+
   async build(): Promise<void> {
     if (!this.project || this.building) return;
     this.#forgetBuild();
@@ -499,7 +508,7 @@ export class Session {
     this.built = true;
     this.buildState = "loading";
     try {
-      await backend().startBuild(this.project.root);
+      await backend().startBuild(this.project.root, this.draft);
     } catch (e: unknown) {
       this.building = false;
       this.fault = String(e);

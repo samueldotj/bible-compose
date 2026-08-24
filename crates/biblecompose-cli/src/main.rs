@@ -86,6 +86,10 @@ enum Command {
         /// sequence.
         #[arg(long)]
         events: bool,
+        /// A proof rather than the publication: stamped on every page, and
+        /// written beside the real PDF rather than over it (P5.4).
+        #[arg(long)]
+        draft: bool,
     },
 
     /// Report the backend version (SILE-002).
@@ -217,6 +221,7 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             sile_path,
             keep_intermediates,
             events,
+            draft,
         } => {
             let opened = document(books.as_deref(), &fixture)?;
             let (doc, settings, load_diagnostics) = (
@@ -235,11 +240,14 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             // asked for intermediates is debugging something.
             let keep = keep_intermediates || *settings.output.keep_intermediates;
 
-            let request = BuildRequest::new(project, output)
+            let mut request = BuildRequest::new(project, output)
                 .with_sile_path(sile_path)
                 .keeping_intermediates(keep)
                 .with_settings(settings)
                 .with_styles(opened.styles.clone());
+            if draft {
+                request.draft = Some(biblecompose_app::draft_note(doc.books.len()));
+            }
 
             let (mut reporter, rx) = BuildReporter::new();
             let cancel = CancelToken::new();

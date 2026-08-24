@@ -260,8 +260,15 @@ export interface Backend {
    * Scripture it cannot draw (GUI-003).
    */
   fonts(root: string | null): Promise<readonly FontChoice[]>;
-  /** Returns as soon as the build is handed to a thread (GUI-012). */
-  startBuild(root: string): Promise<void>;
+  /**
+   * Returns as soon as the build is handed to a thread (GUI-012).
+   *
+   * `draft` stamps every page and writes beside the finished PDF rather
+   * than over it (P5.4). It is an argument and not a setting because it is
+   * what this one run is: a project that remembered it was drafting would
+   * eventually ship a stamped book.
+   */
+  startBuild(root: string, draft: boolean): Promise<void>;
   /** Ask the running build to stop. `false` if there was not one. */
   cancelBuild(): Promise<boolean>;
   /** Everything the build has to say, in order. */
@@ -292,7 +299,7 @@ export const tauriBackend: Backend = {
   resetStyle: (root, selector, property) =>
     invoke("reset_style", { root, selector, property }),
   fonts: (root) => invoke("fonts", { root }),
-  startBuild: (root) => invoke("start_build", { root }),
+  startBuild: (root, draft) => invoke("start_build", { root, draft }),
   cancelBuild: () => invoke("cancel_build"),
   onBuildEvent: async (handler) => {
     const stop = await listen<BuildEvent>("build", (event) => handler(event.payload));

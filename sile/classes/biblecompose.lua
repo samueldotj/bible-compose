@@ -79,6 +79,12 @@ local OPTIONS = {
    -- Chapters by default; the application's settings file carries the
    -- measurement that decided it.
    { key = "anchors", kind = "string", default = "chapter" },
+   -- What to stamp across the top of every page. Empty is a real build.
+   --
+   -- A string rather than a flag because the useful draft mark says what is
+   -- missing — "DRAFT - 2 of 66 books" — and only the application knows how
+   -- many books it left out.
+   { key = "draftmark", kind = "string", default = "" },
    { key = "hyphenate", kind = "boolean", default = true },
    -- What appears on the page. Each of these hides something the document
    -- still carries: the model is unchanged and the XML is unchanged, because
@@ -215,6 +221,18 @@ function class:_frameset (inner, outer)
          right = outermost,
          height = "0",
          bottom = notefoot,
+      },
+      -- The draft mark, in the top margin above the running head (P5.4).
+      --
+      -- The frame is defined whether or not a build is a draft, and that is
+      -- deliberate: a frame that only sometimes exists is a page whose other
+      -- frames sometimes derive from a different set, and nothing else on the
+      -- page derives from this one. It stays empty on a real build.
+      draftmark = {
+         left = "left(contentA)",
+         right = outermost,
+         top = "0",
+         bottom = "top(runningHead)",
       },
    }
 
@@ -436,12 +454,13 @@ local slot_content, set_line, restart_notes, carry_reference
 -- `scratch` and the two anchor helpers, for the same reason: the chapter
 -- and verse commands name a place in Scripture, and both are registered
 -- above the state they read it from.
-local scratch, anchor, destination, o_anchors
+local scratch, anchor, destination, o_anchors, stamp_draft
 
 function class:endPage ()
    local o = self._bcopts
    set_line(SILE.getFrame("runningHead"), { o.headerleft, o.headercenter, o.headerright })
    set_line(SILE.getFrame("folio"), { o.footerleft, o.footercenter, o.footerright })
+   stamp_draft(SILE.getFrame("draftmark"), o.draftmark)
    -- **After the head, not before.** The head for this page is built from the
    -- references collected on it; this records the last of them so that the
    -- *next* page knows which verse it opens in the middle of. Doing it first
@@ -617,6 +636,37 @@ function destination (name, depth)
    if name and name ~= "" then
       SILE.call("pdf:destination", { name = name })
    end
+end
+
+--- Write the draft mark into its frame (P5.4).
+---
+--- Its size and colour are settled here and not in the style sheet, and that
+--- is the one place in this file where appearance is deliberately not a
+--- publisher's to change. A draft mark is not part of the design: it is the
+--- page saying it is not finished, and a sheet that could make it invisible
+--- would be a sheet that could turn a proof into something mistakable for a
+--- printed book.
+function stamp_draft (frame, note)
+   if not frame or note == nil or note == "" then
+      return
+   end
+   -- `typesetNaturally`, the same way the running head and the folio are
+   -- written. Switching frames by hand leaves the paragraph the typesetter was
+   -- in half-built, and the page ends with a queue that is not empty.
+   SILE.typesetNaturally(frame, function ()
+      SILE.settings:set("current.parindent", SILE.types.node.glue())
+      SILE.settings:set("document.lskip", SILE.types.node.glue())
+      SILE.settings:set("document.rskip", SILE.types.node.glue())
+      SILE.settings:set("typesetter.parfillskip", SILE.types.node.glue())
+      SILE.call("hfill")
+      SILE.call("color", { color = "#999999" }, function ()
+         SILE.call("font", { size = "7pt", weight = 700 }, function ()
+            SILE.typesetter:typeset(note)
+         end)
+      end)
+      SILE.call("hfill")
+      SILE.call("par")
+   end)
 end
 
 --- The resolved styles, keyed by selector.

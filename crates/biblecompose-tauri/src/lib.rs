@@ -842,6 +842,10 @@ fn start_build(
     app: tauri::AppHandle,
     session: tauri::State<'_, Arc<Session>>,
     root: String,
+    // A proof rather than the publication (P5.4). An argument and not a
+    // setting: it is what this one run is, and a project that remembered it
+    // was drafting would eventually ship a stamped book.
+    draft: bool,
 ) -> Result<(), String> {
     let mut running = session
         .running
@@ -875,10 +879,13 @@ fn start_build(
 
     std::thread::spawn(move || {
         let opened = project::open(&root);
-        let request = BuildRequest::new(root, opened.output())
+        let mut request = BuildRequest::new(root, opened.output())
             .keeping_intermediates(*opened.settings.output.keep_intermediates)
             .with_settings(opened.settings.clone())
             .with_styles(opened.styles.clone());
+        if draft {
+            request.draft = Some(biblecompose_app::draft_note(opened.document.books.len()));
+        }
 
         let mut reporter = reporter;
         // Everything opening the project had to say reaches the panel before

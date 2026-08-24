@@ -149,6 +149,16 @@ Backend log: ${session.logFile}` : where;
   -->
   <div class="go">
     <QuickSettings keys={["output.keep_intermediates", "strict"]} />
+    <!--
+      A proof rather than the publication. Beside the button and not in the
+      settings form, because it describes the run you are about to start and
+      not the project — and because the button's own label changes with it,
+      which is the clearest possible statement of what pressing it will do.
+    -->
+    <label class="draft">
+      <input type="checkbox" bind:checked={session.draft} disabled={session.building} />
+      Draft
+    </label>
     {#if session.building}
       <button type="button" class="primary" onclick={() => void session.cancel()}>Cancel</button>
     {:else}
@@ -158,7 +168,7 @@ Backend log: ${session.logFile}` : where;
         disabled={!session.canBuild}
         onclick={() => void session.build()}
       >
-        Generate PDF
+        {session.draft ? "Generate draft" : "Generate PDF"}
       </button>
     {/if}
   </div>
@@ -193,6 +203,12 @@ Backend log: ${session.logFile}` : where;
      `justify-content: space-between` on the bar, because the bar wraps: with
      space-between, a bar that fits on one line would also spread the six
      things on its left across the whole width. */
+  .draft {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    white-space: nowrap;
+  }
   .go {
     display: flex;
     gap: 0.9rem;

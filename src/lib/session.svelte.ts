@@ -501,6 +501,16 @@ export class Session {
    */
   draft = $state(false);
 
+  /**
+   * Whether the next build ignores the fingerprint (BLD-007).
+   *
+   * A build with nothing to do is skipped, which is almost always what a
+   * publisher wants and occasionally is not: the fingerprint is a promise
+   * about the project's own files, and a build also reads a system font and
+   * artwork that may live anywhere. This is how you make it wrong again.
+   */
+  clean = $state(false);
+
   async build(): Promise<void> {
     if (!this.project || this.building) return;
     this.#forgetBuild();
@@ -508,7 +518,7 @@ export class Session {
     this.built = true;
     this.buildState = "loading";
     try {
-      await backend().startBuild(this.project.root, this.draft);
+      await backend().startBuild(this.project.root, this.draft, this.clean);
     } catch (e: unknown) {
       this.building = false;
       this.fault = String(e);

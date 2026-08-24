@@ -90,6 +90,10 @@ enum Command {
         /// written beside the real PDF rather than over it (P5.4).
         #[arg(long)]
         draft: bool,
+        /// Run the backend even if nothing that reaches it has changed
+        /// (BLD-007).
+        #[arg(long)]
+        clean: bool,
     },
 
     /// Report the backend version (SILE-002).
@@ -222,6 +226,7 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             keep_intermediates,
             events,
             draft,
+            clean,
         } => {
             let opened = document(books.as_deref(), &fixture)?;
             let (doc, settings, load_diagnostics) = (
@@ -245,6 +250,7 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
                 .keeping_intermediates(keep)
                 .with_settings(settings)
                 .with_styles(opened.styles.clone());
+            request.clean = clean;
             if draft {
                 request.draft = Some(biblecompose_app::draft_note(doc.books.len()));
             }

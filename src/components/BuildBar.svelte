@@ -159,6 +159,16 @@ Backend log: ${session.logFile}` : where;
       <input type="checkbox" bind:checked={session.draft} disabled={session.building} />
       Draft
     </label>
+    <!--
+      A build with nothing to do is skipped. This is how you make it do the work
+      anyway, which is the answer when something outside the project changed —
+      a system font, artwork on another disk — because the fingerprint is a
+      promise about the project's own files and says so (BLD-007).
+    -->
+    <label class="draft" title="Run the typesetter even if nothing has changed">
+      <input type="checkbox" bind:checked={session.clean} disabled={session.building} />
+      Clean
+    </label>
     {#if session.building}
       <button type="button" class="primary" onclick={() => void session.cancel()}>Cancel</button>
     {:else}

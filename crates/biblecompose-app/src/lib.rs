@@ -7,6 +7,7 @@
 
 pub mod asset;
 pub mod backend_input;
+pub mod cache;
 pub mod font;
 pub mod hyphenation;
 pub mod project;
@@ -154,6 +155,13 @@ pub struct BuildRequest {
     /// Deterministic, so the build directory name does not vary between two
     /// otherwise identical runs.
     pub build_id: String,
+    /// Ignore the fingerprint and run the backend regardless (BLD-007).
+    ///
+    /// The escape hatch, and the reason one is needed: the fingerprint is a
+    /// promise about this project's own inputs, and a build also reads things
+    /// outside it — a system font, artwork on another disk. When the answer
+    /// looks wrong, this is what makes it wrong again reproducibly.
+    pub clean: bool,
     /// A draft, and what to say about it on the page.
     ///
     /// `None` is a real build. `Some(note)` stamps the note across the top of
@@ -174,6 +182,7 @@ impl BuildRequest {
             settings: Settings::builtin(),
             styles: biblecompose_config::cascade::resolve(None, false).0,
             build_id: "current".to_owned(),
+            clean: false,
             draft: None,
         }
     }
@@ -365,6 +374,43 @@ pub fn build_with(
         return cancelled(reporter, diagnostics);
     }
 
+    // ---- reuse -------------------------------------------------------------
+    //
+    // Everything that reaches the backend now exists, so this is the first
+    // moment the question can be asked and the last moment it is worth
+    // asking: has anything that could change the PDF changed since the last
+    // build of this project? If not, the finished PDF at the destination is
+    // already the right answer, and running SILE again would take minutes to
+    // produce the same bytes.
+    //
+    // Guarded on the file still being there, because the publisher may have
+    // moved it — a stamp is a record of what was built, not a claim that it
+    // still exists.
+    let fingerprint = cache::Fingerprint::of(
+        &job.xml,
+        &job.class_options,
+        backend
+            .version()
+            .map(|v| v.raw)
+            .unwrap_or_default()
+            .as_str(),
+    );
+    let stamp_dir = cache::stamp_dir(&request.project_root);
+    if !request.clean && destination.exists() && fingerprint.matches(&stamp_dir) {
+        reporter.log(
+            "biblecompose",
+            format!("unchanged since the last build; kept {destination}"),
+        );
+        reporter.advance(BuildState::Succeeded);
+        reporter.output(destination.clone());
+        return BuildReport {
+            state: BuildState::Succeeded,
+            diagnostics,
+            output: Some(destination),
+            backend: backend.version().ok().map(|v| v.raw),
+        };
+    }
+
     // ---- typeset -----------------------------------------------------------
     reporter.advance(BuildState::Typesetting);
     let backend_version;
@@ -440,6 +486,10 @@ pub fn build_with(
     if request.keep_intermediates {
         build_dir.keep();
     }
+
+    // Recorded only now. A stamp written before the backend ran would claim a
+    // PDF that a failed run never produced, and the next build would trust it.
+    fingerprint.write(&stamp_dir);
 
     reporter.advance(BuildState::Succeeded);
     reporter.output(destination.clone());

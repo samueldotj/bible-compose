@@ -77,7 +77,13 @@ impl BuildState {
             Loading => matches!(next, Loaded | Failed | Cancelled),
             Loaded => matches!(next, Validating | Blocked | Failed | Cancelled),
             Validating => matches!(next, Emitting | Blocked | Failed | Cancelled),
-            Emitting => matches!(next, Typesetting | Failed | Cancelled),
+            // `Succeeded` straight from `Emitting` is the reused build
+            // (P5.5): the fingerprint matched, so there was nothing to typeset
+            // and nothing to publish. It is a real success — the PDF at the
+            // destination is the one this build would have written — and
+            // inventing the two states it skipped would make the event log
+            // claim work that never happened.
+            Emitting => matches!(next, Typesetting | Succeeded | Failed | Cancelled),
             Typesetting => matches!(next, Publishing | Failed | Cancelled),
             Publishing => matches!(next, Succeeded | Failed | Cancelled),
             // Terminal states rest until a new build resets the machine.

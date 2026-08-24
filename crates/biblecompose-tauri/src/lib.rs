@@ -846,6 +846,8 @@ fn start_build(
     // setting: it is what this one run is, and a project that remembered it
     // was drafting would eventually ship a stamped book.
     draft: bool,
+    // Run the backend even if nothing that reaches it has changed (BLD-007).
+    clean: bool,
 ) -> Result<(), String> {
     let mut running = session
         .running
@@ -883,6 +885,7 @@ fn start_build(
             .keeping_intermediates(*opened.settings.output.keep_intermediates)
             .with_settings(opened.settings.clone())
             .with_styles(opened.styles.clone());
+        request.clean = clean;
         if draft {
             request.draft = Some(biblecompose_app::draft_note(opened.document.books.len()));
         }

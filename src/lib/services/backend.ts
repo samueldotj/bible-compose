@@ -268,7 +268,7 @@ export interface Backend {
    * what this one run is: a project that remembered it was drafting would
    * eventually ship a stamped book.
    */
-  startBuild(root: string, draft: boolean): Promise<void>;
+  startBuild(root: string, draft: boolean, clean: boolean): Promise<void>;
   /** Ask the running build to stop. `false` if there was not one. */
   cancelBuild(): Promise<boolean>;
   /** Everything the build has to say, in order. */
@@ -299,7 +299,7 @@ export const tauriBackend: Backend = {
   resetStyle: (root, selector, property) =>
     invoke("reset_style", { root, selector, property }),
   fonts: (root) => invoke("fonts", { root }),
-  startBuild: (root, draft) => invoke("start_build", { root, draft }),
+  startBuild: (root, draft, clean) => invoke("start_build", { root, draft, clean }),
   cancelBuild: () => invoke("cancel_build"),
   onBuildEvent: async (handler) => {
     const stop = await listen<BuildEvent>("build", (event) => handler(event.payload));

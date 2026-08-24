@@ -112,6 +112,12 @@ pub fn emit_hiding(doc: &ScriptureDocument, styles: &[StyleRule], hidden: Hidden
 
     let bytes = w.into_inner().into_inner();
     let xml = String::from_utf8(bytes).expect("the writer only ever emits UTF-8");
+    // Here, once, rather than at each of the places a string enters the
+    // document. There are several of those and a new one is one line of a
+    // future change away; there is exactly one finished document, and a
+    // well-formedness guarantee that can be read off one line is worth more
+    // than the allocation it costs in the case that needs it.
+    let xml = without_forbidden(&xml).into_owned();
 
     Emitted {
         xml,
@@ -596,6 +602,97 @@ fn text_node(w: &mut Writer<Cursor<Vec<u8>>>, s: &str, state: &mut EmitState) {
         return;
     }
     write(w, Event::Text(BytesText::new(s)), state);
+}
+
+/// The same text with the characters XML 1.0 has no way of carrying removed.
+///
+/// **Escaping is not an option for these and that is the point.** XML 1.0
+/// permits tab, line feed and carriage return out of the whole C0 range, and
+/// forbids the rest *including as numeric references* — there is no spelling
+/// of U+000B that a conforming parser will accept. So a source file with a
+/// stray control byte, which is what a bad export or a truncated copy leaves
+/// behind, cannot be represented and can only be dropped.
+///
+/// Found by accident and worth keeping: a single vertical tab in one book made
+/// the backend fail with `not well-formed (invalid token)` and no file, line or
+/// character named. The emitter is the last place that can still tell the
+/// difference, so it is the place that has to.
+///
+/// Returns `Cow` because the case this exists for is vanishingly rare and the
+/// case it runs in is every text node in a Bible.
+fn without_forbidden(s: &str) -> std::borrow::Cow<'_, str> {
+    if !s.chars().any(is_forbidden) {
+        return std::borrow::Cow::Borrowed(s);
+    }
+    std::borrow::Cow::Owned(s.chars().filter(|c| !is_forbidden(*c)).collect())
+}
+
+/// Whether XML 1.0 forbids this character outright.
+fn is_forbidden(c: char) -> bool {
+    match c {
+        '\t' | '\n' | '\r' => false,
+        // C0, and the two permanently unassigned code points at the end of the
+        // BMP, which are not characters in any XML version.
+        '\u{0}'..='\u{1f}' => true,
+        '\u{fffe}' | '\u{ffff}' => true,
+        _ => false,
+    }
+}
+
+#[cfg(test)]
+mod forbidden {
+    use super::*;
+
+    /// The three C0 characters XML allows survive; the rest go.
+    #[test]
+    fn only_the_three_permitted_control_characters_survive() {
+        assert_eq!(without_forbidden("plain\text\n"), "plain\text\n");
+        assert_eq!(without_forbidden("a\u{b}b"), "ab", "a vertical tab");
+        assert_eq!(without_forbidden("a\u{0}b"), "ab", "a NUL");
+        assert_eq!(without_forbidden("a\u{1b}b"), "ab", "an escape");
+        assert_eq!(without_forbidden("a\u{fffe}b"), "ab", "a non-character");
+        // Everything a Bible is actually made of, untouched.
+        assert_eq!(without_forbidden("ஆதியாகமம்"), "ஆதியாகமம்");
+        assert_eq!(without_forbidden("\u{2014}\u{a0}"), "\u{2014}\u{a0}");
+    }
+
+    /// **And the emitted document parses.** The defect this exists for was not
+    /// a wrong character in the output — it was a backend that refused the
+    /// whole file with `not well-formed (invalid token)`, naming no book, no
+    /// line and no character.
+    #[test]
+    fn a_control_character_in_the_source_does_not_break_the_document() {
+        use biblecompose_scripture::{
+            Block, Book, BookCode, BookNames, Inline, ParaStyle, ScriptureDocument,
+        };
+        let doc = ScriptureDocument::new(vec![Book::new(
+            BookCode::parse("MRK").expect("a book code"),
+            BookNames::named("Mark\u{b}"),
+            vec![Block::Paragraph {
+                style: ParaStyle::P,
+                content: vec![Inline::Text(
+                    "In the beginning\u{b} was the Word.".to_owned(),
+                )],
+            }],
+        )]);
+        let xml = emit(&doc, &[]).xml;
+
+        assert!(
+            !xml.contains('\u{b}'),
+            "the document still carries it: {xml}"
+        );
+        assert!(xml.contains("In the beginning was the Word."));
+        // Parsed rather than eyeballed: a well-formedness claim that nothing
+        // parses is a claim about a string.
+        let mut reader = quick_xml::Reader::from_str(&xml);
+        loop {
+            match reader.read_event() {
+                Ok(quick_xml::events::Event::Eof) => break,
+                Ok(_) => {}
+                Err(e) => panic!("the emitted document is not well-formed: {e}"),
+            }
+        }
+    }
 }
 
 #[cfg(test)]

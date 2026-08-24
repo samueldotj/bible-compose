@@ -362,6 +362,42 @@ pub fn apparatus() -> ScriptureDocument {
     )])
 }
 
+/// A chapter whose second verse fills several pages on its own (P4.4).
+///
+/// The running head is built from the references a page *collects*, and
+/// `chapterverse` collects one where a verse number is typeset — so a page
+/// wholly inside one verse collects nothing. This is the fixture that shows
+/// it: verse 1 and verses 3 and 4 are a line each, and verse 2 is pages long,
+/// so the pages in the middle have no verse starting on them at all.
+///
+/// Deliberately short of the length at which a single paragraph starts
+/// producing trailing blank pages — see the note on P4.4 in the roadmap. Five
+/// pages is enough to have three with no verse of their own and few enough to
+/// typeset in a test.
+pub fn long_verse() -> ScriptureDocument {
+    let sentence = "and they went out and preached everywhere while the Lord \
+                    worked with them and confirmed the word by the signs that \
+                    accompanied it ";
+    ScriptureDocument::new(vec![Book::new(
+        book("1JN"),
+        BookNames::named("1 John"),
+        vec![Block::Paragraph {
+            style: ParaStyle::P,
+            content: vec![
+                chapter(1),
+                verse(1),
+                text("That which was from the beginning, which we have heard. "),
+                verse(2),
+                text(&format!("{}.", sentence.repeat(100).trim())),
+                verse(3),
+                text(" We proclaim to you what we have seen and heard. "),
+                verse(4),
+                text("We write these things so that our joy may be complete."),
+            ],
+        }],
+    )])
+}
+
 /// Every fixture, for tests that should run over all of them.
 pub fn all() -> Vec<(&'static str, ScriptureDocument)> {
     vec![
@@ -370,6 +406,7 @@ pub fn all() -> Vec<(&'static str, ScriptureDocument)> {
         ("kitchen_sink", kitchen_sink()),
         ("adversarial", adversarial()),
         ("apparatus", apparatus()),
+        ("long_verse", long_verse()),
     ]
 }
 

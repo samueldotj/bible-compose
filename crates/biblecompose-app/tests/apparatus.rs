@@ -9,97 +9,11 @@
 //!
 //! Skipped, loudly, when no backend is installed: see `backend.rs`.
 
-use biblecompose_app::{build, BuildReporter, BuildRequest, CancelToken};
-use biblecompose_config::{cascade, settings, ConfigDocument, Settings};
-use biblecompose_scripture::fixtures;
-use biblecompose_testkit::pdf::{Line, Pdf};
-use camino::Utf8PathBuf;
+mod common;
 
-/// The sizes the built-in style sheet sets the body and the notes at.
-///
-/// **Through the whole application and not through the backend alone**, which
-/// is why these tests live in this crate. The apparatus is styled by
-/// `styles.toml` and configured by `defaults.toml`, and a test that ran the
-/// emitter and the class on their own would be reading a page set entirely in
-/// the body size — every note the same size as the Scripture, and every
-/// assertion below about which is which vacuously true.
-const BODY: f64 = 9.2;
-const NOTE: f64 = 7.4;
+use biblecompose_testkit::pdf::Line;
 
-fn have_backend() -> bool {
-    match biblecompose_app::backend_version() {
-        Ok(_) => true,
-        Err(d) => {
-            eprintln!("skipping apparatus tests: {d}");
-            false
-        }
-    }
-}
-
-/// The built-in settings with a few keys overridden, resolved the way a project
-/// file is — so a spelling these tests use and the resolver rejects fails here
-/// rather than being quietly ignored by the class.
-fn settings(body: &str) -> Settings {
-    let toml = format!("schema_version = 1\n{body}\n");
-    let doc = ConfigDocument::parse("apparatus-test.toml", toml).expect("valid TOML");
-    let (resolved, diagnostics) = settings::resolve(Some(&doc));
-    assert!(
-        diagnostics.is_empty(),
-        "the test's own settings are not valid: {:?}",
-        diagnostics
-            .iter()
-            .map(|d| d.to_string())
-            .collect::<Vec<_>>()
-    );
-    resolved
-}
-
-/// Build one fixture and read the page back.
-fn typeset(fixture: &str, overrides: &str) -> (tempfile::TempDir, Vec<Line>) {
-    let guard = tempfile::tempdir().expect("temp dir");
-    let root = Utf8PathBuf::from_path_buf(guard.path().to_path_buf()).expect("UTF-8 temp path");
-    let doc = fixtures::by_name(fixture).expect("a known fixture");
-
-    let mut request = BuildRequest::new(root.clone(), root.join("out.pdf"));
-    request.sile_path = vec![biblecompose_testkit::repo_root().join("sile")];
-    request.settings = settings(overrides);
-    request.styles = cascade::resolve(None, false).0;
-
-    let (mut reporter, _events) = BuildReporter::new();
-    let report = build(&doc, &request, &CancelToken::new(), &mut reporter);
-    let pdf = report.output.unwrap_or_else(|| {
-        panic!(
-            "{fixture} failed to build: {:?}",
-            report
-                .diagnostics
-                .iter()
-                .map(|d| d.to_string())
-                .collect::<Vec<_>>()
-        )
-    });
-    let raw = std::fs::read(pdf.as_std_path()).expect("read the PDF");
-    (guard, Pdf::lines(&raw))
-}
-
-/// A single column, so "the note area" and "under the column" mean one thing.
-const ONE_COLUMN: &str = "[page]\ncolumns = 1\n";
-
-/// Lines that are wholly note-sized and long enough to be a line of a note
-/// rather than a caller.
-///
-/// The callers in the body are note-sized too — they are set from the note's
-/// own style — so length is what separates them. A caller is one or two glyphs;
-/// a line of a note is a line.
-fn note_lines(lines: &[Line]) -> Vec<&Line> {
-    lines
-        .iter()
-        .filter(|l| l.sizes() == vec![NOTE] && l.text().chars().count() > 3)
-        .collect()
-}
-
-fn body_lines(lines: &[Line]) -> Vec<&Line> {
-    lines.iter().filter(|l| l.sizes().contains(&BODY)).collect()
-}
+use common::{body_lines, have_backend, note_lines, pages, typeset, NOTE, ONE_COLUMN};
 
 /// Every caller in the body, in reading order.
 ///
@@ -120,12 +34,7 @@ fn callers(lines: &[Line]) -> Vec<String> {
 /// its own page. Before the frame work in this milestone, 22 of the 47 pages of
 /// a two-column Mark failed this, by up to 186pt.
 fn assert_notes_clear_the_body(lines: &[Line], what: &str) {
-    let pages: Vec<usize> = {
-        let mut seen: Vec<usize> = lines.iter().map(|l| l.page).collect();
-        seen.dedup();
-        seen
-    };
-    for page in pages {
+    for page in pages(lines) {
         let lowest = body_lines(lines)
             .into_iter()
             .filter(|l| l.page == page)
@@ -279,11 +188,8 @@ fn a_note_too_long_for_the_page_splits() {
     let (_g, lines) = typeset("apparatus", ONE_COLUMN);
 
     let notes = note_lines(&lines);
-    let pages: Vec<usize> = {
-        let mut seen: Vec<usize> = notes.iter().map(|l| l.page).collect();
-        seen.dedup();
-        seen
-    };
+    let mut pages: Vec<usize> = notes.iter().map(|l| l.page).collect();
+    pages.dedup();
     assert!(
         pages.len() >= 2,
         "the long note should reach a second page; note lines are on {pages:?}"

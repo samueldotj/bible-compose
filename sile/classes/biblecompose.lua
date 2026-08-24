@@ -420,26 +420,22 @@ end
 -- close over these names, so the names have to exist before they do — a Lua
 -- upvalue is bound where the closure is written, not where it runs, so a
 -- `local function` further down would be a nil global here.
-local slot_content, set_line, restart_notes
+local slot_content, set_line, restart_notes, carry_reference
 
 function class:endPage ()
    local o = self._bcopts
    set_line(SILE.getFrame("runningHead"), { o.headerleft, o.headercenter, o.headerright })
    set_line(SILE.getFrame("folio"), { o.footerleft, o.footercenter, o.footerright })
+   -- **After the head, not before.** The head for this page is built from the
+   -- references collected on it; this records the last of them so that the
+   -- *next* page knows which verse it opens in the middle of. Doing it first
+   -- would answer the next page's question on this one.
+   carry_reference()
    return plain.endPage(self)
 end
 
 function class:registerCommands ()
    plain.registerCommands(self)
-
-   -- The range of references actually present on this page. `first-reference`
-   -- and `last-reference` read infonode's per-page collection, so this is the
-   -- mechanism SRS "running head with reference range" needs.
-   self:registerCommand("page-reference-range", function (_, _)
-      SILE.call("first-reference", { showbook = false })
-      SILE.typesetter:typeset("–")
-      SILE.call("last-reference", { showbook = false })
-   end)
 
    -- chapterverse stores content[1] verbatim and later tostring()s it. Reached
    -- through \define, content[1] is a content node, not a string, so the
@@ -527,6 +523,7 @@ local function scratch ()
    -- references waiting to be set under the paragraph that called them.
    s.issued = s.issued or { note = 0, ref = 0 }
    s.pending_refs = s.pending_refs or {}
+   s.altbooks = s.altbooks or {}
    return s
 end
 
@@ -583,6 +580,90 @@ end
 -- Colour inside the font call rather than outside it because the font switch
 -- is what changes the shaping, and a colour that wrapped it would be a group
 -- around a group for nothing.
+--- The references `chapterverse` collected on the page being closed.
+--
+-- Empty rather than nil when there are none, so a caller can index it without
+-- asking first. A page of front matter has no verse on it and that is an
+-- ordinary thing for a page to be.
+local function collected ()
+   local info = SILE.scratch.info
+   return (info and info.thispage and info.thispage.references) or {}
+end
+
+--- What is on this page, including the verse it opened in the middle of.
+--
+-- `chapterverse` records a reference where a verse *number* is typeset, so a
+-- page wholly inside one long verse collects nothing at all — and the head
+-- went blank on it. Measured on a book whose second verse ran to fourteen
+-- pages: the first page read `1:1–1:2` and the thirteen after it read nothing,
+-- which is the head saying a page has no Scripture on it while a reader is
+-- looking at Scripture.
+--
+-- So the last reference of each page is carried into the next, and a page that
+-- collects none reports the verse it is still in. That is what a reader
+-- searching for 1:2 needs the head to say.
+local function page_references ()
+   local refs = collected()
+   if #refs > 0 then
+      return refs
+   end
+   local carried = scratch().carried
+   return carried and { carried } or {}
+end
+
+--- Which book this page is in.
+--
+-- From the page's own references and not from `chapterverse`'s running book,
+-- which is a different thing: the running value is whatever was most recently
+-- *typeset*, and SILE sets material well ahead of outputting the page it lands
+-- on. With two books in a document that showed as a first page carrying
+-- Genesis and headed `John 1:1–1:5` — the head naming a book the reader cannot
+-- see, which is worse than naming none.
+--
+-- Every reference carries the book it belongs to, because `save-verse-number`
+-- records one at the moment the verse number is set. So the page's own
+-- collection answers it, and the running value is only a fallback for a page
+-- with no verse on it at all and none carried into it — front matter, where it
+-- is the best guess available and cannot be wrong about a page of Scripture.
+local function page_book ()
+   local first = page_references()[1]
+   if first and first.book then
+      return tostring(first.book)
+   end
+   local running = SILE.scratch.chapterverse and SILE.scratch.chapterverse.book
+   return running and tostring(running) or nil
+end
+
+--- Remember where this page ended, for the next one. See [`page_references`].
+function carry_reference ()
+   local refs = collected()
+   if #refs > 0 then
+      scratch().carried = refs[#refs]
+   end
+end
+
+--- One reference, as `chapter:verse`.
+--
+-- **Never with the book name**, because the book name is its own head slot,
+-- and this is written here rather than passed as `showbook=false` because that
+-- argument does not work. Upstream's `first-reference` takes options and
+-- discards them — `function (_, _)`, then `format-reference` with an empty
+-- table, which defaults `showbook` to true. So the same argument was honoured
+-- by `last-reference` and ignored by `first-reference`, and the default head
+-- read `Mark        Mark 1:1–1:10`: the book twice, once from each end of the
+-- line, which is the arrangement the six slots exist to let a publisher avoid.
+--
+-- Overriding `format-reference` does not help either: the class registers its
+-- commands during `plain._init`, and `chapterverse` is loaded after that and
+-- registers its own on top. Reading the collection directly has no ordering to
+-- get wrong.
+local function typeset_reference (ref)
+   if not (ref and ref.chapter) then
+      return
+   end
+   SILE.typesetter:typeset(tostring(ref.chapter) .. ":" .. tostring(ref.verse))
+end
+
 --- What one slot puts on the page.
 --
 -- Nothing at all for `empty`, and nothing for a slot whose content this page
@@ -596,19 +677,32 @@ function slot_content (slot)
       local counters = SILE.documentState.documentClass.packages.counters
       SILE.typesetter:typeset(counters:formatCounter(SILE.scratch.counters.folio))
    elseif slot == "reference_range" then
-      SILE.call("page-reference-range")
+      local refs = page_references()
+      if #refs > 0 then
+         local first, last = refs[1], refs[#refs]
+         typeset_reference(first)
+         -- A page holding one verse gets that verse, not `1:5–1:5`: a range
+         -- whose ends are the same place is not a range.
+         if last.chapter ~= first.chapter or last.verse ~= first.verse then
+            SILE.typesetter:typeset("–")
+            typeset_reference(last)
+         end
+      end
    elseif slot == "first_reference" then
-      SILE.call("first-reference", { showbook = false })
+      typeset_reference(page_references()[1])
    elseif slot == "last_reference" then
-      SILE.call("last-reference", { showbook = false })
+      local refs = page_references()
+      typeset_reference(refs[#refs])
    elseif slot == "book_name" then
-      local book = SILE.scratch.chapterverse and SILE.scratch.chapterverse.book
+      local book = page_book()
       if book then
-         SILE.typesetter:typeset(tostring(book))
+         SILE.typesetter:typeset(book)
       end
    elseif slot == "alt_book_name" then
-      if s.altbook and s.altbook ~= "" then
-         SILE.typesetter:typeset(s.altbook)
+      local book = page_book()
+      local alt = book and s.altbooks[book]
+      if alt and alt ~= "" then
+         SILE.typesetter:typeset(alt)
       end
    end
 end
@@ -981,18 +1075,33 @@ function class:registerXmlCommands ()
    self:registerCommand("book", function (options, content)
       -- A new book starts a new page — but the break goes at the START of the
       -- second and later books, never at the end of one. `\supereject` after
-      -- the final book fills the balanced frames with infinite glue that can
-      -- never be balanced, and SILE spins forever rather than failing.
+      -- the *final* book fills the frames with infinite glue and, while
+      -- `balanced-frames` was loaded, could never be balanced away; SILE spun
+      -- rather than failing.
+      --
+      -- **`\supereject` and not `\eject`.** `eject` is a `reak`, which the
+      -- typesetter reads as "move on to the next frame" — and in two columns
+      -- the next frame is the next *column*. A second book therefore began in
+      -- column B of the page the first one ended on: measured on a two-book
+      -- document that came out one page long, with Genesis and John under a
+      -- single running head. Only a penalty at or past `supereject_penalty`
+      -- reaches `newPage`.
       local s = scratch()
       if s.books > 0 then
          SILE.typesetter:leaveHmode()
-         SILE.call("eject")
+         SILE.call("supereject")
       end
       s.books = s.books + 1
       restart_notes("per_book")
+      -- Nothing is carried across a book. A title page holding no verse should
+      -- not be headed with the last verse of the book before it.
+      s.carried = nil
 
       SILE.call("bc:book", {}, { options.name or options.code or "" })
-      scratch().altbook = options.altname or options.name or options.code or ""
+      -- Keyed by the name the head shows, so a page can look up the alt form
+      -- of *its own* book rather than of whichever was set last.
+      local named = options.name or options.code or ""
+      scratch().altbooks[named] = options.altname or named
       if options.name then
          SILE.call("center", {}, function ()
             SILE.call("font", { size = "16pt", weight = 600 }, function ()

@@ -437,3 +437,86 @@ fn a_project_font_in_a_style_crosses_as_a_path() {
         .expect("a rule");
     assert!(hermetic.properties.iter().any(|(k, _)| k == "font_family"));
 }
+
+// -------------------------------------------------------------- FONT-005 ---
+//
+// A font the backend can load, asked for a face it has not got. SILE answers
+// with the regular face and says nothing, which is the whole reason this check
+// exists — measured in P4.6, where the shipped DejaVu Serif has no italic and
+// thirty-five selectors in the built-in sheet ask for one.
+
+/// The faces a family has are read by *enumerating* them.
+///
+/// `fontdb`'s query substitutes, so asking it for the italic of a family with
+/// no italic returns the regular face. A check written that way would report
+/// every font as complete, which is the bug it is meant to find.
+#[test]
+fn a_family_with_no_faces_at_all_has_none_of_them() {
+    let faces = font::faces_of(
+        "No Such Family Exists Anywhere",
+        Utf8Path::new("."),
+        &latin(),
+    );
+    assert!(!faces.italic);
+    assert!(!faces.bold);
+}
+
+/// The vendored DejaVu Serif has a bold and no italic, and the check says so.
+///
+/// Skipped, loudly, on a machine that happens to have the italic installed —
+/// which would make the answer right and the assertion wrong.
+#[test]
+fn the_vendored_font_has_a_bold_and_no_italic() {
+    let faces = font::faces_of("DejaVu Serif", Utf8Path::new("."), &latin());
+    assert!(faces.bold, "the bold is committed beside the regular");
+    if faces.italic {
+        eprintln!("skipping: this machine has DejaVu Serif Italic installed");
+        return;
+    }
+    assert!(!faces.italic);
+}
+
+/// **And a style asking for it is warned about, once, by name.**
+#[test]
+fn a_style_asking_for_a_face_the_font_has_not_got_is_reported() {
+    if font::faces_of("DejaVu Serif", Utf8Path::new("."), &latin()).italic {
+        eprintln!("skipping: this machine has DejaVu Serif Italic installed");
+        return;
+    }
+    let styles = styles_from("[character.it]\nitalic = true\n[character.bd]\nweight = 700\n");
+
+    let mut diagnostics = Diagnostics::new();
+    font::preflight_faces(
+        "DejaVu Serif",
+        &styles,
+        Utf8Path::new("."),
+        &latin(),
+        &mut diagnostics,
+    );
+
+    let complaints: Vec<&biblecompose_diagnostics::Diagnostic> = diagnostics.iter().collect();
+    assert_eq!(
+        complaints.len(),
+        1,
+        "one family, one missing face, one diagnostic: {:?}",
+        complaints.iter().map(|d| d.to_string()).collect::<Vec<_>>()
+    );
+    let d = complaints[0];
+    // A warning, not an error. The page still sets — in the wrong face, which
+    // is exactly why nothing else would ever notice.
+    assert_eq!(d.severity, Severity::Warning);
+    assert!(d.message.contains("no italic face"), "{}", d.message);
+    // **And nothing is said about the bold**, which this font has. That is the
+    // half that makes the check worth having rather than a blanket complaint.
+    assert!(!d.message.contains("bold"), "{}", d.message);
+
+    // The count covers the built-in sheet as well as the project's own two
+    // lines, because a style with no font of its own is set in the body's —
+    // which is what made thirty-five selectors one question rather than
+    // thirty-five.
+    assert!(
+        d.message.contains("styles that ask"),
+        "the count should be plural here: {}",
+        d.message
+    );
+}

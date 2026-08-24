@@ -18,6 +18,7 @@ import {
   type BuildState,
   type Defaults,
   type Diagnostic,
+  type Preset,
   type Project,
   type Severity,
 } from "./services/backend";
@@ -471,6 +472,44 @@ export class Session {
       // The file was not changed, so the form keeps showing the old value with
       // the reason the new one was refused beside it.
       this.fieldErrors = { ...this.fieldErrors, [key]: asDiagnostics(e) };
+    }
+  }
+
+  /**
+   * The editions a project can be started from, read once (P6.2).
+   *
+   * `null` until they arrive. They never change while the window is open —
+   * they are compiled into the binary — so this is a cache rather than state.
+   */
+  presets = $state<readonly Preset[] | null>(null);
+
+  async loadPresets(): Promise<void> {
+    if (this.presets !== null) return;
+    try {
+      this.presets = await backend().presets();
+    } catch (e: unknown) {
+      this.fault = String(e);
+    }
+  }
+
+  /**
+   * Apply one, which writes its settings into the project's own file.
+   *
+   * Nothing is remembered about which one was chosen, and that is right: once
+   * applied, a preset is just the settings a publisher now has, and a window
+   * still claiming "Large print" after they changed the page size would be
+   * claiming something untrue.
+   */
+  async applyPreset(id: string): Promise<void> {
+    if (!this.project) return;
+    try {
+      this.project = await backend().applyPreset(this.project.root, id);
+      this.changes = null;
+      this.fieldErrors = {};
+    } catch (e: unknown) {
+      this.fault = asDiagnostics(e)
+        .map((d) => d.message)
+        .join(" ");
     }
   }
 

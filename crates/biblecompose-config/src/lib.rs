@@ -10,6 +10,7 @@ pub mod cascade;
 pub mod document;
 pub mod edit;
 pub mod form;
+pub mod preset;
 pub mod provenance;
 pub mod selector;
 pub mod settings;

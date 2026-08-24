@@ -476,6 +476,12 @@ pub mod code {
             UNRESOLVED = "001",
             MISSING_COVERAGE = "002",
             NO_HYPHENATION_PATTERNS = "004",
+            // 005: the family resolved, and has not got a face a
+            //      style asked for. A warning rather than an error:
+            //      the page still sets, in the nearest face the font
+            //      does have, which is the whole problem — nothing
+            //      about the result says the emphasis went missing.
+            MISSING_FACE = "005",
         }
         Backend "SILE" {
             NOT_FOUND = "001",

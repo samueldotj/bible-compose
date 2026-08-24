@@ -140,6 +140,13 @@ export interface Geometry {
   readonly columns: number;
 }
 
+/** One of the editions a project can be started from (P6.2). */
+export interface Preset {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
+}
+
 /** A project the window has opened before (GUI-001). */
 export interface Recent {
   readonly root: string;
@@ -241,6 +248,16 @@ export interface Backend {
    * their printer will use.
    */
   openPdf(path: string): Promise<void>;
+  /** The editions a project can be started from (P6.2). */
+  presets(): Promise<readonly Preset[]>;
+  /**
+   * Write one into the project's settings file.
+   *
+   * A preset is written rather than layered, so what comes back is a project
+   * whose settings say what the edition is — editable, and visible in the
+   * inspector as having come from the publisher's own file.
+   */
+  applyPreset(root: string, id: string): Promise<Project>;
   /** The projects this machine has opened, most recent first. */
   recentProjects(): Promise<readonly Recent[]>;
   /** Drop one from that list. The folder is not touched. */
@@ -296,6 +313,8 @@ export const tauriBackend: Backend = {
   closeProject: () => invoke("close_project"),
   openFolder: (path) => invoke("open_folder", { path }),
   openPdf: (path) => invoke("open_pdf", { path }),
+  presets: () => invoke("presets"),
+  applyPreset: (root, id) => invoke("apply_preset", { root, id }),
   recentProjects: () => invoke("recent_projects"),
   forgetProject: (root) => invoke("forget_project", { root }),
   createProject: (parent, name, language) =>

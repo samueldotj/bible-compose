@@ -141,6 +141,14 @@ pub struct WireSetting {
     pub location: Option<WireLocation>,
 }
 
+/// One of the editions a project can be started from (P6.2).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct WirePreset {
+    pub id: String,
+    pub title: String,
+    pub description: String,
+}
+
 /// A project the window has opened before (GUI-001).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WireRecent {
@@ -788,6 +796,53 @@ pub fn write_setting(
     Ok(project_at(root))
 }
 
+/// The editions a project can be started from (P6.2).
+#[tauri::command]
+fn presets() -> Vec<WirePreset> {
+    biblecompose_config::preset::ALL
+        .iter()
+        .map(|p| WirePreset {
+            id: p.id.to_owned(),
+            title: p.title.to_owned(),
+            description: p.description.to_owned(),
+        })
+        .collect()
+}
+
+/// Write a preset's settings into the project's file.
+#[tauri::command]
+fn apply_preset(
+    session: tauri::State<'_, Arc<Session>>,
+    root: String,
+    id: String,
+) -> Result<WireProject, Vec<WireDiagnostic>> {
+    let root = Utf8PathBuf::from(root);
+    let project = write_preset(&root, &id)?;
+    forget_changes(&session, &root);
+    Ok(project)
+}
+
+/// [`apply_preset`] without the Tauri binding.
+///
+/// One save for the whole preset rather than one per key: a publisher who
+/// chose "Large print" chose one thing, and a folder watcher seeing fourteen
+/// writes would report fourteen external changes.
+pub fn write_preset(root: &Utf8Path, id: &str) -> Result<WireProject, Vec<WireDiagnostic>> {
+    let Some(preset) = biblecompose_config::preset::by_id(id) else {
+        return Err(vec![WireDiagnostic::from(&AppDiagnostic::error(
+            biblecompose_diagnostics::code::UNKNOWN_KEY,
+            format!("{id} is not an edition this release ships"),
+        ))]);
+    };
+    let mut file = open_settings_file(root).map_err(|d| vec![WireDiagnostic::from(&d)])?;
+    let complaints = biblecompose_config::preset::apply(&mut file, preset);
+    if complaints.has_blocking() {
+        return Err(wire_all(&complaints));
+    }
+    file.save().map_err(|d| vec![WireDiagnostic::from(&d)])?;
+    Ok(project_at(root))
+}
+
 /// Remove one setting, so the built-in value applies again (CFG-007).
 #[tauri::command]
 fn reset_setting(
@@ -1416,6 +1471,8 @@ pub fn run() {
             close_project,
             open_folder,
             open_pdf,
+            presets,
+            apply_preset,
             start_build,
             cancel_build,
             is_building,

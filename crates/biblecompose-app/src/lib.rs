@@ -287,6 +287,16 @@ pub fn build_with(
         &backend.font_dirs(),
         &mut diagnostics,
     );
+    // And whether those families have the faces the styles ask for (FONT-005).
+    // The same failure one level down: a font the backend *can* load, drawn in
+    // a face it has not got, silently substituted for the regular one.
+    font::preflight_faces(
+        &request.settings.typography.font_family,
+        &request.styles,
+        &request.project_root,
+        &backend.font_dirs(),
+        &mut diagnostics,
+    );
     // FONT-004, and for the same reason as the font check: the backend will
     // hyphenate a script that does not hyphenate and say nothing.
     let hyphenation = hyphenation::decide(

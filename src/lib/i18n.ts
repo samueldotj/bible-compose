@@ -93,6 +93,11 @@ export interface Chrome {
   readonly stylesRegion: string;
   readonly pageToScale: string;
   readonly commonTrimSizes: string;
+  readonly editionsRegion: string;
+  readonly startFrom: string;
+  readonly presetNote: string;
+  readonly use: string;
+  readonly overwriteSettings: string;
   readonly coveringOnly: string;
   readonly noProjectToCheckAgainst: string;
 }
@@ -305,6 +310,12 @@ export const EN: Catalogue = {
     stylesRegion: "Styles",
     pageToScale: "The page, to scale",
     commonTrimSizes: "Common trim sizes",
+    editionsRegion: "Editions",
+    startFrom: "Start from an edition",
+    presetNote:
+      "Each one writes its settings into this project, where you can change them one at a time.",
+    use: "Use",
+    overwriteSettings: "Overwrite settings",
     coveringOnly: "Only fonts that can set this Scripture",
     noProjectToCheckAgainst:
       "No project is open, so nothing has been checked against Scripture.",

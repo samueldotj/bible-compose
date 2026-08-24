@@ -5,6 +5,7 @@
   import QuickSettings from "./components/QuickSettings.svelte";
   import ExamplePage from "./components/ExamplePage.svelte";
   import PageDiagram from "./components/PageDiagram.svelte";
+  import PresetPicker from "./components/PresetPicker.svelte";
   import SettingsForm from "./components/SettingsForm.svelte";
   import StartScreen from "./components/StartScreen.svelte";
   import StyleEditor from "./components/StyleEditor.svelte";
@@ -167,6 +168,12 @@
               <StyleEditor groups={styleTab.styleGroups} />
             {/if}
           {:else}
+            {#if tab.diagram}
+              <!-- Above the diagram, because it is the thing to reach for
+                   before adjusting the measurements one at a time, and the
+                   diagram beside it shows what each one did. -->
+              <PresetPicker />
+            {/if}
             {#if tab.diagram && session.geometry}
               <PageDiagram geometry={session.geometry} />
             {/if}

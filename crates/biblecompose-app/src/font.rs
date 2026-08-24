@@ -353,6 +353,131 @@ pub fn gaps(font: &ResolvedFont, doc: &ScriptureDocument) -> Result<Vec<Gap>, Di
     Ok(gaps)
 }
 
+/// Which of the two faces beyond the regular one a family actually has.
+///
+/// **This exists because SILE answers a request for a face a font has not got
+/// with the regular one and no warning** — measured in P4.6, where the runtime
+/// ships DejaVu Serif in regular and bold only and thirteen selectors in the
+/// built-in style sheet ask for italic. Every one of them was setting in the
+/// regular face, and nothing on the page or in the log said so.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Faces {
+    pub italic: bool,
+    pub bold: bool,
+}
+
+/// What faces this family has, as the same search order a build resolves by.
+///
+/// Enumerated rather than queried. `fontdb`'s query *substitutes* — asking it
+/// for the italic of a family with no italic returns the regular face rather
+/// than nothing, which is exactly the behaviour being checked for and would
+/// make this report every font as complete.
+pub fn faces_of(family: &str, project_root: &Utf8Path, backend_dirs: &[Utf8PathBuf]) -> Faces {
+    let mut db = fontdb::Database::new();
+    let project = project_root.join(PROJECT_FONTS);
+    if project.exists() {
+        db.load_fonts_dir(project.as_std_path());
+    }
+    for dir in backend_dirs {
+        if dir.exists() {
+            db.load_fonts_dir(dir.as_std_path());
+        }
+    }
+    db.load_system_fonts();
+
+    let mut faces = Faces::default();
+    for face in db.faces() {
+        if !face.families.iter().any(|(name, _)| name == family) {
+            continue;
+        }
+        if face.style != fontdb::Style::Normal {
+            faces.italic = true;
+        }
+        if face.weight.0 >= 600 {
+            faces.bold = true;
+        }
+    }
+    faces
+}
+
+/// Report every style whose emphasis the font cannot draw (FONT-005).
+///
+/// A warning and not an error, and the severity is the point. The page still
+/// sets — in the nearest face the family does have — so nothing downstream
+/// fails and nothing in the PDF says the emphasis went missing. A publisher
+/// finds out when a reader asks why the quotations are not italic.
+///
+/// One diagnostic per family and missing face, naming the selectors, because
+/// a built-in sheet asking for italic in thirteen places should say that once.
+pub fn preflight_faces(
+    body_family: &str,
+    styles: &biblecompose_config::ResolvedStyles,
+    project_root: &Utf8Path,
+    backend_dirs: &[Utf8PathBuf],
+    diagnostics: &mut Diagnostics,
+) {
+    // family -> (selectors wanting italic, selectors wanting bold).
+    let mut wanted: BTreeMap<String, (Vec<String>, Vec<String>)> = BTreeMap::new();
+    for (selector, resolved) in styles.iter() {
+        let style = &resolved.style;
+        // A style with no font of its own is set in the body's, which is what
+        // makes the built-in sheet's thirteen italics a question about one
+        // family rather than thirteen.
+        let family = style
+            .font_family
+            .as_deref()
+            .unwrap_or(body_family)
+            .to_owned();
+        let entry = wanted.entry(family).or_default();
+        if style.italic.unwrap_or(false) {
+            entry.0.push(selector.key());
+        }
+        if style.weight.unwrap_or(400) >= 600 {
+            entry.1.push(selector.key());
+        }
+    }
+
+    for (family, (italic, bold)) in wanted {
+        if italic.is_empty() && bold.is_empty() {
+            continue;
+        }
+        let have = faces_of(&family, project_root, backend_dirs);
+        for (missing, selectors, word) in
+            [(!have.italic, italic, "italic"), (!have.bold, bold, "bold")]
+        {
+            if !missing || selectors.is_empty() {
+                continue;
+            }
+            diagnostics.push(
+                Diagnostic::warning(
+                    code::MISSING_FACE,
+                    format!(
+                        "{family} has no {word} face, so the {} {} for one {} be \
+                         set in the regular face instead: {}",
+                        selectors.len(),
+                        if selectors.len() == 1 {
+                            "style that asks"
+                        } else {
+                            "styles that ask"
+                        },
+                        if selectors.len() == 1 {
+                            "will"
+                        } else {
+                            "will each"
+                        },
+                        list(&selectors),
+                    ),
+                )
+                .help(format!(
+                    "install the {word} of {family}, put it in {PROJECT_FONTS}/, or \
+                     choose a family that has one — the page will set either way, \
+                     and this is the only warning it gets"
+                )),
+            );
+        }
+    }
+}
+
 /// The whole check, as diagnostics (FONT-001, FONT-002).
 ///
 /// One error for an unresolvable family, one for a coverage gap. Both block:

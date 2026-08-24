@@ -86,21 +86,25 @@ The style cascade, typed selectors, inheritance with cycle detection, and the re
 
 **This is the first milestone worth showing outside the project.** It does what the product name promises for simple editions. Suitable for a friendly typesetter with a Gospel and an opinion.
 
-### M4 — Publishing structures
+### M4 — Publishing structures ✅
 
 **You can** produce something that is recognizably a Bible: footnotes, cross-references in the note area, figures from project assets, running heads with book name and verse range, page numbers.
 
 The heaviest layer of Lua class work, which S0 has already de-risked.
 
-### M5 — Hardening
+### M5 — Hardening — everything but the packaging
 
 **You can** rely on it. The full 66-book corpus builds. Fonts are pre-flighted, so a missing font or an uncovered script is an error rather than a page of tofu ([SRS-REVIEW F5](SRS-REVIEW.md#f5--sile-substitutes-missing-fonts-silently-so-pdf-003-and-pdf-004-cannot-be-delegated)). Cancel works mid-build. Draft builds make the iterate-and-rebuild loop usable ([SRS-REVIEW F10](SRS-REVIEW.md#f10--build-time-is-the-dominant-fact-of-the-workflow-and-the-srs-does-not-confront-it)). Caches make reopening fast. The finished PDF opens in the platform's own viewer. SILE and its native dependencies are packaged for three platforms.
 
 Packaging is called out as milestone content rather than release-week work, because HarfBuzz, fontconfig, ICU, and libtexpdf across Windows, macOS, and Linux is its own project.
 
+**Eight of the nine are done. P5.7 is the ninth**, and it is the one that cannot be done from a desk with one operating system on it: it needs a macOS machine, a Linux machine, and hours of building C libraries on each. Everything it would package is finished and tested against a runtime that is already unpacked, so what remains is the packaging rather than the thing being packaged.
+
 ### M6 — Version 1.0
 
 Signed installers, default presets, documentation, performance and reliability work, and all ten of SRS §16.2's acceptance scenarios demonstrated.
+
+**The three that can be built are built**: the accessibility work (P6.3), the localization catalogue (P6.4), and all ten acceptance scenarios, which run in CI (P6.5). The other three each wait on something outside the code — installers and signing need certificates and the other two platforms (P6.1); the default fonts need their redistribution terms settled with the people who own them (P6.2); and the sign-off is a decision rather than a task (P6.6).
 
 ---
 

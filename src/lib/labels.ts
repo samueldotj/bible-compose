@@ -20,6 +20,8 @@ export interface Group {
 export const LABELS: Readonly<Record<string, string>> = {
   "project.name": "Publication",
   "project.language": "Language",
+  "project.author": "Publisher",
+  "project.subject": "Subject",
   "page.size": "Trim size",
   "page.columns": "Columns",
   "page.margin_top": "Top margin",
@@ -62,6 +64,10 @@ export const LABELS: Readonly<Record<string, string>> = {
 /** Placeholder text where an empty field means something specific. */
 export const PLACEHOLDERS: Readonly<Record<string, string>> = {
   "project.name": "the folder's name",
+  // Both of these end up in the PDF's properties and nowhere else, so the
+  // placeholder says what leaving them empty costs, which is nothing.
+  "project.author": "left out of the PDF",
+  "project.subject": "left out of the PDF",
 };
 
 export const GROUPS: readonly Group[] = [

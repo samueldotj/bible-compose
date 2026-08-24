@@ -93,6 +93,38 @@ pub fn typeset(fixture: &str, overrides: &str) -> (tempfile::TempDir, Vec<Line>)
     (guard, Pdf::lines(&raw))
 }
 
+/// The same build, as bytes rather than as lines.
+///
+/// For the assertions that are about the file rather than the page — its
+/// properties, its destinations, its outline — none of which is reachable from
+/// a list of glyph positions.
+pub fn raw_pdf(fixture: &str, overrides: &str) -> (tempfile::TempDir, Vec<u8>) {
+    let guard = tempfile::tempdir().expect("temp dir");
+    let root = Utf8PathBuf::from_path_buf(guard.path().to_path_buf()).expect("UTF-8 temp path");
+    let doc = fixtures::by_name(fixture).expect("a known fixture");
+    biblecompose_testkit::place_fixture_assets(&root);
+
+    let mut request = BuildRequest::new(root.clone(), root.join("out.pdf"));
+    request.sile_path = vec![biblecompose_testkit::repo_root().join("sile")];
+    request.settings = settings(overrides);
+    request.styles = cascade::resolve(None, false).0;
+
+    let (mut reporter, _events) = BuildReporter::new();
+    let report = build(&doc, &request, &CancelToken::new(), &mut reporter);
+    let pdf = report.output.unwrap_or_else(|| {
+        panic!(
+            "{fixture} failed to build: {:?}",
+            report
+                .diagnostics
+                .iter()
+                .map(|d| d.to_string())
+                .collect::<Vec<_>>()
+        )
+    });
+    let raw = std::fs::read(pdf.as_std_path()).expect("read the PDF");
+    (guard, raw)
+}
+
 /// A single column, so "the note area" and "the measure" each mean one thing.
 pub const ONE_COLUMN: &str = "[page]\ncolumns = 1\n";
 

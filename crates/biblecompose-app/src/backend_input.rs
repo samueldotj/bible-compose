@@ -83,6 +83,18 @@ pub fn class_options_with(
         }),
     );
 
+    // What the file says about itself (PDF-005). Each crosses as the empty
+    // string when unset, and the class writes no property for an empty one —
+    // a `/Title ()` in the properties panel is worse than no title, because it
+    // looks like an answer.
+    let said = |v: &Option<biblecompose_config::Sourced<String>>| {
+        v.as_ref().map(|n| n.to_string()).unwrap_or_default()
+    };
+    put("anchors", s.output.anchors.to_string());
+    put("title", said(&s.project.name));
+    put("author", said(&s.project.author));
+    put("subject", said(&s.project.subject));
+
     // What appears on the page.
     put("chapternumbers", flag(*s.numbering.show_chapter_numbers));
     put("versenumbers", flag(*s.numbering.show_verse_numbers));

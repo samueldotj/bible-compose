@@ -22,6 +22,8 @@ strict = true
 [project]
 name = \"My Bible\"
 language = \"ta\"
+author = \"A Bible Society\"
+subject = \"New Testament\"
 
 [books]
 order = [\"MAT\"]
@@ -78,6 +80,7 @@ missing_figure = \"omit\"
 
 [output]
 keep_intermediates = true
+anchors = \"verse\"
 ";
 
 fn resolve(body: &str) -> Settings {
@@ -118,9 +121,17 @@ fn the_index_covers_every_key_that_has_a_value() {
 #[test]
 fn an_unset_optional_key_has_no_origin_at_all() {
     let s = Settings::builtin();
-    assert_eq!(s.provenance.get("project.name"), None);
-    assert_eq!(s.provenance.get("books.include"), None);
-    assert_eq!(s.provenance.len(), known_keys().len() - 3);
+    for key in [
+        "project.name",
+        "project.author",
+        "project.subject",
+        "books.include",
+    ] {
+        assert_eq!(s.provenance.get(key), None, "{key} was never chosen");
+    }
+    // The four above, and `schema_version`, which is a declaration about the
+    // settings rather than one of them.
+    assert_eq!(s.provenance.len(), known_keys().len() - 5);
 }
 
 #[test]

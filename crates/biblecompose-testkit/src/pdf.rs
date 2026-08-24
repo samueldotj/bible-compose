@@ -958,6 +958,193 @@ fn ascii_u32(word: &[u8]) -> Option<u32> {
     text.trim().parse().ok()
 }
 
+// ---------------------------------------------------------------------------
+// What the file says about itself, and where it says a place is (P4.8).
+//
+// These read three structures no other assertion touches: the information
+// dictionary, the named-destination tree, and the outline. All three are
+// reachable only through the object table, which is why they live below it.
+// ---------------------------------------------------------------------------
+
+/// One entry in the document outline.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Bookmark {
+    /// How deep it sits. The outline's own children are 1.
+    pub level: usize,
+    pub title: String,
+    /// The named destination it goes to.
+    pub dest: String,
+}
+
+impl Pdf {
+    /// The document information dictionary, decoded.
+    ///
+    /// Keys come back without the slash, values with their UTF-16BE unwrapped:
+    /// PDF may write a string either as `(text)` or as hex, and every writer
+    /// that has to carry a name outside Latin-1 chooses hex. Reading only the
+    /// literal form would make an assertion that passes for `Genesis` and
+    /// fails for `ஆதியாகமம்`.
+    pub fn info(raw: &[u8]) -> BTreeMap<String, String> {
+        let objects = objects(raw);
+        let Some(dict) = reference(raw, b"/Info").and_then(|n| objects.get(&n)) else {
+            return BTreeMap::new();
+        };
+        dictionary_strings(dict)
+    }
+
+    /// Every named destination, sorted — which is how a name tree stores them.
+    ///
+    /// The names, not the places. Where a destination points is the
+    /// outputter's arithmetic and asserting it would be asserting SILE; that a
+    /// verse *has* a name, and that the name is the reference a link would be
+    /// written against, is this application's part (SCR-008).
+    ///
+    /// **A name tree, not an array.** A document with a handful of
+    /// destinations gets one flat `/Names`; past that the writer balances them
+    /// into `/Kids` with `/Limits`, so a reader that only knows the flat form
+    /// works on a one-chapter file and returns nothing for a Bible.
+    pub fn destinations(raw: &[u8]) -> Vec<String> {
+        let objects = objects(raw);
+        let root = catalog(&objects)
+            .and_then(|c| reference(c, b"/Names"))
+            .and_then(|n| objects.get(&n))
+            .and_then(|n| reference(n, b"/Dests"));
+        let mut out = Vec::new();
+        if let Some(root) = root {
+            walk_names(&objects, root, 0, &mut out);
+        }
+        out
+    }
+
+    /// The outline, flattened depth-first — which is the order a reader sees.
+    pub fn bookmarks(raw: &[u8]) -> Vec<Bookmark> {
+        let objects = objects(raw);
+        let mut out = Vec::new();
+        let first = catalog(&objects)
+            .and_then(|c| reference(c, b"/Outlines"))
+            .and_then(|n| objects.get(&n))
+            .and_then(|o| reference(o, b"/First"));
+        if let Some(first) = first {
+            walk_outline(&objects, first, 1, &mut out);
+        }
+        out
+    }
+}
+
+/// One node of a name tree: its children, or its own names.
+fn walk_names(objects: &BTreeMap<u32, Vec<u8>>, node: u32, depth: usize, out: &mut Vec<String>) {
+    if depth > 32 {
+        return;
+    }
+    let Some(body) = objects.get(&node) else {
+        return;
+    };
+    if let Some(kids) = between(body, b"/Kids", b'[', b']') {
+        for child in references_in(&kids) {
+            walk_names(objects, child, depth + 1, out);
+        }
+        return;
+    }
+    if let Some(names) = between(body, b"/Names", b'[', b']') {
+        // `(JHN)11 0 R(JHN.3)12 0 R` — the array alternates name and target,
+        // and only the names are wanted.
+        out.extend(
+            sections(&String::from_utf8_lossy(&names), "(", ")")
+                .into_iter()
+                .map(str::to_owned),
+        );
+    }
+}
+
+fn catalog(objects: &BTreeMap<u32, Vec<u8>>) -> Option<&Vec<u8>> {
+    objects
+        .values()
+        .find(|b| find(b, b"/Type/Catalog").is_some() || find(b, b"/Type /Catalog").is_some())
+}
+
+/// One item and its siblings, each followed by its own children.
+fn walk_outline(
+    objects: &BTreeMap<u32, Vec<u8>>,
+    node: u32,
+    level: usize,
+    out: &mut Vec<Bookmark>,
+) {
+    // An outline is a doubly-linked tree and a malformed one can be a cycle.
+    if level > 16 || out.len() > 4096 {
+        return;
+    }
+    let Some(body) = objects.get(&node) else {
+        return;
+    };
+    out.push(Bookmark {
+        level,
+        title: dictionary_strings(body)
+            .get("Title")
+            .cloned()
+            .unwrap_or_default(),
+        dest: between(body, b"/D", b'(', b')')
+            .map(|d| String::from_utf8_lossy(&d).into_owned())
+            .unwrap_or_default(),
+    });
+    if let Some(child) = reference(body, b"/First") {
+        walk_outline(objects, child, level + 1, out);
+    }
+    if let Some(next) = reference(body, b"/Next") {
+        walk_outline(objects, next, level, out);
+    }
+}
+
+/// Every `/Key(value)` and `/Key<hex>` in a dictionary, decoded.
+fn dictionary_strings(dict: &[u8]) -> BTreeMap<String, String> {
+    let text = String::from_utf8_lossy(dict).into_owned();
+    let mut out = BTreeMap::new();
+    let mut rest = text.as_str();
+    while let Some(at) = rest.find('/') {
+        let after = &rest[at + 1..];
+        let name: String = after
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric())
+            .collect();
+        rest = &after[name.len()..];
+        if name.is_empty() {
+            continue;
+        }
+        match rest.as_bytes().first() {
+            Some(b'(') => {
+                if let Some(end) = rest.find(')') {
+                    out.insert(name, rest[1..end].to_owned());
+                    rest = &rest[end + 1..];
+                }
+            }
+            Some(b'<') if !rest.starts_with("<<") => {
+                if let Some(end) = rest.find('>') {
+                    out.insert(name, from_pdf_hex(&rest[1..end]));
+                    rest = &rest[end + 1..];
+                }
+            }
+            _ => {}
+        }
+    }
+    out
+}
+
+/// A hex PDF string. UTF-16BE when it opens with a byte-order mark, and
+/// PDFDocEncoding — Latin-1, near enough for an assertion — when it does not.
+fn from_pdf_hex(hex: &str) -> String {
+    let hex = hex.trim();
+    if let Some(rest) = hex
+        .strip_prefix("feff")
+        .or_else(|| hex.strip_prefix("FEFF"))
+    {
+        return utf16_be(rest);
+    }
+    hex.as_bytes()
+        .chunks(2)
+        .filter_map(|c| u8::from_str_radix(&String::from_utf8_lossy(c), 16).ok())
+        .map(char::from)
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

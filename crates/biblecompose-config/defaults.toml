@@ -19,7 +19,13 @@ strict = false
 
 [project]
 # `name` is deliberately absent. There is no default publication name that is
-# right for anybody, so an unset name means "use the project folder's name".
+# right for anybody, so an unset name means "use the project folder's name" —
+# in the interface. The PDF gets no title at all rather than the name of the
+# directory it happened to be built in, which is a path reaching the output.
+#
+# `author` and `subject` are absent for the same reason and go the same way:
+# each becomes a PDF property when it is set, and nothing when it is not.
+# `author` is `Author` in PDF terms and the publisher in everyone else's.
 language = "en"
 
 [books]
@@ -131,3 +137,11 @@ missing_figure = "stop"
 
 [output]
 keep_intermediates = false
+# How much of the text the PDF can be pointed at: "chapter", "verse", "none".
+#
+# Chapters by default, which is a measurement and not a preference. A
+# destination for every verse cost 15% of the build time and 14% of the file
+# size on a 4,950-verse document, and nothing in this release points at one --
+# no cross-reference is a hyperlink yet. The outline, which is what a reader
+# actually navigates by, comes from the chapters and costs almost nothing.
+anchors = "chapter"

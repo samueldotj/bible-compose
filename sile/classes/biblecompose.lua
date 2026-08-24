@@ -69,6 +69,16 @@ local OPTIONS = {
    { key = "fontsize", kind = "string", default = "9.2pt" },
    { key = "leading", kind = "string", default = "11.2pt" },
    { key = "language", kind = "string", default = "en" },
+   -- What the file says about itself (PDF-005). Empty means unset, and an
+   -- unset property is not written: an empty `/Title` in a properties panel
+   -- reads as an answer, and it is not one.
+   { key = "title", kind = "string", default = "" },
+   { key = "author", kind = "string", default = "" },
+   { key = "subject", kind = "string", default = "" },
+   -- How much of the text the file can be pointed at: chapter, verse, none.
+   -- Chapters by default; the application's settings file carries the
+   -- measurement that decided it.
+   { key = "anchors", kind = "string", default = "chapter" },
    { key = "hyphenate", kind = "boolean", default = true },
    -- What appears on the page. Each of these hides something the document
    -- still carries: the model is unchanged and the XML is unchanged, because
@@ -269,6 +279,8 @@ function class:_init (options)
    self:loadPackage("infonode")
    self:loadPackage("chapterverse")
    self:loadPackage("image")
+   -- Destinations, bookmarks and document properties (PDF-005, SCR-008).
+   self:loadPackage("pdf")
 
    self:registerPostinit(function (self_)
       local o = self_._bcopts
@@ -421,6 +433,10 @@ end
 -- upvalue is bound where the closure is written, not where it runs, so a
 -- `local function` further down would be a nil global here.
 local slot_content, set_line, restart_notes, carry_reference
+-- `scratch` and the two anchor helpers, for the same reason: the chapter
+-- and verse commands name a place in Scripture, and both are registered
+-- above the state they read it from.
+local scratch, anchor, destination, o_anchors
 
 function class:endPage ()
    local o = self._bcopts
@@ -452,6 +468,11 @@ function class:registerCommands ()
       -- The number is withheld, never the verse: `save-verse-number` still
       -- runs below, so a running head asking for the reference range on a page
       -- that starts at verse 1 still knows where it starts.
+      -- Anchored whether or not the number is printed, for the same reason
+      -- the chapter is: the anchor is where the verse *is*, and that does not
+      -- depend on whether a reader can see its number.
+      local s = scratch()
+      destination(anchor(s.code, s.chapter, options.start or options.n), "verse")
       local first = self._bcopts.hidefirstverse and tostring(options.start) == "1"
       if self._bcopts.versenumbers and not first then
          SILE.call("bc:verse-number", options, content)
@@ -461,6 +482,20 @@ function class:registerCommands ()
 
    self:registerCommand("bc:chapter", function (options, content)
       SILE.call("save-chapter-number", options, flat(content))
+      -- Outside the `chapternumbers` guard below, and that is the point:
+      -- SCR-001 says hiding a number does not remove its anchor, and an
+      -- edition set without chapter numbers is still navigable by chapter.
+      local s = scratch()
+      s.chapter = tostring(options.n or "")
+      local dest = anchor(s.code, s.chapter)
+      destination(dest, "chapter")
+      if dest ~= "" and s.chapter ~= "" and o_anchors() ~= "none" then
+         SILE.call("pdf:bookmark", {
+            dest = dest,
+            title = (scratch().book_title or s.code) .. " " .. s.chapter,
+            level = 2,
+         })
+      end
       -- The restart happens whether or not the number is printed. Hiding
       -- chapter numbers is a decision about the page; where a note sequence
       -- begins again is a decision about the apparatus, and a reader-format
@@ -511,7 +546,7 @@ end
 -- One initialiser, because two is how the first version of this broke: the
 -- style lookup created the table without `books`, so the guard that gives the
 -- second and later books a page break compared a number with nil.
-local function scratch ()
+function scratch ()
    local s = SILE.scratch.biblecompose
    if not s then
       s = {}
@@ -524,7 +559,64 @@ local function scratch ()
    s.issued = s.issued or { note = 0, ref = 0 }
    s.pending_refs = s.pending_refs or {}
    s.altbooks = s.altbooks or {}
+   -- Where in Scripture the typesetter currently is, for naming destinations.
+   -- The book code is carried rather than looked up because a verse knows its
+   -- own number and nothing else about where it sits.
+   s.code = s.code or ""
+   s.chapter = s.chapter or ""
    return s
+end
+
+--- The name of one place in the text (SCR-008).
+---
+--- `JHN.3.16` — the book code, the chapter, the verse; the form Paratext and
+--- every reference parser already speak, so a link written against it later
+--- needs nothing from this file. A chapter is `JHN.3` and a book is `JHN`,
+--- which makes a prefix of a verse name the name of the thing containing it.
+---
+--- The book code and not the printed name: a name is a setting, translated,
+--- and may hold a space; a code is three characters and is the same in every
+--- edition of the same Scripture.
+function anchor (...)
+   local parts = { ... }
+   local out = {}
+   for _, part in ipairs(parts) do
+      local text = tostring(part or "")
+      if text ~= "" then
+         out[#out + 1] = text
+      end
+   end
+   return table.concat(out, ".")
+end
+
+--- Put a destination here, if there is anywhere to put it and anyone asked.
+---
+--- Guarded on the book code because a document may carry a book that never
+--- declared one, and a destination named `.3.16` is worse than none: it
+--- collides with every other book missing a code in the same document, and a
+--- PDF with two destinations of one name resolves to whichever came last.
+---
+--- `depth` is what the caller is: `"chapter"` for a book or a chapter,
+--- `"verse"` for a verse. A verse anchor is skipped unless it was asked for,
+--- because it is the one that costs — 15% of the build and 14% of the file on
+--- a 4,950-verse document, measured.
+--- What the project asked for. A function because the class options are not
+--- reachable until a document is being processed.
+function o_anchors ()
+   return SILE.documentState.documentClass._bcopts.anchors
+end
+
+function destination (name, depth)
+   local want = SILE.documentState.documentClass._bcopts.anchors
+   if want == "none" then
+      return
+   end
+   if depth == "verse" and want ~= "verse" then
+      return
+   end
+   if name and name ~= "" then
+      SILE.call("pdf:destination", { name = name })
+   end
 end
 
 --- The resolved styles, keyed by selector.
@@ -1186,6 +1278,21 @@ function class:registerXmlCommands ()
       end
       SILE.settings:set("document.baselineskip", SILE.types.node.vglue(o.leading))
 
+      -- What the file says about itself (PDF-005).
+      --
+      -- Only what was given. An empty value is written as no property rather
+      -- than as an empty one, because a properties panel showing `Title:` with
+      -- nothing after it looks like an answer and is not.
+      --
+      -- `Lang` is not one of these. It belongs in the document catalogue and
+      -- these go in the info dictionary, so it is set below where the
+      -- outputter can put it in the right place.
+      for key, value in pl.tablex.sort({ Title = o.title, Author = o.author, Subject = o.subject }) do
+         if value ~= "" then
+            SILE.call("pdf:metadata", { key = key, value = value })
+         end
+      end
+
       -- Hyphenation is per-language in SILE, and the way to have none is a
       -- language with no patterns. "und" is that language, and saying so
       -- here keeps the whole of it in one place rather than reaching into
@@ -1263,11 +1370,20 @@ function class:registerXmlCommands ()
       -- not be headed with the last verse of the book before it.
       s.carried = nil
 
+      scratch().book_title = options.name or options.code or ""
       SILE.call("bc:book", {}, { options.name or options.code or "" })
       -- Keyed by the name the head shows, so a page can look up the alt form
       -- of *its own* book rather than of whichever was set last.
       local named = options.name or options.code or ""
       scratch().altbooks[named] = options.altname or named
+      -- After `bc:book`, so the destination lands with the book's first
+      -- content rather than before the page break that precedes it.
+      s.code = options.code or ""
+      s.chapter = ""
+      destination(anchor(s.code), "chapter")
+      if s.code ~= "" and o_anchors() ~= "none" then
+         SILE.call("pdf:bookmark", { dest = anchor(s.code), title = named, level = 1 })
+      end
       if options.name then
          SILE.call("center", {}, function ()
             SILE.call("font", { size = "16pt", weight = 600 }, function ()
@@ -1451,7 +1567,11 @@ function class:registerXmlCommands ()
       -- `n` arrives as a string and stays one all the way into chapterverse.
       -- Spike F-9: anything SILE later stringifies must already be a string,
       -- or the running head renders "table: 0x55f…".
-      SILE.call("bc:chapter", {}, { tostring(options.n or "") })
+      -- `n` is passed as an option as well as as content: the content is what
+      -- gets set, and `bc:chapter` needs the number itself to name the
+      -- chapter's anchor. Reading it back out of the content would work and
+      -- would be the only place in this file that parsed its own output.
+      SILE.call("bc:chapter", { n = tostring(options.n or "") }, { tostring(options.n or "") })
    end)
 
    self:registerCommand("bc:chapter-number", function (_, content)

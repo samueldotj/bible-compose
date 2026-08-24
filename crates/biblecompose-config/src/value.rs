@@ -493,6 +493,28 @@ spelled! {
 }
 
 spelled! {
+    /// How much of the text a PDF can be pointed at (SCR-008).
+    ///
+    /// **The default is chapters, and that is a measurement rather than a
+    /// preference.** One destination per verse cost 15% of the build time and
+    /// 14% of the file size on a 4,950-verse document — and nothing in this
+    /// release points at one, because no cross-reference is a link yet. What a
+    /// reader uses today is the outline, which chapters give for almost
+    /// nothing. Verse anchors are there for whoever wants a document that can
+    /// be linked into from outside, and for the release that turns references
+    /// into links; until then they are a cost with no reader on the other end.
+    Anchors {
+        /// A destination for each book and chapter, and an outline of both.
+        Chapter => "chapter",
+        /// And one for every verse: `JHN.3.16`.
+        Verse => "verse",
+        /// None at all, for a publication that is only ever going to be
+        /// printed.
+        None => "none",
+    }
+}
+
+spelled! {
     /// What a build does about a figure whose file is not there.
     ///
     /// Only this one question is a policy. A figure pointing *outside* the

@@ -25,7 +25,7 @@ use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, Severity, SourceLo
 use crate::document::{ConfigDocument, Located, Node};
 use crate::provenance::{Provenance, Sourced};
 use crate::value::{
-    self, CallerStyle, HeadSlot, Length, MissingAsset, PageSize, ReferencePlacement,
+    self, Anchors, CallerStyle, HeadSlot, Length, MissingAsset, PageSize, ReferencePlacement,
     RestartNumbering,
 };
 
@@ -81,9 +81,20 @@ pub struct Settings {
 pub struct Project {
     /// Absent means "use the folder's name". There is no default publication
     /// name that is right for anybody.
+    ///
+    /// The folder's name is the answer the *interface* gives. It is not the
+    /// answer the PDF gives: a path that can reach the output is a path that
+    /// can reach a golden file, so an unset name leaves the document with no
+    /// title rather than with the name of whatever directory it was built in.
     pub name: Option<Sourced<String>>,
-    /// A BCP-47 tag, for hyphenation and language-aware breaking.
+    /// A BCP-47 tag, for hyphenation and language-aware breaking. Also the
+    /// document's `/Lang`, which is what a screen reader reads it by.
     pub language: Sourced<String>,
+    /// Who published it. `Author` in PDF terms, which for Scripture is
+    /// nobody's idea of the author and everybody's idea of the field.
+    pub author: Option<Sourced<String>>,
+    /// What it is — "New Testament", "Study Bible", a translation's name.
+    pub subject: Option<Sourced<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -194,6 +205,8 @@ pub struct Assets {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Output {
     pub keep_intermediates: Sourced<bool>,
+    /// How much of the text the PDF can be pointed at (SCR-008).
+    pub anchors: Sourced<Anchors>,
 }
 
 /// One of the seven things a head or a footer can hold.
@@ -211,6 +224,10 @@ fn restart(n: &Node) -> Result<Located<RestartNumbering>, Diagnostic> {
 
 fn placement(n: &Node) -> Result<Located<ReferencePlacement>, Diagnostic> {
     value::choice(n, ReferencePlacement::NAMES)
+}
+
+fn anchors(n: &Node) -> Result<Located<Anchors>, Diagnostic> {
+    value::choice(n, Anchors::NAMES)
 }
 
 fn missing_asset(n: &Node) -> Result<Located<MissingAsset>, Diagnostic> {
@@ -450,6 +467,8 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
         project: Project {
             name: r.optional("project.name", |n| n.string()),
             language: r.value("project.language", |n| n.string()),
+            author: r.optional("project.author", |n| n.string()),
+            subject: r.optional("project.subject", |n| n.string()),
         },
         books: Books {
             order: r.list("books.order"),
@@ -509,6 +528,7 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
         },
         output: Output {
             keep_intermediates: r.value("output.keep_intermediates", |n| n.boolean()),
+            anchors: r.value("output.anchors", anchors),
         },
     }
 }

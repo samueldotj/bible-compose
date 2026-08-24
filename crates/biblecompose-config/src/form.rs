@@ -13,7 +13,9 @@
 use crate::edit::SettingValue;
 use crate::provenance::Origin;
 use crate::settings::Settings;
-use crate::value::{CallerStyle, HeadSlot, MissingAsset, ReferencePlacement, RestartNumbering};
+use crate::value::{
+    Anchors, CallerStyle, HeadSlot, MissingAsset, ReferencePlacement, RestartNumbering,
+};
 
 /// What kind of control a key needs, and how its text is to be read back.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -147,6 +149,24 @@ impl Settings {
             "project.language",
             Language,
             self.project.language.to_string(),
+        );
+        push(
+            "project.author",
+            Text,
+            self.project
+                .author
+                .as_ref()
+                .map(|n| n.to_string())
+                .unwrap_or_default(),
+        );
+        push(
+            "project.subject",
+            Text,
+            self.project
+                .subject
+                .as_ref()
+                .map(|n| n.to_string())
+                .unwrap_or_default(),
         );
 
         push("books.order", List, join(&self.books.order));
@@ -298,6 +318,11 @@ impl Settings {
             self.assets.missing_figure.to_string(),
         );
 
+        push(
+            "output.anchors",
+            Choice(Anchors::SPELLINGS),
+            self.output.anchors.to_string(),
+        );
         push(
             "output.keep_intermediates",
             Boolean,

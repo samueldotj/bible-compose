@@ -205,6 +205,16 @@ pub struct Assets {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Output {
     pub keep_intermediates: Sourced<bool>,
+    /// What the PDF is called (BLD-003).
+    ///
+    /// A **file name and not a path**, which is the whole of the difference
+    /// between this and the `output.file` that was removed. The PDF stays in
+    /// `output/` inside the project, so that it travels with the book it was
+    /// made from; what a publisher gets to decide is what it is called.
+    ///
+    /// Unset means derived from the publication's name, which is what most
+    /// projects want and none of them should have to write down.
+    pub name: Option<Sourced<String>>,
     /// How much of the text the PDF can be pointed at (SCR-008).
     pub anchors: Sourced<Anchors>,
 }
@@ -436,9 +446,9 @@ const REMOVED: [(&str, &str); 6] = [
     (
         "output.file",
         concat!(
-            "`output.file` was removed: the PDF is always written to ",
-            "`output/bible.pdf` inside the project folder, so that it stays ",
-            "with the book it was made from",
+            "`output.file` was removed: the PDF is always written inside the ",
+            "project's `output/` folder, so that it stays with the book it was ",
+            "made from. `output.name` sets what it is called",
         ),
     ),
 ];
@@ -528,6 +538,7 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
         },
         output: Output {
             keep_intermediates: r.value("output.keep_intermediates", |n| n.boolean()),
+            name: r.optional("output.name", |n| n.string()),
             anchors: r.value("output.anchors", anchors),
         },
     }

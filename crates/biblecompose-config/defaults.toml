@@ -137,6 +137,12 @@ missing_figure = "stop"
 
 [output]
 keep_intermediates = false
+# `name` is deliberately absent. What the PDF is called is derived from the
+# publication's name -- `output/My Bible.pdf` -- and a default written here
+# would be a name that is right for nobody. Set it to say otherwise (BLD-003).
+#
+# A name and not a path: the PDF is always written inside the project's
+# `output/` folder, so that it stays with the book it was made from.
 # How much of the text the PDF can be pointed at: "chapter", "verse", "none".
 #
 # Chapters by default, which is a measurement and not a preference. A

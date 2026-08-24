@@ -81,6 +81,7 @@ missing_figure = \"omit\"
 [output]
 keep_intermediates = true
 anchors = \"verse\"
+name = \"Proof copy\"
 ";
 
 fn resolve(body: &str) -> Settings {
@@ -126,12 +127,13 @@ fn an_unset_optional_key_has_no_origin_at_all() {
         "project.author",
         "project.subject",
         "books.include",
+        "output.name",
     ] {
         assert_eq!(s.provenance.get(key), None, "{key} was never chosen");
     }
-    // The four above, and `schema_version`, which is a declaration about the
+    // The five above, and `schema_version`, which is a declaration about the
     // settings rather than one of them.
-    assert_eq!(s.provenance.len(), known_keys().len() - 5);
+    assert_eq!(s.provenance.len(), known_keys().len() - 6);
 }
 
 #[test]

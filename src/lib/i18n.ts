@@ -211,6 +211,7 @@ export const EN_LABELS: Readonly<Record<string, string>> = {
   "headers.footer_center": "Centre",
   "headers.footer_right": "Right",
   "assets.missing_figure": "A figure with no file",
+  "output.name": "PDF file name",
   "output.keep_intermediates": "Keep intermediates",
   strict: "Strict settings",
 };
@@ -218,6 +219,7 @@ export const EN_LABELS: Readonly<Record<string, string>> = {
 /** Placeholder text where an empty field means something specific. */
 export const EN_PLACEHOLDERS: Readonly<Record<string, string>> = {
   "project.name": "the folder's name",
+  "output.name": "named after the publication",
   // Both of these end up in the PDF's properties and nowhere else, so the
   // placeholder says what leaving them empty costs, which is nothing.
   "project.author": "left out of the PDF",

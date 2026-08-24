@@ -238,9 +238,11 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
                 eprintln!("{d}");
             }
 
-            // `--output` wins; otherwise the one place a project's PDF goes.
-            let output =
-                output.unwrap_or_else(|| project.join(biblecompose_app::project::OUTPUT_FILE));
+            // `--output` wins; otherwise wherever the project says, which is
+            // derived from its name when it has not said (BLD-003). Asked of
+            // `Opened` rather than rebuilt here, so the CLI and the window
+            // cannot disagree about where a publisher's PDF goes.
+            let output = output.unwrap_or_else(|| opened.output());
             // The flag can turn keeping on but not off: a project that has
             // asked for intermediates is debugging something.
             let keep = keep_intermediates || *settings.output.keep_intermediates;

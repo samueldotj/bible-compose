@@ -73,7 +73,49 @@ pub const STYLES_FILE: &str = "styles.toml";
 /// Scripture is not sitting among the Scripture. `--output` on the CLI still
 /// overrides it: that is an argument to one command, not a property of the
 /// project, and a build script redirecting its own output is reasonable.
-pub const OUTPUT_FILE: &str = "output/bible.pdf";
+pub const OUTPUT_DIR: &str = "output";
+
+/// What the PDF is called when the project has not been named.
+pub const UNNAMED_OUTPUT: &str = "bible.pdf";
+
+/// A publication's name, as a filename (BLD-003).
+///
+/// A name is a person's sentence and a filename is not: it may hold a colon, a
+/// slash, a quotation mark, a trailing full stop — all of which are ordinary in
+/// `The Holy Bible: New Testament` and none of which every filesystem accepts.
+///
+/// **The rule is what a filesystem rejects, not what an alphabet contains**,
+/// and that distinction is the whole of it. Keeping "letters, digits and
+/// spaces" reads as safe and is not: `char::is_alphanumeric` is false for a
+/// combining mark, so `திருவிவிலியம்` loses its final virama and becomes a
+/// different word. Scripture is not published only in Latin, so everything
+/// survives except the characters that are actually reserved.
+///
+/// Returns `None` for a name with nothing usable left in it, because a file
+/// called `.pdf` is worse than one called `bible.pdf`.
+pub fn output_name(publication: &str) -> Option<String> {
+    // Reserved on Windows, on POSIX, or by convention — plus the control
+    // characters, which no filesystem wants and some accept.
+    const RESERVED: [char; 9] = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
+
+    let mut out = String::with_capacity(publication.len());
+    let mut spaced = false;
+    for c in publication.chars() {
+        let reject = RESERVED.contains(&c) || c.is_control();
+        if !reject && !(c == ' ' && spaced) {
+            out.push(c);
+            spaced = c == ' ';
+        } else if reject && !spaced && !out.is_empty() {
+            // One space where a run of reserved characters was, so
+            // `Genesis/Exodus` does not become `GenesisExodus`.
+            out.push(' ');
+            spaced = true;
+        }
+    }
+    // A trailing space or dot makes a name Windows silently renames.
+    let trimmed = out.trim().trim_end_matches('.').trim();
+    (!trimmed.is_empty()).then(|| format!("{trimmed}.pdf"))
+}
 
 /// Start a project: a folder with a settings file in it and nothing else.
 ///
@@ -204,9 +246,47 @@ impl Opened {
         self.diagnostics.has_blocking()
     }
 
-    /// Where the PDF goes unless the caller says otherwise (CFG-002).
+    /// Where the PDF goes unless the caller says otherwise (CFG-002, BLD-003).
+    ///
+    /// The settings file wins; otherwise the publication's name; otherwise the
+    /// folder's. The folder's name is allowed here and not in the PDF's
+    /// properties, and the difference is not a slip: a *filename* is
+    /// somewhere the publisher can already see the folder's name, and a
+    /// document *property* travels with the file to people who cannot
+    /// (ADR-005).
     pub fn output(&self) -> Utf8PathBuf {
-        self.root.join(OUTPUT_FILE)
+        // A name and not a path. A separator or `..` is rejected rather than
+        // sanitised, because a publisher who wrote one meant something this
+        // application does not do, and quietly doing something else is worse
+        // than the file keeping the name it already had.
+        let chosen = self
+            .settings
+            .output
+            .name
+            .as_deref()
+            .map(|n| n.to_string())
+            .filter(|n| !n.contains('/') && !n.contains('\\') && n != ".." && !n.is_empty())
+            .map(|n| {
+                if n.ends_with(".pdf") {
+                    n
+                } else {
+                    format!("{n}.pdf")
+                }
+            });
+        if let Some(name) = chosen {
+            return self.root.join(OUTPUT_DIR).join(name);
+        }
+        let from_settings = self
+            .settings
+            .project
+            .name
+            .as_deref()
+            .and_then(|n| output_name(n));
+        let from_folder = self.root.file_name().and_then(output_name);
+        let name = from_settings
+            .or(from_folder)
+            .unwrap_or_else(|| UNNAMED_OUTPUT.to_owned());
+        self.root.join(OUTPUT_DIR).join(name)
     }
 }
 
@@ -326,5 +406,64 @@ pub fn load(root: &Utf8Path, plan: &BookPlan) -> Loaded {
         document,
         diagnostics,
         left_out,
+    }
+}
+
+#[cfg(test)]
+mod output_name_tests {
+    use super::output_name;
+
+    /// A publication's name is a person's sentence; a filename is not.
+    #[test]
+    fn a_name_becomes_something_a_filesystem_will_take() {
+        assert_eq!(output_name("My Bible").as_deref(), Some("My Bible.pdf"));
+        assert_eq!(
+            output_name("The Holy Bible: New Testament").as_deref(),
+            Some("The Holy Bible New Testament.pdf"),
+            "a colon is reserved on Windows"
+        );
+        assert_eq!(
+            output_name("Genesis/Exodus").as_deref(),
+            Some("Genesis Exodus.pdf"),
+            "a slash would be a directory"
+        );
+        assert_eq!(
+            output_name("A  Bible").as_deref(),
+            Some("A Bible.pdf"),
+            "runs collapse rather than leaving a double space"
+        );
+    }
+
+    /// **Scripture is not published only in Latin**, so the rule is what a
+    /// filesystem rejects rather than what an alphabet contains.
+    #[test]
+    fn a_name_in_another_script_survives() {
+        assert_eq!(
+            output_name("திருவிவிலியம்").as_deref(),
+            Some("திருவிவிலியம்.pdf")
+        );
+        assert_eq!(
+            output_name("الكتاب المقدس").as_deref(),
+            Some("الكتاب المقدس.pdf")
+        );
+    }
+
+    /// A trailing space or dot is a name Windows silently renames, which is
+    /// worse than being told.
+    #[test]
+    fn nothing_ends_in_a_space_or_a_dot() {
+        assert_eq!(output_name("My Bible.").as_deref(), Some("My Bible.pdf"));
+        assert_eq!(output_name("My Bible   ").as_deref(), Some("My Bible.pdf"));
+        assert_eq!(output_name("  Bible  ").as_deref(), Some("Bible.pdf"));
+    }
+
+    /// And a name with nothing usable in it is no name at all — a file called
+    /// `.pdf` is worse than one called `bible.pdf`.
+    #[test]
+    fn a_name_of_nothing_but_punctuation_is_refused() {
+        assert_eq!(output_name("///").as_deref(), None);
+        assert_eq!(output_name("").as_deref(), None);
+        assert_eq!(output_name("   ").as_deref(), None);
+        assert_eq!(output_name("...").as_deref(), None);
     }
 }

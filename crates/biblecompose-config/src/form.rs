@@ -319,6 +319,15 @@ impl Settings {
         );
 
         push(
+            "output.name",
+            Text,
+            self.output
+                .name
+                .as_ref()
+                .map(|n| n.to_string())
+                .unwrap_or_default(),
+        );
+        push(
             "output.anchors",
             Choice(Anchors::SPELLINGS),
             self.output.anchors.to_string(),

@@ -234,6 +234,12 @@ fn a_removed_setting_says_what_replaced_it() {
 }
 
 /// The other removed key, for the same reason and with the same manners.
+///
+/// It stays removed. `output.name` was added afterwards and does not reopen
+/// the decision: a *path* would let a PDF leave the project it was made from,
+/// and a *name* only decides what it is called inside it. The help says so,
+/// because a publisher who reaches for `output.file` is asking a question the
+/// new key answers.
 #[test]
 fn the_output_path_is_no_longer_a_setting() {
     let (_, d) = resolve("schema_version = 1\n[output]\nfile = \"elsewhere/book.pdf\"\n");
@@ -241,6 +247,10 @@ fn the_output_path_is_no_longer_a_setting() {
     let stray = unknown(&d);
     assert_eq!(stray.len(), 1, "{:?}", messages(&d));
     let help = stray[0].help.as_deref().expect("a removed key needs help");
-    assert!(help.contains("output/bible.pdf"), "{help}");
+    assert!(help.contains("output/"), "{help}");
+    assert!(
+        help.contains("output.name"),
+        "the help should point at the key that answers the question: {help}"
+    );
     assert!(!help.contains("did you mean"), "{help}");
 }

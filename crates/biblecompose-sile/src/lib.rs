@@ -9,6 +9,7 @@
 pub mod bundle;
 pub mod cache;
 pub mod emit;
+pub mod failure;
 pub mod process;
 
 use std::sync::atomic::{AtomicBool, Ordering};

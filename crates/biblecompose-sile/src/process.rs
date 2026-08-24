@@ -9,6 +9,7 @@
 //!
 //! [ADR-002]: ../../../docs/adr/002-sile-interface.md
 
+use std::collections::VecDeque;
 use std::io::{BufReader, Read};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
@@ -29,6 +30,13 @@ const CANCEL_POLL: Duration = Duration::from_millis(50);
 
 /// The environment variable an advanced user or a test points at an alternate
 /// SILE (SILE-004).
+/// How many lines of backend output are kept for classifying a failure.
+///
+/// Generous: SILE's stack traces are long and the useful line can be well
+/// above the last one. Bounded all the same, because a run that fails after a
+/// hundred thousand lines should not also exhaust memory.
+const KEEP_LINES: usize = 200;
+
 pub const SILE_ENV: &str = "BIBLECOMPOSE_SILE";
 
 /// Extra class and package directories, path-separated.
@@ -293,6 +301,19 @@ impl Backend for SileBackend {
         // arrives immediately still has something to kill.
         let guard = platform::Guard::adopt(&child);
 
+        // What the backend said, kept so a failure can be read rather than
+        // guessed at (P5.8). Bounded: a run that fails after writing a hundred
+        // thousand lines should not also exhaust memory, and only the tail is
+        // ever used — SILE writes the error and then unwinds, so the end is
+        // where the failure is.
+        let mut said: VecDeque<String> = VecDeque::new();
+        let keep = |said: &mut VecDeque<String>, line: &str| {
+            if said.len() >= KEEP_LINES {
+                said.pop_front();
+            }
+            said.push_back(line.to_owned());
+        };
+
         let (tx, rx) = mpsc::channel::<BackendEvent>();
         let mut pumps = Vec::new();
         if let Some(out) = child.stdout.take() {
@@ -303,11 +324,23 @@ impl Backend for SileBackend {
         }
         drop(tx);
 
-        let status = wait_with_cancel(&mut child, cancel, &rx, report, &guard)?;
+        let status = {
+            let said = &mut said;
+            let report = &mut |event: BackendEvent| {
+                if let BackendEvent::Log(line) = &event {
+                    keep(said, &line.text);
+                }
+                report(event);
+            };
+            wait_with_cancel(&mut child, cancel, &rx, report, &guard)?
+        };
 
         // Drain anything the pumps produced after the last poll. SILE-006:
         // no line is lost because the process ended.
         for event in rx.iter() {
+            if let BackendEvent::Log(line) = &event {
+                keep(&mut said, &line.text);
+            }
             report(event);
         }
         for p in pumps {
@@ -320,6 +353,15 @@ impl Backend for SileBackend {
 
         let exit_code = status.code();
         if !status.success() {
+            let log: Vec<&str> = said.iter().map(String::as_str).collect();
+            let log = log.join("\n");
+            // A failure the table knows, said in terms a publisher can act on
+            // (SILE-007). Anything it does not know still surfaces, with the
+            // same raw tail attached — the table lists what has been seen and
+            // does not decide what is worth reporting.
+            if let Some(mapped) = crate::failure::classify(&log) {
+                return Err(mapped);
+            }
             return Err(Diagnostic::error(
                 code::NONZERO_EXIT,
                 match exit_code {
@@ -327,7 +369,8 @@ impl Backend for SileBackend {
                     None => "the typesetting backend was terminated by a signal".to_owned(),
                 },
             )
-            .help("the backend log holds the technical detail"));
+            .help("the backend log holds the technical detail")
+            .detail(crate::failure::tail(&log)));
         }
 
         if !pdf.exists() {

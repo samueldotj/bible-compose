@@ -485,6 +485,26 @@ pub mod code {
             CANCELLED = "005",
             CLASS_VERSION_MISMATCH = "006",
             BUNDLE_UNPACK_FAILED = "007",
+
+            // ---- the mapping table (SILE-007's requirement, P5.8) ----
+            //
+            // Each is a failure class that has been *seen*, not one that was
+            // imagined: a table of speculative failures is a table nobody
+            // maintains. `biblecompose-sile::failure` holds the patterns and
+            // the wording.
+            //
+            // 008: the document this application generated is not valid XML,
+            //      which is always a defect here and never in the Scripture.
+            // 009: a font the styles named, which the backend could not load —
+            //      past the point where the pre-flight could have caught it.
+            // 010: the class failed while composing. A missing frame, a queue
+            //      that would not empty, a Lua error. A defect in this
+            //      application.
+            // 011: the backend ran out of something it needed to finish.
+            MALFORMED_DOCUMENT = "008",
+            FONT_UNAVAILABLE = "009",
+            CLASS_DEFECT = "010",
+            BACKEND_EXHAUSTED = "011",
         }
         Output "OUT" {
             DESTINATION_LOCKED = "001",

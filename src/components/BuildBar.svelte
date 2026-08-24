@@ -2,9 +2,13 @@
   /**
    * GUI-006 and GUI-012: what the build is doing, and the two buttons.
    *
-   * Build and Cancel are one control in two states rather than two controls,
-   * because only one of them is ever meaningful and a disabled Cancel beside
-   * an enabled Build is a thing to read before acting.
+   * Generate PDF and Cancel are one control in two states rather than two
+   * controls, because only one of them is ever meaningful and a disabled
+   * Cancel beside an enabled Generate PDF is a thing to read before acting.
+   *
+   * The strip reads left to right as report then action: what the last build
+   * did, where it put it, what is wrong with the project — and, at the far
+   * end, the two questions about the next build and the button that starts it.
    */
   import QuickSettings from "./QuickSettings.svelte";
   import { session } from "../lib/session.svelte";
@@ -52,19 +56,6 @@ Backend log: ${session.logFile}` : where;
 </script>
 
 <div class="bar">
-  {#if session.building}
-    <button type="button" class="primary" onclick={() => void session.cancel()}>Cancel</button>
-  {:else}
-    <button
-      type="button"
-      class="primary"
-      disabled={!session.canBuild}
-      onclick={() => void session.build()}
-    >
-      Build
-    </button>
-  {/if}
-
   <span class="state {tone}">{LABELS[session.buildState]}</span>
 
   {#if session.building}
@@ -123,7 +114,6 @@ Backend log: ${session.logFile}` : where;
     <span class="tally">{session.problemCount}</span>
   </button>
 
-
   {#if session.output}
     <span class="output" title={session.output}>wrote {session.output}</span>
   {:else if session.project}
@@ -143,21 +133,41 @@ Backend log: ${session.logFile}` : where;
     Open folder
   </button>
 
-  <!-- Questions about the build that is about to run: whether it keeps what
-       it wrote on the way, and whether a setting this release does not
-       recognise stops it. Beside the button rather than behind a tab, because
-       they are decided while looking at this one. -->
-  <QuickSettings keys={["output.keep_intermediates", "strict"]} />
-
   {#if session.backendVersion}
     <span class="backend" title={session.backendVersion}>{session.backendVersion}</span>
   {/if}
+
+  <!--
+    The right-hand end, and everything that belongs to the act of running a
+    build comes with it.
+
+    Questions about the build that is *about to run* — whether it keeps what it
+    wrote on the way, and whether a setting this release does not recognise
+    stops it — are decided while looking at the button, so they travel with it
+    rather than staying where the button used to be. Everything to the left is
+    a report on the build that already ran.
+  -->
+  <div class="go">
+    <QuickSettings keys={["output.keep_intermediates", "strict"]} />
+    {#if session.building}
+      <button type="button" class="primary" onclick={() => void session.cancel()}>Cancel</button>
+    {:else}
+      <button
+        type="button"
+        class="primary"
+        disabled={!session.canBuild}
+        onclick={() => void session.build()}
+      >
+        Generate PDF
+      </button>
+    {/if}
+  </div>
 </div>
 
 <style>
   .bar {
-    /* The bottom edge of the window. It never shrinks — the Build button is
-       the control you reach for after changing something, and it should not be
+    /* The bottom edge of the window. It never shrinks — Generate PDF is the
+       control you reach for after changing something, and it should not be
        somewhere you have to go looking.
        
        A tenth of the window exactly, rather than as much as its contents want.
@@ -179,7 +189,21 @@ Backend log: ${session.logFile}` : where;
     padding-block: 0.5rem;
     border-block-start: 1px solid color-mix(in oklab, currentColor 15%, transparent);
   }
+  /* The build controls, held at the right-hand end. `auto` rather than
+     `justify-content: space-between` on the bar, because the bar wraps: with
+     space-between, a bar that fits on one line would also spread the six
+     things on its left across the whole width. */
+  .go {
+    display: flex;
+    gap: 0.9rem;
+    align-items: center;
+    flex: none;
+    margin-inline-start: auto;
+  }
   .primary {
+    /* Wide enough for the longer of its two labels, so the strip does not
+       shift sideways the moment a build starts. */
+    min-inline-size: 8.5rem;
     padding-block: 0.3rem;
     padding-inline: 1rem;
     border: 1px solid color-mix(in oklab, currentColor 35%, transparent);

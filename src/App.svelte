@@ -122,7 +122,7 @@
       {/if}
 
       <!-- The tabs stay put and the form moves under them. Outside a scroller
-           the Page section alone pushes the Build button off the bottom of the
+           the Page section alone pushes the build bar off the bottom of the
            window, and the control you press after changing something should not
            be the one you have to go looking for. -->
       <div class="body" class:sectioned={tab.styles}>

@@ -388,6 +388,25 @@ export class Session {
     return this.project.root;
   }
 
+  /**
+   * Open the PDF this build wrote, in the platform's own viewer (GUI-009).
+   *
+   * `this.output` and not the project's configured path: a draft goes
+   * somewhere else, and the button should open the file that was just made
+   * rather than the one that would have been.
+   */
+  async showPdf(): Promise<void> {
+    const pdf = this.output;
+    if (!pdf) return;
+    try {
+      await backend().openPdf(pdf);
+    } catch (e: unknown) {
+      this.fault = asDiagnostics(e)
+        .map((d) => d.message)
+        .join(" ");
+    }
+  }
+
   async showFolder(): Promise<void> {
     const path = this.folderToOpen;
     if (!path) return;

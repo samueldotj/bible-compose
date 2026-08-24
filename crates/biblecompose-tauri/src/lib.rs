@@ -560,6 +560,57 @@ fn open_folder(path: String) -> Result<(), Vec<WireDiagnostic>> {
         })
 }
 
+/// Open the finished PDF in whatever the platform reads PDFs with (GUI-009).
+///
+/// **There is no integrated preview and this is what stands in for one.**
+/// GUI-008 is a SHOULD and [ADR-003](../../../docs/adr/003-gui.md) declines it:
+/// a viewer inside the window would be a second PDF renderer to keep, and the
+/// one the publisher already trusts is the one their printer will use.
+///
+/// Same spawn as `open_folder`, and the same argument for it. The path is one
+/// this application produced and never text out of a document.
+///
+/// On Windows the file is handed to `explorer`, which opens it with its
+/// registered application. `cmd /c start` would do the same and would also put
+/// the path through a shell — for a filename this application chose that is
+/// safe today and is one refactor away from not being.
+#[tauri::command]
+fn open_pdf(path: String) -> Result<(), Vec<WireDiagnostic>> {
+    let path = Utf8PathBuf::from(path);
+    if !path.is_file() {
+        return Err(vec![WireDiagnostic::from(
+            &AppDiagnostic::error(
+                biblecompose_diagnostics::code::COULD_NOT_CREATE,
+                format!("{path} is not a file that exists"),
+            )
+            .help("build first, or the file was moved or renamed since"),
+        )]);
+    }
+
+    let program = if cfg!(windows) {
+        "explorer"
+    } else if cfg!(target_os = "macos") {
+        "open"
+    } else {
+        "xdg-open"
+    };
+
+    std::process::Command::new(program)
+        .arg(path.as_std_path())
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| {
+            vec![WireDiagnostic::from(
+                &AppDiagnostic::error(
+                    biblecompose_diagnostics::code::COULD_NOT_CREATE,
+                    format!("could not open {path}"),
+                )
+                .help("no application on this machine is registered for PDF files")
+                .detail(e.to_string()),
+            )]
+        })
+}
+
 /// Put the project down and go back to the start screen.
 ///
 /// The window forgets what it was watching, so the change detector stops
@@ -1361,6 +1412,7 @@ pub fn run() {
             create_project,
             close_project,
             open_folder,
+            open_pdf,
             start_build,
             cancel_build,
             is_building,

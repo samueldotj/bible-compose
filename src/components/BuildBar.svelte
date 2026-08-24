@@ -115,7 +115,16 @@ Backend log: ${session.logFile}` : where;
   </button>
 
   {#if session.output}
-    <span class="output" title={session.output}>wrote {session.output}</span>
+    <!-- The path is the report; the button beside it is the action. Only once
+         there is a file: a viewer opened on nothing is worse than no button. -->
+    <button
+      type="button"
+      class="output-link"
+      title={session.output}
+      onclick={() => void session.showPdf()}
+    >
+      wrote {session.output}
+    </button>
   {:else if session.project}
     <span class="output muted" title={session.project.output}>→ {session.project.output}</span>
   {/if}
@@ -213,6 +222,25 @@ Backend log: ${session.logFile}` : where;
      `justify-content: space-between` on the bar, because the bar wraps: with
      space-between, a bar that fits on one line would also spread the six
      things on its left across the whole width. */
+  /* The written path, as a button. Deliberately not styled as one: it is the
+     report first and the action second, and a row of buttons all shouting is
+     a row nobody reads. */
+  .output-link {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-align: start;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 0.2em;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .draft {
     display: flex;
     align-items: center;

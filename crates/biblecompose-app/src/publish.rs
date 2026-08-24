@@ -266,6 +266,16 @@ mod tests {
 /// build that would have succeeded. Publishing still fails loudly if the lock
 /// is real.
 pub fn preflight_destination(output: &Utf8Path, diagnostics: &mut Diagnostics) {
+    // The folder first, because it is the failure a *first* build hits and the
+    // locked-file check below cannot see: a destination under a folder that
+    // does not exist, or one nothing may write to, fails at publish — which on
+    // a Bible is several minutes after the mistake was made (SRS-REVIEW F10).
+    if let Some(folder) = output.parent() {
+        if !folder.as_str().is_empty() {
+            preflight_folder(folder, diagnostics);
+        }
+    }
+
     if !output.exists() {
         return;
     }
@@ -290,6 +300,62 @@ pub fn preflight_destination(output: &Utf8Path, diagnostics: &mut Diagnostics) {
     }
 }
 
+/// Whether a build could write into this folder.
+///
+/// Checked by *trying*, not by reading permission bits. A folder's mode says
+/// what it says; whether this process can create a file in it is a question
+/// only the filesystem can answer, and on Windows the two are barely related.
+/// The probe is removed again, and a probe that cannot be removed is still a
+/// folder a build can write to — which is all that was being asked.
+fn preflight_folder(folder: &Utf8Path, diagnostics: &mut Diagnostics) {
+    if !folder.exists() {
+        // Not an error. A publisher naming `out/Bible.pdf` in a project that
+        // has never been built means the folder, and creating it is the
+        // obviously intended behaviour — this only says so early enough to be
+        // useful if it turns out to be impossible.
+        if let Err(e) = std::fs::create_dir_all(folder.as_std_path()) {
+            diagnostics.push(
+                Diagnostic::error(
+                    code::COULD_NOT_CREATE,
+                    format!("the output folder {folder} does not exist and cannot be created"),
+                )
+                .at(SourceLoc::file(folder.to_owned()))
+                .help("choose an output path under a folder this account can write to")
+                .detail(e.to_string()),
+            );
+        }
+        return;
+    }
+
+    if !folder.is_dir() {
+        diagnostics.push(
+            Diagnostic::error(
+                code::COULD_NOT_CREATE,
+                format!("{folder} is a file, so nothing can be written inside it"),
+            )
+            .at(SourceLoc::file(folder.to_owned()))
+            .help("the output path names a folder that is really a file"),
+        );
+        return;
+    }
+
+    let probe = folder.join(".biblecompose-write-test");
+    match std::fs::write(probe.as_std_path(), b"") {
+        Ok(()) => {
+            let _ = std::fs::remove_file(probe.as_std_path());
+        }
+        Err(e) => diagnostics.push(
+            Diagnostic::error(
+                code::COULD_NOT_CREATE,
+                format!("nothing can be written into the output folder {folder}"),
+            )
+            .at(SourceLoc::file(folder.to_owned()))
+            .help("choose an output path under a folder this account can write to")
+            .detail(e.to_string()),
+        ),
+    }
+}
+
 #[cfg(test)]
 mod preflight_tests {
     use super::*;
@@ -303,6 +369,42 @@ mod preflight_tests {
         let mut diagnostics = Diagnostics::new();
         preflight_destination(&out, &mut diagnostics);
         assert!(diagnostics.is_empty(), "{diagnostics:?}");
+    }
+
+    /// **A destination under a folder that does not exist is created, not
+    /// refused.** A publisher naming `out/Bible.pdf` in a project that has
+    /// never been built means the folder.
+    #[test]
+    fn a_missing_output_folder_is_made() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("utf8");
+        let out = root.join("out/deeper/Bible.pdf");
+
+        let mut diagnostics = Diagnostics::new();
+        preflight_destination(&out, &mut diagnostics);
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+        assert!(
+            root.join("out/deeper").is_dir(),
+            "the folder should exist now"
+        );
+    }
+
+    /// **And a folder that is really a file is refused before the build, not
+    /// after it.** The whole point of the pre-flight: on a Bible, publishing is
+    /// several minutes after the mistake was made (SRS-REVIEW F10).
+    #[test]
+    fn an_output_folder_that_is_a_file_is_reported_early() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("utf8");
+        let blocker = root.join("out");
+        std::fs::write(blocker.as_std_path(), b"not a folder").expect("write");
+
+        let mut diagnostics = Diagnostics::new();
+        preflight_destination(&blocker.join("Bible.pdf"), &mut diagnostics);
+        assert!(
+            diagnostics.has_blocking(),
+            "this cannot be published to and the build should stop: {diagnostics:?}"
+        );
     }
 
     /// A first build has nothing to be locked.

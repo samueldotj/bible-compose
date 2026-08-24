@@ -233,6 +233,14 @@ export interface Backend {
   closeProject(): Promise<void>;
   /** Show a folder in the platform's own file manager (GUI-009). */
   openFolder(path: string): Promise<void>;
+  /**
+   * Open a finished PDF in the platform's own viewer (GUI-009).
+   *
+   * There is no preview inside the window and this is deliberate
+   * (ADR-003): the viewer a publisher already trusts is the one
+   * their printer will use.
+   */
+  openPdf(path: string): Promise<void>;
   /** The projects this machine has opened, most recent first. */
   recentProjects(): Promise<readonly Recent[]>;
   /** Drop one from that list. The folder is not touched. */
@@ -287,6 +295,7 @@ export const tauriBackend: Backend = {
   openProject: (root) => invoke("open_project", { root }),
   closeProject: () => invoke("close_project"),
   openFolder: (path) => invoke("open_folder", { path }),
+  openPdf: (path) => invoke("open_pdf", { path }),
   recentProjects: () => invoke("recent_projects"),
   forgetProject: (root) => invoke("forget_project", { root }),
   createProject: (parent, name, language) =>

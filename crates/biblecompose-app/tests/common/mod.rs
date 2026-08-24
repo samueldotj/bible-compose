@@ -125,6 +125,41 @@ pub fn raw_pdf(fixture: &str, overrides: &str) -> (tempfile::TempDir, Vec<u8>) {
     (guard, raw)
 }
 
+/// Build a document this crate's fixtures do not hold — a corpus book.
+///
+/// Returns the report rather than the PDF, because the interesting answer is
+/// often a diagnostic: a book in a script no available font covers is
+/// *blocked*, and a caller wants to say so rather than to panic.
+///
+/// `fonts` are written into the project's own `assets/fonts`, which is where
+/// resolution looks first (P5.1). A test that relied on a system font would
+/// be a test that changes its answer when the machine is updated (DET-002).
+pub fn attempt(
+    doc: &biblecompose_scripture::ScriptureDocument,
+    overrides: &str,
+    fonts: &[&camino::Utf8Path],
+) -> (tempfile::TempDir, biblecompose_app::BuildReport) {
+    let guard = tempfile::tempdir().expect("temp dir");
+    let root = Utf8PathBuf::from_path_buf(guard.path().to_path_buf()).expect("UTF-8 temp path");
+    biblecompose_testkit::place_fixture_assets(&root);
+
+    let dir = root.join("assets/fonts");
+    std::fs::create_dir_all(dir.as_std_path()).expect("font directory");
+    for font in fonts {
+        let name = font.file_name().expect("a file name");
+        std::fs::copy(font.as_std_path(), dir.join(name).as_std_path()).expect("copy the font");
+    }
+
+    let mut request = BuildRequest::new(root.clone(), root.join("out.pdf"));
+    request.sile_path = vec![biblecompose_testkit::repo_root().join("sile")];
+    request.settings = settings(overrides);
+    request.styles = cascade::resolve(None, false).0;
+
+    let (mut reporter, _events) = BuildReporter::new();
+    let report = build(doc, &request, &CancelToken::new(), &mut reporter);
+    (guard, report)
+}
+
 /// A single column, so "the note area" and "the measure" each mean one thing.
 pub const ONE_COLUMN: &str = "[page]\ncolumns = 1\n";
 

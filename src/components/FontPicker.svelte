@@ -17,6 +17,7 @@
   import { untrack } from "svelte";
   import { backend, type FontChoice } from "../lib/services/backend";
   import { session } from "../lib/session.svelte";
+  import { t } from "../lib/i18n";
 
   const {
     current,
@@ -118,13 +119,13 @@
     if (e.target === e.currentTarget) onclose();
   }}
 >
-  <div class="dialog" role="dialog" aria-modal="true" aria-label="Choose a font">
+  <div class="dialog" role="dialog" aria-modal="true" aria-label={t("chooseFont")}>
     <header>
-      <h2>Choose a font</h2>
+      <h2>{t("chooseFont")}</h2>
       <!-- svelte-ignore a11y_autofocus -->
       <input
         type="search"
-        placeholder="Search fonts"
+        placeholder={t("searchFonts")}
         spellcheck="false"
         autofocus
         bind:value={filter}
@@ -134,15 +135,15 @@
     {#if checked}
       <label class="only">
         <input type="checkbox" bind:checked={coveringOnly} />
-        Only fonts that can set this Scripture
+        {t("coveringOnly")}
       </label>
     {:else if !session.project}
-      <p class="note">No project is open, so nothing has been checked against Scripture.</p>
+      <p class="note">{t("noProjectToCheckAgainst")}</p>
     {/if}
 
     <div class="list">
       {#if fonts === null}
-        <p class="note">Reading the fonts on this machine…</p>
+        <p class="note">{t("readingFonts")}</p>
       {:else if failure}
         <p class="error">{failure}</p>
       {:else if shown.length === 0}
@@ -173,8 +174,8 @@
 
     <footer>
       <span class="chosen">{selected}</span>
-      <button type="button" onclick={onclose}>Cancel</button>
-      <button type="button" class="primary" onclick={confirm}>Use this font</button>
+      <button type="button" onclick={onclose}>{t("cancel")}</button>
+      <button type="button" class="primary" onclick={confirm}>{t("useThisFont")}</button>
     </footer>
   </div>
 </div>

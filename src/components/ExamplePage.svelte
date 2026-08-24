@@ -33,6 +33,7 @@
   } from "../lib/sample";
   import { wordsFor } from "../lib/labels";
   import { session } from "../lib/session.svelte";
+  import { t } from "../lib/i18n";
 
   /** Which set of switches to put beside the page. */
   const { which }: { which: "contents" | "headers" } = $props();
@@ -231,7 +232,7 @@
       label saying which slot that is.
     -->
     <fieldset class="controls">
-      <legend>Header</legend>
+      <legend>{t("header")}</legend>
       <div class="row">
         {#each HEADER as s (s.key)}
           <label
@@ -357,7 +358,7 @@
 
   {#if which === "headers"}
     <fieldset class="controls">
-      <legend>Footer</legend>
+      <legend>{t("footer")}</legend>
       <div class="row">
         {#each FOOTER as s (s.key)}
           <label

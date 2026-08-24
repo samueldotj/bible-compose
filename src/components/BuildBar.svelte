@@ -12,6 +12,7 @@
    */
   import QuickSettings from "./QuickSettings.svelte";
   import { session } from "../lib/session.svelte";
+  import { locale, t } from "../lib/i18n";
 
   /**
    * What hovering Open folder says.
@@ -21,26 +22,11 @@
    */
   function folderHint(): string {
     const where = session.folderToOpen;
-    if (!where) return "No project open";
+    if (!where) return t("noProjectOpen");
     return session.logFile ? `${where}
 Backend log: ${session.logFile}` : where;
   }
-  import type { BuildState } from "../lib/services/backend";
 
-  /** GUI-006's wording, which is also what the CLI prints. */
-  const LABELS: Readonly<Record<BuildState, string>> = {
-    idle: "idle",
-    loading: "loading",
-    loaded: "loaded",
-    blocked: "blocked",
-    validating: "validating",
-    emitting: "generating",
-    typesetting: "running SILE",
-    publishing: "publishing",
-    succeeded: "completed",
-    failed: "failed",
-    cancelled: "canceled",
-  };
 
   const tone = $derived(
     session.buildState === "succeeded"
@@ -56,7 +42,7 @@ Backend log: ${session.logFile}` : where;
 </script>
 
 <div class="bar">
-  <span class="state {tone}">{LABELS[session.buildState]}</span>
+  <span class="state {tone}">{locale().states[session.buildState]}</span>
 
   {#if session.building}
     <!-- A real count, always; a bar with an end only when there is an honest
@@ -70,7 +56,7 @@ Backend log: ${session.logFile}` : where;
         aria-valuemin={0}
         aria-valuemax={session.pagesExpected ?? undefined}
         aria-valuenow={session.progress === null ? undefined : session.pagesDone}
-        aria-label="Typesetting progress"
+        aria-label={t("typesettingProgress")}
       >
         {#if session.progress !== null}
           <div class="fill" style:inline-size="{session.progress * 100}%"></div>
@@ -80,7 +66,7 @@ Backend log: ${session.logFile}` : where;
       </div>
       <span class="pages">
         {#if session.pagesDone === 0}
-          starting…
+          {t("starting")}
         {:else if session.pagesExpected}
           page {session.pagesDone} of about {session.pagesExpected}
         {:else}
@@ -110,7 +96,7 @@ Backend log: ${session.logFile}` : where;
     disabled={!session.project}
     onclick={() => (session.showProblems = true)}
   >
-    Problems
+    {t("problems")}
     <span class="tally">{session.problemCount}</span>
   </button>
 
@@ -139,7 +125,7 @@ Backend log: ${session.logFile}` : where;
     title={folderHint()}
     onclick={() => void session.showFolder()}
   >
-    Open folder
+    {t("openFolder")}
   </button>
 
   {#if session.backendVersion}
@@ -166,7 +152,7 @@ Backend log: ${session.logFile}` : where;
     -->
     <label class="draft">
       <input type="checkbox" bind:checked={session.draft} disabled={session.building} />
-      Draft
+      {t("draft")}
     </label>
     <!--
       A build with nothing to do is skipped. This is how you make it do the work
@@ -174,12 +160,12 @@ Backend log: ${session.logFile}` : where;
       a system font, artwork on another disk — because the fingerprint is a
       promise about the project's own files and says so (BLD-007).
     -->
-    <label class="draft" title="Run the typesetter even if nothing has changed">
+    <label class="draft" title={t("cleanHint")}>
       <input type="checkbox" bind:checked={session.clean} disabled={session.building} />
-      Clean
+      {t("clean")}
     </label>
     {#if session.building}
-      <button type="button" class="primary" onclick={() => void session.cancel()}>Cancel</button>
+      <button type="button" class="primary" onclick={() => void session.cancel()}>{t("cancel")}</button>
     {:else}
       <button
         type="button"
@@ -187,7 +173,7 @@ Backend log: ${session.logFile}` : where;
         disabled={!session.canBuild}
         onclick={() => void session.build()}
       >
-        {session.draft ? "Generate draft" : "Generate PDF"}
+        {session.draft ? t("generateDraft") : t("generatePdf")}
       </button>
     {/if}
   </div>

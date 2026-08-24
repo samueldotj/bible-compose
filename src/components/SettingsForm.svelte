@@ -13,9 +13,10 @@
    * batching buys nothing.
    */
   import FontPicker from "./FontPicker.svelte";
-  import { EDITED_ELSEWHERE, GROUPS, labelFor, PLACEHOLDERS, wordsFor } from "../lib/labels";
+  import { EDITED_ELSEWHERE, GROUPS, labelFor, placeholderFor, wordsFor } from "../lib/labels";
   import { session } from "../lib/session.svelte";
   import type { Setting } from "../lib/services/backend";
+  import { t } from "../lib/i18n";
 
   /**
    * Which groups to show, and whether to sweep up the settings that belong to
@@ -73,9 +74,9 @@
   }
 </script>
 
-<section class="pane" aria-label="Settings">
+<section class="pane" aria-label={t("settingsRegion")}>
   {#if session.settings.length === 0}
-    <p class="empty">Loading…</p>
+    <p class="empty">{t("loading")}</p>
   {:else}
     {#each grouped as group (group.id)}
       <fieldset>
@@ -135,7 +136,7 @@
                   disabled={!session.editable}
                   onchange={(e) => commit(setting, e.currentTarget.value)}
                 />
-                <button type="button" onclick={() => (picking = setting.key)}>Choose…</button>
+                <button type="button" onclick={() => (picking = setting.key)}>{t("choose")}</button>
               </span>
               {#if picking === setting.key}
                 <FontPicker
@@ -149,7 +150,7 @@
                 id={`set-${setting.key}`}
                 type="text"
                 value={setting.value}
-                placeholder={PLACEHOLDERS[setting.key] ?? ""}
+                placeholder={placeholderFor(setting.key) ?? ""}
                 spellcheck="false"
                 disabled={!session.editable}
                 onchange={(e) => commit(setting, e.currentTarget.value)}

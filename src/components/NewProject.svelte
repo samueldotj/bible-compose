@@ -17,6 +17,7 @@
   import { LANGUAGES } from "../lib/languages";
   import { backend, type Diagnostic } from "../lib/services/backend";
   import { session } from "../lib/session.svelte";
+  import { t } from "../lib/i18n";
 
   const { onclose }: { onclose: () => void } = $props();
 
@@ -60,26 +61,26 @@
     if (e.target === e.currentTarget) onclose();
   }}
 >
-  <div class="dialog" role="dialog" aria-modal="true" aria-label="New project">
-    <h2>New project</h2>
+  <div class="dialog" role="dialog" aria-modal="true" aria-label={t("newProject")}>
+    <h2>{t("newProject")}</h2>
 
     <div class="body">
       <label class="field">
-        <span>Where it goes</span>
+        <span>{t("where")}</span>
         <span class="pair">
-          <input type="text" readonly value={parent} placeholder="Choose a folder…" />
-          <button type="button" onclick={() => void choose()}>Browse…</button>
+          <input type="text" readonly value={parent} placeholder={t("chooseFolder")} />
+          <button type="button" onclick={() => void choose()}>{t("browse")}</button>
         </span>
       </label>
 
       <label class="field">
-        <span>Publication name</span>
+        <span>{t("publicationName")}</span>
         <!-- svelte-ignore a11y_autofocus -->
-        <input type="text" autofocus bind:value={name} placeholder="My Bible" spellcheck="false" />
+        <input type="text" autofocus bind:value={name} placeholder={t("exampleName")} spellcheck="false" />
       </label>
 
       <label class="field">
-        <span>Language</span>
+        <span>{t("language")}</span>
         <input
           type="text"
           list="bc-languages"
@@ -95,7 +96,7 @@
       </label>
 
       {#if folder !== "" && parent !== ""}
-        <p class="preview">Creates <code>{parent}/{folder}</code></p>
+        <p class="preview">{t("creates")}<code>{parent}/{folder}</code></p>
       {/if}
 
       {#each refused as problem (problem.code + problem.message)}
@@ -104,7 +105,7 @@
     </div>
 
     <footer>
-      <button type="button" onclick={onclose}>Cancel</button>
+      <button type="button" onclick={onclose}>{t("cancel")}</button>
       <button type="button" class="primary" disabled={!ready} onclick={() => void create()}>
         {working ? "Creating…" : "Create"}
       </button>

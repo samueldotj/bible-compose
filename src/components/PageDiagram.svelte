@@ -22,6 +22,7 @@
   import type { Geometry, Setting } from "../lib/services/backend";
   import { session } from "../lib/session.svelte";
   import { TRIMS } from "../lib/trims";
+  import { t } from "../lib/i18n";
 
   const { geometry: g }: { geometry: Geometry } = $props();
 
@@ -141,7 +142,7 @@
 </script>
 
 <figure class="sheet" style:aspect-ratio={`${view.width} / ${view.height}`}>
-  <svg viewBox={`0 0 ${view.width} ${view.height}`} role="img" aria-label="The page, to scale">
+  <svg viewBox={`0 0 ${view.width} ${view.height}`} role="img" aria-label={t("pageToScale")}>
     {#each [versoX, rectoX] as x (x)}
       <rect class="paper" {x} y={top} width={w} height={h} rx="1" />
     {/each}
@@ -210,7 +211,7 @@
             <button
               type="button"
               class="chevron"
-              aria-label="Common trim sizes"
+              aria-label={t("commonTrimSizes")}
               aria-expanded={trims}
               disabled={!session.editable}
               onclick={() => (trims = !trims)}

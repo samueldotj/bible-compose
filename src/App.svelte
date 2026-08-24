@@ -11,6 +11,7 @@
   import StyleInspector from "./components/StyleInspector.svelte";
   import { STYLE_TABS, TABS } from "./lib/labels";
   import { session } from "./lib/session.svelte";
+  import { t } from "./lib/i18n";
 
   $effect(() => {
     void session.start();
@@ -63,7 +64,7 @@
       <QuickSettings keys={["project.name", "project.language"]} width="12rem" />
       <!-- Beside what it closes: the strip is what this project *is*, and
            putting it down belongs with the two things that name it. -->
-      <button type="button" class="close" onclick={() => void session.close()}>Close project</button>
+      <button type="button" class="close" onclick={() => void session.close()}>{t("closeProject")}</button>
     </div>
   {/if}
 
@@ -79,7 +80,7 @@
       application looking like it did not hear you.
     -->
     <section class="loading">
-      <p class="what">Loading…</p>
+      <p class="what">{t("loading")}</p>
       <p class="where">{session.openingWhat}</p>
     </section>
   {:else if !session.project}
@@ -101,7 +102,7 @@
            at three separate times. Tabs rather than an accordion so the choice
            survives an edit, which reopens the project and would otherwise
            collapse it. -->
-      <nav class="tabs" aria-label="Configuration">
+      <nav class="tabs" aria-label={t("configurationRegion")}>
         {#each TABS as t (t.id)}
           <button
             type="button"
@@ -133,7 +134,7 @@
                moves the section you are reading every time the window is
                resized. A column also leaves the names left-aligned, so they
                read as a list of what can be styled. -->
-          <nav class="subtabs" aria-label="Styles sections">
+          <nav class="subtabs" aria-label={t("stylesSectionsRegion")}>
             {#each STYLE_TABS as s (s.id)}
               <button
                 type="button"

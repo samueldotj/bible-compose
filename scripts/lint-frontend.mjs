@@ -18,6 +18,15 @@
  * Scripture and project files arrive by email and USB from third parties. The
  * control is that *no path exists* from file content to raw markup, not that
  * escaping is applied carefully.
+ *
+ * # No user-facing literal in a component
+ *
+ * NFR-012: the release ships in English and the architecture supports another
+ * locale. That only holds if adding one is a matter of writing a catalogue, so
+ * a sentence typed into a component is the thing that breaks it — and it
+ * breaks it silently, because English keeps working. This catches the two
+ * shapes that account for nearly all of them: text between tags, and the
+ * attributes a person reads.
  */
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -38,6 +47,20 @@ const RULES = [
       "imports a Tauri API directly. Route it through a typed interface in " +
       `${SERVICE_DIR} (ADR-003).`,
     exempt: (rel) => rel.startsWith(SERVICE_DIR),
+  },
+  {
+    name: "hard-coded-string",
+    // Text between tags that starts with a capital and runs on, or a
+    // `title=`, `placeholder=` or `aria-label=` holding the same. Anything
+    // interpolated is `{...}` and does not match, which is the whole point.
+    pattern:
+      /(?:>\s*[A-Z][A-Za-z][A-Za-z ,'&?!.’…-]{3,}<)|(?:(?:title|placeholder|aria-label)="[A-Z][^"]{3,}")/,
+    message:
+      "has a user-facing string written into it. Put it in the catalogue in " +
+      "src/lib/i18n.ts and read it with t() (NFR-012).",
+    // Only components. The catalogue is *made* of strings, and a service or a
+    // model has none a person reads.
+    exempt: (rel) => !rel.endsWith(".svelte"),
   },
   {
     name: "raw-markup",

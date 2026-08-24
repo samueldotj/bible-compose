@@ -1,5 +1,5 @@
 /**
- * The words for settings keys.
+ * The words for settings keys, and the structures they title.
  *
  * Here and not in `biblecompose-config`, because these are words shown to a
  * person: they get translated, and the schema does not. The config crate
@@ -7,8 +7,15 @@
  *
  * A key with no entry still renders — as its own dotted name — so adding a
  * setting to the schema never produces a blank row, only an untranslated one.
+ *
+ * **The `EN_` maps are the English half of the catalogue in `i18n.ts`** and
+ * are exported for it to assemble. Everything read at runtime goes through
+ * `locale()`, so a second locale replaces the words without touching the tabs,
+ * the groups, or the order of anything (NFR-012). The structures stay here
+ * beside the form they describe; only the words travel.
  */
 
+import { locale } from "./i18n";
 import { STYLE_GROUPS } from "./styles";
 
 export interface Group {
@@ -17,58 +24,7 @@ export interface Group {
   readonly keys: readonly string[];
 }
 
-export const LABELS: Readonly<Record<string, string>> = {
-  "project.name": "Publication",
-  "project.language": "Language",
-  "project.author": "Publisher",
-  "project.subject": "Subject",
-  "page.size": "Trim size",
-  "page.columns": "Columns",
-  "page.margin_top": "Top margin",
-  "page.margin_bottom": "Bottom margin",
-  "page.margin_inner": "Inner margin",
-  "page.margin_outer": "Outer margin",
-  "page.column_gap": "Column gap",
-  "page.header_gap": "Header gap",
-  "page.footer_gap": "Footer gap",
-  "typography.font_family": "Font",
-  "typography.font_size": "Body size",
-  "typography.leading": "Leading",
-  "typography.hyphenation": "Hyphenate",
-  "numbering.show_chapter_numbers": "Chapter numbers",
-  "numbering.show_verse_numbers": "Verse numbers",
-  "numbering.hide_first_verse_number": "Hide first verse number",
-  "numbering.show_chapter_labels": "Chapter labels",
-  "contents.show_book_introductions": "Book introductions",
-  "contents.show_introductory_outlines": "Introductory outlines",
-  "contents.show_section_headings": "Section headings",
-  "typography.justify": "Justify paragraphs",
-  "typography.keep_poetry_indentation": "Keep poetry indentation",
-  "notes.show_footnotes": "Footnotes",
-  "notes.show_cross_references": "Cross-references",
-  "notes.footnote_callers": "Footnote marks",
-  "notes.cross_reference_callers": "Reference marks",
-  "notes.restart_numbering": "Marks start again",
-  "notes.cross_reference_placement": "References go",
-  "headers.header_left": "Left",
-  "headers.header_center": "Centre",
-  "headers.header_right": "Right",
-  "headers.footer_left": "Left",
-  "headers.footer_center": "Centre",
-  "headers.footer_right": "Right",
-  "assets.missing_figure": "A figure with no file",
-  "output.keep_intermediates": "Keep intermediates",
-  strict: "Strict settings",
-};
 
-/** Placeholder text where an empty field means something specific. */
-export const PLACEHOLDERS: Readonly<Record<string, string>> = {
-  "project.name": "the folder's name",
-  // Both of these end up in the PDF's properties and nowhere else, so the
-  // placeholder says what leaving them empty costs, which is nothing.
-  "project.author": "left out of the PDF",
-  "project.subject": "left out of the PDF",
-};
 
 export const GROUPS: readonly Group[] = [
   {
@@ -147,35 +103,19 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
 ]);
 
 export function labelFor(key: string): string {
-  return LABELS[key] ?? key;
+  return locale().labels[key] ?? key;
 }
 
-/**
- * The words for one option of a `choice` setting.
- *
- * The spellings themselves are the schema's and are not translated — they are
- * what goes in the file. These are what a person reads in a dropdown, so they
- * live here with the rest of the words.
- *
- * Only the ones a rule would get wrong are listed. Everything else falls
- * through to un-snaking, which turns `first_reference` into "First reference"
- * and is right far more often than it is worth an entry.
- */
-const CHOICE_WORDS: Readonly<Record<string, string>> = {
-  stop: "Stops the build",
-  omit: "Is left out",
-  note_area: "In the note area",
-  inline: "In the text",
-  end_of_paragraph: "Under the paragraph",
-  none: "No mark",
-  numbers: "1, 2, 3",
-  letters: "a, b, c",
-  symbols: "*, †, ‡",
-  alt_book_name: "Alt book name",
-};
+/** What an empty field means, where empty means something specific. */
+export function placeholderFor(key: string): string | undefined {
+  return locale().placeholders[key];
+}
+
+
+
 
 export function wordsFor(choice: string): string {
-  const known = CHOICE_WORDS[choice];
+  const known = locale().choices[choice];
   if (known !== undefined) return known;
   const words = choice.replace(/_/g, " ");
   return words.charAt(0).toUpperCase() + words.slice(1);

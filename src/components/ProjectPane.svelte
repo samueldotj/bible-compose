@@ -15,6 +15,7 @@
    */
   import { session } from "../lib/session.svelte";
   import type { Testament } from "../lib/services/backend";
+  import { t } from "../lib/i18n";
 
   let dragging = $state<string | null>(null);
   /** The arrangement being dragged, before it is committed on drop. */
@@ -162,11 +163,11 @@
 <!-- No heading of its own: the tab above it says Scripture, and each column
      says which testament it is. A third title between them would be a label
      for a thing already labelled twice. -->
-<section class="pane" aria-label="Books">
+<section class="pane" aria-label={t("booksRegion")}>
   {#if !session.project}
-    <p class="empty">No project open.</p>
+    <p class="empty">{t("noProjectOpen")}</p>
   {:else if session.books.length === 0}
-    <p class="empty">This folder has no USFM in it.</p>
+    <p class="empty">{t("noUsfmHere")}</p>
   {:else}
     <p class="hint">
       <span>
@@ -178,18 +179,18 @@
         <button
           type="button"
           disabled={!session.editable || included.size === session.books.length}
-          onclick={() => selectAll(true)}>Select all</button
+          onclick={() => selectAll(true)}>{t("selectAll")}</button
         >
         <button
           type="button"
           disabled={!session.editable || included.size === 0}
-          onclick={() => selectAll(false)}>Clear all</button
+          onclick={() => selectAll(false)}>{t("clearAll")}</button
         >
         <button
           type="button"
           disabled={!session.editable || isCanonical}
-          title="Put the books back in the order the canon gives them"
-          onclick={restoreCanonical}>Canonical order</button
+          title={t("canonicalOrderHint")}
+          onclick={restoreCanonical}>{t("canonicalOrder")}</button
         >
       </span>
     </p>
@@ -215,13 +216,13 @@
                   type="button"
                   disabled={!session.editable || chosen === codes.length}
                   title={`Put every book of the ${column.title} in the publication`}
-                  onclick={() => selectGroup(codes, true)}>Select all</button
+                  onclick={() => selectGroup(codes, true)}>{t("selectAll")}</button
                 >
                 <button
                   type="button"
                   disabled={!session.editable || chosen === 0}
                   title={`Take every book of the ${column.title} out`}
-                  onclick={() => selectGroup(codes, false)}>Clear all</button
+                  onclick={() => selectGroup(codes, false)}>{t("clearAll")}</button
                 >
               </span>
             {/if}

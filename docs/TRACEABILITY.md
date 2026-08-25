@@ -30,7 +30,7 @@ PDF's name is derived from the publication's, and it was always `bible.pdf`.
 | **FUN-005** | The application shall expose detected metadata including book ID, file path, chapter co… | [`a_folder_of_usfm_opens_with_its_books_and_its_defaults`](../crates/biblecompose-tauri/tests/commands.rs) |
 | **FUN-006** | The user shall be able to reload the project after external file changes without closin… | [`an_external_settings_edit_is_reflected_after_reload`](../crates/biblecompose-tauri/tests/commands.rs) |
 | **BLD-001** | The user shall be able to start PDF generation from the GUI. | [`a_folder_of_usfm_opens_with_its_books_and_its_defaults`](../crates/biblecompose-tauri/tests/commands.rs) |
-| **BLD-002** | A successful build shall create exactly one primary PDF at the resolved output path. | [`a_defaults_only`](../crates/biblecompose-app/tests/acceptance.rs) |
+| **BLD-002** | A successful build shall create exactly one primary PDF at the resolved output path. | [relative_project.rs](../crates/biblecompose-app/tests/relative_project.rs) *(the whole suite)* |
 | **BLD-003** | The default output filename shall be derived from project name, with a configurable ove… | [`a_setting_the_project_wrote_says_where`](../crates/biblecompose-tauri/tests/commands.rs) (+1 more) |
 | **BLD-004** | The application shall not overwrite source USFM during a build. | [`a_defaults_only`](../crates/biblecompose-app/tests/acceptance.rs) (+2 more) |
 | **BLD-005** | The application shall capture SILE standard output, warnings, and errors and translate… | [`j_cancel`](../crates/biblecompose-app/tests/acceptance.rs) |

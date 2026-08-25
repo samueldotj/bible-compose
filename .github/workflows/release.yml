@@ -106,9 +106,32 @@ jobs:
           # here ever asks for it — the check failed the macOS build outright,
           # four minutes in, over a font this application does not set.
           ./configure --prefix="$PWD/../runtime" --with-system-luarocks=no \
-            FCMATCH=true
+            FCMATCH=true \
+            CPPFLAGS="${CPPFLAGS:-}" LDFLAGS="${LDFLAGS:-}"
           make -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
           make install
+
+      # An error like "Sorry, you need zlib with compress2" names a function
+      # and not the reason the link failed. `config.log` holds the compiler
+      # invocation and its output, which is what decides — and without it, a
+      # remote build is diagnosed by guessing one run at a time.
+      - name: why configure failed
+        if: failure()
+        shell: bash
+        run: |
+          for f in sile-src/config.log sile-src/libtexpdf/config.log; do
+            [ -f "$f" ] || continue
+            echo "===== $f ====="
+            # The tail is where the failing check is; the head carries the
+            # invocation that produced it.
+            head -30 "$f"
+            echo "..."
+            tail -150 "$f"
+          done
+          echo "===== environment ====="
+          echo "CPPFLAGS=${CPPFLAGS:-unset}"
+          echo "LDFLAGS=${LDFLAGS:-unset}"
+          echo "PKG_CONFIG_PATH=${PKG_CONFIG_PATH:-unset}"
 
       # ------------------------------------------------------------- staging
       #

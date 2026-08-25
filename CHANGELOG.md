@@ -1,0 +1,89 @@
+# Changelog
+
+Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
+
+## 0.1.0 — unreleased
+
+The first release. A folder of USFM becomes a printable PDF, on a machine with
+nothing else installed.
+
+### Composition
+
+* **Scripture**: paragraphs, poetry `q1`–`q4`, section headings `s1`–`s4`,
+  `\d`, `\sp`, `\r`, `\sr`, lists `li1`–`li4` and `lim1`–`lim4`, tables with
+  measured columns, and the common character styles.
+* **Apparatus**: footnotes and cross-references as separate types, with their
+  own caller sequences, styles and numbering policies. Cross-references can be
+  set at the foot, inline, or under the paragraph that called them.
+* **Figures** from project assets, with format sniffed from the bytes rather
+  than the extension, and a containment check that a path cannot escape.
+* **Running heads and folios** with live verse ranges, correct across a column
+  break and on a page whose first verse began earlier.
+* **Chapter openings** as drop figures the text runs into.
+* A heading is never left alone at the foot of a column.
+
+### The publication
+
+* **Three presets** to start from: standard two-column, a reader's edition, and
+  large print. Applying one writes into your settings file, where you can then
+  change one line at a time.
+* **Styles** keyed by USFM marker, with inheritance by level and an inspector
+  that says which file decided each value.
+* **PDF properties** — title, author and subject — and named destinations for
+  every book and chapter, in the `JHN.3.16` form reference parsers already
+  speak. Verse-level anchors are available with `output.anchors = "verse"`.
+* **Draft builds**, stamped on every page and written beside the finished PDF
+  rather than over it.
+* The PDF is named after the publication, in `output/` inside the project.
+
+### Before the build, not after it
+
+Every one of these used to be discovered from the page, or from the backend, or
+not at all:
+
+* A font that cannot draw your Scripture, naming the character, its count and a
+  verse it appears in.
+* A font that resolves but has not got the face a style asked for — silently
+  substituted otherwise.
+* A figure that is missing, outside the project, or not an image.
+* An output folder that does not exist or cannot be written to.
+* A settings file that will not parse, which now blocks the build rather than
+  being reported and then ignored.
+
+### Building
+
+* **One executable per platform**, carrying its own typesetter. Nothing to
+  install alongside it.
+* **No internet connection is used or needed.** Nothing below the window links
+  an HTTP client, and the shipped typesetter has no socket code in it at all.
+* **Your Scripture is never written to**, asserted by checksum after every
+  acceptance test.
+* A build with nothing changed is skipped and returns at once; `Clean` runs it
+  anyway.
+* Backend failures arrive as sentences saying what happened and whose fault it
+  is, with the raw log kept and collapsed.
+
+### Known limitations
+
+* **The bundled font has no italic**, so styles asking for italic are set in
+  the regular face. The build warns (`FONT-005`) and names them. Put a family
+  that has one in `assets/fonts/`, or choose one that is installed.
+* **Artefacts are unsigned.** Windows shows a SmartScreen warning and macOS
+  requires an explicit override in System Settings. Signing needs certificates
+  that are bought rather than written.
+* **Only the Windows artefact has been built and run.** The Linux and macOS
+  jobs are written and have never executed.
+* **Table cells do not wrap.** A table wider than its column says so on the
+  backend log and runs past the margin rather than looking fine and being
+  wrong.
+* **In two columns, a word wider than the column overhangs it.** Measured at
+  five glyph runs on two lines of a Tamil book; there is no legal break inside
+  a Tamil word. One column is clean.
+* Diagnostics are English only. The window's own text is a catalogue a second
+  locale can replace without touching Rust; the diagnostics are not, because
+  they interpolate values a template would have to be given.
+
+### Platforms
+
+Windows, macOS and Linux. Windows is verified end to end; the other two are
+built by the same workflow and have not yet been run.

@@ -126,7 +126,19 @@ jobs:
           # fontconfig. SILE hard-requires one at configure time and nothing
           # here ever asks for it — the check failed the macOS build outright,
           # four minutes in, over a font this application does not set.
+          # `--with-system-lua-sources` is not optional, and the spike wrote
+          # down why for Windows before this hit the same wall on macOS:
+          # without it mlua links LuaJIT *statically* into the binary, which
+          # then exports nothing, while the rock modules expect to bind their
+          # Lua symbols against the host.
+          #
+          # Linux survives that because an ELF executable offers its dynamic
+          # symbols to what it loads. macOS has a two-level namespace and does
+          # not, so the first C rock SILE opens dies with `symbol not found in
+          # flat namespace '_luaL_checkinteger'` — a Lua API function, missing
+          # from a program that has a whole Lua inside it.
           ./configure --prefix="$PWD/../runtime" --with-system-luarocks=no \
+            --with-system-lua-sources \
             FCMATCH=true \
             CPPFLAGS="${CPPFLAGS:-}" LDFLAGS="${LDFLAGS:-}" CFLAGS="${CFLAGS:-}"
           make -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu)"

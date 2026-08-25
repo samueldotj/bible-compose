@@ -662,3 +662,83 @@ fn an_existing_folder_is_not_taken_over() {
         "and nothing of theirs was touched"
     );
 }
+
+// ------------------------------------------------------------- open_url ----
+
+/// **What may be handed to a shell handler, and what may not.**
+///
+/// The start screen links to where an open-licensed Bible can be downloaded.
+/// The address reaches the operating system's URL handler, which opens far
+/// more than web pages — so the rule is an allowlist of one scheme rather than
+/// a list of things to refuse, which would be a list somebody has to keep
+/// complete.
+#[test]
+fn only_an_https_address_is_opened() {
+    use biblecompose_tauri_lib::openable;
+
+    assert!(openable("https://www.open.bible/bibles"));
+    assert!(openable("https://example.org/a?b=c#d"));
+
+    // Not even `http`: every address this application has reason to open is
+    // one it can reach securely, and the other invites a link rewritten in
+    // transit.
+    assert!(!openable("http://www.open.bible/bibles"));
+
+    // The schemes that make this worth checking at all. Each opens something
+    // that is not a web page, and each is one character of typo away from a
+    // check written as "does not start with file:".
+    for hostile in [
+        "file:///C:/Windows/System32",
+        "file:///etc/passwd",
+        "ms-settings:privacy",
+        "vbscript:msgbox(1)",
+        "javascript:alert(1)",
+        "data:text/html,<script>alert(1)</script>",
+        "shell:startup",
+        r"\\server\share",
+        r"C:\Windows\System32\cmd.exe",
+        "",
+    ] {
+        assert!(!openable(hostile), "{hostile} should be refused");
+    }
+
+    // A space or a control character is not part of an address, and both are
+    // how an argument gets split into two.
+    assert!(!openable("https://example.org/a b"));
+    assert!(!openable("https://example.org/a\nb"));
+    assert!(!openable("https://example.org/a\0b"));
+
+    // And nothing unbounded, since it is a process argument.
+    assert!(!openable(&format!(
+        "https://example.org/{}",
+        "a".repeat(3000)
+    )));
+}
+
+/// The address the window actually passes is one the rule allows — which is
+/// the half that would otherwise be found by clicking it.
+#[test]
+fn the_start_screens_link_is_openable() {
+    use biblecompose_tauri_lib::openable;
+
+    let screen = std::fs::read_to_string(
+        biblecompose_testkit::repo_root()
+            .join("src/components/StartScreen.svelte")
+            .as_std_path(),
+    )
+    .expect("the start screen is readable");
+
+    let links: Vec<&str> = screen
+        .match_indices("https://")
+        .map(|(at, _)| {
+            let rest = &screen[at..];
+            let end = rest.find(['"', '\'', ' ', '\n']).unwrap_or(rest.len());
+            &rest[..end]
+        })
+        .collect();
+
+    assert!(!links.is_empty(), "the start screen should link somewhere");
+    for link in links {
+        assert!(openable(link), "{link} is on the start screen and refused");
+    }
+}

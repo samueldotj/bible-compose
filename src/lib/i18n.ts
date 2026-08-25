@@ -34,6 +34,27 @@ export interface Chrome {
   readonly appName: string;
 
   // The start screen.
+  readonly openProjectEllipsis: string;
+  /**
+   * How to arrive at a folder of Scripture, for somebody who has not got one.
+   *
+   * Split into a sentence, three steps and a closing paragraph rather than
+   * held as one block, because the structure is markup and this window refuses
+   * to render markup out of a string — project files come from third parties.
+   * So an ordered list has to be an ordered list, and each step its own entry.
+   *
+   * `openBibleBefore` and `openBibleAfter` bracket the link. Splitting a
+   * sentence is not something to do lightly, and the thing between them is a
+   * proper noun that no locale translates.
+   */
+  readonly startIntro: string;
+  readonly startExisting: string;
+  readonly startStepDownloadBefore: string;
+  readonly startStepDownloadAfter: string;
+  readonly startStepExtract: string;
+  readonly startStepSelect: string;
+  readonly startNew: string;
+  readonly openBible: string;
   readonly newProject: string;
   readonly newProjectEllipsis: string;
   readonly browse: string;
@@ -256,6 +277,17 @@ export const EN: Catalogue = {
   chrome: {
     appName: "BibleCompose",
 
+    openProjectEllipsis: "Open a project…",
+    startIntro: "A Bible project is a folder containing Scripture text in USFM format.",
+    startExisting: "To get started with an existing Bible:",
+    startStepDownloadBefore: "Download an open-licensed Bible in USFM or Paratext format from ",
+    startStepDownloadAfter: ".",
+    startStepExtract: "Extract the downloaded files to a folder.",
+    startStepSelect: "In the application, select that folder as your Bible project directory.",
+    startNew:
+      "To start a new Bible translation, create or select an empty folder. You can then add " +
+      "USFM files to the project as each book is translated.",
+    openBible: "Open.Bible",
     newProject: "New project",
     newProjectEllipsis: "New project…",
     browse: "Browse…",

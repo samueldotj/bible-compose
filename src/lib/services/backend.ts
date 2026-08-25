@@ -248,6 +248,14 @@ export interface Backend {
    * their printer will use.
    */
   openPdf(path: string): Promise<void>;
+  /**
+   * Open a web address in the machine's browser.
+   *
+   * Not by following a link: this is a webview showing the application, so a
+   * link that navigated would replace the application with a website. The
+   * backend refuses anything that is not `https`.
+   */
+  openUrl(url: string): Promise<void>;
   /** The editions a project can be started from (P6.2). */
   presets(): Promise<readonly Preset[]>;
   /**
@@ -313,6 +321,7 @@ export const tauriBackend: Backend = {
   closeProject: () => invoke("close_project"),
   openFolder: (path) => invoke("open_folder", { path }),
   openPdf: (path) => invoke("open_pdf", { path }),
+  openUrl: (url) => invoke("open_url", { url }),
   presets: () => invoke("presets"),
   applyPreset: (root, id) => invoke("apply_preset", { root, id }),
   recentProjects: () => invoke("recent_projects"),

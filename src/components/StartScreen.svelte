@@ -9,6 +9,11 @@
    *
    * So: the projects this machine has opened, and the two ways to arrive at
    * one that is not on the list.
+   *
+   * The lede answers the question the old one did not. "A folder of USFM will
+   * build" is true and useless to somebody who has no USFM — which is most
+   * people opening this for the first time. What they need is where to get a
+   * Bible, or permission to start with an empty folder.
    */
   import NewProject from "./NewProject.svelte";
   import { session } from "./../lib/session.svelte";
@@ -27,15 +32,33 @@
 <section class="start">
   <div class="actions">
     <button type="button" class="primary" onclick={() => void session.choose()}>
-      Open a project…
+      {t("openProjectEllipsis")}
     </button>
     <button type="button" onclick={() => (starting = true)}>{t("newProjectEllipsis")}</button>
   </div>
 
-  <p class="lede">
-    A project is a folder of USFM. Anything it does not configure uses the built-in defaults, so a
-    folder with nothing but Scripture in it will build.
-  </p>
+  <div class="lede">
+    <p>{t("startIntro")}</p>
+    <p>{t("startExisting")}</p>
+    <ol>
+      <li>
+        {t("startStepDownloadBefore")}<!--
+          Opened in the machine's browser rather than followed here. This is a
+          webview showing the application, and a link that navigated it would
+          replace the application with a website and leave no way back.
+        --><a
+          href="https://www.open.bible/bibles"
+          onclick={(e) => {
+            e.preventDefault();
+            void session.openUrl("https://www.open.bible/bibles");
+          }}>{t("openBible")}</a
+        >{t("startStepDownloadAfter")}
+      </li>
+      <li>{t("startStepExtract")}</li>
+      <li>{t("startStepSelect")}</li>
+    </ol>
+    <p>{t("startNew")}</p>
+  </div>
 
   {#if session.recent.length > 0}
     <h2>{t("recent")}</h2>
@@ -99,6 +122,29 @@
     margin-block: 0.9rem 1.6rem;
     font-size: 0.9rem;
     opacity: 0.7;
+    /* Several paragraphs and a list now, where this was one sentence. The
+       default 1.2 is fine for a line and tight for a block of instructions. */
+    line-height: 1.5;
+  }
+  /* The block's own spacing decides the gap above and below it; the first and
+     last child adding their own doubles both. */
+  .lede > :first-child {
+    margin-block-start: 0;
+  }
+  .lede > :last-child {
+    margin-block-end: 0;
+  }
+  .lede p {
+    margin-block: 0.7rem;
+  }
+  .lede ol {
+    /* Enough for the numbers and no more. The browser default is set for a
+       full-width page, and this column is 34 characters narrower. */
+    padding-inline-start: 1.4rem;
+    margin-block: 0.7rem;
+  }
+  .lede li {
+    margin-block: 0.25rem;
   }
   h2 {
     margin: 0 0 0.4rem;

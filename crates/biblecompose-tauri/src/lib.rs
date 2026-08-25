@@ -619,6 +619,83 @@ fn open_pdf(path: String) -> Result<(), Vec<WireDiagnostic>> {
         })
 }
 
+/// Open a web address in the machine's browser.
+///
+/// The start screen links to where an open-licensed Bible can be downloaded,
+/// and a link is the one thing this window cannot simply follow: it is a
+/// webview showing the application, so navigating it would replace the
+/// application with a website and leave no way back.
+///
+/// # Why the scheme is checked
+///
+/// Because the argument reaches a shell handler, and a shell handler will open
+/// far more than web pages. `file:` would open anything on the disk;
+/// `ms-settings:` and its equivalents reach the operating system's own
+/// surfaces. The window only ever passes one constant address, so a rule this
+/// strict costs nothing — and the value of writing it down is that it stays
+/// true when the second caller arrives.
+///
+/// **`https` and nothing else**, not even `http`: every address this
+/// application has reason to open is one it can reach securely, and allowing
+/// the other invites a link that can be rewritten in transit.
+#[tauri::command]
+fn open_url(url: String) -> Result<(), Vec<WireDiagnostic>> {
+    let refused = |why: &str| {
+        vec![WireDiagnostic::from(
+            &AppDiagnostic::error(
+                biblecompose_diagnostics::code::COULD_NOT_CREATE,
+                format!("{url} is not an address this application will open"),
+            )
+            .help(why),
+        )]
+    };
+
+    // Parsed by hand rather than by adding a URL crate for one check. What
+    // matters is the prefix and the absence of anything that could end the
+    // argument early, and both are cheap to state exactly.
+    if !url.starts_with("https://") {
+        return Err(refused("only https addresses are opened"));
+    }
+    if url.len() > 2048 || url.chars().any(|c| c.is_control() || c.is_whitespace()) {
+        return Err(refused(
+            "an address with a space or a control character in it is not one",
+        ));
+    }
+
+    let program = if cfg!(windows) {
+        "explorer"
+    } else if cfg!(target_os = "macos") {
+        "open"
+    } else {
+        "xdg-open"
+    };
+
+    std::process::Command::new(program)
+        .arg(&url)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| {
+            vec![WireDiagnostic::from(
+                &AppDiagnostic::error(
+                    biblecompose_diagnostics::code::COULD_NOT_CREATE,
+                    format!("could not open {url}"),
+                )
+                .help("no browser on this machine is registered for web addresses")
+                .detail(e.to_string()),
+            )]
+        })
+}
+
+/// [`open_url`]'s rule, without the spawn — so it can be asserted.
+///
+/// Separated because the check is the interesting half and starting a browser
+/// during a test suite is not something to do sixty times.
+pub fn openable(url: &str) -> bool {
+    url.starts_with("https://")
+        && url.len() <= 2048
+        && !url.chars().any(|c| c.is_control() || c.is_whitespace())
+}
+
 /// Put the project down and go back to the start screen.
 ///
 /// The window forgets what it was watching, so the change detector stops
@@ -1471,6 +1548,7 @@ pub fn run() {
             close_project,
             open_folder,
             open_pdf,
+            open_url,
             presets,
             apply_preset,
             start_build,

@@ -408,6 +408,23 @@ export class Session {
     }
   }
 
+  /**
+   * Open a web address in the machine's browser.
+   *
+   * A failure here is a fault rather than a field error: nothing the person
+   * typed caused it, and the only shapes it takes are a machine with no
+   * browser registered and an address this application refuses.
+   */
+  async openUrl(url: string): Promise<void> {
+    try {
+      await backend().openUrl(url);
+    } catch (e: unknown) {
+      this.fault = asDiagnostics(e)
+        .map((d) => d.message)
+        .join(" ");
+    }
+  }
+
   async showFolder(): Promise<void> {
     const path = this.folderToOpen;
     if (!path) return;

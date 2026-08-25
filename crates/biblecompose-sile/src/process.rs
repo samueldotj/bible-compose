@@ -177,6 +177,26 @@ impl Backend for SileBackend {
     }
 
     fn version(&self) -> Result<BackendVersion, Diagnostic> {
+        /// How a process ended, in words rather than as a number nobody reads.
+        ///
+        /// A signal is the interesting case and the one `ExitStatus`'s own
+        /// `Display` buries: on macOS an unsigned or unrunnable binary is
+        /// killed rather than allowed to fail, and "signal 9" is the whole
+        /// diagnosis.
+        fn describe(status: &std::process::ExitStatus) -> String {
+            #[cfg(unix)]
+            {
+                use std::os::unix::process::ExitStatusExt;
+                if let Some(signal) = status.signal() {
+                    return format!("the backend was killed by signal {signal}");
+                }
+            }
+            match status.code() {
+                Some(code) => format!("the backend exited with status {code}"),
+                None => "the backend ended without a status".to_owned(),
+            }
+        }
+
         let out = self
             .command()
             .arg("--version")
@@ -201,11 +221,32 @@ impl Backend for SileBackend {
             .to_owned();
 
         if raw.is_empty() {
+            // **How it ended, not only what it said.** A backend that fails to
+            // start writes nothing to either stream, so a diagnostic carrying
+            // only the output says "the backend did not report a version" and
+            // stops — which is what a first macOS release run produced, twice,
+            // with nothing to act on. The status separates the cases that need
+            // different answers: a signal is the operating system refusing to
+            // run it, an exit code is the program deciding not to.
+            let mut detail = String::from_utf8_lossy(&out.stderr).into_owned();
+            if detail.trim().is_empty() {
+                detail = format!(
+                    "{} and wrote nothing to either stream",
+                    describe(&out.status)
+                );
+            } else {
+                detail = format!(
+                    "{}
+{detail}",
+                    describe(&out.status)
+                );
+            }
             return Err(Diagnostic::error(
                 code::VERSION_UNREADABLE,
                 "the backend did not report a version",
             )
-            .detail(String::from_utf8_lossy(&out.stderr).into_owned()));
+            .at(SourceLoc::file(self.exe.clone()))
+            .detail(detail));
         }
 
         let semver = raw

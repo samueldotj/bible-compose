@@ -89,8 +89,10 @@ not at all:
 * **Artefacts are unsigned.** Windows shows a SmartScreen warning and macOS
   requires an explicit override in System Settings. Signing needs certificates
   that are bought rather than written.
-* **Only the Windows artefact has been built and run.** The Linux and macOS
-  jobs are written and have never executed.
+* **Linux and macOS carry SILE but not the system libraries it links against**
+  — HarfBuzz, fontconfig, ICU. The machine that builds them is the machine the
+  smoke test runs on, so *works on a fresh machine* is proved on Windows and
+  assumed on the other two. The Windows executable carries its own copies.
 * **Table cells do not wrap.** A table wider than its column says so on the
   backend log and runs past the margin rather than looking fine and being
   wrong.

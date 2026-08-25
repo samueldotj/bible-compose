@@ -200,6 +200,19 @@ jobs:
     name: installers (${{ matrix.os }})
     needs: [bundle, windows]
     runs-on: ${{ matrix.os }}
+    # **`secrets` is not a context a step's `if` can read.** `env` is, so the
+    # secrets are lifted here and the steps below ask whether they are empty.
+    # Writing `if: secrets.X != ''` on a step looks right, is accepted, and is
+    # always false — which would leave every release unsigned and every log
+    # saying nothing was wrong.
+    env:
+      WINDOWS_CERT_THUMBPRINT: ${{ secrets.WINDOWS_CERT_THUMBPRINT }}
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     strategy:
       fail-fast: false
       matrix:
@@ -228,31 +241,114 @@ jobs:
 
       - run: npm ci
 
-      - name: build the installers
-        env:
-          BIBLECOMPOSE_SILE_BUNDLE: ${{ github.workspace }}/stage
-          # Apple's are read by Tauri directly; absent means unsigned.
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # Windows: a thumbprint of a certificate already in the runner's
-          # store. The certificate itself is never written to disk here.
-          TAURI_WINDOWS_CERT_THUMBPRINT: ${{ secrets.WINDOWS_CERT_THUMBPRINT }}
-        run: npx tauri build --features embedded-sile
-
-      - name: say whether the artefacts are signed
+      # ------------------------------------------------------------ signing
+      #
+      # **Windows signing is configuration, not an environment variable.** The
+      # bundler reads `bundle.windows.certificateThumbprint`; there is no
+      # `TAURI_WINDOWS_CERT_THUMBPRINT` and setting one does nothing at all,
+      # which is the worst possible failure here — an unsigned release that
+      # everybody believed was signed. So the thumbprint goes in through
+      # `--config`, which merges over `tauri.conf.json` without ever writing a
+      # credential to a file in the tree.
+      #
+      # The certificate itself must already be in the runner's certificate
+      # store; a self-hosted runner is the usual answer, and a hosted one needs
+      # an import step before this that is a decision about where the key lives
+      # rather than a line of YAML.
+      - name: sign on Windows, if there is a certificate
+        if: runner.os == 'Windows' && env.WINDOWS_CERT_THUMBPRINT != ''
         shell: bash
         run: |
-          # Stated rather than assumed. An unsigned release that everyone
-          # believed was signed is the failure worth one line of output.
-          if [ -n "${{ secrets.APPLE_SIGNING_IDENTITY }}${{ secrets.WINDOWS_CERT_THUMBPRINT }}" ]; then
-            echo "signing credentials were present for this platform"
+          cat > sign.json <<'JSON'
+          { "bundle": { "windows": {
+              "digestAlgorithm": "sha256",
+              "timestampUrl": "http://timestamp.digicert.com"
+          } } }
+          JSON
+          node -e '
+            const fs = require("fs");
+            const c = JSON.parse(fs.readFileSync("sign.json", "utf8"));
+            c.bundle.windows.certificateThumbprint = process.env.THUMBPRINT;
+            fs.writeFileSync("sign.json", JSON.stringify(c));
+          '
+          echo "TAURI_EXTRA_CONFIG=sign.json" >> "$GITHUB_ENV"
+
+      # macOS wants the certificate in a keychain, because that is what
+      # `codesign` reads. A temporary one, unlocked for this job and thrown
+      # away with the runner.
+      - name: sign on macOS, if there is a certificate
+        if: runner.os == 'macOS' && env.APPLE_CERTIFICATE != ''
+        run: |
+          KEYCHAIN=$RUNNER_TEMP/signing.keychain-db
+          PASSWORD=$(openssl rand -base64 24)
+          security create-keychain -p "$PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 900 "$KEYCHAIN"
+          security unlock-keychain -p "$PASSWORD" "$KEYCHAIN"
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$PASSWORD" "$KEYCHAIN"
+          security list-keychain -d user -s "$KEYCHAIN"
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+      # `APPLE_SIGNING_IDENTITY` is read by the bundler itself and is already
+      # in the job's environment. Absent means an unsigned build rather than a
+      # failed one.
+      - name: build the installers
+        shell: bash
+        env:
+          BIBLECOMPOSE_SILE_BUNDLE: ${{ github.workspace }}/stage
+        run: |
+          if [ -n "${TAURI_EXTRA_CONFIG:-}" ]; then
+            npx tauri build --features embedded-sile --config "$TAURI_EXTRA_CONFIG"
           else
-            echo "::warning::no signing credentials — these artefacts are UNSIGNED"
+            npx tauri build --features embedded-sile
           fi
+
+      # Notarization is run here rather than left to the bundler, because what
+      # the bundler does about it varies by version and a silent no-op is the
+      # one outcome this must not have. `notarytool` waits, and `stapler`
+      # attaches the ticket so the result works offline.
+      - name: notarize, if there is an account
+        if: runner.os == 'macOS' && env.APPLE_ID != ''
+        run: |
+          for dmg in target/release/bundle/dmg/*.dmg; do
+            xcrun notarytool submit "$dmg" --wait \
+              --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_PASSWORD"
+            xcrun stapler staple "$dmg"
+          done
+
+      # **Whether the artefacts are signed is checked, not assumed.** A step
+      # that reported what secrets were *present* would have passed for the
+      # whole time the Windows wiring was reading an environment variable
+      # nothing looks at.
+      - name: are they actually signed? (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem target/release/bundle -Recurse -Include *.msi, *.exe
+          $signed = $false
+          foreach ($f in $files) {
+            $status = (Get-AuthenticodeSignature $f.FullName).Status
+            Write-Host "$($f.Name): $status"
+            if ($status -eq 'Valid') { $signed = $true }
+          }
+          if (-not $signed) { Write-Host "::warning::these artefacts are UNSIGNED" }
+
+      - name: are they actually signed? (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          signed=0
+          for f in target/release/bundle/macos/*.app target/release/bundle/dmg/*.dmg; do
+            [ -e "$f" ] || continue
+            if codesign --verify --deep --strict "$f"; then
+              echo "signed: $f"
+              signed=1
+            else
+              echo "unsigned: $f"
+            fi
+          done
+          [ "$signed" = "1" ] || echo "::warning::these artefacts are UNSIGNED"
 
       - uses: actions/upload-artifact@v4
         with:

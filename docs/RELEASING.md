@@ -70,16 +70,42 @@ that warning exists to prevent.
 | `APPLE_CERTIFICATE` | macOS | A base64 `.p12` of a Developer ID Application certificate |
 | `APPLE_CERTIFICATE_PASSWORD` | macOS | The password for that `.p12` |
 | `APPLE_SIGNING_IDENTITY` | macOS | `Developer ID Application: NAME (TEAMID)` |
-| `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` | macOS | Notarization; an app-specific password, not the account one |
-| `WINDOWS_CERT_THUMBPRINT` | Windows | The thumbprint of a code-signing certificate already in the runner's store |
+| `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` | macOS | Notarization; an **app-specific** password, not the account one |
+| `WINDOWS_CERT_THUMBPRINT` | Windows | The SHA-1 thumbprint of a certificate **already in the runner's store** |
 
-Windows takes a thumbprint rather than the certificate itself, so the private
-key is never written to a runner's disk. macOS needs the `.p12` because
-`codesign` needs a keychain; it is imported to a temporary keychain and
-discarded with the runner.
+Both certificates are **purchased and issued by a third party**, and the lead
+time is days rather than minutes — which is why P6.1 sits where it does in the
+roadmap.
 
-Both are **purchased and issued by a third party**, and the lead time is days
-rather than minutes — which is why P6.1 sits where it does in the roadmap.
+Windows takes a thumbprint rather than the certificate itself, so no private
+key is written to a runner's disk — which also means the certificate has to be
+installed on the runner already. A hosted runner has no way to do that safely;
+this is what a **self-hosted Windows runner** or a cloud signing service is
+for, and it is a decision about where the key lives rather than a line of YAML.
+
+macOS needs the `.p12` because `codesign` reads a keychain. It is imported into
+a temporary keychain, unlocked for the job, and thrown away with the runner.
+
+### Three things about the wiring that are easy to get wrong
+
+Each of these was got wrong first, and each fails **silently** — an unsigned
+release that every log calls successful.
+
+* **Windows signing is configuration, not an environment variable.** The
+  bundler reads `bundle.windows.certificateThumbprint`. There is no
+  `TAURI_WINDOWS_CERT_THUMBPRINT`; setting one does nothing. The workflow
+  passes it through `--config`, so no credential is written into the tree.
+* **`secrets` is not a context a step's `if` can read.** `if: secrets.X != ''`
+  is accepted and is always false. The secrets are lifted to the job's `env`
+  and the steps test that.
+* **Notarization is run explicitly**, with `xcrun notarytool --wait` and
+  `stapler`, rather than left to the bundler — what the bundler does about it
+  varies by version, and a silent no-op is the one outcome this must not have.
+
+And the workflow **checks the artefacts rather than the secrets**: it asks
+`Get-AuthenticodeSignature` and `codesign --verify` what happened. A step that
+reported which secrets were present would have passed happily for the whole
+time the Windows wiring was reading a variable nothing looks at.
 
 ### Verifying afterwards
 
@@ -102,9 +128,11 @@ build.
 
 ## Cutting a release
 
-1. Update `version` in the workspace `Cargo.toml` and in
-   `crates/biblecompose-tauri/tauri.conf.json`. They are checked against each
-   other by CI.
+1. Update `version` in `crates/biblecompose-tauri/Cargo.toml` and in
+   `crates/biblecompose-tauri/tauri.conf.json`. A test fails if the two
+   disagree — one is what `--version` prints, the other is what the installer
+   registers with the operating system, and a release where they differ
+   installs over itself or refuses to.
 2. Update `CHANGELOG.md`.
 3. Tag `vX.Y.Z` and push it. The workflow runs on the tag.
 4. Download the artefacts, and **install one of them on a machine that has

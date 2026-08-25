@@ -74,7 +74,10 @@ import { join, relative, sep } from "node:path";
  */
 const REMOVE = [
   // TLS and sockets (spike F-16, NFR-004).
-  { pattern: /(^|[/])(socket|ssl|mime)([/]|\.lua$)/, why: "networking" },
+  // The trailing `$` matters: without it the *files* under `socket/` go and
+  // the directory stays, empty — which leaves a stage that passes a check for
+  // networking code while still carrying something called `socket`.
+  { pattern: /(^|[/])(socket|ssl|mime)([/]|\.lua$|$)/, why: "networking" },
   { pattern: /(^|[/])ltn12\.lua$/, why: "networking (luasocket's filter library)" },
   { pattern: /(^|[/])(socket|ssl|mime)\.(so|dll|dylib)$/, why: "networking" },
   // One machine's font list, rebuilt on first run wherever it lands.
@@ -217,6 +220,28 @@ function verify(stage) {
     console.error(`no fonts in ${stage} — every build would be blocked by FONT-001`);
     process.exit(1);
   }
+  // **What Lua modules the stage actually has**, printed rather than assumed.
+  //
+  // A bundle missing a rock fails at run time with `module 'x' not found` and
+  // a list of the places it looked — which is a long way from the machine that
+  // built it, and reads as a path problem when it is a packaging one. Listing
+  // them here costs a directory read and turns the next such failure into a
+  // diff against this output.
+  const rocks = join(stage, "lua_modules", "share", "lua", "5.1");
+  const modules = existsSync(rocks)
+    ? readdirSync(rocks)
+        .filter((e) => e !== "sile")
+        .sort()
+    : [];
+  console.log(`  lua modules (${modules.length}): ${modules.join(" ") || "none"}`);
+  // `vstruct` is the one SILE reaches for first, when it opens a font — so a
+  // stage without it cannot set a single page, and says so here rather than
+  // on a publisher's machine.
+  if (!modules.some((m) => m === "vstruct" || m === "vstruct.lua")) {
+    console.error(`no vstruct in ${rocks} — SILE cannot read a font without it`);
+    process.exit(1);
+  }
+
   console.log(`stage-backend: ${stage} is clean, ${mb(bytes(stage))}, ${exe}`);
 }
 

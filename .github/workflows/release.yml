@@ -92,6 +92,13 @@ jobs:
             # names a function rather than a path.
             echo "LDFLAGS=-L$(brew --prefix zlib)/lib"
             echo "CPPFLAGS=-I$(brew --prefix zlib)/include"
+            # And the reason the *link* test for it fails while the header
+            # check above it passes: clang now compiles as C23, where an
+            # implicit function declaration is an error rather than a
+            # warning. `AC_CHECK_LIB` calls the function without declaring
+            # it, so every such check fails to compile — and autoconf
+            # reports that as the library being absent.
+            echo "CFLAGS=-Wno-implicit-function-declaration"
           } >> "$GITHUB_ENV"
 
       - name: build SILE
@@ -107,7 +114,7 @@ jobs:
           # four minutes in, over a font this application does not set.
           ./configure --prefix="$PWD/../runtime" --with-system-luarocks=no \
             FCMATCH=true \
-            CPPFLAGS="${CPPFLAGS:-}" LDFLAGS="${LDFLAGS:-}"
+            CPPFLAGS="${CPPFLAGS:-}" LDFLAGS="${LDFLAGS:-}" CFLAGS="${CFLAGS:-}"
           make -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
           make install
 
@@ -122,11 +129,10 @@ jobs:
           for f in sile-src/config.log sile-src/libtexpdf/config.log; do
             [ -f "$f" ] || continue
             echo "===== $f ====="
-            # The tail is where the failing check is; the head carries the
-            # invocation that produced it.
-            head -30 "$f"
-            echo "..."
-            tail -150 "$f"
+            # Around the failing check by name, not by position — `tail` lands
+            # in the `#define` block that ends the file and misses the conftest
+            # entirely, which is how one run was spent learning nothing.
+            grep -n -B 40 -A 5 -iE "compress2|failed|error" "$f" | tail -200 || true
           done
           echo "===== environment ====="
           echo "CPPFLAGS=${CPPFLAGS:-unset}"

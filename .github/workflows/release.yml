@@ -75,7 +75,7 @@ jobs:
         run: |
           brew install autoconf automake libtool pkg-config \
             harfbuzz fontconfig icu4c freetype libpng expat \
-            luajit luarocks jq poppler
+            luajit luarocks jq poppler zlib
           # Both are keg-only, so Homebrew leaves them off the default
           # pkg-config path and `configure` reports "cannot find Lua includes"
           # — which sounds like a missing package and is a missing path.
@@ -86,6 +86,12 @@ jobs:
             # build that fails four minutes in.
             echo "LUA_INCLUDE=-I$(brew --prefix luajit)/include/luajit-2.1"
             echo "LUA_LIB=-L$(brew --prefix luajit)/lib -lluajit-5.1"
+            # libtexpdf configures itself separately and looks for zlib with
+            # `compress2`. macOS has one in the SDK that its test does not
+            # find, and the error — "Sorry, you need zlib with compress2" —
+            # names a function rather than a path.
+            echo "LDFLAGS=-L$(brew --prefix zlib)/lib"
+            echo "CPPFLAGS=-I$(brew --prefix zlib)/include"
           } >> "$GITHUB_ENV"
 
       - name: build SILE
@@ -215,9 +221,21 @@ jobs:
       - name: the stage carries no networking code
         run: node scripts/stage-backend.mjs --verify stage
 
+      # SILE was cross-built inside a Fedora container, which had the mingw
+      # toolchain. This step is not: it runs on the Ubuntu host, where nothing
+      # has installed one, and `windows-sys` fails with "error calling dlltool
+      # 'x86_64-w64-mingw32-dlltool': No such file or directory" — which names
+      # the tool and not the reason it is absent.
+      - name: the mingw toolchain, on the host this time
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64
+
       - name: build with the runtime embedded
         env:
           BIBLECOMPOSE_SILE_BUNDLE: ${{ github.workspace }}/stage
+          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: x86_64-w64-mingw32-gcc
         run: |
           cargo build --release --target x86_64-pc-windows-gnu \
             --bin biblecompose --features biblecompose-sile/embedded-sile

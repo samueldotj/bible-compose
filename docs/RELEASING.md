@@ -134,10 +134,37 @@ build.
    registers with the operating system, and a release where they differ
    installs over itself or refuses to.
 2. Update `CHANGELOG.md`.
-3. Tag `vX.Y.Z` and push it. The workflow runs on the tag.
-4. Download the artefacts, and **install one of them on a machine that has
-   never had a development build on it**. Everything above this line is
-   testable in CI; this is not.
+3. Tag `vX.Y.Z` and push it. The workflow runs on the tag and ends by creating
+   a **draft** release with every artefact and a `SHA256SUMS` covering them.
+4. Read the signing warnings in the installer jobs.
+5. **Install one artefact on a machine that has never had a development build
+   on it.** Everything above this line is testable in CI; this is not.
+6. Publish the draft.
+
+The release is a draft on purpose. The workflow does the work and a person
+decides whether it ships — which is also the last gate before an unsigned build
+reaches anybody, since the signing steps only warn and a warning nobody reads
+is not a gate.
+
+`workflow_dispatch` builds everything and creates no release, so "does this
+still work" is a question that can be asked without publishing an answer.
+
+### What lands on the release page
+
+| | |
+|---|---|
+| `biblecompose-linux-x86_64`, `-macos-*`, `-windows-x86_64.exe` | The command line, one file, typesetter included |
+| `.msi`, `-setup.exe`, `.dmg`, `.deb`, `.AppImage` | The window, installed |
+| `SHA256SUMS` | Every file above |
+
+The staged runtimes are intermediates and are kept for a day, not released:
+they are 79 MB apiece and only the installer jobs want them.
+
+The executables are named for their platform and architecture rather than
+`biblecompose`, because Linux's and macOS's are otherwise the same filename —
+which nothing notices until they are on one page together. The architecture is
+asked of the runner rather than assumed; `macos-latest` is arm64, and a hosted
+runner's shape is not a constant.
 
 ## Building an installer locally
 

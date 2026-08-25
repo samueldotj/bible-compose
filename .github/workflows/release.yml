@@ -133,10 +133,27 @@ jobs:
             echo "the file produced is not a PDF"; exit 1; }
           echo "smoke: $(wc -c < smoke/out.pdf) bytes from a machine with no SILE"
 
+      # Named for the platform and the architecture, because the release
+      # page is one directory and `biblecompose` means three different files.
+      # `macos-latest` is arm64, so the architecture is asked for rather than
+      # assumed — a hosted runner's shape is not a constant.
+      - name: name the executable for its platform
+        shell: bash
+        run: |
+          arch=$(uname -m)
+          case "${{ runner.os }}" in
+            Linux) os=linux ;;
+            macOS) os=macos ;;
+          esac
+          mkdir -p dist
+          cp target/release/biblecompose "dist/biblecompose-$os-$arch"
+          echo "artefact=biblecompose-$os-$arch" >> "$GITHUB_OUTPUT"
+        id: name
+
       - uses: actions/upload-artifact@v4
         with:
-          name: biblecompose-${{ matrix.os }}
-          path: target/release/biblecompose
+          name: cli-${{ matrix.os }}
+          path: dist/${{ steps.name.outputs.artefact }}
           if-no-files-found: error
 
       # The staged runtime, for the installer job on this platform. Uploaded
@@ -147,6 +164,9 @@ jobs:
           name: stage-${{ matrix.os }}
           path: stage
           if-no-files-found: error
+          # An intermediate, not an artefact. 79 MB each, and the only thing
+          # that wants them is the installer job an hour later.
+          retention-days: 1
 
   windows:
     name: windows (cross-built)
@@ -184,6 +204,21 @@ jobs:
       # The smoke test cannot run here — the binary is for another operating
       # system — so it runs on a Windows runner against the artefact, which is
       # a truer test anyway: it is the file a publisher would download.
+      - name: name the executable for its platform
+        run: |
+          mkdir -p dist
+          cp target/x86_64-pc-windows-gnu/release/biblecompose.exe \
+             dist/biblecompose-windows-x86_64.exe
+
+      # Under its own name for the release, and under the old one as well,
+      # because `windows-smoke` downloads it by that name and a smoke test
+      # should run against the file a publisher gets rather than a copy.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli-windows-latest
+          path: dist/biblecompose-windows-x86_64.exe
+          if-no-files-found: error
+
       - uses: actions/upload-artifact@v4
         with:
           name: biblecompose-windows
@@ -195,6 +230,7 @@ jobs:
           name: stage-windows-latest
           path: stage
           if-no-files-found: error
+          retention-days: 1
 
   installers:
     name: installers (${{ matrix.os }})
@@ -384,3 +420,95 @@ jobs:
           head -c 8 smoke/out.pdf | grep -q '%PDF' || {
             echo "the file produced is not a PDF"; exit 1; }
           echo "smoke: $(wc -c < smoke/out.pdf) bytes from a machine with no SILE"
+
+  release:
+    name: draft the release
+    needs: [bundle, windows, installers, windows-smoke]
+    # Only for a tag. `workflow_dispatch` is for finding out whether the build
+    # still works, and a manual run that quietly created a release would be a
+    # surprise every time.
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    # The only job that needs to write anything, and the only one that has the
+    # permission to. Everything above this could run on a fork's pull request
+    # without being able to publish.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Named patterns rather than everything: the stages are intermediates and
+      # would put 240 MB of unpacked typesetter on the release page.
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cli-*
+          path: incoming
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installers-*
+          path: incoming
+          merge-multiple: true
+
+      - name: gather and checksum
+        id: gather
+        run: |
+          mkdir -p release
+          find incoming -type f \
+            \( -name 'biblecompose-*' -o -name '*.msi' -o -name '*.exe' \
+               -o -name '*.dmg' -o -name '*.deb' -o -name '*.AppImage' \) \
+            -exec cp {} release/ ";"
+          cd release
+          # Checksums matter more the less signed the artefacts are: with no
+          # certificate they are the only way a publisher can tell that what
+          # they downloaded is what was built.
+          #
+          # `SHA256SUMS` is excluded by name rather than by hoping it does not
+          # exist yet. The redirection creates it before anything walks the
+          # directory, so both `*` and a bare `find` will list the file being
+          # written — with a hash of nothing.
+          find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%P '             | sort -z | xargs -0 sha256sum > SHA256SUMS
+          echo "--- release contents ---"
+          ls -la
+          test -s SHA256SUMS
+
+      - name: draft the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          {
+            echo "## BibleCompose $version"
+            echo
+            echo "One file per platform. Each carries its own typesetter — there"
+            echo "is nothing to install alongside it and no internet connection"
+            echo "needed to build a PDF."
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Windows | \`.msi\` or \`-setup.exe\` to install, \`biblecompose-windows-x86_64.exe\` for the command line |"
+            echo "| macOS | \`.dmg\` to install, \`biblecompose-macos-*\` for the command line |"
+            echo "| Linux | \`.deb\` or \`.AppImage\`, \`biblecompose-linux-*\` for the command line |"
+            echo
+            echo "\`SHA256SUMS\` covers every file above."
+            echo
+            echo "New here? [The guide](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/docs/GUIDE.md)"
+            echo "goes from a folder of USFM to a PDF."
+          } > notes.md
+
+          # **A draft.** The workflow does the work; a person decides whether it
+          # ships. That is also the last gate before an unsigned build reaches
+          # anybody — the signing steps warn, and a warning nobody reads is not
+          # a gate.
+          gh release create "$GITHUB_REF_NAME" \
+            --draft \
+            --title "BibleCompose $version" \
+            --notes-file notes.md \
+            release/*
+
+      - name: what to check before publishing
+        run: |
+          echo "::notice::A DRAFT release was created. Before publishing:"
+          echo "::notice::1. Check the signing warnings in the installer jobs above."
+          echo "::notice::2. Install one artefact on a machine that has never had a dev build."
+          echo "::notice::3. Open a PDF it produces."

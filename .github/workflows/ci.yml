@@ -66,6 +66,13 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # A workflow that only runs on a tag is only broken on a tag, which is
+      # the worst moment to find out. `release.yml` fires on `v*` and nothing
+      # else, so nothing here would exercise it until a release.
+      - run: node scripts/lint-workflows.mjs
 
   # ADR-004's boundary and SILE-005's ordered-map rule. Both are the kind that
   # erode one convenient import at a time, so they are asserted rather than

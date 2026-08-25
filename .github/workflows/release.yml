@@ -467,7 +467,7 @@ jobs:
           # exist yet. The redirection creates it before anything walks the
           # directory, so both `*` and a bare `find` will list the file being
           # written — with a hash of nothing.
-          find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%P '             | sort -z | xargs -0 sha256sum > SHA256SUMS
+          find . -maxdepth 1 -type f ! -name SHA256SUMS -exec sha256sum {} + | sort -k2 > SHA256SUMS
           echo "--- release contents ---"
           ls -la
           test -s SHA256SUMS

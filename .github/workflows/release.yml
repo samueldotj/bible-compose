@@ -92,13 +92,23 @@ jobs:
             # names a function rather than a path.
             echo "LDFLAGS=-L$(brew --prefix zlib)/lib"
             echo "CPPFLAGS=-I$(brew --prefix zlib)/include"
-            # And the reason the *link* test for it fails while the header
-            # check above it passes: clang now compiles as C23, where an
-            # implicit function declaration is an error rather than a
-            # warning. `AC_CHECK_LIB` calls the function without declaring
-            # it, so every such check fails to compile — and autoconf
-            # reports that as the library being absent.
-            echo "CFLAGS=-Wno-implicit-function-declaration"
+            # And the reason the *compile* test for it fails while the
+            # header check above it passes. `config.log` settles it: the
+            # conftest calls
+            #
+            #   compress2(dst, &dstlen, src, srclen, lvl)
+            #
+            # with `dstlen` a `uLong` where zlib wants a `uLongf *`. The two
+            # are the same type everywhere that matters, and passing one for
+            # the other has been a warning for thirty years — clang now
+            # compiles as C23, where it is an error. autoconf reports a
+            # conftest that will not compile as the library being absent,
+            # which is how "you need zlib with compress2" ends up describing
+            # a zlib that has it.
+            #
+            # All three are the same change of default, and libtexpdf is from
+            # 2014.
+            echo "CFLAGS=-Wno-implicit-function-declaration -Wno-incompatible-pointer-types -Wno-int-conversion"
           } >> "$GITHUB_ENV"
 
       - name: build SILE
@@ -132,7 +142,10 @@ jobs:
             # Around the failing check by name, not by position — `tail` lands
             # in the `#define` block that ends the file and misses the conftest
             # entirely, which is how one run was spent learning nothing.
-            grep -n -B 40 -A 5 -iE "compress2|failed|error" "$f" | tail -200 || true
+            # Wide enough to reach the compile command above the conftest —
+            # 40 lines put the source in view and left the invocation and
+            # its output just off the top.
+            grep -n -B 70 -A 8 -iE "compress2|failed|error" "$f" | tail -260 || true
           done
           echo "===== environment ====="
           echo "CPPFLAGS=${CPPFLAGS:-unset}"

@@ -211,6 +211,24 @@ cp -r lua_modules/share/lua/5.1/. "$ST/lua_modules/share/lua/5.1/"
 cp -r "$XR"/lib*/lua/5.1/. "$ST/lua_modules/lib/lua/5.1/"
 [ -d "$XR/share/lua/5.1" ] && cp -r "$XR/share/lua/5.1/." "$ST/lua_modules/share/lua/5.1/"
 
+# The pure-Lua rocks the cross-build does not leave behind.
+#
+# `make` populates lua_modules for the BUILD machine, and nine of the twelve
+# arrive; vstruct, lua_cliargs and luarepl do not. SILE opens vstruct the
+# moment it reads a font, so a stage without it cannot set a single page —
+# and says so as `module 'vstruct' not found`, on the target machine, with a
+# list of paths that all look plausible.
+#
+# Installed with the host's luarocks and no cross-compilation, because there
+# is nothing to compile: these are Lua source, and a `.lua` file is the same
+# file on every architecture.
+say "the pure-Lua rocks make leaves out"
+for rock in vstruct lua_cliargs luarepl; do
+  luarocks --lua-version 5.1 install --tree "$ST/lua_modules" --deps-mode none     "$rock" >/dev/null 2>&1 || echo "  could not install $rock"
+done
+printf '  lua modules staged: %s
+'   "$(find "$ST/lua_modules/share/lua/5.1" -maxdepth 1 -mindepth 1 -printf '%f ' 2>/dev/null)"
+
 # Transitive DLL closure, walked rather than guessed — Fedora names ICU
 # icuuc74.dll with no lib prefix, which hand-written lists miss.
 OD=x86_64-w64-mingw32-objdump

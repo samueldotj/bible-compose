@@ -280,7 +280,7 @@ export const EN: Catalogue = {
     openProjectEllipsis: "Open a project…",
     startIntro: "A Bible project is a folder containing Scripture text in USFM format.",
     startExisting: "To get started with an existing Bible:",
-    startStepDownloadBefore: "Download an open-licensed Bible in USFM or Paratext format from ",
+    startStepDownloadBefore: "Download an open-licensed Bible in USFM or Paratext format from",
     startStepDownloadAfter: ".",
     startStepExtract: "Extract the downloaded files to a folder.",
     startStepSelect: "In the application, select that folder as your Bible project directory.",

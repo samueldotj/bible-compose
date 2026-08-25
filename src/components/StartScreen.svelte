@@ -42,7 +42,16 @@
     <p>{t("startExisting")}</p>
     <ol>
       <li>
-        {t("startStepDownloadBefore")}<!--
+        <!--
+          A non-breaking space, so the sentence never ends a line on "from"
+          with the link alone on the next one. The word before a link and the
+          link are one phrase to a reader, and this column is narrow enough
+          that the break lands there.
+
+          The space lives here rather than at the end of the catalogue string:
+          trailing whitespace is invisible, survives no careless edit, and is
+          the first thing a translator drops.
+        -->{t("startStepDownloadBefore")}&nbsp;<!--
           Opened in the machine's browser rather than followed here. This is a
           webview showing the application, and a link that navigated it would
           replace the application with a website and leave no way back.

@@ -135,7 +135,7 @@ fn document(books: Option<&Utf8Path>, fixture: &str) -> Result<project::Opened, 
 
     if opened.blocked() {
         for d in opened.diagnostics.iter() {
-            eprintln!("{d}");
+            print_diagnostic(&mut std::io::stderr(), d);
         }
         return Err(format!("{root} cannot be built"));
     }
@@ -173,7 +173,7 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
                     // A missing backend is reported, not fatal to `version`:
                     // knowing the application version is exactly what you want
                     // when the backend is what is broken.
-                    eprintln!("{d}");
+                    print_diagnostic(&mut std::io::stderr(), &d);
                     Ok(ExitCode::FAILURE)
                 }
             }
@@ -187,7 +187,7 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             let opened = document(books.as_deref(), &fixture)?;
             let (doc, diagnostics) = (&opened.document, &opened.diagnostics);
             for d in diagnostics.iter() {
-                eprintln!("{d}");
+                print_diagnostic(&mut std::io::stderr(), d);
             }
             let emitted = emit(doc, &opened.styles);
             match output {
@@ -205,7 +205,7 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
             let opened = document(books.as_deref(), &fixture)?;
             let (doc, diagnostics) = (&opened.document, &opened.diagnostics);
             for d in diagnostics.iter() {
-                println!("{d}");
+                print_diagnostic(&mut std::io::stdout(), d);
             }
             println!(
                 "{} book(s), {} character(s) of Scripture",
@@ -237,7 +237,7 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
                 &opened.diagnostics,
             );
             for d in load_diagnostics.iter() {
-                eprintln!("{d}");
+                print_diagnostic(&mut std::io::stderr(), d);
             }
 
             // `--output` wins; otherwise wherever the project says, which is
@@ -279,9 +279,19 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
                         Severity::Error => &mut std::io::stderr(),
                         _ => &mut std::io::stdout(),
                     };
-                    let _ = writeln!(stream, "{d}");
-                    if let Some(h) = &d.help {
-                        let _ = writeln!(stream, "  help: {h}");
+                    print_diagnostic(stream, d);
+                    // **The detail is the evidence**, and it was going
+                    // nowhere. A diagnostic carries one exactly when the
+                    // message is not enough by itself — a linker's own words,
+                    // the signal a process died from, the line a parser
+                    // stopped at — and the window shows it in a panel while
+                    // the command line was dropping it on the floor. Two
+                    // remote build failures were diagnosed without it before
+                    // anyone noticed it was never printed.
+                    if let Some(detail) = &d.detail {
+                        for line in detail.lines() {
+                            let _ = writeln!(stream, "  {line}");
+                        }
                     }
                 }
                 if let Some(path) = &report.output {
@@ -304,6 +314,28 @@ fn load(name: &str) -> Result<biblecompose_scripture::ScriptureDocument, String>
             fixtures::names().join(", ")
         )
     })
+}
+
+/// One diagnostic, with everything it carries.
+///
+/// **The detail was going nowhere.** A diagnostic carries one exactly when the
+/// message is not enough by itself — a linker's own words, the signal a
+/// process died from, the position a parser stopped at — and the window shows
+/// it in a panel while the command line dropped it. Two remote build failures
+/// were diagnosed without it before anyone noticed it was never printed.
+///
+/// Indented under the message rather than run together, because a detail is
+/// often several lines and the ones that matter are usually the last.
+fn print_diagnostic(stream: &mut dyn std::io::Write, d: &biblecompose_diagnostics::Diagnostic) {
+    let _ = writeln!(stream, "{d}");
+    if let Some(help) = &d.help {
+        let _ = writeln!(stream, "  help: {help}");
+    }
+    if let Some(detail) = &d.detail {
+        for line in detail.lines() {
+            let _ = writeln!(stream, "  {line}");
+        }
+    }
 }
 
 fn print_event(event: &BuildEvent, as_json: bool) {

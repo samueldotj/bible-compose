@@ -86,28 +86,28 @@ jobs:
             # build that fails four minutes in.
             echo "LUA_INCLUDE=-I$(brew --prefix luajit)/include/luajit-2.1"
             echo "LUA_LIB=-L$(brew --prefix luajit)/lib -lluajit-5.1"
-            # libtexpdf configures itself separately and looks for zlib with
-            # `compress2`. macOS has one in the SDK that its test does not
-            # find, and the error — "Sorry, you need zlib with compress2" —
-            # names a function rather than a path.
-            echo "LDFLAGS=-L$(brew --prefix zlib)/lib"
-            echo "CPPFLAGS=-I$(brew --prefix zlib)/include"
-            # And the reason the *compile* test for it fails while the
-            # header check above it passes. `config.log` settles it: the
-            # conftest calls
+            # **"Sorry, you need zlib with compress2" is about libpng.**
             #
-            #   compress2(dst, &dstlen, src, srclen, lvl)
+            # libtexpdf configures itself separately, and its zlib check links
+            # `-lz -lpng`. The libpng check just above it passes, because that
+            # one uses the flags pkg-config handed back; this one falls back to
+            # plain LDFLAGS, which had no path to libpng in it. `config.log`
+            # ends the argument in one line — `ld: library 'png' not found` —
+            # and configure reports the whole check as zlib lacking a function
+            # it has had since 1998.
             #
-            # with `dstlen` a `uLong` where zlib wants a `uLongf *`. The two
-            # are the same type everywhere that matters, and passing one for
-            # the other has been a warning for thirty years — clang now
-            # compiles as C23, where it is an error. autoconf reports a
-            # conftest that will not compile as the library being absent,
-            # which is how "you need zlib with compress2" ends up describing
-            # a zlib that has it.
-            #
-            # All three are the same change of default, and libtexpdf is from
-            # 2014.
+            # Three wrong answers were given to this before the log was read
+            # widely enough to show the linker's own words: a missing package,
+            # a missing header path, and a C23 diagnostic. It was none of them.
+            echo "LDFLAGS=-L$(brew --prefix zlib)/lib -L$(brew --prefix libpng)/lib"
+            echo "CPPFLAGS=-I$(brew --prefix zlib)/include -I$(brew --prefix libpng)/include"
+            # Precautionary, and honestly so: these were added on the theory
+            # that C23 promoting old warnings to errors was breaking the
+            # conftest, and they changed nothing — the failure was the linker,
+            # above. They stay because libtexpdf is a 2014 C codebase being
+            # compiled as C23, where implicit declarations and incompatible
+            # pointers are errors rather than warnings, and the next check to
+            # trip over that would fail the same illegible way.
             echo "CFLAGS=-Wno-implicit-function-declaration -Wno-incompatible-pointer-types -Wno-int-conversion"
           } >> "$GITHUB_ENV"
 

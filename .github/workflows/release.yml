@@ -432,6 +432,20 @@ jobs:
         env:
           BIBLECOMPOSE_SILE_BUNDLE: ${{ github.workspace }}/stage
         run: |
+          # **An empty variable is not an absent one, and the bundler cannot
+          # tell.** The signing secrets are lifted to the job's environment so
+          # the steps above can test them; a repository without them gets
+          # `APPLE_CERTIFICATE=""`, which the bundler reads as "sign with
+          # this" and fails on `security import: failed to import keychain
+          # certificate` — a message about a certificate that was never there.
+          #
+          # So: anything empty is removed before the bundler sees it, and
+          # absent means absent.
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD                       APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD                       APPLE_TEAM_ID WINDOWS_CERT_THUMBPRINT; do
+            eval "value=\${$name:-}"
+            [ -n "$value" ] || unset "$name"
+          done
+
           if [ -n "${TAURI_EXTRA_CONFIG:-}" ]; then
             npx tauri build --features embedded-sile --config "$TAURI_EXTRA_CONFIG"
           else

@@ -95,7 +95,12 @@ jobs:
             https://github.com/sile-typesetter/sile.git sile-src
           cd sile-src
           ./bootstrap.sh
-          ./configure --prefix="$PWD/../runtime" --with-system-luarocks=no
+          # FCMATCH=true skips the check that a Gentium Plus resolves through
+          # fontconfig. SILE hard-requires one at configure time and nothing
+          # here ever asks for it — the check failed the macOS build outright,
+          # four minutes in, over a font this application does not set.
+          ./configure --prefix="$PWD/../runtime" --with-system-luarocks=no \
+            FCMATCH=true
           make -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
           make install
 
@@ -194,7 +199,13 @@ jobs:
       # whole mingw-w64 stack SILE needs (S1-NOTES P-9).
       - name: cross-build SILE for Windows
         run: |
-          docker run --rm -v "$PWD:/out" -e SILE_REF="$SILE_REF" fedora:41 \
+          # `WORK` is where the script builds and stages, and it defaults to
+          # `/work` — a path *inside* the container, which the host never
+          # sees. Without this the cross-build succeeds in full and the
+          # stage leaves with the container, which reads as a failure at
+          # the `chown` below and is not one.
+          docker run --rm -v "$PWD:/out" \
+            -e SILE_REF="$SILE_REF" -e WORK=/out/work fedora:41 \
             bash /out/spike/s1-windows-cross.sh
           sudo chown -R "$USER" work/stage
 

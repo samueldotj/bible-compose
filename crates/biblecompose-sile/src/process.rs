@@ -242,13 +242,39 @@ impl Backend for SileBackend {
         })?;
 
         let pdf = job.pdf_path();
+
+        // **Absolute, because the backend does not run where this does.**
+        //
+        // The working directory below is the *project*, so that a relative
+        // asset path in the document means what the project means by it. Every
+        // other path handed over is therefore relative to something the
+        // backend has already stopped standing in: a project given as
+        // `--project smoke` puts the build directory at
+        // `smoke/.biblecompose/…`, and the backend, already inside `smoke`,
+        // looks for `smoke/smoke/.biblecompose/…` and reports a file it cannot
+        // find. Absolute on a machine where the project was named absolutely,
+        // which is why this went unseen until a release ran from a parent
+        // directory.
+        //
+        // `absolute` rather than `canonicalize`: the PDF does not exist yet, so
+        // there is nothing to resolve, and on Windows `canonicalize` returns a
+        // `Y:` path that not every tool reads.
+        let here = |path: &Utf8Path| -> Utf8PathBuf {
+            std::path::absolute(path.as_std_path())
+                .ok()
+                .and_then(|p| Utf8PathBuf::from_path_buf(p).ok())
+                .unwrap_or_else(|| path.to_owned())
+        };
+        let xml_arg = here(&xml_path);
+        let pdf_arg = here(&pdf);
+
         let mut cmd = self.command();
         cmd.current_dir(job.project_root.as_std_path())
-            .arg(xml_path.as_str())
+            .arg(xml_arg.as_str())
             .arg("--class")
             .arg(&job.class)
             .arg("-o")
-            .arg(pdf.as_str())
+            .arg(pdf_arg.as_str())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 

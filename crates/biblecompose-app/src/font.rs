@@ -441,6 +441,15 @@ pub fn preflight_faces(
         if italic.is_empty() && bold.is_empty() {
             continue;
         }
+        // **A family nobody has is not a family missing a face.** FONT-001 has
+        // already said it cannot be found; adding that it has no italic and no
+        // bold is two more diagnostics about the same absence, and they read
+        // as separate problems. Measured on a clean machine, where the default
+        // font is not installed: one blocking error and two warnings, of which
+        // only the error was worth printing.
+        if resolve(&family, project_root, backend_dirs).is_none() {
+            continue;
+        }
         let have = faces_of(&family, project_root, backend_dirs);
         for (missing, selectors, word) in
             [(!have.italic, italic, "italic"), (!have.bold, bold, "bold")]

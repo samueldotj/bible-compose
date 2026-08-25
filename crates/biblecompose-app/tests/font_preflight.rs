@@ -520,3 +520,32 @@ fn a_style_asking_for_a_face_the_font_has_not_got_is_reported() {
         d.message
     );
 }
+
+/// **A family nobody has is not a family missing a face.**
+///
+/// FONT-001 already says it cannot be found. Adding that it has no italic and
+/// no bold is two more diagnostics about the same absence, and on a clean
+/// machine — where the *default* font is not installed — that is what a
+/// publisher saw: one error worth reading and two warnings that read as
+/// separate problems.
+#[test]
+fn a_font_nobody_has_is_reported_once() {
+    let styles = styles_from("[character.it]\nitalic = true\n[character.bd]\nweight = 700\n");
+
+    let mut diagnostics = Diagnostics::new();
+    font::preflight_faces(
+        "No Such Family Exists Anywhere",
+        &styles,
+        Utf8Path::new("."),
+        &latin(),
+        &mut diagnostics,
+    );
+    assert!(
+        diagnostics.is_empty(),
+        "nothing should be said about the faces of a font that is not there: {:?}",
+        diagnostics
+            .iter()
+            .map(|d| d.to_string())
+            .collect::<Vec<_>>()
+    );
+}

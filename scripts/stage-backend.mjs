@@ -43,6 +43,14 @@
  * the Rust: one shape crosses the seam, and the knowledge that `make install`
  * has opinions stays in the script that deals with `make install`.
  *
+ * **And the default face goes in.** A runtime built from source carries no
+ * fonts, so the shipped application could not set a page at all: the built-in
+ * `typography.font_family` is DejaVu Serif, and on a machine without it the
+ * pre-flight blocks the build with FONT-001 before anything else happens. That
+ * is the pre-flight working and the bundle being incomplete. The faces are the
+ * ones in `tests/fonts/`, which are already the application's default and are
+ * already recorded there as redistributable.
+ *
  * # Why a script rather than a build step
  *
  * Because the runtime is produced differently on each platform — cross-built
@@ -178,6 +186,11 @@ function flatten(runtime, stage) {
   console.log(`  flattened a prefix install: ${exe} and share/sile`);
 }
 
+/** This repository, whichever directory the script was run from. */
+function root() {
+  return new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+}
+
 function verify(stage) {
   const problems = offending(stage);
   if (problems.length > 0) {
@@ -194,6 +207,14 @@ function verify(stage) {
   }
   if (!existsSync(join(stage, "classes", "biblecompose.lua"))) {
     console.error(`no classes/biblecompose.lua in ${stage} — this would build nothing`);
+    process.exit(1);
+  }
+  // A bundle with no font blocks every build on a machine that has not got
+  // one installed, which is the machine this exists for.
+  const fonts = join(stage, "fonts");
+  const faces = existsSync(fonts) ? readdirSync(fonts).filter((f) => /\.(ttf|otf)$/i.test(f)) : [];
+  if (faces.length === 0) {
+    console.error(`no fonts in ${stage} — every build would be blocked by FONT-001`);
     process.exit(1);
   }
   console.log(`stage-backend: ${stage} is clean, ${mb(bytes(stage))}, ${exe}`);
@@ -224,7 +245,7 @@ if (args[0] === "--verify") {
 
   // The repository's own class and packages, over the top of whatever the
   // runtime brought. Last, so it wins.
-  const ours = join(new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"), "sile");
+  const ours = join(root(), "sile");
   if (existsSync(ours)) {
     cpSync(ours, stage, { recursive: true });
     console.log(`  copied ${relative(process.cwd(), ours)} over the runtime's own`);
@@ -232,6 +253,25 @@ if (args[0] === "--verify") {
     console.error(`${ours} does not exist — the stage would carry no class`);
     process.exit(1);
   }
+
+  // The default face, so a fresh machine can set a page without installing
+  // anything. A runtime built from source has no `fonts/` of its own; one
+  // unpacked from a SILE distribution does, and this adds to it rather than
+  // replacing it.
+  const fonts = join(root(), "tests", "fonts");
+  if (!existsSync(fonts)) {
+    console.error(`${fonts} does not exist — the bundle would carry no font`);
+    process.exit(1);
+  }
+  mkdirSync(join(stage, "fonts"), { recursive: true });
+  let faces = 0;
+  for (const entry of readdirSync(fonts)) {
+    if (/\.(ttf|otf)$/i.test(entry)) {
+      cpSync(join(fonts, entry), join(stage, "fonts", entry));
+      faces += 1;
+    }
+  }
+  console.log(`  added ${faces} default face(s)`);
 
   const removed = prune(stage);
   for (const r of removed) {

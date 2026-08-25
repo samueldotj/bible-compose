@@ -313,6 +313,37 @@ impl Backend for SileBackend {
             cmd.env("SILE_PATH", sile_path.join(path_separator()));
         }
 
+        // **And where its Lua rocks are, which `SILE_PATH` does not cover.**
+        //
+        // `SILE_PATH` tells SILE where to find *its own* classes and packages.
+        // The rocks under `lua_modules/` are found by Lua itself, through
+        // `package.path`, which a bundled runtime seeds from a prefix compiled
+        // into the binary at configure time — a path on the machine that built
+        // it — plus `./lua_modules/…`, relative to the working directory.
+        //
+        // The working directory is the project. So a runtime unpacked anywhere
+        // else fails at the first rock it needs, with `module 'vstruct' not
+        // found` and a list of the places it looked, none of which is where it
+        // actually is. The spike script's closing line — "copy the stage to a
+        // Windows machine and run sile.exe from inside it" — is that same fact,
+        // written as an instruction rather than as a limitation.
+        //
+        // The trailing `;;` is Lua's own: it expands to the default paths, so
+        // this adds to the search rather than replacing it.
+        if let Some(rt) = &self.runtime {
+            let rocks = rt.sile_path.join("lua_modules");
+            let lua = format!(
+                "{share}/?.lua;{share}/?/init.lua;;",
+                share = rocks.join("share/lua/5.1"),
+            );
+            // Windows loads `.dll`, everything else `.so`. Both are listed
+            // rather than chosen, because a wrong guess here fails the same
+            // way as no guess at all and the cost is one path entry.
+            let lib = rocks.join("lib/lua/5.1");
+            let clua = format!("{lib}/?.dll;{lib}/?.so;;");
+            cmd.env("LUA_PATH", lua).env("LUA_CPATH", clua);
+        }
+
         platform::before_spawn(&mut cmd);
 
         let mut child = cmd.spawn().map_err(|e| {

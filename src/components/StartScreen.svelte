@@ -71,7 +71,7 @@
 
   {#if session.recent.length > 0}
     <h2>{t("recent")}</h2>
-    <ul>
+    <ul class="recent">
       {#each session.recent as item (item.root)}
         <li class:missing={item.missing}>
           <button
@@ -162,12 +162,19 @@
     letter-spacing: 0.06em;
     opacity: 0.6;
   }
-  ul {
+  /* Scoped to the recent list. These were written when it was the only list
+     on this screen, and a bare `li` rule reached the lede's steps once it had
+     one: `display: flex` turns an item into a flex container, which makes each
+     of its children a flex item — so the sentence, the link and the full stop
+     became three boxes laid out side by side instead of one line of prose.
+     A link is blockified by that, which is what `display: block` on an inline
+     element was saying. */
+  .recent {
     list-style: none;
     margin: 0;
     padding: 0;
   }
-  li {
+  .recent li {
     display: flex;
     gap: 0.3rem;
     align-items: center;
@@ -195,7 +202,7 @@
   .row:disabled {
     cursor: default;
   }
-  li.missing .name {
+  .recent li.missing .name {
     text-decoration: line-through;
     opacity: 0.55;
   }

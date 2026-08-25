@@ -176,13 +176,23 @@ function flatten(runtime, stage) {
 
   cpSync(resources, stage, { recursive: true });
   cpSync(exe, join(stage, exe.endsWith(".exe") ? "sile.exe" : "sile"));
+  // Every shared object under `lib`, wherever it sits in there, copied to the
+  // top of the stage.
+  //
+  // **`rusile` is the reason this recurses.** `make install` puts it in
+  // `lib/sile/`, one level down, because that is where Lua's `cpath` looks in
+  // a prefix install — and a flat stage has no `lib` at all, so SILE looks for
+  // it beside the executable. That is where the Windows cross-build has always
+  // put it. Copying only the top of `lib` left it behind, and the symptom was
+  // the backend refusing to report a version at all.
+  //
+  // The static archives and pkg-config files stay behind: nothing will read
+  // them, and they are a third of the directory.
   const libs = join(runtime, "lib");
   if (existsSync(libs)) {
-    for (const entry of readdirSync(libs)) {
-      // SILE's own shared objects, not the whole of `lib` — a prefix install
-      // also holds pkg-config files and static archives nothing will read.
-      if (/\.(so|dylib)(\.\d+)*$/.test(entry)) {
-        cpSync(join(libs, entry), join(stage, entry));
+    for (const path of walk(libs)) {
+      if (/\.(so|dylib)(\.\d+)*$/.test(path)) {
+        cpSync(path, join(stage, path.split(sep).pop()));
       }
     }
   }
@@ -234,6 +244,10 @@ function verify(stage) {
         .sort()
     : [];
   console.log(`  lua modules (${modules.length}): ${modules.join(" ") || "none"}`);
+  const top = readdirSync(stage)
+    .filter((e) => /\.(so|dylib|dll)(\.\d+)*$/.test(e))
+    .sort();
+  console.log(`  shared objects (${top.length}): ${top.join(" ") || "none"}`);
   // `vstruct` is the one SILE reaches for first, when it opens a font — so a
   // stage without it cannot set a single page, and says so here rather than
   // on a publisher's machine.

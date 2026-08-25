@@ -603,8 +603,39 @@ jobs:
             echo
             echo "\`SHA256SUMS\` covers every file above."
             echo
-            echo "New here? [The guide](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/docs/GUIDE.md)"
-            echo "goes from a folder of USFM to a PDF."
+            echo "New here? [**The guide**](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/docs/GUIDE.md)"
+            echo "goes from a folder of USFM to a PDF and assumes nothing else."
+            echo
+            # **What a person meets in the first thirty seconds**, on the page
+            # they are standing on. Without this the download stops at a
+            # security dialog with no explanation, and the reasonable
+            # conclusion is that the file is malware.
+            #
+            # Written unconditionally: when these artefacts are signed this
+            # section is wrong and has to be edited, which is the right way
+            # round. A note that quietly disappears when a secret is set would
+            # be a note nobody checks.
+            echo "## Before you install"
+            echo
+            echo "**These artefacts are not code-signed**, so Windows and macOS will"
+            echo "both stop you the first time. Nothing is wrong."
+            echo
+            echo "* **Windows** shows \"Windows protected your PC\". Choose **More info**,"
+            echo "  then **Run anyway**."
+            echo "* **macOS** refuses, and the Control-click shortcut was removed in"
+            echo "  Sequoia: open **System Settings -> Privacy & Security**, find the"
+            echo "  blocked application, and choose **Open Anyway**."
+            echo
+            echo "If that is not acceptable in your setting — a managed machine will"
+            echo "often refuse outright — wait for a signed release rather than working"
+            echo "around it."
+            echo
+            echo "## Known limitations"
+            echo
+            echo "In [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/CHANGELOG.md),"
+            echo "with the measurement behind each. The two most likely to be met:"
+            echo "the bundled font has no italic, and on Linux and macOS the executable"
+            echo "carries the typesetter but not the system libraries it links against."
           } > notes.md
 
           # **A draft.** The workflow does the work; a person decides whether it

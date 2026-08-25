@@ -31,6 +31,18 @@
  * an undeclared class option. The class is copied last, over the top, so the
  * stage always holds the class that shipped with the code that built it.
  *
+ * # Two shapes go in, one comes out
+ *
+ * The Windows runtime is cross-built and lands **flat** — `sile.exe` with the
+ * Lua tree and the DLLs beside it. Linux and macOS are built from source and
+ * `make install`ed to a prefix, which lands as an ordinary Unix tree: the
+ * executable in `bin/`, everything it reads in `share/sile/`.
+ *
+ * The bundle wants the flat shape, because that is what `bundle::ensure`
+ * unpacks and runs. So a prefix tree is flattened here rather than taught to
+ * the Rust: one shape crosses the seam, and the knowledge that `make install`
+ * has opinions stays in the script that deals with `make install`.
+ *
  * # Why a script rather than a build step
  *
  * Because the runtime is produced differently on each platform — cross-built
@@ -119,6 +131,53 @@ function prune(stage) {
   return removed;
 }
 
+/**
+ * Copy a runtime into the stage, in the flat shape the bundle unpacks.
+ *
+ * A tree that already has the executable at its top is copied as it is. A
+ * prefix install is rearranged: `bin/` and `share/sile/` are the two places
+ * anything lives, and `lib/` carries the shared objects SILE built for itself
+ * — `librusile`, `libtexpdf` — which have to travel with it.
+ *
+ * What does *not* travel is the system libraries it linked against. On Linux
+ * that is HarfBuzz, fontconfig and ICU, and the smoke test cannot see the
+ * difference because the machine that builds is the machine that runs. Said
+ * out loud in `docs/RELEASING.md` rather than discovered by a publisher.
+ */
+function flatten(runtime, stage) {
+  const flat = ["sile", "sile.exe"].some((n) => existsSync(join(runtime, n)));
+  if (flat) {
+    cpSync(runtime, stage, { recursive: true });
+    return;
+  }
+
+  const exe = ["bin/sile", "bin/sile.exe"]
+    .map((n) => join(runtime, ...n.split("/")))
+    .find((p) => existsSync(p));
+  const resources = join(runtime, "share", "sile");
+  if (!exe || !existsSync(resources)) {
+    console.error(
+      `${runtime} is neither a flat runtime nor a prefix install — ` +
+        `expected either sile at the top, or bin/sile and share/sile`,
+    );
+    process.exit(1);
+  }
+
+  cpSync(resources, stage, { recursive: true });
+  cpSync(exe, join(stage, exe.endsWith(".exe") ? "sile.exe" : "sile"));
+  const libs = join(runtime, "lib");
+  if (existsSync(libs)) {
+    for (const entry of readdirSync(libs)) {
+      // SILE's own shared objects, not the whole of `lib` — a prefix install
+      // also holds pkg-config files and static archives nothing will read.
+      if (/\.(so|dylib)(\.\d+)*$/.test(entry)) {
+        cpSync(join(libs, entry), join(stage, entry));
+      }
+    }
+  }
+  console.log(`  flattened a prefix install: ${exe} and share/sile`);
+}
+
 function verify(stage) {
   const problems = offending(stage);
   if (problems.length > 0) {
@@ -161,7 +220,7 @@ if (args[0] === "--verify") {
   rmSync(stage, { recursive: true, force: true });
   mkdirSync(stage, { recursive: true });
   const before = bytes(runtime);
-  cpSync(runtime, stage, { recursive: true });
+  flatten(runtime, stage);
 
   // The repository's own class and packages, over the top of whatever the
   // runtime brought. Last, so it wins.

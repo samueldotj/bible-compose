@@ -54,6 +54,30 @@ across three build recipes is what gets *removed*:
   brought — SILE resolves its class from its own tree, and a stale one shadowed
   the repository's for six weeks of this project's history.
 
+### Three ways the Lua dependency hides
+
+All three platforms failed their first real run, and all three for the same
+reason wearing a different hat. Worth writing down, because the messages name
+neither the variable nor the cause.
+
+| | |
+|---|---|
+| macOS | `configure: error: cannot find Lua includes`. Homebrew's `luajit` is keg-only, so it is off the default pkg-config path. Sounds like a missing package; is a missing path. |
+| Windows | `cannot find LuaJIT using pkg-config: pkg-config has not been configured to support cross-compilation`. The Rust half asks through the `pkg-config` crate, which refuses to answer while cross-compiling unless `PKG_CONFIG_ALLOW_CROSS=1`. The C half was already configured and says nothing. |
+| Linux | Built cleanly and failed at staging: `make install` lays out a prefix tree — `bin/sile`, `share/sile/` — where the Windows cross-build lands flat. `stage-backend.mjs` flattens the first into the second. |
+
+### What the Linux smoke test cannot see
+
+The executable carries SILE. It does **not** carry the system libraries SILE
+linked against — HarfBuzz, fontconfig, ICU — and the runner that builds is the
+runner that runs, so the smoke test passes whether or not a machine without
+them would.
+
+So "a fresh machine with no SILE installed builds a PDF" is proved on Windows,
+where the DLLs are cross-built and travel in the bundle, and is **not yet
+proved on Linux**. Answering it properly means either static linking or
+carrying the shared objects, and either is a decision rather than a patch.
+
 ## Signing
 
 **No certificate, key, password or thumbprint appears in this repository, and

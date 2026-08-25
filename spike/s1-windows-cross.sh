@@ -122,6 +122,16 @@ say "bootstrap"
 
 say "configure for x86_64-w64-mingw32"
 export PKG_CONFIG_PATH=$SYS/lib/pkgconfig PKG_CONFIG_LIBDIR=$SYS/lib/pkgconfig
+# The Rust half asks pkg-config separately, through the `pkg-config` crate,
+# which REFUSES to answer while cross-compiling unless told this — on the
+# grounds that a build script reading the host's libraries is usually a
+# mistake. Here it is not: PKG_CONFIG_LIBDIR above points at the mingw sysroot
+# and nothing else, so what it finds is the target's LuaJIT.
+#
+# Without it `mlua-sys` fails with "cannot find LuaJIT using pkg-config:
+# pkg-config has not been configured to support cross-compilation", which
+# names neither the variable nor the reason.
+export PKG_CONFIG_ALLOW_CROSS=1
 export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc
 export CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc
 export AR_x86_64_pc_windows_gnu=x86_64-w64-mingw32-ar

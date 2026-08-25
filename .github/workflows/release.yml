@@ -76,7 +76,17 @@ jobs:
           brew install autoconf automake libtool pkg-config \
             harfbuzz fontconfig icu4c freetype libpng expat \
             luajit luarocks jq poppler
-          echo "PKG_CONFIG_PATH=$(brew --prefix icu4c)/lib/pkgconfig:$PKG_CONFIG_PATH" >> "$GITHUB_ENV"
+          # Both are keg-only, so Homebrew leaves them off the default
+          # pkg-config path and `configure` reports "cannot find Lua includes"
+          # — which sounds like a missing package and is a missing path.
+          {
+            echo "PKG_CONFIG_PATH=$(brew --prefix luajit)/lib/pkgconfig:$(brew --prefix icu4c)/lib/pkgconfig:$PKG_CONFIG_PATH"
+            # Named outright as well, because `configure` takes these directly
+            # and a second way to find the same thing costs nothing against a
+            # build that fails four minutes in.
+            echo "LUA_INCLUDE=-I$(brew --prefix luajit)/include/luajit-2.1"
+            echo "LUA_LIB=-L$(brew --prefix luajit)/lib -lluajit-5.1"
+          } >> "$GITHUB_ENV"
 
       - name: build SILE
         shell: bash

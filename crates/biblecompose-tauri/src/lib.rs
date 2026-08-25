@@ -110,6 +110,9 @@ pub struct WireBook {
     /// the order, and a list that hid it would be a list you could not put it
     /// back from. It is not parsed, so it has no chapters and no diagnostics.
     pub included: bool,
+    /// `old`, `new` or `deuterocanon`, from the canon table — so the window can
+    /// group the list without a second copy of which book is where.
+    pub testament: &'static str,
 }
 
 /// One row of the settings form (GUI-002).
@@ -117,9 +120,18 @@ pub struct WireBook {
 pub struct WireSetting {
     pub key: String,
     /// Which control to render: `text`, `length`, `page_size`, `integer`,
-    /// `boolean`, `path`, `list`.
+    /// `boolean`, `path`, `list`, `choice`.
     pub kind: &'static str,
     pub value: String,
+    /// For `choice`, every spelling the resolver accepts, in the order to offer
+    /// them; empty for every other kind.
+    ///
+    /// Sent rather than restated in TypeScript, because a list of head slots or
+    /// caller styles kept in the window is a list that drifts from the one the
+    /// resolver parses with — and the failure is a dropdown offering a value
+    /// that gets rejected the moment it is chosen.
+    #[serde(skip_serializing_if = "<[_]>::is_empty")]
+    pub choices: &'static [&'static str],
     /// `true` when the project file set it — what the reset control reads
     /// (CFG-007).
     pub overridden: bool,
@@ -127,6 +139,14 @@ pub struct WireSetting {
     /// ADR-005 refuses to invent a location.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub location: Option<WireLocation>,
+}
+
+/// One of the editions a project can be started from (P6.2).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct WirePreset {
+    pub id: String,
+    pub title: String,
+    pub description: String,
 }
 
 /// A project the window has opened before (GUI-001).
@@ -548,6 +568,57 @@ fn open_folder(path: String) -> Result<(), Vec<WireDiagnostic>> {
         })
 }
 
+/// Open the finished PDF in whatever the platform reads PDFs with (GUI-009).
+///
+/// **There is no integrated preview and this is what stands in for one.**
+/// GUI-008 is a SHOULD and [ADR-003](../../../docs/adr/003-gui.md) declines it:
+/// a viewer inside the window would be a second PDF renderer to keep, and the
+/// one the publisher already trusts is the one their printer will use.
+///
+/// Same spawn as `open_folder`, and the same argument for it. The path is one
+/// this application produced and never text out of a document.
+///
+/// On Windows the file is handed to `explorer`, which opens it with its
+/// registered application. `cmd /c start` would do the same and would also put
+/// the path through a shell — for a filename this application chose that is
+/// safe today and is one refactor away from not being.
+#[tauri::command]
+fn open_pdf(path: String) -> Result<(), Vec<WireDiagnostic>> {
+    let path = Utf8PathBuf::from(path);
+    if !path.is_file() {
+        return Err(vec![WireDiagnostic::from(
+            &AppDiagnostic::error(
+                biblecompose_diagnostics::code::COULD_NOT_CREATE,
+                format!("{path} is not a file that exists"),
+            )
+            .help("build first, or the file was moved or renamed since"),
+        )]);
+    }
+
+    let program = if cfg!(windows) {
+        "explorer"
+    } else if cfg!(target_os = "macos") {
+        "open"
+    } else {
+        "xdg-open"
+    };
+
+    std::process::Command::new(program)
+        .arg(path.as_std_path())
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| {
+            vec![WireDiagnostic::from(
+                &AppDiagnostic::error(
+                    biblecompose_diagnostics::code::COULD_NOT_CREATE,
+                    format!("could not open {path}"),
+                )
+                .help("no application on this machine is registered for PDF files")
+                .detail(e.to_string()),
+            )]
+        })
+}
+
 /// Put the project down and go back to the start screen.
 ///
 /// The window forgets what it was watching, so the change detector stops
@@ -725,6 +796,53 @@ pub fn write_setting(
     Ok(project_at(root))
 }
 
+/// The editions a project can be started from (P6.2).
+#[tauri::command]
+fn presets() -> Vec<WirePreset> {
+    biblecompose_config::preset::ALL
+        .iter()
+        .map(|p| WirePreset {
+            id: p.id.to_owned(),
+            title: p.title.to_owned(),
+            description: p.description.to_owned(),
+        })
+        .collect()
+}
+
+/// Write a preset's settings into the project's file.
+#[tauri::command]
+fn apply_preset(
+    session: tauri::State<'_, Arc<Session>>,
+    root: String,
+    id: String,
+) -> Result<WireProject, Vec<WireDiagnostic>> {
+    let root = Utf8PathBuf::from(root);
+    let project = write_preset(&root, &id)?;
+    forget_changes(&session, &root);
+    Ok(project)
+}
+
+/// [`apply_preset`] without the Tauri binding.
+///
+/// One save for the whole preset rather than one per key: a publisher who
+/// chose "Large print" chose one thing, and a folder watcher seeing fourteen
+/// writes would report fourteen external changes.
+pub fn write_preset(root: &Utf8Path, id: &str) -> Result<WireProject, Vec<WireDiagnostic>> {
+    let Some(preset) = biblecompose_config::preset::by_id(id) else {
+        return Err(vec![WireDiagnostic::from(&AppDiagnostic::error(
+            biblecompose_diagnostics::code::UNKNOWN_KEY,
+            format!("{id} is not an edition this release ships"),
+        ))]);
+    };
+    let mut file = open_settings_file(root).map_err(|d| vec![WireDiagnostic::from(&d)])?;
+    let complaints = biblecompose_config::preset::apply(&mut file, preset);
+    if complaints.has_blocking() {
+        return Err(wire_all(&complaints));
+    }
+    file.save().map_err(|d| vec![WireDiagnostic::from(&d)])?;
+    Ok(project_at(root))
+}
+
 /// Remove one setting, so the built-in value applies again (CFG-007).
 #[tauri::command]
 fn reset_setting(
@@ -830,6 +948,12 @@ fn start_build(
     app: tauri::AppHandle,
     session: tauri::State<'_, Arc<Session>>,
     root: String,
+    // A proof rather than the publication (P5.4). An argument and not a
+    // setting: it is what this one run is, and a project that remembered it
+    // was drafting would eventually ship a stamped book.
+    draft: bool,
+    // Run the backend even if nothing that reaches it has changed (BLD-007).
+    clean: bool,
 ) -> Result<(), String> {
     let mut running = session
         .running
@@ -863,10 +987,17 @@ fn start_build(
 
     std::thread::spawn(move || {
         let opened = project::open(&root);
-        let request = BuildRequest::new(root, opened.output())
+        let mut request = BuildRequest::new(root, opened.output())
             .keeping_intermediates(*opened.settings.output.keep_intermediates)
             .with_settings(opened.settings.clone())
             .with_styles(opened.styles.clone());
+        request.clean = clean;
+        // Handed to the build rather than only announced, so a project that
+        // cannot be opened cannot be built (SRS §16.2 scenario H).
+        request.prior = opened.diagnostics.clone();
+        if draft {
+            request.draft = Some(biblecompose_app::draft_note(opened.document.books.len()));
+        }
 
         let mut reporter = reporter;
         // Everything opening the project had to say reaches the panel before
@@ -1059,6 +1190,7 @@ fn wire_project(root: &Utf8Path, opened: project::Opened) -> WireProject {
                 errors,
                 warnings,
                 included: true,
+                testament: book.code.testament().as_str(),
             }
         })
         .collect();
@@ -1080,6 +1212,7 @@ fn wire_project(root: &Utf8Path, opened: project::Opened) -> WireProject {
                 errors: 0,
                 warnings: 0,
                 included: false,
+                testament: out.code.testament().as_str(),
             },
         );
     }
@@ -1151,6 +1284,7 @@ fn wire_field(f: form::Field) -> WireSetting {
     WireSetting {
         key: f.key.to_owned(),
         kind: f.kind.as_str(),
+        choices: f.kind.choices(),
         value: f.value,
         overridden: !f.origin.is_builtin(),
         // Through `location()` rather than matching the variants here: it is
@@ -1336,6 +1470,9 @@ pub fn run() {
             create_project,
             close_project,
             open_folder,
+            open_pdf,
+            presets,
+            apply_preset,
             start_build,
             cancel_build,
             is_building,

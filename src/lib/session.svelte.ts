@@ -18,6 +18,7 @@ import {
   type BuildState,
   type Defaults,
   type Diagnostic,
+  type Preset,
   type Project,
   type Severity,
 } from "./services/backend";
@@ -122,8 +123,14 @@ export class Session {
    */
   showProblems = $state(false);
 
-  /** Which configuration tab is showing. One of `TABS`. */
-  pane = $state("page");
+  /**
+   * Which configuration tab is showing. One of `TABS`.
+   *
+   * The books, because opening a project is a thing you do to look at what is
+   * in it, and because "which books, in what order" is the question every
+   * other tab assumes an answer to.
+   */
+  pane = $state("scripture");
   /** And which section within the Styles tab. One of `STYLE_TABS`. */
   stylePane = $state("typography");
   /** The selector the inspector is showing, and what is filtering the list. */
@@ -382,6 +389,25 @@ export class Session {
     return this.project.root;
   }
 
+  /**
+   * Open the PDF this build wrote, in the platform's own viewer (GUI-009).
+   *
+   * `this.output` and not the project's configured path: a draft goes
+   * somewhere else, and the button should open the file that was just made
+   * rather than the one that would have been.
+   */
+  async showPdf(): Promise<void> {
+    const pdf = this.output;
+    if (!pdf) return;
+    try {
+      await backend().openPdf(pdf);
+    } catch (e: unknown) {
+      this.fault = asDiagnostics(e)
+        .map((d) => d.message)
+        .join(" ");
+    }
+  }
+
   async showFolder(): Promise<void> {
     const path = this.folderToOpen;
     if (!path) return;
@@ -449,6 +475,44 @@ export class Session {
     }
   }
 
+  /**
+   * The editions a project can be started from, read once (P6.2).
+   *
+   * `null` until they arrive. They never change while the window is open —
+   * they are compiled into the binary — so this is a cache rather than state.
+   */
+  presets = $state<readonly Preset[] | null>(null);
+
+  async loadPresets(): Promise<void> {
+    if (this.presets !== null) return;
+    try {
+      this.presets = await backend().presets();
+    } catch (e: unknown) {
+      this.fault = String(e);
+    }
+  }
+
+  /**
+   * Apply one, which writes its settings into the project's own file.
+   *
+   * Nothing is remembered about which one was chosen, and that is right: once
+   * applied, a preset is just the settings a publisher now has, and a window
+   * still claiming "Large print" after they changed the page size would be
+   * claiming something untrue.
+   */
+  async applyPreset(id: string): Promise<void> {
+    if (!this.project) return;
+    try {
+      this.project = await backend().applyPreset(this.project.root, id);
+      this.changes = null;
+      this.fieldErrors = {};
+    } catch (e: unknown) {
+      this.fault = asDiagnostics(e)
+        .map((d) => d.message)
+        .join(" ");
+    }
+  }
+
   async resetSetting(key: string): Promise<void> {
     if (!this.project) return;
     try {
@@ -486,6 +550,25 @@ export class Session {
     }
   }
 
+  /**
+   * Whether the next build is a proof.
+   *
+   * Lives here and not in the settings file on purpose: it describes one
+   * run rather than the publication, so reopening the project starts you
+   * on a real build again (P5.4).
+   */
+  draft = $state(false);
+
+  /**
+   * Whether the next build ignores the fingerprint (BLD-007).
+   *
+   * A build with nothing to do is skipped, which is almost always what a
+   * publisher wants and occasionally is not: the fingerprint is a promise
+   * about the project's own files, and a build also reads a system font and
+   * artwork that may live anywhere. This is how you make it wrong again.
+   */
+  clean = $state(false);
+
   async build(): Promise<void> {
     if (!this.project || this.building) return;
     this.#forgetBuild();
@@ -493,7 +576,7 @@ export class Session {
     this.built = true;
     this.buildState = "loading";
     try {
-      await backend().startBuild(this.project.root);
+      await backend().startBuild(this.project.root, this.draft, this.clean);
     } catch (e: unknown) {
       this.building = false;
       this.fault = String(e);

@@ -83,6 +83,18 @@ pub fn class_options_with(
         }),
     );
 
+    // What the file says about itself (PDF-005). Each crosses as the empty
+    // string when unset, and the class writes no property for an empty one —
+    // a `/Title ()` in the properties panel is worse than no title, because it
+    // looks like an answer.
+    let said = |v: &Option<biblecompose_config::Sourced<String>>| {
+        v.as_ref().map(|n| n.to_string()).unwrap_or_default()
+    };
+    put("anchors", s.output.anchors.to_string());
+    put("title", said(&s.project.name));
+    put("author", said(&s.project.author));
+    put("subject", said(&s.project.subject));
+
     // What appears on the page.
     put("chapternumbers", flag(*s.numbering.show_chapter_numbers));
     put("versenumbers", flag(*s.numbering.show_verse_numbers));
@@ -91,6 +103,16 @@ pub fn class_options_with(
     put("poetryindent", flag(*s.typography.keep_poetry_indentation));
     put("footnotes", flag(*s.notes.show_footnotes));
     put("crossrefs", flag(*s.notes.show_cross_references));
+    put("footnotecallers", s.notes.footnote_callers.to_string());
+    put(
+        "crossrefcallers",
+        s.notes.cross_reference_callers.to_string(),
+    );
+    put("restartnotes", s.notes.restart_numbering.to_string());
+    put(
+        "crossrefplacement",
+        s.notes.cross_reference_placement.to_string(),
+    );
     // Six slots rather than four switches: where a thing goes is as much a
     // decision as whether it is there, and the class can only honour what it
     // is told.
@@ -115,6 +137,13 @@ pub fn hidden(s: &Settings) -> biblecompose_sile::Hidden {
         book_introductions: !*s.contents.show_book_introductions,
         introductory_outlines: !*s.contents.show_introductory_outlines,
         section_headings: !*s.contents.show_section_headings,
+        // The one that is a `numbering` setting rather than a `contents` one:
+        // it is hidden here because of where the chapter anchor lives, not
+        // because of which group a publisher finds it under.
+        chapter_labels: !*s.numbering.show_chapter_labels,
+        // Filled in by the caller from the asset pre-flight, which is the only
+        // thing that knows which files are actually there.
+        figures: Vec::new(),
     }
 }
 

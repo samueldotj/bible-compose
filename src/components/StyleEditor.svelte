@@ -16,6 +16,7 @@
   import { session } from "../lib/session.svelte";
   import { ALIGNMENTS, STYLE_GROUPS, type PropertyRow } from "../lib/styles";
   import type { StyleProperty } from "../lib/services/backend";
+  import { phrases, t } from "../lib/i18n";
 
   /** Which of `STYLE_GROUPS` to show. The tab decides. */
   const { groups: show }: { groups: readonly string[] } = $props();
@@ -58,9 +59,9 @@
   }
 </script>
 
-<section class="pane" aria-label="Styles">
+<section class="pane" aria-label={t("stylesRegion")}>
   {#if session.styles.length === 0}
-    <p class="empty">Loading…</p>
+    <p class="empty">{t("loading")}</p>
   {:else}
     {#each shown as group (group.id)}
       <fieldset>
@@ -139,7 +140,7 @@
                       class="swatch"
                       value={p?.value ?? UNSET_COLOR}
                       disabled={!session.editable}
-                      aria-label={`${property.label} swatch`}
+                      aria-label={phrases().colourSwatch(property.label)}
                       oninput={(e) => commit(style.selector, property, e.currentTarget.value)}
                     />
                     <input

@@ -18,6 +18,21 @@ pub enum Testament {
     Deuterocanon,
 }
 
+impl Testament {
+    /// The wire spelling, for a window that groups books by it.
+    ///
+    /// Here rather than in the window for the same reason the table is: a
+    /// second answer to which testament a book belongs to, kept in a language
+    /// that cannot be checked against this one, is an answer that drifts.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Testament::Old => "old",
+            Testament::New => "new",
+            Testament::Deuterocanon => "deuterocanon",
+        }
+    }
+}
+
 /// A canonical three-character Scripture identifier.
 ///
 /// Constructed only through [`BookCode::parse`], so an arbitrary string cannot

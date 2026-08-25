@@ -37,6 +37,38 @@ weight = 600
 space_above = "5pt"
 space_below = "1pt"
 
+# Four levels that can be told apart, because a translation that marks three
+# levels and gets two has had its structure flattened without being told. The
+# cascade would give `s3` and `s4` whatever `s2` has (P3.2), which is the right
+# answer for a level nobody defined and the wrong one for a level USFM names.
+#
+# The four are separated by size, all the way down, and that is a deliberate
+# choice over the usual one. The conventional fourth level is the body size in
+# italic, and it is not used here because **a font with no italic answers a
+# request for one with the regular face, silently**: on a two-face font that
+# treatment renders a fourth-level heading as body text. Size survives any font
+# with a single face, so the hierarchy is carried by the property that cannot
+# quietly fail. Italic is still asked for, and a font that has one will show it.
+#
+# The last level lands below the body size. That is intended — `\s4` is a very
+# fine subdivision, it stays bold, and the space above it still sets it off.
+[heading.s3]
+font_size = "9.2pt"
+weight = 600
+space_above = "4pt"
+space_below = "1pt"
+
+# `weight` is written out, and has to be: the cascade hands a level whatever the
+# level above it has, so leaving it unsaid would still be inheriting `s3`'s 600
+# — which is what is wanted here, but saying so is what stops a later edit to
+# `s3` from moving `s4` as well.
+[heading.s4]
+font_size = "8.8pt"
+weight = 600
+italic = true
+space_above = "3pt"
+space_below = "1pt"
+
 # `\sr` — the reference range under a section heading.
 [heading.sr1]
 font_size = "7.6pt"
@@ -118,18 +150,37 @@ space_above = "4pt"
 space_below = "1pt"
 
 # ------------------------------------------------------------------ lists
+#
+# `indent` on a list item indents the *whole* item, continuation lines
+# included, which is what makes a wrapped item read as one item. Nine points
+# per level, matching poetry, so a list and a poem at the same depth line up.
 
-[list.1]
+[list.li1]
 indent = "9pt"
 
-[list.2]
+[list.li2]
 indent = "18pt"
 
-[list.3]
+[list.li3]
 indent = "27pt"
 
-[list.4]
+[list.li4]
 indent = "36pt"
+
+# `\lim` is a list embedded in a paragraph, so it starts one step in from
+# where a free-standing list of the same level would, and every level below it
+# keeps that offset.
+[list.lim1]
+indent = "18pt"
+
+[list.lim2]
+indent = "27pt"
+
+[list.lim3]
+indent = "36pt"
+
+[list.lim4]
+indent = "45pt"
 
 # ------------------------------------------------------ chapter and verse
 

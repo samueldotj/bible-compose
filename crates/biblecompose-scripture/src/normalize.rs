@@ -34,8 +34,8 @@ use usfm_core::{Document, Node, NodeKind};
 
 use crate::{
     Align, Attribute, Block, Book, BookCode, BookNames, Cell, CharStyle, CrossReference, FigureRef,
-    HeadingStyle, Inline, Milestone, Note, NoteKind, ParaStyle, PoetryStyle, Row, Unsupported,
-    VerseId,
+    HeadingStyle, Inline, ListStyle, Milestone, Note, NoteKind, ParaStyle, PoetryStyle, Row,
+    Unsupported, VerseId,
 };
 
 /// Normalize one parsed file into a publication book.
@@ -157,7 +157,11 @@ impl Cx<'_> {
                         level,
                         content,
                     }),
-                    Para::ListItem(level) => blocks.push(Block::ListItem { level, content }),
+                    Para::ListItem(style, level) => blocks.push(Block::ListItem {
+                        style,
+                        level,
+                        content,
+                    }),
                     Para::Break => {
                         // `\b` carries nothing, but an anchor waiting on it
                         // must not be discarded with it.
@@ -436,6 +440,7 @@ impl Cx<'_> {
                         } else {
                             Align::Start
                         },
+                        span: cell_span(cell.marker.as_ref().map(|m| m.as_str())),
                         content: self.inlines(&cell.children),
                     })
                     .collect(),
@@ -529,11 +534,31 @@ fn flatten(nodes: &[Node]) -> String {
     out.trim().to_owned()
 }
 
+/// How many columns a cell marker covers.
+///
+/// USFM 3.0 spells a spanning cell `\\tc1-2`, and the width is the only place
+/// that range survives: the parser gives the cells of a row in order with no
+/// column numbers, because it has already rejected any row whose columns are
+/// not consecutive. So a two-column cell that arrives looking like a
+/// one-column cell would silently shorten its row.
+///
+/// Anything unreadable is one column, which is what a cell with no range is.
+fn cell_span(marker: Option<&str>) -> u8 {
+    let Some((first, last)) = marker.and_then(|m| m.rsplit_once('-')) else {
+        return 1;
+    };
+    let digits = |s: &str| s.trim_matches(|c: char| !c.is_ascii_digit()).parse::<u8>();
+    match (digits(first), last.parse::<u8>()) {
+        (Ok(from), Ok(to)) if to >= from => to - from + 1,
+        _ => 1,
+    }
+}
+
 enum Para {
     Paragraph(ParaStyle),
     Poetry(PoetryStyle, u8),
     Heading(HeadingStyle, u8),
-    ListItem(u8),
+    ListItem(ListStyle, u8),
     Break,
     Unknown,
 }
@@ -569,8 +594,8 @@ fn classify(marker: &str) -> Para {
     if let Some(style) = HeadingStyle::all().iter().find(|s| s.marker() == family) {
         return Para::Heading(*style, level);
     }
-    if family == "li" {
-        return Para::ListItem(level);
+    if let Some(style) = ListStyle::all().iter().find(|s| s.marker() == family) {
+        return Para::ListItem(*style, level);
     }
     // `\ms` is a major section heading; the family table has `s`, and a major
     // section is a section for typesetting purposes at a larger size.

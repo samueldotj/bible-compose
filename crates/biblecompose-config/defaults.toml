@@ -19,7 +19,13 @@ strict = false
 
 [project]
 # `name` is deliberately absent. There is no default publication name that is
-# right for anybody, so an unset name means "use the project folder's name".
+# right for anybody, so an unset name means "use the project folder's name" —
+# in the interface. The PDF gets no title at all rather than the name of the
+# directory it happened to be built in, which is a path reaching the output.
+#
+# `author` and `subject` are absent for the same reason and go the same way:
+# each becomes a PDF property when it is set, and nothing when it is not.
+# `author` is `Author` in PDF terms and the publisher in everyone else's.
 language = "en"
 
 [books]
@@ -74,9 +80,33 @@ show_verse_numbers = true
 # Off by default: it is a common Bible convention rather than a universal one.
 hide_first_verse_number = false
 
+# USFM's `\cl` — the words a translation gives a chapter, such as
+# `\cl அத்தியாயம் 1` beside `\c 1`. On, because a translation that carries them
+# wrote them deliberately; off for an edition that wants the figure alone.
+show_chapter_labels = true
+
 [notes]
 show_footnotes = true
 show_cross_references = true
+
+# What USFM's `\f +` asks for: the next mark in a sequence. `numbers`,
+# `letters`, `symbols`, or `none`. A note that names its own caller — `\f *` —
+# keeps it, and does not take a place in the sequence.
+#
+# Different sequences for the two kinds, so a page carrying both says which
+# mark belongs to which without a legend.
+footnote_callers = "numbers"
+cross_reference_callers = "letters"
+
+# Where a sequence starts again: `per_chapter`, `per_book` or `never`.
+# Per chapter, because that is the common Bible convention and because it keeps
+# the marks short — a book-long sequence of footnotes reaches three digits.
+restart_numbering = "per_chapter"
+
+# Where a `\x` reference is set: `note_area` beside the footnotes, `inline` in
+# brackets where it was called, or `end_of_paragraph` gathered under the
+# paragraph that called it (SCR-005). Centre-column is post-MVP.
+cross_reference_placement = "note_area"
 
 # Three slots at the top of the page and three at the foot, each holding one
 # of: empty, page_number, reference_range, first_reference, last_reference,
@@ -94,5 +124,30 @@ footer_left = "empty"
 footer_center = "page_number"
 footer_right = "empty"
 
+# Figures and anything else a project points at that is not Scripture.
+[assets]
+# What to do about a figure whose file is not there: `stop` refuses to build,
+# `omit` leaves it out and warns. Stop, because a printed book with a hole
+# where an illustration should be is worse than a build that says why — and
+# because the backend will happily produce that book without mentioning it.
+#
+# A figure pointing outside the project folder is refused whatever this says,
+# and so is one in a format the backend cannot read.
+missing_figure = "stop"
+
 [output]
 keep_intermediates = false
+# `name` is deliberately absent. What the PDF is called is derived from the
+# publication's name -- `output/My Bible.pdf` -- and a default written here
+# would be a name that is right for nobody. Set it to say otherwise (BLD-003).
+#
+# A name and not a path: the PDF is always written inside the project's
+# `output/` folder, so that it stays with the book it was made from.
+# How much of the text the PDF can be pointed at: "chapter", "verse", "none".
+#
+# Chapters by default, which is a measurement and not a preference. A
+# destination for every verse cost 15% of the build time and 14% of the file
+# size on a 4,950-verse document, and nothing in this release points at one --
+# no cross-reference is a hyperlink yet. The outline, which is what a reader
+# actually navigates by, comes from the chapters and costs almost nothing.
+anchors = "chapter"

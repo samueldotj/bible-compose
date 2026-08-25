@@ -10,27 +10,35 @@ Open a project folder. BibleCompose discovers the books, validates them, merges 
 
 ## Status
 
-**S0 and M0 complete.** The pipeline exists end to end: a `ScriptureDocument` becomes XML, SILE turns it into a PDF, and the PDF is published atomically. 83 tests, 8 crates, no GUI.
+**M0 through M5 complete, and most of M6.** A folder of USFM opens in a window,
+is validated, styled, and composed into a PDF; the application ships as one
+executable carrying its own typesetter. 499 tests, 9 crates.
 
 ```bash
-cargo run -p biblecompose-cli -- build --fixture john_1_1_5 --output MyBible.pdf
+biblecompose build --books ./MyBible --project ./MyBible
 ```
 
-S0 answered the feasibility question — SILE sets a Bible page in Latin and in Tamil, with balanced columns, footnotes, running heads carrying the live verse range, and vector artwork. Its bundled `bible` class turned out to be unusable, so [`sile/classes/biblecompose.lua`](sile/classes/biblecompose.lua) is ours. Findings and evidence in [spike/NOTES.md](spike/NOTES.md).
+New here? [**The guide**](docs/GUIDE.md) goes from a folder of USFM to a PDF and
+assumes nothing else.
 
-M0 built the second half of the pipeline before the first half exists: documents come from hand-built [fixtures](crates/biblecompose-scripture/src/fixtures.rs), not a parser. The parser arrives at M1.
+**What is left is not code.** Packaging needs a macOS and a Linux machine to run
+on; installers need signing certificates, which are bought rather than written;
+the bundled fonts need their redistribution terms settled with the people who
+own them. Everything those wait on is outside this repository.
+
+S0 answered the feasibility question — SILE sets a Bible page in Latin and in Tamil, with balanced columns, footnotes, running heads carrying the live verse range, and vector artwork. Its bundled `bible` class turned out to be unusable, so [`sile/classes/biblecompose.lua`](sile/classes/biblecompose.lua) is ours. Findings and evidence in [spike/NOTES.md](spike/NOTES.md).
 
 | | Milestone | What it means |
 |---|---|---|
 | **S0** | Typesetting spike ✓ | SILE can set a Bible page. No Rust. |
 | **M0** | Skeleton and contract ✓ | The pipeline exists end to end on one book. |
-| **S1** | Packaging spike | What a single binary costs, and whether Windows is a wall. |
-| **M1** | USFM to PDF | Real Scripture through the real parser, in two columns. |
-| **M2** | Configuration | Page, typography, and output settings, from file and GUI. |
-| **M3** | Styles | The visual layer, editable without TOML. |
-| **M4** | Publishing structures | Footnotes, cross-references, figures, running heads. |
-| **M5** | Hardening | Full corpus, fonts, cancellation, packaging. |
-| **M6** | Version 1.0 | Installers, presets, documentation. |
+| **S1** | Packaging spike ✓ | What a single binary costs, and whether Windows is a wall. |
+| **M1** | USFM to PDF ✓ | Real Scripture through the real parser, in two columns. |
+| **M2** | Configuration ✓ | Page, typography, and output settings, from file and GUI. |
+| **M3** | Styles ✓ | The visual layer, editable without TOML. |
+| **M4** | Publishing structures ✓ | Footnotes, cross-references, figures, running heads. |
+| **M5** | Hardening | Eight of nine. The ninth is packaging, and needs two more machines. |
+| **M6** | Version 1.0 | Accessibility, localization and the ten acceptance scenarios done; installers, fonts and sign-off are not code. |
 
 73 work items sized S to XL — see [ROADMAP](docs/ROADMAP.md).
 
@@ -38,10 +46,13 @@ M0 built the second half of the pipeline before the first half exists: documents
 
 | | |
 |---|---|
+| [GUIDE](docs/GUIDE.md) | **Start here.** A folder of USFM to a PDF, assuming nothing else |
 | [SRS v0.1](docs/SRS-v0.1.md) | The requirements this design answers — the source document, unedited |
 | [SRS-REVIEW](docs/SRS-REVIEW.md) | Analysis of those requirements: findings, gaps, risks, decisions closed |
+| [TRACEABILITY](docs/TRACEABILITY.md) | Every MUST in the SRS, and the test that answers it |
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | The design |
 | [ROADMAP](docs/ROADMAP.md) | The sequence and why it is this one |
+| [RELEASING](docs/RELEASING.md) | How a version becomes three installers, and what has to be supplied |
 
 Decisions and their rejected alternatives:
 [001 shared USFM core](docs/adr/001-usfm-core.md) ·

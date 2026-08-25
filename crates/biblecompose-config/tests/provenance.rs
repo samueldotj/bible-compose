@@ -22,6 +22,8 @@ strict = true
 [project]
 name = \"My Bible\"
 language = \"ta\"
+author = \"A Bible Society\"
+subject = \"New Testament\"
 
 [books]
 order = [\"MAT\"]
@@ -55,10 +57,15 @@ show_section_headings = false
 show_chapter_numbers = false
 show_verse_numbers = false
 hide_first_verse_number = true
+show_chapter_labels = false
 
 [notes]
 show_footnotes = false
 show_cross_references = false
+footnote_callers = \"symbols\"
+cross_reference_callers = \"none\"
+restart_numbering = \"per_book\"
+cross_reference_placement = \"inline\"
 
 [headers]
 header_left = \"alt_book_name\"
@@ -68,8 +75,13 @@ footer_left = \"first_reference\"
 footer_center = \"empty\"
 footer_right = \"last_reference\"
 
+[assets]
+missing_figure = \"omit\"
+
 [output]
 keep_intermediates = true
+anchors = \"verse\"
+name = \"Proof copy\"
 ";
 
 fn resolve(body: &str) -> Settings {
@@ -110,9 +122,18 @@ fn the_index_covers_every_key_that_has_a_value() {
 #[test]
 fn an_unset_optional_key_has_no_origin_at_all() {
     let s = Settings::builtin();
-    assert_eq!(s.provenance.get("project.name"), None);
-    assert_eq!(s.provenance.get("books.include"), None);
-    assert_eq!(s.provenance.len(), known_keys().len() - 3);
+    for key in [
+        "project.name",
+        "project.author",
+        "project.subject",
+        "books.include",
+        "output.name",
+    ] {
+        assert_eq!(s.provenance.get(key), None, "{key} was never chosen");
+    }
+    // The five above, and `schema_version`, which is a declaration about the
+    // settings rather than one of them.
+    assert_eq!(s.provenance.len(), known_keys().len() - 6);
 }
 
 #[test]

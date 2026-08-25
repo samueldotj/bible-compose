@@ -40,7 +40,10 @@ fn a_folder_of_usfm_opens_with_its_books_and_its_defaults() {
     assert_eq!((john.errors, john.warnings), (0, 0));
 
     assert!(!p.blocked);
-    assert!(p.output.ends_with("bible.pdf"), "{}", p.output);
+    // Named after the folder, since this project has no name of its own
+    // (BLD-003), and inside the project either way.
+    assert!(p.output.ends_with(".pdf"), "{}", p.output);
+    assert!(p.output.contains("output"), "{}", p.output);
 
     // CFG-001: a folder with no settings file still has every setting.
     let size = p.settings.iter().find(|s| s.key == "page.size").unwrap();
@@ -519,27 +522,75 @@ fn the_windows_own_write_is_not_a_change() {
     );
 }
 
-/// The PDF goes in the project folder, and nothing in the settings moves it.
+/// **The PDF is named after the publication** (BLD-003), and stays in the
+/// project's own `output/` folder whatever the settings say.
 #[test]
-fn the_output_path_is_the_project_folder() {
-    let (_dir, root) = project(None);
-    let expected = root.join(biblecompose_app::project::OUTPUT_FILE);
-    assert_eq!(project_at(&root).output, expected.to_string());
+fn the_pdf_is_named_after_the_publication() {
+    use biblecompose_app::project::{OUTPUT_DIR, UNNAMED_OUTPUT};
 
-    // Even for a project that tries. `output.file` was a setting once, and a
-    // file still carrying it is told so rather than quietly obeyed.
+    // Named, so the file is called what the book is called.
+    let (_dir, named) = project(Some(
+        "schema_version = 1\n[project]\nname = \"The Holy Scriptures\"\n",
+    ));
+    assert_eq!(
+        project_at(&named).output,
+        named
+            .join(OUTPUT_DIR)
+            .join("The Holy Scriptures.pdf")
+            .to_string()
+    );
+
+    // Unnamed, so the folder's name stands in — which it may do for a
+    // *filename*, where the publisher can already see it, and may not for a
+    // document property, which travels to people who cannot (ADR-005).
+    let (_dir2, unnamed) = project(None);
+    let expected =
+        biblecompose_app::project::output_name(unnamed.file_name().expect("a folder name"))
+            .unwrap_or_else(|| UNNAMED_OUTPUT.to_owned());
+    assert_eq!(
+        project_at(&unnamed).output,
+        unnamed.join(OUTPUT_DIR).join(expected).to_string()
+    );
+}
+
+/// **And `output.name` is a name, not a way out of the folder.**
+///
+/// `output.file` was removed so that a PDF stays with the book it was made
+/// from, and that decision stands: a file still carrying the old key is told
+/// so, and the new one refuses anything with a path in it rather than
+/// sanitising it into something the publisher did not ask for.
+#[test]
+fn the_output_name_cannot_leave_the_project() {
+    use biblecompose_app::project::OUTPUT_DIR;
+
+    let (_dir, chosen) = project(Some(
+        "schema_version = 1\n[output]\nname = \"Proof copy\"\n",
+    ));
+    assert_eq!(
+        project_at(&chosen).output,
+        chosen.join(OUTPUT_DIR).join("Proof copy.pdf").to_string()
+    );
+
+    for escape in ["../elsewhere.pdf", "sub/dir.pdf", ".."] {
+        let (_d, root) = project(Some(&format!(
+            "schema_version = 1\n[project]\nname = \"Book\"\n[output]\nname = \"{escape}\"\n"
+        )));
+        assert_eq!(
+            project_at(&root).output,
+            root.join(OUTPUT_DIR).join("Book.pdf").to_string(),
+            "{escape} should be refused, not obeyed"
+        );
+    }
+
+    // The key that no longer works still says so.
     let (_dir2, opinionated) = project(Some(
         "schema_version = 1\n[output]\nfile = \"somewhere/else.pdf\"\n",
     ));
-    let p = project_at(&opinionated);
-    assert_eq!(
-        p.output,
-        opinionated
-            .join(biblecompose_app::project::OUTPUT_FILE)
-            .to_string()
-    );
     assert!(
-        p.diagnostics.iter().any(|d| d.code == "CFG-002"),
+        project_at(&opinionated)
+            .diagnostics
+            .iter()
+            .any(|d| d.code == "CFG-002"),
         "the key that no longer works says so"
     );
 }

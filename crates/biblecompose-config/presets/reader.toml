@@ -1,0 +1,45 @@
+# A reader's edition (P6.2).
+#
+# The one preset that is a *decision* rather than a set of measurements: it
+# takes the numbers and the apparatus off the page. A reader's Bible is set
+# like a novel, and verse numbers, footnote callers and reference letters are
+# all machinery for finding a passage rather than for reading one.
+#
+# **The anchors do not go with them** (SCR-001). Hiding a number does not
+# remove the place it marks, so a reader's edition is still a document that can
+# be linked into and still knows its own verse range — which is what keeps the
+# running head useful once the numbers are gone.
+#
+# One column, because two columns exist to fit more words onto a page that is
+# going to be looked things up in, and a reading edition is not that. Larger
+# type and more leading for the same reason.
+
+[page]
+size = "5.5x8.5in"
+columns = 1
+margin_inner = "0.85in"
+margin_outer = "0.7in"
+margin_top = "0.8in"
+margin_bottom = "0.9in"
+
+[typography]
+font_size = "10.5pt"
+leading = "15pt"
+justify = true
+
+[numbering]
+show_chapter_numbers = true
+show_verse_numbers = false
+show_chapter_labels = true
+
+[notes]
+show_footnotes = false
+show_cross_references = false
+
+# The book, and the page number. No reference range: there are no verse numbers
+# on the page for it to point at.
+[headers]
+header_left = "book_name"
+header_center = "empty"
+header_right = "empty"
+footer_center = "page_number"

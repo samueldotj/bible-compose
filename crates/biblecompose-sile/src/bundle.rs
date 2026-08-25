@@ -71,6 +71,29 @@ pub fn ensure() -> Result<Utf8PathBuf, Diagnostic> {
         .help("BIBLECOMPOSE_SILE_BUNDLE pointed at a directory with no files in it"));
     }
 
+    // **A shipped runtime has no networking code in it, and this is where
+    // that stops being a promise** (NFR-004, spike F-16). `luasec` and
+    // `luasocket` come with SILE's standard rock set; `scripts/stage-backend.mjs`
+    // removes them and CI checks the stage. This is the last line of that
+    // defence and the only one that survives a release built by hand: the
+    // entries are already being walked to compute the cache key, so it costs
+    // a string comparison each and refuses rather than warns, because a
+    // warning about a property of the *binary* has nobody left to act on it.
+    if let Some(found) = entries.iter().find(|e| is_networking(&e.path)) {
+        return Err(Diagnostic::error(
+            code::BUNDLE_UNPACK_FAILED,
+            format!(
+                "the embedded typesetting runtime contains networking code ({}), \
+                 which this application does not ship",
+                found.path
+            ),
+        )
+        .help(
+            "the bundle was staged without scripts/stage-backend.mjs, or with an \
+             older copy of it — restage and rebuild",
+        ));
+    }
+
     let key = cache_key(&mut entries);
 
     let root = default_cache_root().ok_or_else(|| {
@@ -86,6 +109,25 @@ pub fn ensure() -> Result<Utf8PathBuf, Diagnostic> {
     })?;
 
     Ok(dir.join(EXE_NAME))
+}
+
+/// Whether this path inside a bundle belongs to `luasec` or `luasocket`.
+///
+/// The same names `scripts/stage-backend.mjs` removes, written out again here
+/// rather than shared — the script runs in Node at packaging time and this
+/// runs in Rust at start-up, and a list duplicated in two languages with a
+/// test on both sides is better than a third file neither of them owns.
+fn is_networking(path: &str) -> bool {
+    // Directory separators inside a `rust-embed` path are always `/`.
+    path.split('/').any(|part| {
+        matches!(
+            part,
+            "socket" | "ssl" | "mime" | "ltn12.lua" | "socket.lua" | "ssl.lua" | "mime.lua"
+        ) || matches!(
+            part,
+            "socket.so" | "ssl.so" | "mime.so" | "socket.dll" | "ssl.dll" | "mime.dll"
+        )
+    })
 }
 
 #[cfg(test)]
@@ -109,6 +151,32 @@ mod tests {
                 .contains("BIBLECOMPOSE_SILE_BUNDLE"),
             "the message should name the variable to set: {err:?}"
         );
+    }
+
+    /// The paths that must not be in a shipped bundle, and the ones that are
+    /// fine — `cliargs/utils/disect.lua` contains "sect" and a rule matching
+    /// substrings rather than path segments would take it out.
+    #[test]
+    fn networking_is_recognised_by_path_segment() {
+        for path in [
+            "lua_modules/share/lua/5.1/ssl.lua",
+            "lua_modules/share/lua/5.1/socket.lua",
+            "lua_modules/share/lua/5.1/socket/http.lua",
+            "lua_modules/share/lua/5.1/ssl/https.lua",
+            "lua_modules/share/lua/5.1/ltn12.lua",
+            "lua_modules/lib/lua/5.1/socket/core.dll",
+        ] {
+            assert!(is_networking(path), "{path} should be refused");
+        }
+        for path in [
+            "classes/biblecompose.lua",
+            "packages/insertions/init.lua",
+            "lua_modules/share/lua/5.1/cliargs/utils/disect.lua",
+            "core/socketry.lua",
+            "languages/mimetype-ish.lua",
+        ] {
+            assert!(!is_networking(path), "{path} should be allowed");
+        }
     }
 
     #[test]

@@ -14,7 +14,9 @@
 
 use std::fmt;
 
-use biblecompose_scripture::{CharStyle, HeadingStyle, NoteKind, ParaStyle, PoetryStyle};
+use biblecompose_scripture::{
+    CharStyle, HeadingStyle, ListStyle, NoteKind, ParaStyle, PoetryStyle,
+};
 
 /// How deep a levelled family goes.
 ///
@@ -48,7 +50,9 @@ pub enum StyleSelector {
     Poetry(PoetryStyle, u8),
     Heading(HeadingStyle, u8),
     Character(CharStyle),
-    ListItem(u8),
+    /// `\\li1`, `\\lim2` — the family and the digit, for the same reason
+    /// poetry carries both.
+    ListItem(ListStyle, u8),
     /// The chapter number where it is set, not the chapter as a division.
     Chapter,
     Verse,
@@ -73,7 +77,7 @@ impl StyleSelector {
             StyleSelector::Poetry(..) => "poetry",
             StyleSelector::Heading(..) => "heading",
             StyleSelector::Character(_) => "character",
-            StyleSelector::ListItem(_) => "list",
+            StyleSelector::ListItem(..) => "list",
             StyleSelector::Chapter => "chapter",
             StyleSelector::Verse => "verse",
             StyleSelector::Note(_) => "note",
@@ -93,7 +97,7 @@ impl StyleSelector {
             StyleSelector::Character(s) => Some(s.marker().to_owned()),
             StyleSelector::Poetry(s, level) => Some(format!("{}{level}", s.marker())),
             StyleSelector::Heading(s, level) => Some(format!("{}{level}", s.marker())),
-            StyleSelector::ListItem(level) => Some(level.to_string()),
+            StyleSelector::ListItem(s, level) => Some(format!("{}{level}", s.marker())),
             StyleSelector::Note(NoteKind::Footnote) => Some("f".to_owned()),
             StyleSelector::Note(NoteKind::Endnote) => Some("fe".to_owned()),
             StyleSelector::Chapter
@@ -136,7 +140,10 @@ impl StyleSelector {
                 let (family, level) = split_level(n)?;
                 marker(HeadingStyle::all(), family).map(|s| StyleSelector::Heading(s, level))
             }
-            ("list", Some(n)) => n.parse().ok().map(StyleSelector::ListItem),
+            ("list", Some(n)) => {
+                let (family, level) = split_level(n)?;
+                marker(ListStyle::all(), family).map(|s| StyleSelector::ListItem(s, level))
+            }
             ("note", Some("f")) => Some(StyleSelector::Note(NoteKind::Footnote)),
             ("note", Some("fe")) => Some(StyleSelector::Note(NoteKind::Endnote)),
             ("chapter", None) => Some(StyleSelector::Chapter),
@@ -182,7 +189,11 @@ impl StyleSelector {
                     .iter()
                     .map(|s| StyleSelector::Heading(*s, level)),
             );
-            out.push(StyleSelector::ListItem(level));
+            out.extend(
+                ListStyle::all()
+                    .iter()
+                    .map(|s| StyleSelector::ListItem(*s, level)),
+            );
         }
         out.extend([
             StyleSelector::Chapter,
@@ -210,7 +221,9 @@ impl StyleSelector {
             StyleSelector::Heading(s, level) if level > 1 => {
                 Some(StyleSelector::Heading(s, level - 1))
             }
-            StyleSelector::ListItem(level) if level > 1 => Some(StyleSelector::ListItem(level - 1)),
+            StyleSelector::ListItem(s, level) if level > 1 => {
+                Some(StyleSelector::ListItem(s, level - 1))
+            }
             _ => None,
         }
     }
@@ -240,7 +253,7 @@ macro_rules! marker_impl {
         })*
     };
 }
-marker_impl!(ParaStyle, PoetryStyle, HeadingStyle, CharStyle);
+marker_impl!(ParaStyle, PoetryStyle, HeadingStyle, CharStyle, ListStyle);
 
 /// `q2` → (`q`, 2); `q` → (`q`, 1).
 ///

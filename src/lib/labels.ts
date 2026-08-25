@@ -1,5 +1,5 @@
 /**
- * The words for settings keys.
+ * The words for settings keys, and the structures they title.
  *
  * Here and not in `biblecompose-config`, because these are words shown to a
  * person: they get translated, and the schema does not. The config crate
@@ -7,8 +7,15 @@
  *
  * A key with no entry still renders — as its own dotted name — so adding a
  * setting to the schema never produces a blank row, only an untranslated one.
+ *
+ * **The `EN_` maps are the English half of the catalogue in `i18n.ts`** and
+ * are exported for it to assemble. Everything read at runtime goes through
+ * `locale()`, so a second locale replaces the words without touching the tabs,
+ * the groups, or the order of anything (NFR-012). The structures stay here
+ * beside the form they describe; only the words travel.
  */
 
+import { locale } from "./i18n";
 import { STYLE_GROUPS } from "./styles";
 
 export interface Group {
@@ -17,46 +24,7 @@ export interface Group {
   readonly keys: readonly string[];
 }
 
-export const LABELS: Readonly<Record<string, string>> = {
-  "project.name": "Publication",
-  "project.language": "Language",
-  "page.size": "Trim size",
-  "page.columns": "Columns",
-  "page.margin_top": "Top margin",
-  "page.margin_bottom": "Bottom margin",
-  "page.margin_inner": "Inner margin",
-  "page.margin_outer": "Outer margin",
-  "page.column_gap": "Column gap",
-  "page.header_gap": "Header gap",
-  "page.footer_gap": "Footer gap",
-  "typography.font_family": "Font",
-  "typography.font_size": "Body size",
-  "typography.leading": "Leading",
-  "typography.hyphenation": "Hyphenate",
-  "numbering.show_chapter_numbers": "Chapter numbers",
-  "numbering.show_verse_numbers": "Verse numbers",
-  "numbering.hide_first_verse_number": "Hide first verse number",
-  "contents.show_book_introductions": "Book introductions",
-  "contents.show_introductory_outlines": "Introductory outlines",
-  "contents.show_section_headings": "Section headings",
-  "typography.justify": "Justify paragraphs",
-  "typography.keep_poetry_indentation": "Keep poetry indentation",
-  "notes.show_footnotes": "Footnotes",
-  "notes.show_cross_references": "Cross-references",
-  "headers.header_left": "Left",
-  "headers.header_center": "Centre",
-  "headers.header_right": "Right",
-  "headers.footer_left": "Left",
-  "headers.footer_center": "Centre",
-  "headers.footer_right": "Right",
-  "output.keep_intermediates": "Keep intermediates",
-  strict: "Strict settings",
-};
 
-/** Placeholder text where an empty field means something specific. */
-export const PLACEHOLDERS: Readonly<Record<string, string>> = {
-  "project.name": "the folder's name",
-};
 
 export const GROUPS: readonly Group[] = [
   {
@@ -98,6 +66,7 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   "numbering.show_chapter_numbers",
   "numbering.show_verse_numbers",
   "numbering.hide_first_verse_number",
+  "numbering.show_chapter_labels",
   "contents.show_book_introductions",
   "contents.show_introductory_outlines",
   "contents.show_section_headings",
@@ -105,6 +74,10 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   "typography.keep_poetry_indentation",
   "notes.show_footnotes",
   "notes.show_cross_references",
+  "notes.footnote_callers",
+  "notes.cross_reference_callers",
+  "notes.restart_numbering",
+  "notes.cross_reference_placement",
   "headers.header_left",
   "headers.header_center",
   "headers.header_right",
@@ -130,7 +103,22 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
 ]);
 
 export function labelFor(key: string): string {
-  return LABELS[key] ?? key;
+  return locale().labels[key] ?? key;
+}
+
+/** What an empty field means, where empty means something specific. */
+export function placeholderFor(key: string): string | undefined {
+  return locale().placeholders[key];
+}
+
+
+
+
+export function wordsFor(choice: string): string {
+  const known = locale().choices[choice];
+  if (known !== undefined) return known;
+  const words = choice.replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 /**
@@ -174,10 +162,30 @@ export interface Tab {
    * nowhere.
    */
   readonly orphans?: boolean;
+  /**
+   * The books, which are a tab of their own rather than a column beside every
+   * other one.
+   *
+   * They were in a permanent left-hand pane, and it cost the whole window a
+   * third of its width on every tab — including the ones where the answer to
+   * "which books" has already been given and the question is what the page
+   * looks like. A whole Bible is sixty-six rows and wants the width; a settings
+   * form beside it had none to spare.
+   */
+  readonly books?: boolean;
 }
 
+/**
+ * Outward from the words.
+ *
+ * Which books there are, then what is printed in the text, then what surrounds
+ * it, then the shape of the sheet it all sits on, and last how it is set. Each
+ * one is a smaller decision than the one before it and is easier to make once
+ * the earlier ones are made — the page size is worth arguing about after you
+ * know whether the edition carries footnotes, not before.
+ */
 export const TABS: readonly Tab[] = [
-  { id: "page", title: "Page", settingGroups: [], diagram: true },
+  { id: "scripture", title: "Scripture", settingGroups: [], books: true },
   // Claims the strays now that the Project tab is gone. Exactly one tab does,
   // so a key added to the schema is visible somewhere rather than nowhere.
   { id: "contents", title: "Contents", settingGroups: [], example: "contents", orphans: true },
@@ -187,6 +195,7 @@ export const TABS: readonly Tab[] = [
     settingGroups: [],
     example: "headers",
   },
+  { id: "page", title: "Page", settingGroups: [], diagram: true },
   { id: "styles", title: "Styles", settingGroups: ["typography"], styles: true },
 ];
 

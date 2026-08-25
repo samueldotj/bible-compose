@@ -112,6 +112,12 @@ pub fn emit_hiding(doc: &ScriptureDocument, styles: &[StyleRule], hidden: Hidden
 
     let bytes = w.into_inner().into_inner();
     let xml = String::from_utf8(bytes).expect("the writer only ever emits UTF-8");
+    // Here, once, rather than at each of the places a string enters the
+    // document. There are several of those and a new one is one line of a
+    // future change away; there is exactly one finished document, and a
+    // well-formedness guarantee that can be read off one line is worth more
+    // than the allocation it costs in the case that needs it.
+    let xml = without_forbidden(&xml).into_owned();
 
     Emitted {
         xml,
@@ -266,12 +272,31 @@ fn emit_book(w: &mut Writer<Cursor<Vec<u8>>>, book: &Book, state: &mut EmitState
 /// costs a re-emission, and re-emission costs nothing here: every build emits
 /// from the model anyway.
 ///
+/// The chapter label joined them for a different reason: `\cl` is where the
+/// chapter anchor lives. USJ puts the `\c` inside the label's paragraph —
+/// `<para style="cl"><chapter n="1"/>Chapter One</para>` — so hiding the
+/// paragraph anywhere except here would take the chapter with it, and every
+/// running head asking for a reference would go blank. [`emit_anchors`] is
+/// what makes that safe, and it is only reachable from this side.
+///
 /// [ADR-002]: ../../../docs/adr/002-sile-interface.md
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Hidden {
     pub book_introductions: bool,
     pub introductory_outlines: bool,
     pub section_headings: bool,
+    /// USFM's `\cl` — the words an edition prints for a chapter, either
+    /// before the first `\c` to name every chapter or after one to name that
+    /// chapter alone.
+    pub chapter_labels: bool,
+    /// Figures the backend must not be asked to draw, by their `src`.
+    ///
+    /// Named one at a time rather than switched as a class, because this is
+    /// not a decision about what a publication contains: each of these is a
+    /// figure the project does want and whose file is not there yet. The
+    /// application has already said so, once each (SCR-006); withholding them
+    /// here is what stops the backend dying on the first one.
+    pub figures: Vec<camino::Utf8PathBuf>,
 }
 
 impl Hidden {
@@ -280,12 +305,23 @@ impl Hidden {
         Hidden::default()
     }
 
+    /// The same, with named figures withheld.
+    pub fn without_figures(mut self, figures: Vec<camino::Utf8PathBuf>) -> Hidden {
+        self.figures = figures;
+        self
+    }
+
+    fn hides_figure(&self, src: &camino::Utf8Path) -> bool {
+        self.figures.iter().any(|f| f == src)
+    }
+
     /// Whether a paragraph marker is one of the parts being withheld.
     fn hides_para(&self, marker: &str) -> bool {
         const INTRO: [&str; 9] = ["ip", "ipi", "im", "imi", "ipq", "imq", "ipr", "iex", "ie"];
         const OUTLINE: [&str; 6] = ["io1", "io2", "io3", "io4", "ili1", "ili2"];
         (self.book_introductions && INTRO.contains(&marker))
             || (self.introductory_outlines && OUTLINE.contains(&marker))
+            || (self.chapter_labels && marker == "cl")
     }
 
     /// And a heading marker. `\s` is the section heading; the parallel
@@ -340,8 +376,13 @@ fn emit_block(w: &mut Writer<Cursor<Vec<u8>>>, block: &Block, state: &mut EmitSt
             emit_inlines(w, content, state);
             write(w, Event::End(BytesEnd::new("heading")), state);
         }
-        Block::ListItem { level, content } => {
+        Block::ListItem {
+            style,
+            level,
+            content,
+        } => {
             let mut el = BytesStart::new("item");
+            el.push_attribute(("style", style.marker()));
             el.push_attribute(("level", level.to_string().as_str()));
             write(w, Event::Start(el), state);
             emit_inlines(w, content, state);
@@ -355,7 +396,11 @@ fn emit_block(w: &mut Writer<Cursor<Vec<u8>>>, block: &Block, state: &mut EmitSt
             newline(w, state);
             write(w, Event::End(BytesEnd::new("table")), state);
         }
-        Block::Figure(f) => emit_figure(w, f, state),
+        Block::Figure(f) => {
+            if !state.hidden.hides_figure(&f.src) {
+                emit_figure(w, f, state);
+            }
+        }
         Block::Break => {
             write(w, Event::Empty(BytesStart::new("break")), state);
         }
@@ -382,6 +427,7 @@ fn emit_cell(w: &mut Writer<Cursor<Vec<u8>>>, cell: &Cell, state: &mut EmitState
             Align::End => "end",
         },
     ));
+    el.push_attribute(("span", cell.span.max(1).to_string().as_str()));
     write(w, Event::Start(el), state);
     emit_inlines(w, &cell.content, state);
     write(w, Event::End(BytesEnd::new("cell")), state);
@@ -558,6 +604,97 @@ fn text_node(w: &mut Writer<Cursor<Vec<u8>>>, s: &str, state: &mut EmitState) {
     write(w, Event::Text(BytesText::new(s)), state);
 }
 
+/// The same text with the characters XML 1.0 has no way of carrying removed.
+///
+/// **Escaping is not an option for these and that is the point.** XML 1.0
+/// permits tab, line feed and carriage return out of the whole C0 range, and
+/// forbids the rest *including as numeric references* — there is no spelling
+/// of U+000B that a conforming parser will accept. So a source file with a
+/// stray control byte, which is what a bad export or a truncated copy leaves
+/// behind, cannot be represented and can only be dropped.
+///
+/// Found by accident and worth keeping: a single vertical tab in one book made
+/// the backend fail with `not well-formed (invalid token)` and no file, line or
+/// character named. The emitter is the last place that can still tell the
+/// difference, so it is the place that has to.
+///
+/// Returns `Cow` because the case this exists for is vanishingly rare and the
+/// case it runs in is every text node in a Bible.
+fn without_forbidden(s: &str) -> std::borrow::Cow<'_, str> {
+    if !s.chars().any(is_forbidden) {
+        return std::borrow::Cow::Borrowed(s);
+    }
+    std::borrow::Cow::Owned(s.chars().filter(|c| !is_forbidden(*c)).collect())
+}
+
+/// Whether XML 1.0 forbids this character outright.
+fn is_forbidden(c: char) -> bool {
+    match c {
+        '\t' | '\n' | '\r' => false,
+        // C0, and the two permanently unassigned code points at the end of the
+        // BMP, which are not characters in any XML version.
+        '\u{0}'..='\u{1f}' => true,
+        '\u{fffe}' | '\u{ffff}' => true,
+        _ => false,
+    }
+}
+
+#[cfg(test)]
+mod forbidden {
+    use super::*;
+
+    /// The three C0 characters XML allows survive; the rest go.
+    #[test]
+    fn only_the_three_permitted_control_characters_survive() {
+        assert_eq!(without_forbidden("plain\text\n"), "plain\text\n");
+        assert_eq!(without_forbidden("a\u{b}b"), "ab", "a vertical tab");
+        assert_eq!(without_forbidden("a\u{0}b"), "ab", "a NUL");
+        assert_eq!(without_forbidden("a\u{1b}b"), "ab", "an escape");
+        assert_eq!(without_forbidden("a\u{fffe}b"), "ab", "a non-character");
+        // Everything a Bible is actually made of, untouched.
+        assert_eq!(without_forbidden("ஆதியாகமம்"), "ஆதியாகமம்");
+        assert_eq!(without_forbidden("\u{2014}\u{a0}"), "\u{2014}\u{a0}");
+    }
+
+    /// **And the emitted document parses.** The defect this exists for was not
+    /// a wrong character in the output — it was a backend that refused the
+    /// whole file with `not well-formed (invalid token)`, naming no book, no
+    /// line and no character.
+    #[test]
+    fn a_control_character_in_the_source_does_not_break_the_document() {
+        use biblecompose_scripture::{
+            Block, Book, BookCode, BookNames, Inline, ParaStyle, ScriptureDocument,
+        };
+        let doc = ScriptureDocument::new(vec![Book::new(
+            BookCode::parse("MRK").expect("a book code"),
+            BookNames::named("Mark\u{b}"),
+            vec![Block::Paragraph {
+                style: ParaStyle::P,
+                content: vec![Inline::Text(
+                    "In the beginning\u{b} was the Word.".to_owned(),
+                )],
+            }],
+        )]);
+        let xml = emit(&doc, &[]).xml;
+
+        assert!(
+            !xml.contains('\u{b}'),
+            "the document still carries it: {xml}"
+        );
+        assert!(xml.contains("In the beginning was the Word."));
+        // Parsed rather than eyeballed: a well-formedness claim that nothing
+        // parses is a claim about a string.
+        let mut reader = quick_xml::Reader::from_str(&xml);
+        loop {
+            match reader.read_event() {
+                Ok(quick_xml::events::Event::Eof) => break,
+                Ok(_) => {}
+                Err(e) => panic!("the emitted document is not well-formed: {e}"),
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -716,5 +853,155 @@ mod tests {
         let gen = out.xml.find("GEN").unwrap();
         let jhn = out.xml.find("JHN").unwrap();
         assert!(gen < jhn);
+    }
+
+    // ----------------------------------------------------------- hiding
+    //
+    // What a project chooses not to print, and the one property every one of
+    // these has to keep: the Scripture anchors stay. A hidden part that took
+    // its `\c` with it would empty the running head of every page it fell on,
+    // and would do it silently.
+
+    /// A book shaped the way USJ delivers one: an introduction, an outline, a
+    /// chapter label with the chapter anchor *inside* it, a section heading,
+    /// and a verse.
+    fn withholdable() -> biblecompose_scripture::ScriptureDocument {
+        use biblecompose_scripture::{
+            canon::BookCode, Block, Book, BookNames, HeadingStyle, Inline, ParaStyle, VerseId,
+        };
+        let words = |s: &str| Inline::Text(s.to_owned());
+        biblecompose_scripture::ScriptureDocument::new(vec![Book::new(
+            BookCode::parse("1JN").expect("a real book code"),
+            BookNames::named("1 John"),
+            vec![
+                Block::Heading {
+                    style: HeadingStyle::Is,
+                    level: 1,
+                    content: vec![words("Introduction")],
+                },
+                Block::Paragraph {
+                    style: ParaStyle::Ip,
+                    content: vec![words("Written to assure believers.")],
+                },
+                Block::Heading {
+                    style: HeadingStyle::Iot,
+                    level: 1,
+                    content: vec![words("Outline")],
+                },
+                Block::Paragraph {
+                    style: ParaStyle::Io1,
+                    content: vec![words("Fellowship with God")],
+                },
+                Block::Paragraph {
+                    style: ParaStyle::Cl,
+                    content: vec![
+                        Inline::Chapter {
+                            number: 1,
+                            published: None,
+                            alternate: None,
+                        },
+                        words("Chapter One"),
+                    ],
+                },
+                Block::Heading {
+                    style: HeadingStyle::S,
+                    level: 1,
+                    content: vec![words("The Word of Life")],
+                },
+                Block::Paragraph {
+                    style: ParaStyle::P,
+                    content: vec![
+                        Inline::Verse {
+                            id: VerseId::single(1),
+                            published: None,
+                            alternate: None,
+                        },
+                        words("That which was from the beginning."),
+                    ],
+                },
+            ],
+        )])
+    }
+
+    #[test]
+    fn nothing_is_withheld_by_default() {
+        let out = emit(&withholdable(), &[]);
+        for kept in ["Introduction", "Outline", "Chapter One", "The Word of Life"] {
+            assert!(out.xml.contains(kept), "{kept} should be printed");
+        }
+    }
+
+    #[test]
+    fn each_part_can_be_withheld_on_its_own() {
+        let cases: [(Hidden, &str, &str); 4] = [
+            (
+                Hidden {
+                    book_introductions: true,
+                    ..Hidden::nothing()
+                },
+                "Written to assure believers.",
+                "Outline",
+            ),
+            (
+                Hidden {
+                    introductory_outlines: true,
+                    ..Hidden::nothing()
+                },
+                "Fellowship with God",
+                "Written to assure believers.",
+            ),
+            (
+                Hidden {
+                    section_headings: true,
+                    ..Hidden::nothing()
+                },
+                "The Word of Life",
+                "Chapter One",
+            ),
+            (
+                Hidden {
+                    chapter_labels: true,
+                    ..Hidden::nothing()
+                },
+                "Chapter One",
+                "The Word of Life",
+            ),
+        ];
+
+        for (hidden, gone, kept) in cases {
+            let out = emit_hiding(&withholdable(), &[], hidden.clone());
+            assert!(
+                !out.xml.contains(gone),
+                "{hidden:?} left {gone:?} on the page"
+            );
+            assert!(out.xml.contains(kept), "{hidden:?} also took {kept:?}");
+        }
+    }
+
+    /// The reason `emit_anchors` exists, asserted rather than remembered.
+    ///
+    /// The chapter anchor is inside the label's paragraph and the verse anchor
+    /// is inside the ordinary one; withholding everything must leave both.
+    #[test]
+    fn withholding_a_part_keeps_the_anchors_inside_it() {
+        let all = Hidden {
+            book_introductions: true,
+            introductory_outlines: true,
+            section_headings: true,
+            chapter_labels: true,
+            figures: Vec::new(),
+        };
+        let out = emit_hiding(&withholdable(), &[], all);
+        assert!(
+            out.xml.contains(r#"<chapter n="1"/>"#),
+            "the chapter anchor went with the label: {}",
+            out.xml
+        );
+        assert!(
+            out.xml.contains(r#"<verse n="1""#),
+            "the verse anchor is gone too: {}",
+            out.xml
+        );
+        assert!(!out.xml.contains("Chapter One"), "{}", out.xml);
     }
 }

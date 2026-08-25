@@ -1,0 +1,514 @@
+name: Release artefacts
+
+# P5.7 and P6.1: build the typesetter, stage it, bake it into one executable,
+# and prove that executable typesets on a machine with no SILE on it.
+#
+# **The acceptance criterion is the smoke test at the end of each job**, not
+# the fact that the build succeeded. A binary that compiles and cannot set a
+# page is the failure this exists to catch, and it is the failure that a
+# packaging change produces: a missing shared library, a Lua module that did
+# not get copied, a class shadowed by a stale one. So every job ends by
+# building a PDF from a folder holding one book, with the environment scrubbed
+# of anything that could point at another SILE.
+#
+# Run it from the Actions tab, or by pushing a tag.
+#
+# Signing is driven entirely by repository secrets, and no certificate, key or
+# password appears in this file or anywhere else in the repository. If the
+# secrets are absent the jobs still run and produce **unsigned** artefacts,
+# which is the right default: an unsigned build that works is more useful than
+# a failed one, and a signed build is a release decision rather than a CI
+# detail. `docs/RELEASING.md` lists what has to be supplied and how.
+on:
+  workflow_dispatch:
+    inputs:
+      sile_ref:
+        description: The SILE tag to build
+        default: v0.15.13
+  push:
+    tags: ["v*"]
+
+env:
+  CARGO_TERM_COLOR: always
+  SILE_REF: ${{ inputs.sile_ref || 'v0.15.13' }}
+
+jobs:
+  bundle:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Every platform's answer is wanted, including when one of them is no.
+      # NFR-001 names three targets and a failure here lands on that
+      # requirement rather than on the release date.
+      fail-fast: false
+      matrix:
+        # Windows is not here. It is cross-built from a container in the
+        # job below, which is what S1 proved works — the native MSYS2 route
+        # was never made to configure (S1-NOTES P-9).
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # ---------------------------------------------------------------- SILE
+      #
+      # The prerequisites and flags are S1's, one refusal at a time; see
+      # `.github/workflows/packaging-spike.yml`, which is where they were
+      # found, and `spike/S1-NOTES.md`, which says why each is there.
+
+      - name: dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential autoconf automake libtool pkg-config \
+            libharfbuzz-dev libfontconfig1-dev libicu-dev libfreetype-dev \
+            libpng-dev zlib1g-dev libexpat1-dev \
+            luajit libluajit-5.1-dev luarocks \
+            jq poppler-utils fonts-sil-gentiumplus
+
+      - name: dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install autoconf automake libtool pkg-config \
+            harfbuzz fontconfig icu4c freetype libpng expat \
+            luajit luarocks jq poppler
+          echo "PKG_CONFIG_PATH=$(brew --prefix icu4c)/lib/pkgconfig:$PKG_CONFIG_PATH" >> "$GITHUB_ENV"
+
+      - name: build SILE
+        shell: bash
+        run: |
+          git clone --depth 1 --branch "$SILE_REF" --recurse-submodules \
+            https://github.com/sile-typesetter/sile.git sile-src
+          cd sile-src
+          ./bootstrap.sh
+          ./configure --prefix="$PWD/../runtime" --with-system-luarocks=no
+          make -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
+          make install
+
+      # ------------------------------------------------------------- staging
+      #
+      # One script for every platform, because the one thing that must be
+      # identical across three build recipes is what gets *removed*.
+
+      - name: stage the runtime
+        shell: bash
+        run: node scripts/stage-backend.mjs runtime stage
+
+      - name: the stage carries no networking code
+        shell: bash
+        run: node scripts/stage-backend.mjs --verify stage
+
+      # --------------------------------------------------------- the binary
+
+      - name: build with the runtime embedded
+        shell: bash
+        env:
+          BIBLECOMPOSE_SILE_BUNDLE: ${{ github.workspace }}/stage
+        run: cargo build --release --bin biblecompose --features biblecompose-sile/embedded-sile
+
+      # -------------------------------------------------------- the criterion
+      #
+      # "A fresh machine with no SILE installed builds a PDF from the installer
+      # artefact." The runner has no SILE outside the tree we just built, and
+      # the environment is scrubbed of every variable that could point at one,
+      # so what produces this PDF is the executable and nothing else.
+
+      - name: a fresh machine builds a PDF
+        shell: bash
+        run: |
+          mkdir -p smoke
+          printf '%s\n' '\id JHN' '\h John' '\c 1' '\p' \
+            '\v 1 In the beginning was the Word.' > smoke/JHN.usfm
+          printf 'schema_version = 1\n' > smoke/biblecompose.toml
+          env -u BIBLECOMPOSE_SILE -u BIBLECOMPOSE_SILE_PATH \
+              -u BIBLECOMPOSE_SILE_BUNDLE \
+            ./target/release/biblecompose build \
+              --books smoke --project smoke --output smoke/out.pdf
+          test -s smoke/out.pdf
+          head -c 8 smoke/out.pdf | grep -q '%PDF' || {
+            echo "the file produced is not a PDF"; exit 1; }
+          echo "smoke: $(wc -c < smoke/out.pdf) bytes from a machine with no SILE"
+
+      # Named for the platform and the architecture, because the release
+      # page is one directory and `biblecompose` means three different files.
+      # `macos-latest` is arm64, so the architecture is asked for rather than
+      # assumed — a hosted runner's shape is not a constant.
+      - name: name the executable for its platform
+        shell: bash
+        run: |
+          arch=$(uname -m)
+          case "${{ runner.os }}" in
+            Linux) os=linux ;;
+            macOS) os=macos ;;
+          esac
+          mkdir -p dist
+          cp target/release/biblecompose "dist/biblecompose-$os-$arch"
+          echo "artefact=biblecompose-$os-$arch" >> "$GITHUB_OUTPUT"
+        id: name
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli-${{ matrix.os }}
+          path: dist/${{ steps.name.outputs.artefact }}
+          if-no-files-found: error
+
+      # The staged runtime, for the installer job on this platform. Uploaded
+      # rather than rebuilt, because building SILE twice for one release is
+      # half an hour spent proving the same thing.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stage-${{ matrix.os }}
+          path: stage
+          if-no-files-found: error
+          # An intermediate, not an artefact. 79 MB each, and the only thing
+          # that wants them is the installer job an hour later.
+          retention-days: 1
+
+  windows:
+    name: windows (cross-built)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Fedora, because it is the only distribution checked that packages the
+      # whole mingw-w64 stack SILE needs (S1-NOTES P-9).
+      - name: cross-build SILE for Windows
+        run: |
+          docker run --rm -v "$PWD:/out" -e SILE_REF="$SILE_REF" fedora:41 \
+            bash /out/spike/s1-windows-cross.sh
+          sudo chown -R "$USER" work/stage
+
+      - name: stage the runtime
+        run: node scripts/stage-backend.mjs work/stage stage
+
+      - name: the stage carries no networking code
+        run: node scripts/stage-backend.mjs --verify stage
+
+      - name: build with the runtime embedded
+        env:
+          BIBLECOMPOSE_SILE_BUNDLE: ${{ github.workspace }}/stage
+        run: |
+          cargo build --release --target x86_64-pc-windows-gnu \
+            --bin biblecompose --features biblecompose-sile/embedded-sile
+
+      # The smoke test cannot run here — the binary is for another operating
+      # system — so it runs on a Windows runner against the artefact, which is
+      # a truer test anyway: it is the file a publisher would download.
+      - name: name the executable for its platform
+        run: |
+          mkdir -p dist
+          cp target/x86_64-pc-windows-gnu/release/biblecompose.exe \
+             dist/biblecompose-windows-x86_64.exe
+
+      # Under its own name for the release, and under the old one as well,
+      # because `windows-smoke` downloads it by that name and a smoke test
+      # should run against the file a publisher gets rather than a copy.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli-windows-latest
+          path: dist/biblecompose-windows-x86_64.exe
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: biblecompose-windows
+          path: target/x86_64-pc-windows-gnu/release/biblecompose.exe
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stage-windows-latest
+          path: stage
+          if-no-files-found: error
+          retention-days: 1
+
+  installers:
+    name: installers (${{ matrix.os }})
+    needs: [bundle, windows]
+    runs-on: ${{ matrix.os }}
+    # **`secrets` is not a context a step's `if` can read.** `env` is, so the
+    # secrets are lifted here and the steps below ask whether they are empty.
+    # Writing `if: secrets.X != ''` on a step looks right, is accepted, and is
+    # always false — which would leave every release unsigned and every log
+    # saying nothing was wrong.
+    env:
+      WINDOWS_CERT_THUMBPRINT: ${{ secrets.WINDOWS_CERT_THUMBPRINT }}
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # The staged runtime this platform's `bundle` job produced. The installer
+      # carries the typesetter inside the executable (ADR-006), so there is
+      # nothing to install alongside it and nothing for the `.deb` to depend on.
+      - uses: actions/download-artifact@v4
+        with:
+          name: stage-${{ matrix.os }}
+          path: stage
+
+      - name: webkit (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - run: npm ci
+
+      # ------------------------------------------------------------ signing
+      #
+      # **Windows signing is configuration, not an environment variable.** The
+      # bundler reads `bundle.windows.certificateThumbprint`; there is no
+      # `TAURI_WINDOWS_CERT_THUMBPRINT` and setting one does nothing at all,
+      # which is the worst possible failure here — an unsigned release that
+      # everybody believed was signed. So the thumbprint goes in through
+      # `--config`, which merges over `tauri.conf.json` without ever writing a
+      # credential to a file in the tree.
+      #
+      # The certificate itself must already be in the runner's certificate
+      # store; a self-hosted runner is the usual answer, and a hosted one needs
+      # an import step before this that is a decision about where the key lives
+      # rather than a line of YAML.
+      - name: sign on Windows, if there is a certificate
+        if: runner.os == 'Windows' && env.WINDOWS_CERT_THUMBPRINT != ''
+        shell: bash
+        run: |
+          cat > sign.json <<'JSON'
+          { "bundle": { "windows": {
+              "digestAlgorithm": "sha256",
+              "timestampUrl": "http://timestamp.digicert.com"
+          } } }
+          JSON
+          node -e '
+            const fs = require("fs");
+            const c = JSON.parse(fs.readFileSync("sign.json", "utf8"));
+            c.bundle.windows.certificateThumbprint = process.env.THUMBPRINT;
+            fs.writeFileSync("sign.json", JSON.stringify(c));
+          '
+          echo "TAURI_EXTRA_CONFIG=sign.json" >> "$GITHUB_ENV"
+
+      # macOS wants the certificate in a keychain, because that is what
+      # `codesign` reads. A temporary one, unlocked for this job and thrown
+      # away with the runner.
+      - name: sign on macOS, if there is a certificate
+        if: runner.os == 'macOS' && env.APPLE_CERTIFICATE != ''
+        run: |
+          KEYCHAIN=$RUNNER_TEMP/signing.keychain-db
+          PASSWORD=$(openssl rand -base64 24)
+          security create-keychain -p "$PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 900 "$KEYCHAIN"
+          security unlock-keychain -p "$PASSWORD" "$KEYCHAIN"
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$PASSWORD" "$KEYCHAIN"
+          security list-keychain -d user -s "$KEYCHAIN"
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+      # `APPLE_SIGNING_IDENTITY` is read by the bundler itself and is already
+      # in the job's environment. Absent means an unsigned build rather than a
+      # failed one.
+      - name: build the installers
+        shell: bash
+        env:
+          BIBLECOMPOSE_SILE_BUNDLE: ${{ github.workspace }}/stage
+        run: |
+          if [ -n "${TAURI_EXTRA_CONFIG:-}" ]; then
+            npx tauri build --features embedded-sile --config "$TAURI_EXTRA_CONFIG"
+          else
+            npx tauri build --features embedded-sile
+          fi
+
+      # Notarization is run here rather than left to the bundler, because what
+      # the bundler does about it varies by version and a silent no-op is the
+      # one outcome this must not have. `notarytool` waits, and `stapler`
+      # attaches the ticket so the result works offline.
+      - name: notarize, if there is an account
+        if: runner.os == 'macOS' && env.APPLE_ID != ''
+        run: |
+          for dmg in target/release/bundle/dmg/*.dmg; do
+            xcrun notarytool submit "$dmg" --wait \
+              --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_PASSWORD"
+            xcrun stapler staple "$dmg"
+          done
+
+      # **Whether the artefacts are signed is checked, not assumed.** A step
+      # that reported what secrets were *present* would have passed for the
+      # whole time the Windows wiring was reading an environment variable
+      # nothing looks at.
+      - name: are they actually signed? (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem target/release/bundle -Recurse -Include *.msi, *.exe
+          $signed = $false
+          foreach ($f in $files) {
+            $status = (Get-AuthenticodeSignature $f.FullName).Status
+            Write-Host "$($f.Name): $status"
+            if ($status -eq 'Valid') { $signed = $true }
+          }
+          if (-not $signed) { Write-Host "::warning::these artefacts are UNSIGNED" }
+
+      - name: are they actually signed? (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          signed=0
+          for f in target/release/bundle/macos/*.app target/release/bundle/dmg/*.dmg; do
+            [ -e "$f" ] || continue
+            if codesign --verify --deep --strict "$f"; then
+              echo "signed: $f"
+              signed=1
+            else
+              echo "unsigned: $f"
+            fi
+          done
+          [ "$signed" = "1" ] || echo "::warning::these artefacts are UNSIGNED"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.os }}
+          path: |
+            target/release/bundle/msi/*.msi
+            target/release/bundle/nsis/*.exe
+            target/release/bundle/dmg/*.dmg
+            target/release/bundle/deb/*.deb
+            target/release/bundle/appimage/*.AppImage
+          if-no-files-found: error
+
+  windows-smoke:
+    name: windows · a fresh machine builds a PDF
+    needs: windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: biblecompose-windows
+      - name: build a PDF with nothing installed
+        shell: bash
+        run: |
+          mkdir -p smoke
+          printf '%s\n' '\id JHN' '\h John' '\c 1' '\p' \
+            '\v 1 In the beginning was the Word.' > smoke/JHN.usfm
+          printf 'schema_version = 1\n' > smoke/biblecompose.toml
+          env -u BIBLECOMPOSE_SILE -u BIBLECOMPOSE_SILE_PATH \
+              -u BIBLECOMPOSE_SILE_BUNDLE \
+            ./biblecompose.exe build \
+              --books smoke --project smoke --output smoke/out.pdf
+          test -s smoke/out.pdf
+          head -c 8 smoke/out.pdf | grep -q '%PDF' || {
+            echo "the file produced is not a PDF"; exit 1; }
+          echo "smoke: $(wc -c < smoke/out.pdf) bytes from a machine with no SILE"
+
+  release:
+    name: draft the release
+    needs: [bundle, windows, installers, windows-smoke]
+    # Only for a tag. `workflow_dispatch` is for finding out whether the build
+    # still works, and a manual run that quietly created a release would be a
+    # surprise every time.
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    # The only job that needs to write anything, and the only one that has the
+    # permission to. Everything above this could run on a fork's pull request
+    # without being able to publish.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Named patterns rather than everything: the stages are intermediates and
+      # would put 240 MB of unpacked typesetter on the release page.
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cli-*
+          path: incoming
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installers-*
+          path: incoming
+          merge-multiple: true
+
+      - name: gather and checksum
+        id: gather
+        run: |
+          mkdir -p release
+          find incoming -type f \
+            \( -name 'biblecompose-*' -o -name '*.msi' -o -name '*.exe' \
+               -o -name '*.dmg' -o -name '*.deb' -o -name '*.AppImage' \) \
+            -exec cp {} release/ ";"
+          cd release
+          # Checksums matter more the less signed the artefacts are: with no
+          # certificate they are the only way a publisher can tell that what
+          # they downloaded is what was built.
+          #
+          # `SHA256SUMS` is excluded by name rather than by hoping it does not
+          # exist yet. The redirection creates it before anything walks the
+          # directory, so both `*` and a bare `find` will list the file being
+          # written — with a hash of nothing.
+          find . -maxdepth 1 -type f ! -name SHA256SUMS -exec sha256sum {} + | sort -k2 > SHA256SUMS
+          echo "--- release contents ---"
+          ls -la
+          test -s SHA256SUMS
+
+      - name: draft the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          {
+            echo "## BibleCompose $version"
+            echo
+            echo "One file per platform. Each carries its own typesetter — there"
+            echo "is nothing to install alongside it and no internet connection"
+            echo "needed to build a PDF."
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Windows | \`.msi\` or \`-setup.exe\` to install, \`biblecompose-windows-x86_64.exe\` for the command line |"
+            echo "| macOS | \`.dmg\` to install, \`biblecompose-macos-*\` for the command line |"
+            echo "| Linux | \`.deb\` or \`.AppImage\`, \`biblecompose-linux-*\` for the command line |"
+            echo
+            echo "\`SHA256SUMS\` covers every file above."
+            echo
+            echo "New here? [The guide](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/docs/GUIDE.md)"
+            echo "goes from a folder of USFM to a PDF."
+          } > notes.md
+
+          # **A draft.** The workflow does the work; a person decides whether it
+          # ships. That is also the last gate before an unsigned build reaches
+          # anybody — the signing steps warn, and a warning nobody reads is not
+          # a gate.
+          gh release create "$GITHUB_REF_NAME" \
+            --draft \
+            --title "BibleCompose $version" \
+            --notes-file notes.md \
+            release/*
+
+      - name: what to check before publishing
+        run: |
+          echo "::notice::A DRAFT release was created. Before publishing:"
+          echo "::notice::1. Check the signing warnings in the installer jobs above."
+          echo "::notice::2. Install one artefact on a machine that has never had a dev build."
+          echo "::notice::3. Open a PDF it produces."

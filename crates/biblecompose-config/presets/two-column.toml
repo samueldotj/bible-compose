@@ -1,0 +1,30 @@
+# The conventional Bible page, written out (P6.2).
+#
+# Nearly the built-in defaults, and that is the point of shipping it as a
+# preset rather than leaving it implicit: a publisher who starts from "standard
+# two-column" and then changes three things has a settings file that says what
+# their edition is, rather than one that says what they disagreed with. It also
+# gives the other two presets something to be a departure *from*.
+#
+# What it does add over the defaults is the two lines nobody would think to
+# write and everybody wants: the first verse of a chapter goes unnumbered,
+# because the chapter figure beside it already says which verse it is.
+
+[page]
+size = "6x9in"
+columns = 2
+
+[typography]
+font_size = "9.2pt"
+leading = "11.2pt"
+justify = true
+
+[numbering]
+show_chapter_numbers = true
+show_verse_numbers = true
+hide_first_verse_number = true
+
+[notes]
+show_footnotes = true
+show_cross_references = true
+cross_reference_placement = "note_area"

@@ -5,7 +5,9 @@
 //! the only thing that orchestrates — `biblecompose-core` from SRS §12.1 is
 //! gone because its stated job had exactly one caller.
 
+pub mod asset;
 pub mod backend_input;
+pub mod cache;
 pub mod font;
 pub mod hyphenation;
 pub mod project;
@@ -105,6 +107,36 @@ pub fn build(
     build_with(doc, request, &backend, cancel, reporter)
 }
 
+/// The name a draft of `output` is published under.
+///
+/// `Bible.pdf` becomes `Bible-draft.pdf`, in the same folder, so a publisher
+/// looking for their proof finds it next to the real thing rather than
+/// wondering which of the two they are holding.
+pub fn draft_path(output: &Utf8Path) -> Utf8PathBuf {
+    let stem = output.file_stem().unwrap_or("output");
+    let name = match output.extension() {
+        Some(ext) => format!("{stem}-draft.{ext}"),
+        None => format!("{stem}-draft"),
+    };
+    output.with_file_name(name)
+}
+
+/// What a draft says about itself on the page.
+///
+/// The book count, because that is what a proof is usually missing and the one
+/// thing a reader of a stray PDF cannot tell by looking. **No date**: two runs
+/// of the same build have to produce the same bytes (DET-001), and a timestamp
+/// is the shortest route to breaking that.
+///
+/// Here rather than in either front end, so the CLI and the window stamp the
+/// same words.
+pub fn draft_note(books: usize) -> String {
+    match books {
+        1 => "DRAFT - 1 book".to_owned(),
+        n => format!("DRAFT - {n} books"),
+    }
+}
+
 /// What a build needs to know that is not in the document.
 #[derive(Debug, Clone)]
 pub struct BuildRequest {
@@ -123,6 +155,33 @@ pub struct BuildRequest {
     /// Deterministic, so the build directory name does not vary between two
     /// otherwise identical runs.
     pub build_id: String,
+    /// What opening the project already found.
+    ///
+    /// Included in the build's own diagnostics, and therefore in its own
+    /// blocking check — which is the point. A settings file that will not
+    /// parse, a book claimed by two files, a style sheet with a cycle: all of
+    /// those are found by `project::open` and none of them is found again
+    /// here, so a build handed them and told nothing would report the error
+    /// and then produce a PDF from the defaults (SRS §16.2 scenario H).
+    ///
+    /// The CLI guarded itself against this and the window did not, which is
+    /// the argument for it living here rather than in either of them.
+    pub prior: Diagnostics,
+    /// Ignore the fingerprint and run the backend regardless (BLD-007).
+    ///
+    /// The escape hatch, and the reason one is needed: the fingerprint is a
+    /// promise about this project's own inputs, and a build also reads things
+    /// outside it — a system font, artwork on another disk. When the answer
+    /// looks wrong, this is what makes it wrong again reproducibly.
+    pub clean: bool,
+    /// A draft, and what to say about it on the page.
+    ///
+    /// `None` is a real build. `Some(note)` stamps the note across the top of
+    /// every page **and publishes beside `output` rather than to it**: a draft
+    /// of two books must not replace the finished PDF of sixty-six, and the
+    /// only reliable way to guarantee that is for a draft to be unable to
+    /// name it.
+    pub draft: Option<String>,
 }
 
 impl BuildRequest {
@@ -135,6 +194,17 @@ impl BuildRequest {
             settings: Settings::builtin(),
             styles: biblecompose_config::cascade::resolve(None, false).0,
             build_id: "current".to_owned(),
+            prior: Diagnostics::new(),
+            clean: false,
+            draft: None,
+        }
+    }
+
+    /// Where this request actually writes.
+    pub fn destination(&self) -> Utf8PathBuf {
+        match &self.draft {
+            Some(_) => draft_path(&self.output),
+            None => self.output.clone(),
         }
     }
 
@@ -190,7 +260,9 @@ pub fn build_with(
     cancel: &CancelToken,
     reporter: &mut BuildReporter,
 ) -> BuildReport {
-    let mut diagnostics = Diagnostics::new();
+    // Everything opening the project found, so this build's blocking check
+    // covers it too. Nothing below rediscovers a bad settings file.
+    let mut diagnostics = request.prior.clone();
 
     reporter.advance(BuildState::Loading);
     reporter.advance(BuildState::Loaded);
@@ -215,6 +287,16 @@ pub fn build_with(
         &backend.font_dirs(),
         &mut diagnostics,
     );
+    // And whether those families have the faces the styles ask for (FONT-005).
+    // The same failure one level down: a font the backend *can* load, drawn in
+    // a face it has not got, silently substituted for the regular one.
+    font::preflight_faces(
+        &request.settings.typography.font_family,
+        &request.styles,
+        &request.project_root,
+        &backend.font_dirs(),
+        &mut diagnostics,
+    );
     // FONT-004, and for the same reason as the font check: the backend will
     // hyphenate a script that does not hyphenate and say nothing.
     let hyphenation = hyphenation::decide(
@@ -223,7 +305,19 @@ pub fn build_with(
         doc,
         &mut diagnostics,
     );
-    publish::preflight_destination(&request.output, &mut diagnostics);
+    // SCR-006 and SRS §15. The backend checks a figure's *format* and never
+    // its provenance: an absolute path to artwork outside the project embeds
+    // silently (spike F-14), and a missing one used to be swallowed by the
+    // class and produce a hole in a finished book.
+    let assets = asset::preflight(
+        doc,
+        &request.project_root,
+        *request.settings.assets.missing_figure,
+        *request.settings.page.columns,
+        &mut diagnostics,
+    );
+    let destination = request.destination();
+    publish::preflight_destination(&destination, &mut diagnostics);
     for d in diagnostics.iter() {
         reporter.diagnostic(d.clone());
     }
@@ -245,7 +339,7 @@ pub fn build_with(
     let emitted = biblecompose_sile::emit_hiding(
         doc,
         &backend_input::style_rules_with(&request.styles, &style_fonts),
-        backend_input::hidden(&request.settings),
+        backend_input::hidden(&request.settings).without_figures(assets.omitted),
     );
     for u in &emitted.dropped {
         let d = Diagnostic::warning(
@@ -280,19 +374,66 @@ pub fn build_with(
     let job = BackendJob {
         xml: emitted.xml,
         work_dir: build_dir.path().to_owned(),
-        pdf_name: output_file_name(&request.output),
+        pdf_name: output_file_name(&destination),
         sile_path: request.sile_path.clone(),
         project_root: request.project_root.clone(),
         class: "biblecompose".to_owned(),
-        class_options: backend_input::class_options_with(
-            &request.settings,
-            body_font.as_ref(),
-            Some(&hyphenation),
-        ),
+        class_options: {
+            // The draft mark is not a setting — it is what this one run is —
+            // so it is appended here rather than resolved with the rest.
+            // Appended, so a real build's argument list is byte-for-byte what
+            // it was before drafts existed (DET-001).
+            let mut options = backend_input::class_options_with(
+                &request.settings,
+                body_font.as_ref(),
+                Some(&hyphenation),
+            );
+            if let Some(note) = &request.draft {
+                options.push(("draftmark".to_owned(), note.clone()));
+            }
+            options
+        },
     };
 
     if cancel.is_cancelled() {
         return cancelled(reporter, diagnostics);
+    }
+
+    // ---- reuse -------------------------------------------------------------
+    //
+    // Everything that reaches the backend now exists, so this is the first
+    // moment the question can be asked and the last moment it is worth
+    // asking: has anything that could change the PDF changed since the last
+    // build of this project? If not, the finished PDF at the destination is
+    // already the right answer, and running SILE again would take minutes to
+    // produce the same bytes.
+    //
+    // Guarded on the file still being there, because the publisher may have
+    // moved it — a stamp is a record of what was built, not a claim that it
+    // still exists.
+    let fingerprint = cache::Fingerprint::of(
+        &job.xml,
+        &job.class_options,
+        backend
+            .version()
+            .map(|v| v.raw)
+            .unwrap_or_default()
+            .as_str(),
+    );
+    let stamp_dir = cache::stamp_dir(&request.project_root);
+    if !request.clean && destination.exists() && fingerprint.matches(&stamp_dir) {
+        reporter.log(
+            "biblecompose",
+            format!("unchanged since the last build; kept {destination}"),
+        );
+        reporter.advance(BuildState::Succeeded);
+        reporter.output(destination.clone());
+        return BuildReport {
+            state: BuildState::Succeeded,
+            diagnostics,
+            output: Some(destination),
+            backend: backend.version().ok().map(|v| v.raw),
+        };
     }
 
     // ---- typeset -----------------------------------------------------------
@@ -363,7 +504,7 @@ pub fn build_with(
     remember_pages(&request.project_root, pages.load(Ordering::Relaxed));
 
     reporter.advance(BuildState::Publishing);
-    if let Err(e) = publish(&outcome.pdf, &request.output) {
+    if let Err(e) = publish(&outcome.pdf, &destination) {
         build_dir.keep();
         return failed(reporter, diagnostics, e);
     }
@@ -371,12 +512,16 @@ pub fn build_with(
         build_dir.keep();
     }
 
+    // Recorded only now. A stamp written before the backend ran would claim a
+    // PDF that a failed run never produced, and the next build would trust it.
+    fingerprint.write(&stamp_dir);
+
     reporter.advance(BuildState::Succeeded);
-    reporter.output(request.output.clone());
+    reporter.output(destination.clone());
     BuildReport {
         state: BuildState::Succeeded,
         diagnostics,
-        output: Some(request.output.clone()),
+        output: Some(destination),
         backend: backend_version,
     }
 }
@@ -781,6 +926,7 @@ mod tests {
     #[test]
     fn unsupported_markers_warn_without_blocking() {
         let (_g, root) = tmp();
+        biblecompose_testkit::place_fixture_assets(&root);
         let req = BuildRequest::new(&root, root.join("out.pdf"));
         let (mut r, _rx) = BuildReporter::new();
         let report = build_with(

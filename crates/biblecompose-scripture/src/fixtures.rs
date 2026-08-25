@@ -12,8 +12,8 @@ use camino::Utf8PathBuf;
 
 use crate::{
     canon::BookCode, Align, Attribute, Block, Book, BookNames, Cell, CharStyle, CrossReference,
-    FigureRef, HeadingStyle, Inline, Milestone, Note, NoteKind, ParaStyle, PoetryStyle, Row,
-    ScriptureDocument, Unsupported, VerseId,
+    FigureRef, HeadingStyle, Inline, ListStyle, Milestone, Note, NoteKind, ParaStyle, PoetryStyle,
+    Row, ScriptureDocument, Unsupported, VerseId,
 };
 
 fn book(code: &str) -> BookCode {
@@ -194,6 +194,7 @@ pub fn kitchen_sink() -> ScriptureDocument {
             },
             Block::Break,
             Block::ListItem {
+                style: ListStyle::Li,
                 level: 1,
                 content: vec![verse(3), text("A list item.")],
             },
@@ -204,10 +205,12 @@ pub fn kitchen_sink() -> ScriptureDocument {
                         cells: vec![
                             Cell {
                                 align: Align::Start,
+                                span: 1,
                                 content: vec![text("Tribe")],
                             },
                             Cell {
                                 align: Align::End,
+                                span: 1,
                                 content: vec![text("Number")],
                             },
                         ],
@@ -217,10 +220,12 @@ pub fn kitchen_sink() -> ScriptureDocument {
                         cells: vec![
                             Cell {
                                 align: Align::Start,
+                                span: 1,
                                 content: vec![text("Reuben")],
                             },
                             Cell {
                                 align: Align::End,
+                                span: 1,
                                 content: vec![text("46,500")],
                             },
                         ],
@@ -271,6 +276,298 @@ pub fn adversarial() -> ScriptureDocument {
     )])
 }
 
+/// Two chapters carrying every question the apparatus has to answer (P4.1,
+/// P4.2).
+///
+/// Built for the layout, not for the model — [`kitchen_sink`] already proves a
+/// note and a cross-reference normalize and emit. What this one is for is what
+/// only a real page can show: that two sequences run side by side without
+/// interleaving, that an editor's own caller is printed and skipped over, that
+/// a note longer than the note area splits across pages, and that a caller
+/// sequence starts again at a chapter.
+///
+/// Deliberately in one book with two chapters, because the restart boundary is
+/// the chapter and a fixture with one chapter cannot show it.
+pub fn apparatus() -> ScriptureDocument {
+    // Long enough that the note area cannot hold it, so the insertion splits
+    // and continues on the next page. Assembled rather than written out: the
+    // property that matters is the length, and 6,000 characters of prose in a
+    // source file would bury the fixture it belongs to.
+    let long = format!(
+        "A note too long for one page's note area, so that it has to split. {}",
+        "Repeated filler that carries the note past the foot of the page. ".repeat(90)
+    );
+
+    let reference = |origin: &str, body: &str| {
+        Inline::Ref(CrossReference {
+            caller: "+".to_owned(),
+            origin: Some(origin.to_owned()),
+            content: vec![Inline::Char {
+                style: CharStyle::Xt,
+                content: vec![text(body)],
+            }],
+        })
+    };
+
+    ScriptureDocument::new(vec![Book::new(
+        book("1JN"),
+        BookNames::named("1 John"),
+        vec![
+            Block::Paragraph {
+                style: ParaStyle::P,
+                content: vec![
+                    chapter(1),
+                    verse(1),
+                    text("That which was from the beginning"),
+                    reference("1:1", "John 1:1; John 1:14"),
+                    text(", which we have heard, which we have seen with our own eyes. "),
+                    verse(2),
+                    text("And this is the life that was revealed"),
+                    footnote("1:2", "Or everlasting life."),
+                    text("; we have seen it and testified to it. "),
+                    verse(3),
+                    text("We proclaim to you what we have seen and heard"),
+                    reference("1:3", "Acts 4:20"),
+                    text(", so that you also may have fellowship with us. "),
+                    verse(4),
+                    text("We write these things so that our"),
+                    // An editor's own caller: printed as written, and it does
+                    // not take a place in the sequence.
+                    Inline::Note(Note {
+                        kind: NoteKind::Footnote,
+                        caller: "*".to_owned(),
+                        origin: Some("1:4".to_owned()),
+                        content: vec![Block::Paragraph {
+                            style: ParaStyle::P,
+                            content: vec![text("BYZ and TR read "), text("your.")],
+                        }],
+                    }),
+                    text(" joy may be complete. "),
+                    verse(5),
+                    text("And this is the message we have heard from Him"),
+                    footnote("1:5", &long),
+                    text(": God is light, and in Him there is no darkness at all."),
+                ],
+            },
+            Block::Paragraph {
+                style: ParaStyle::P,
+                content: vec![
+                    chapter(2),
+                    verse(1),
+                    text("My little children, I am writing these things to you"),
+                    footnote("2:1", "The first note of a new chapter."),
+                    text(" so that you will not sin. "),
+                    verse(2),
+                    text("He Himself is the atoning sacrifice for our sins"),
+                    reference("2:2", "John 14:15"),
+                    text(", and not only for ours but also for the whole world."),
+                ],
+            },
+        ],
+    )])
+}
+
+/// A chapter whose second verse fills several pages on its own (P4.4).
+///
+/// The running head is built from the references a page *collects*, and
+/// `chapterverse` collects one where a verse number is typeset — so a page
+/// wholly inside one verse collects nothing. This is the fixture that shows
+/// it: verse 1 and verses 3 and 4 are a line each, and verse 2 is pages long,
+/// so the pages in the middle have no verse starting on them at all.
+///
+/// Deliberately short of the length at which a single paragraph starts
+/// producing trailing blank pages — see the note on P4.4 in the roadmap. Five
+/// pages is enough to have three with no verse of their own and few enough to
+/// typeset in a test.
+pub fn long_verse() -> ScriptureDocument {
+    let sentence = "and they went out and preached everywhere while the Lord \
+                    worked with them and confirmed the word by the signs that \
+                    accompanied it ";
+    ScriptureDocument::new(vec![Book::new(
+        book("1JN"),
+        BookNames::named("1 John"),
+        vec![Block::Paragraph {
+            style: ParaStyle::P,
+            content: vec![
+                chapter(1),
+                verse(1),
+                text("That which was from the beginning, which we have heard. "),
+                verse(2),
+                text(&format!("{}.", sentence.repeat(100).trim())),
+                verse(3),
+                text(" We proclaim to you what we have seen and heard. "),
+                verse(4),
+                text("We write these things so that our joy may be complete."),
+            ],
+        }],
+    )])
+}
+
+/// Every kind of heading USFM has, in one psalm (P4.6).
+///
+/// Six of them share the `heading` element and differ only by the style they
+/// resolve to, so this is the fixture that shows whether a reader can tell them
+/// apart. A psalm, because `\d` and `\sp` belong to psalms and to Job and the
+/// Song, and putting them anywhere else would be a fixture nobody recognises.
+pub fn headings() -> ScriptureDocument {
+    let says = |style: HeadingStyle, level: u8, words: &str| Block::Heading {
+        style,
+        level,
+        content: vec![text(words)],
+    };
+    let verse_of = |n: u16, words: &str| Block::Paragraph {
+        style: ParaStyle::P,
+        content: vec![verse(n), text(words)],
+    };
+
+    ScriptureDocument::new(vec![Book::new(
+        book("PSA"),
+        BookNames::named("Psalms"),
+        vec![
+            // The chapter anchor lives in the superscription, which is where
+            // USJ puts it when a psalm has one.
+            Block::Heading {
+                style: HeadingStyle::D,
+                level: 1,
+                content: vec![
+                    chapter(3),
+                    text("A Psalm of David, when he fled from Absalom his son."),
+                ],
+            },
+            says(HeadingStyle::S, 1, "A first-level heading"),
+            says(HeadingStyle::R, 1, "(2 Samuel 15:13-30)"),
+            verse_of(1, "O LORD, how many are my foes!"),
+            says(HeadingStyle::S, 2, "A second-level heading"),
+            verse_of(2, "Many are saying of me."),
+            says(HeadingStyle::S, 3, "A third-level heading"),
+            verse_of(3, "But You, O LORD, are a shield around me."),
+            says(HeadingStyle::S, 4, "A fourth-level heading"),
+            verse_of(4, "To the LORD I cry aloud."),
+            says(HeadingStyle::Sp, 1, "The Beloved"),
+            verse_of(5, "I lie down and sleep."),
+            says(HeadingStyle::Sr, 1, "(3:1-8)"),
+            verse_of(6, "I will not fear the tens of thousands."),
+        ],
+    )])
+}
+
+/// Enough prose to fill a column, then a heading — so that, laid out without
+/// care, the heading is the last line the column can hold (P4.6).
+///
+/// The lengths are chosen against the built-in page rather than guessed: a
+/// heading that landed comfortably mid-column would make the test pass without
+/// testing anything, so the paragraph before each one is sized to run the
+/// column out.
+pub fn orphan_heading() -> ScriptureDocument {
+    let sentence = "and they went out and preached everywhere while the Lord \
+                    worked with them and confirmed the word by the signs that \
+                    accompanied it. ";
+    let mut blocks = vec![Block::Paragraph {
+        style: ParaStyle::P,
+        content: vec![chapter(1), verse(1), text(sentence)],
+    }];
+
+    // Several headings at different depths into the column, so at least one of
+    // them lands where a break would want to be whatever the exact measure.
+    for (n, fill) in [(2u16, 11usize), (3, 13), (4, 15), (5, 17)] {
+        blocks.push(Block::Paragraph {
+            style: ParaStyle::P,
+            content: vec![verse(n), text(&sentence.repeat(fill))],
+        });
+        blocks.push(Block::Heading {
+            style: HeadingStyle::S,
+            level: 1,
+            content: vec![text(&format!("Heading {n}"))],
+        });
+        blocks.push(Block::Paragraph {
+            style: ParaStyle::P,
+            content: vec![verse(n + 100), text(sentence)],
+        });
+    }
+
+    ScriptureDocument::new(vec![Book::new(
+        book("MRK"),
+        BookNames::named("Mark"),
+        blocks,
+    )])
+}
+
+/// Lists at both families and every level, and a table whose columns can only
+/// line up if they were measured (P4.7).
+///
+/// The numbers in the second column are deliberately of different widths, and
+/// the names in the first deliberately of different lengths: a table set by
+/// putting a fixed gap after each cell looks perfectly reasonable until the
+/// cells differ, which is exactly when a reader needs the column.
+///
+/// One list item is long enough to wrap in a single column, which is the only
+/// way to see whether an item is indented as a block or only on its first
+/// line.
+pub fn lists_and_tables() -> ScriptureDocument {
+    let cell = |align: Align, span: u8, body: &str| Cell {
+        align,
+        span,
+        content: vec![text(body)],
+    };
+    let row = |header: bool, name: &str, number: &str| Row {
+        header,
+        cells: vec![cell(Align::Start, 1, name), cell(Align::End, 1, number)],
+    };
+    let item = |style: ListStyle, level: u8, body: &str| Block::ListItem {
+        style,
+        level,
+        content: vec![text(body)],
+    };
+
+    ScriptureDocument::new(vec![Book::new(
+        book("EZR"),
+        BookNames::named("Ezra"),
+        vec![
+            Block::Paragraph {
+                style: ParaStyle::P,
+                content: vec![
+                    chapter(2),
+                    verse(1),
+                    text("Now these are the people of the province who came up."),
+                ],
+            },
+            Block::Paragraph {
+                style: ParaStyle::Lh,
+                content: vec![text("The number of the men of the people of Israel:")],
+            },
+            item(ListStyle::Li, 1, "the descendants of Parosh"),
+            item(ListStyle::Li, 2, "the descendants of Shephatiah"),
+            item(ListStyle::Li, 3, "the descendants of Arah"),
+            item(ListStyle::Li, 4, "the descendants of Pahath-Moab"),
+            item(
+                ListStyle::Li,
+                1,
+                "the descendants of Elam, and of Zattu, and of Zaccai, and of \
+                 Bani, and of Bebai, and of Azgad, and of Adonikam, whose \
+                 number ran on far enough to need a second line of its own",
+            ),
+            item(ListStyle::Lim, 1, "an item embedded in the paragraph"),
+            item(ListStyle::Lim, 2, "and one a level deeper"),
+            Block::Paragraph {
+                style: ParaStyle::Lf,
+                content: vec![text("The whole assembly together.")],
+            },
+            Block::Table {
+                rows: vec![
+                    row(true, "Family", "Number"),
+                    row(false, "Parosh", "2,172"),
+                    row(false, "Shephatiah", "372"),
+                    row(false, "Arah", "775"),
+                    Row {
+                        header: false,
+                        cells: vec![cell(Align::Start, 2, "and the rest of them")],
+                    },
+                ],
+            },
+        ],
+    )])
+}
+
 /// Every fixture, for tests that should run over all of them.
 pub fn all() -> Vec<(&'static str, ScriptureDocument)> {
     vec![
@@ -278,6 +575,11 @@ pub fn all() -> Vec<(&'static str, ScriptureDocument)> {
         ("two_books", two_books()),
         ("kitchen_sink", kitchen_sink()),
         ("adversarial", adversarial()),
+        ("apparatus", apparatus()),
+        ("long_verse", long_verse()),
+        ("headings", headings()),
+        ("orphan_heading", orphan_heading()),
+        ("lists_and_tables", lists_and_tables()),
     ]
 }
 

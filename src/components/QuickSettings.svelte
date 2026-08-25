@@ -13,10 +13,11 @@
    * shape: one line, no legend, no origin, and a reset that appears only when
    * there is something to reset.
    */
-  import { labelFor, PLACEHOLDERS } from "../lib/labels";
+  import { labelFor, placeholderFor } from "../lib/labels";
   import { LANGUAGES } from "../lib/languages";
   import { session } from "../lib/session.svelte";
   import type { Setting } from "../lib/services/backend";
+  import { phrases, t } from "../lib/i18n";
 
   const { keys, width = "8rem" }: { keys: readonly string[]; width?: string } = $props();
 
@@ -80,10 +81,11 @@
         <input
           id={`quick-${setting.key}`}
           type="text"
+          dir="auto"
           style:inline-size={width}
           class:bad={errors.length > 0}
           value={setting.value}
-          placeholder={PLACEHOLDERS[setting.key] ?? ""}
+          placeholder={placeholderFor(setting.key) ?? ""}
           spellcheck="false"
           disabled={!session.editable}
           title={errors.map((e) => e.message).join(" ") || undefined}
@@ -97,8 +99,8 @@
         <button
           type="button"
           class="reset"
-          title="Restore the built-in value"
-          aria-label={`Reset ${labelFor(setting.key)}`}
+          title={t("restoreHint")}
+          aria-label={phrases().resetSetting(labelFor(setting.key))}
           onclick={() => void session.resetSetting(setting.key)}
         >
           ×

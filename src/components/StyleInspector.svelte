@@ -14,6 +14,7 @@
   import { session } from "../lib/session.svelte";
   import { ALL_PROPERTIES, labelForSelector } from "../lib/styles";
   import type { StyleProperty } from "../lib/services/backend";
+  import { t } from "../lib/i18n";
 
   const selectors = $derived(
     session.styles
@@ -51,14 +52,14 @@
   }
 </script>
 
-<section class="pane" aria-label="Style inspector">
+<section class="pane" aria-label={t("styleInspector")}>
   <div class="split">
     <div class="list">
       <input
         type="search"
-        placeholder="Filter selectors"
+        placeholder={t("filterSelectors")}
         spellcheck="false"
-        aria-label="Filter selectors"
+        aria-label={t("filterSelectors")}
         bind:value={session.inspectFilter}
       />
       <ul>
@@ -77,19 +78,19 @@
             </button>
           </li>
         {:else}
-          <li class="none">Nothing matches.</li>
+          <li class="none">{t("nothingMatches")}</li>
         {/each}
       </ul>
     </div>
 
     <div class="detail">
       {#if !chosen}
-        <p class="none">No element selected.</p>
+        <p class="none">{t("noElementSelected")}</p>
       {:else}
         <h3>{chosen}</h3>
         <table>
           <thead>
-            <tr><th>Property</th><th>Value</th><th>From</th></tr>
+            <tr><th>{t("property")}</th><th>{t("value")}</th><th>{t("from")}</th></tr>
           </thead>
           <tbody>
             {#each ALL_PROPERTIES as property (property.name)}

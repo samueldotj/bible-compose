@@ -25,7 +25,7 @@ const ONE_PER_CLASS: [&str; 14] = [
     "poetry.q1",
     "heading.s1",
     "character.bd",
-    "list.1",
+    "list.li1",
     "chapter",
     "verse",
     "note.f",

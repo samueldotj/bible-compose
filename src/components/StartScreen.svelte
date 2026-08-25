@@ -12,6 +12,7 @@
    */
   import NewProject from "./NewProject.svelte";
   import { session } from "./../lib/session.svelte";
+  import { phrases, t } from "../lib/i18n";
 
   let starting = $state(false);
 
@@ -28,7 +29,7 @@
     <button type="button" class="primary" onclick={() => void session.choose()}>
       Open a project…
     </button>
-    <button type="button" onclick={() => (starting = true)}>New project…</button>
+    <button type="button" onclick={() => (starting = true)}>{t("newProjectEllipsis")}</button>
   </div>
 
   <p class="lede">
@@ -37,7 +38,7 @@
   </p>
 
   {#if session.recent.length > 0}
-    <h2>Recent</h2>
+    <h2>{t("recent")}</h2>
     <ul>
       {#each session.recent as item (item.root)}
         <li class:missing={item.missing}>
@@ -57,8 +58,8 @@
           <button
             type="button"
             class="forget"
-            title="Remove from this list — the folder is not touched"
-            aria-label={`Forget ${item.name}`}
+            title={t("forgetHint")}
+            aria-label={phrases().forgetProject(item.name)}
             onclick={() => void session.forget(item.root)}
           >
             ×

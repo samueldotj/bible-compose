@@ -459,11 +459,29 @@ pub mod code {
             MISSING = "001",
             OUTSIDE_PROJECT = "002",
             UNSUPPORTED_FORMAT = "003",
+            // A PDF placed as artwork brings its whole page box and its
+            // embedded font subsets with it. Measured, not feared: a plate
+            // taken from a Tamil publication took a two-font output to four
+            // (P4.3). Not a defect and not refusable — a note, because the
+            // fonts in a finished book are a licensing fact and a printer's
+            // pre-flight will list them whether the publisher expected them
+            // or not.
+            PDF_ARTWORK = "004",
+            // `size="span"` where the page has more than one column. The
+            // figure sets at column width, which is a reasonable answer and
+            // a silent one.
+            SIZE_UNSUPPORTED = "005",
         }
         Font "FONT" {
             UNRESOLVED = "001",
             MISSING_COVERAGE = "002",
             NO_HYPHENATION_PATTERNS = "004",
+            // 005: the family resolved, and has not got a face a
+            //      style asked for. A warning rather than an error:
+            //      the page still sets, in the nearest face the font
+            //      does have, which is the whole problem — nothing
+            //      about the result says the emphasis went missing.
+            MISSING_FACE = "005",
         }
         Backend "SILE" {
             NOT_FOUND = "001",
@@ -473,6 +491,26 @@ pub mod code {
             CANCELLED = "005",
             CLASS_VERSION_MISMATCH = "006",
             BUNDLE_UNPACK_FAILED = "007",
+
+            // ---- the mapping table (SILE-007's requirement, P5.8) ----
+            //
+            // Each is a failure class that has been *seen*, not one that was
+            // imagined: a table of speculative failures is a table nobody
+            // maintains. `biblecompose-sile::failure` holds the patterns and
+            // the wording.
+            //
+            // 008: the document this application generated is not valid XML,
+            //      which is always a defect here and never in the Scripture.
+            // 009: a font the styles named, which the backend could not load —
+            //      past the point where the pre-flight could have caught it.
+            // 010: the class failed while composing. A missing frame, a queue
+            //      that would not empty, a Lua error. A defect in this
+            //      application.
+            // 011: the backend ran out of something it needed to finish.
+            MALFORMED_DOCUMENT = "008",
+            FONT_UNAVAILABLE = "009",
+            CLASS_DEFECT = "010",
+            BACKEND_EXHAUSTED = "011",
         }
         Output "OUT" {
             DESTINATION_LOCKED = "001",

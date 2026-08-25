@@ -13,6 +13,9 @@
 use crate::edit::SettingValue;
 use crate::provenance::Origin;
 use crate::settings::Settings;
+use crate::value::{
+    Anchors, CallerStyle, HeadSlot, MissingAsset, ReferencePlacement, RestartNumbering,
+};
 
 /// What kind of control a key needs, and how its text is to be read back.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -34,8 +37,15 @@ pub enum Kind {
     Boolean,
     /// A path relative to the project folder.
     Path,
-    /// One of the seven things a running head or a footer can hold.
-    HeadSlot,
+    /// One of a closed set of spellings, carrying the set.
+    ///
+    /// One variant for every enum rather than one each. The form needs to know
+    /// *that* the value comes from a list and *what* the list is, and neither
+    /// question has a different answer for a head slot than for a caller
+    /// style — a variant per enum would be a `<select>` to write per enum for
+    /// no gain. The list is the resolver's own table, so a form cannot offer a
+    /// spelling the file would reject, nor miss one it would accept.
+    Choice(&'static [&'static str]),
     /// Book codes, comma-separated in the form.
     List,
 }
@@ -51,8 +61,16 @@ impl Kind {
             Kind::Integer => "integer",
             Kind::Boolean => "boolean",
             Kind::Path => "path",
-            Kind::HeadSlot => "head_slot",
+            Kind::Choice(_) => "choice",
             Kind::List => "list",
+        }
+    }
+
+    /// The spellings a choice accepts, or nothing for every other kind.
+    pub const fn choices(self) -> &'static [&'static str] {
+        match self {
+            Kind::Choice(names) => names,
+            _ => &[],
         }
     }
 
@@ -131,6 +149,24 @@ impl Settings {
             "project.language",
             Language,
             self.project.language.to_string(),
+        );
+        push(
+            "project.author",
+            Text,
+            self.project
+                .author
+                .as_ref()
+                .map(|n| n.to_string())
+                .unwrap_or_default(),
+        );
+        push(
+            "project.subject",
+            Text,
+            self.project
+                .subject
+                .as_ref()
+                .map(|n| n.to_string())
+                .unwrap_or_default(),
         );
 
         push("books.order", List, join(&self.books.order));
@@ -212,6 +248,11 @@ impl Settings {
             Boolean,
             self.numbering.hide_first_verse_number.to_string(),
         );
+        push(
+            "numbering.show_chapter_labels",
+            Boolean,
+            self.numbering.show_chapter_labels.to_string(),
+        );
 
         push(
             "contents.show_book_introductions",
@@ -239,6 +280,26 @@ impl Settings {
             Boolean,
             self.notes.show_cross_references.to_string(),
         );
+        push(
+            "notes.footnote_callers",
+            Choice(CallerStyle::SPELLINGS),
+            self.notes.footnote_callers.to_string(),
+        );
+        push(
+            "notes.cross_reference_callers",
+            Choice(CallerStyle::SPELLINGS),
+            self.notes.cross_reference_callers.to_string(),
+        );
+        push(
+            "notes.restart_numbering",
+            Choice(RestartNumbering::SPELLINGS),
+            self.notes.restart_numbering.to_string(),
+        );
+        push(
+            "notes.cross_reference_placement",
+            Choice(ReferencePlacement::SPELLINGS),
+            self.notes.cross_reference_placement.to_string(),
+        );
 
         for (key, slot) in [
             ("headers.header_left", &self.headers.header_left),
@@ -248,9 +309,29 @@ impl Settings {
             ("headers.footer_center", &self.headers.footer_center),
             ("headers.footer_right", &self.headers.footer_right),
         ] {
-            push(key, HeadSlot, slot.to_string());
+            push(key, Choice(HeadSlot::SPELLINGS), slot.to_string());
         }
 
+        push(
+            "assets.missing_figure",
+            Choice(MissingAsset::SPELLINGS),
+            self.assets.missing_figure.to_string(),
+        );
+
+        push(
+            "output.name",
+            Text,
+            self.output
+                .name
+                .as_ref()
+                .map(|n| n.to_string())
+                .unwrap_or_default(),
+        );
+        push(
+            "output.anchors",
+            Choice(Anchors::SPELLINGS),
+            self.output.anchors.to_string(),
+        );
         push(
             "output.keep_intermediates",
             Boolean,

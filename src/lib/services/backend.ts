@@ -47,6 +47,14 @@ export interface Diagnostic {
   readonly detail?: string;
 }
 
+/**
+ * Which part of the canon a book belongs to, from the canon table.
+ *
+ * Sent with each book rather than derived here: sixty-six codes divided into
+ * testaments is exactly the sort of list that drifts when it is written twice.
+ */
+export type Testament = "old" | "new" | "deuterocanon";
+
 export interface BookSummary {
   readonly code: string;
   readonly name: string;
@@ -62,6 +70,7 @@ export interface BookSummary {
    * diagnostics.
    */
   readonly included: boolean;
+  readonly testament: Testament;
 }
 
 /** Which control a setting needs, decided by the schema and not by the form. */
@@ -71,8 +80,8 @@ export type SettingKind =
   | "font"
   /** A BCP-47 language tag, likewise. */
   | "language"
-  /** One of the seven things a running head or a footer slot can hold. */
-  | "head_slot"
+  /** One of a closed set of spellings, which `Setting.choices` lists. */
+  | "choice"
   | "length"
   | "page_size"
   | "integer"
@@ -84,6 +93,14 @@ export interface Setting {
   readonly key: string;
   readonly kind: SettingKind;
   readonly value: string;
+  /**
+   * For `choice`, every spelling the resolver accepts, in the order to offer
+   * them.
+   *
+   * From the schema rather than written here, so a dropdown cannot offer a
+   * value the settings file would reject, nor miss one it would accept.
+   */
+  readonly choices?: readonly string[];
   /** The project file set it, so it can be reset (CFG-007). */
   readonly overridden: boolean;
   readonly location?: SourceLocation;
@@ -121,6 +138,13 @@ export interface Geometry {
   readonly headerGap: number;
   readonly footerGap: number;
   readonly columns: number;
+}
+
+/** One of the editions a project can be started from (P6.2). */
+export interface Preset {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
 }
 
 /** A project the window has opened before (GUI-001). */
@@ -216,6 +240,24 @@ export interface Backend {
   closeProject(): Promise<void>;
   /** Show a folder in the platform's own file manager (GUI-009). */
   openFolder(path: string): Promise<void>;
+  /**
+   * Open a finished PDF in the platform's own viewer (GUI-009).
+   *
+   * There is no preview inside the window and this is deliberate
+   * (ADR-003): the viewer a publisher already trusts is the one
+   * their printer will use.
+   */
+  openPdf(path: string): Promise<void>;
+  /** The editions a project can be started from (P6.2). */
+  presets(): Promise<readonly Preset[]>;
+  /**
+   * Write one into the project's settings file.
+   *
+   * A preset is written rather than layered, so what comes back is a project
+   * whose settings say what the edition is — editable, and visible in the
+   * inspector as having come from the publisher's own file.
+   */
+  applyPreset(root: string, id: string): Promise<Project>;
   /** The projects this machine has opened, most recent first. */
   recentProjects(): Promise<readonly Recent[]>;
   /** Drop one from that list. The folder is not touched. */
@@ -243,8 +285,15 @@ export interface Backend {
    * Scripture it cannot draw (GUI-003).
    */
   fonts(root: string | null): Promise<readonly FontChoice[]>;
-  /** Returns as soon as the build is handed to a thread (GUI-012). */
-  startBuild(root: string): Promise<void>;
+  /**
+   * Returns as soon as the build is handed to a thread (GUI-012).
+   *
+   * `draft` stamps every page and writes beside the finished PDF rather
+   * than over it (P5.4). It is an argument and not a setting because it is
+   * what this one run is: a project that remembered it was drafting would
+   * eventually ship a stamped book.
+   */
+  startBuild(root: string, draft: boolean, clean: boolean): Promise<void>;
   /** Ask the running build to stop. `false` if there was not one. */
   cancelBuild(): Promise<boolean>;
   /** Everything the build has to say, in order. */
@@ -263,6 +312,9 @@ export const tauriBackend: Backend = {
   openProject: (root) => invoke("open_project", { root }),
   closeProject: () => invoke("close_project"),
   openFolder: (path) => invoke("open_folder", { path }),
+  openPdf: (path) => invoke("open_pdf", { path }),
+  presets: () => invoke("presets"),
+  applyPreset: (root, id) => invoke("apply_preset", { root, id }),
   recentProjects: () => invoke("recent_projects"),
   forgetProject: (root) => invoke("forget_project", { root }),
   createProject: (parent, name, language) =>
@@ -275,7 +327,7 @@ export const tauriBackend: Backend = {
   resetStyle: (root, selector, property) =>
     invoke("reset_style", { root, selector, property }),
   fonts: (root) => invoke("fonts", { root }),
-  startBuild: (root) => invoke("start_build", { root }),
+  startBuild: (root, draft, clean) => invoke("start_build", { root, draft, clean }),
   cancelBuild: () => invoke("cancel_build"),
   onBuildEvent: async (handler) => {
     const stop = await listen<BuildEvent>("build", (event) => handler(event.payload));

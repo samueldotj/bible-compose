@@ -24,7 +24,10 @@ use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, Severity, SourceLo
 
 use crate::document::{ConfigDocument, Located, Node};
 use crate::provenance::{Provenance, Sourced};
-use crate::value::{self, HeadSlot, Length, PageSize};
+use crate::value::{
+    self, Anchors, CallerStyle, HeadSlot, Length, MissingAsset, PageSize, ReferencePlacement,
+    RestartNumbering,
+};
 
 /// The settings vocabulary this release speaks.
 pub const SCHEMA_VERSION: i64 = 1;
@@ -70,6 +73,7 @@ pub struct Settings {
     pub contents: Contents,
     pub notes: Notes,
     pub headers: Headers,
+    pub assets: Assets,
     pub output: Output,
 }
 
@@ -77,9 +81,20 @@ pub struct Settings {
 pub struct Project {
     /// Absent means "use the folder's name". There is no default publication
     /// name that is right for anybody.
+    ///
+    /// The folder's name is the answer the *interface* gives. It is not the
+    /// answer the PDF gives: a path that can reach the output is a path that
+    /// can reach a golden file, so an unset name leaves the document with no
+    /// title rather than with the name of whatever directory it was built in.
     pub name: Option<Sourced<String>>,
-    /// A BCP-47 tag, for hyphenation and language-aware breaking.
+    /// A BCP-47 tag, for hyphenation and language-aware breaking. Also the
+    /// document's `/Lang`, which is what a screen reader reads it by.
     pub language: Sourced<String>,
+    /// Who published it. `Author` in PDF terms, which for Scripture is
+    /// nobody's idea of the author and everybody's idea of the field.
+    pub author: Option<Sourced<String>>,
+    /// What it is — "New Testament", "Study Bible", a translation's name.
+    pub subject: Option<Sourced<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -127,6 +142,14 @@ pub struct Numbering {
     /// the place. A common setting in Bible typography and an odd one
     /// everywhere else, which is why it is a setting and not a style.
     pub hide_first_verse_number: Sourced<bool>,
+    /// Whether USFM's `\cl` is printed — the words an edition gives a chapter,
+    /// such as `\cl அத்தியாயம் 1` beside `\c 1`.
+    ///
+    /// Here rather than under `contents` because what a publisher is deciding
+    /// is how a chapter is announced, and the number beside it is the other
+    /// half of that decision. A translation that carries labels and an edition
+    /// that wants only figures are both ordinary, and the file says which.
+    pub show_chapter_labels: Sourced<bool>,
 }
 
 /// Which parts of a book are printed at all.
@@ -142,10 +165,25 @@ pub struct Contents {
     pub show_section_headings: Sourced<bool>,
 }
 
+/// Footnotes and cross-references: whether, how marked, and — for references —
+/// where (SCR-003 – SCR-005).
+///
+/// The two kinds keep separate caller settings on purpose. A page carrying both
+/// needs to say which mark belongs to which apparatus, and the way editions do
+/// that is by giving them different sequences — numbers against letters — not
+/// by interleaving one sequence between them. That is the whole of what P4.2's
+/// "styled independently of footnotes" asks for at the level of the mark.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Notes {
     pub show_footnotes: Sourced<bool>,
     pub show_cross_references: Sourced<bool>,
+    pub footnote_callers: Sourced<CallerStyle>,
+    pub cross_reference_callers: Sourced<CallerStyle>,
+    /// Applies to both sequences, because a page whose footnotes restart at a
+    /// chapter and whose references do not is a page with two different
+    /// answers to the same question.
+    pub restart_numbering: Sourced<RestartNumbering>,
+    pub cross_reference_placement: Sourced<ReferencePlacement>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -158,14 +196,52 @@ pub struct Headers {
     pub footer_right: Sourced<HeadSlot>,
 }
 
+/// The files a project points at that are not Scripture (SCR-006).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Assets {
+    pub missing_figure: Sourced<MissingAsset>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Output {
     pub keep_intermediates: Sourced<bool>,
+    /// What the PDF is called (BLD-003).
+    ///
+    /// A **file name and not a path**, which is the whole of the difference
+    /// between this and the `output.file` that was removed. The PDF stays in
+    /// `output/` inside the project, so that it travels with the book it was
+    /// made from; what a publisher gets to decide is what it is called.
+    ///
+    /// Unset means derived from the publication's name, which is what most
+    /// projects want and none of them should have to write down.
+    pub name: Option<Sourced<String>>,
+    /// How much of the text the PDF can be pointed at (SCR-008).
+    pub anchors: Sourced<Anchors>,
 }
 
 /// One of the seven things a head or a footer can hold.
 fn slot(n: &Node) -> Result<Located<HeadSlot>, Diagnostic> {
-    value::choice(n, &HeadSlot::NAMES)
+    value::choice(n, HeadSlot::NAMES)
+}
+
+fn caller_style(n: &Node) -> Result<Located<CallerStyle>, Diagnostic> {
+    value::choice(n, CallerStyle::NAMES)
+}
+
+fn restart(n: &Node) -> Result<Located<RestartNumbering>, Diagnostic> {
+    value::choice(n, RestartNumbering::NAMES)
+}
+
+fn placement(n: &Node) -> Result<Located<ReferencePlacement>, Diagnostic> {
+    value::choice(n, ReferencePlacement::NAMES)
+}
+
+fn anchors(n: &Node) -> Result<Located<Anchors>, Diagnostic> {
+    value::choice(n, Anchors::NAMES)
+}
+
+fn missing_asset(n: &Node) -> Result<Located<MissingAsset>, Diagnostic> {
+    value::choice(n, MissingAsset::NAMES)
 }
 
 /// The maximum a page can be divided into before a column is too narrow to
@@ -370,9 +446,9 @@ const REMOVED: [(&str, &str); 6] = [
     (
         "output.file",
         concat!(
-            "`output.file` was removed: the PDF is always written to ",
-            "`output/bible.pdf` inside the project folder, so that it stays ",
-            "with the book it was made from",
+            "`output.file` was removed: the PDF is always written inside the ",
+            "project's `output/` folder, so that it stays with the book it was ",
+            "made from. `output.name` sets what it is called",
         ),
     ),
 ];
@@ -401,6 +477,8 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
         project: Project {
             name: r.optional("project.name", |n| n.string()),
             language: r.value("project.language", |n| n.string()),
+            author: r.optional("project.author", |n| n.string()),
+            subject: r.optional("project.subject", |n| n.string()),
         },
         books: Books {
             order: r.list("books.order"),
@@ -431,6 +509,7 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             show_chapter_numbers: r.value("numbering.show_chapter_numbers", |n| n.boolean()),
             show_verse_numbers: r.value("numbering.show_verse_numbers", |n| n.boolean()),
             hide_first_verse_number: r.value("numbering.hide_first_verse_number", |n| n.boolean()),
+            show_chapter_labels: r.value("numbering.show_chapter_labels", |n| n.boolean()),
         },
         contents: Contents {
             show_book_introductions: r.value("contents.show_book_introductions", |n| n.boolean()),
@@ -441,6 +520,10 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
         notes: Notes {
             show_footnotes: r.value("notes.show_footnotes", |n| n.boolean()),
             show_cross_references: r.value("notes.show_cross_references", |n| n.boolean()),
+            footnote_callers: r.value("notes.footnote_callers", caller_style),
+            cross_reference_callers: r.value("notes.cross_reference_callers", caller_style),
+            restart_numbering: r.value("notes.restart_numbering", restart),
+            cross_reference_placement: r.value("notes.cross_reference_placement", placement),
         },
         headers: Headers {
             header_left: r.value("headers.header_left", slot),
@@ -450,8 +533,13 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             footer_center: r.value("headers.footer_center", slot),
             footer_right: r.value("headers.footer_right", slot),
         },
+        assets: Assets {
+            missing_figure: r.value("assets.missing_figure", missing_asset),
+        },
         output: Output {
             keep_intermediates: r.value("output.keep_intermediates", |n| n.boolean()),
+            name: r.optional("output.name", |n| n.string()),
+            anchors: r.value("output.anchors", anchors),
         },
     }
 }

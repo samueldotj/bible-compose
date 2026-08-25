@@ -8,7 +8,7 @@ Running log of what the spike establishes. Findings that survive get promoted in
 |---|---|
 | S0.1 Toolchain pinned, versions recorded | **Done** |
 | S0.2 Two-column Scripture page | **Substantially done** — works, with one open defect (F-8) |
-| S0.3 Footnotes and cross-references | **Partial** — placement correct, two defects open (F-10) |
+| S0.3 Footnotes and cross-references | **Partial** — placement correct, two defects open (F-10, both closed at P4.1) |
 | S0.4 Running head with verse range | **Done** — works |
 | S0.5 Tamil, uninstalled font | **Done** — works, and found F-11 |
 | S0.6 XML input path | **Done** — [ADR-002](../docs/adr/002-sile-interface.md) confirmed decisively |
@@ -167,6 +167,18 @@ With those fixed, the output is a recognisable Bible page. From [`out/render/joh
 
 Both land on P4.1 and are the reason that item is `M` rather than `S`.
 
+**Closed at P4.1.** The diagnosis above was close and not right, and the difference cost a day, so it is worth recording. The overlap was **three** defects wearing one symptom, and the balancer was implicated in none of them:
+
+1. **Page 1 was set on a different frameset from the one the steal reached.** `defineMaster` registers its frames in the global `SILE.frames`, while the typesetter had been created holding the copy `initialFrame` made from `declareFrames`. From page 2 on, `twoside` switches masters and repoints the typesetter and the two agree; on page 1 nothing switched. `setShrinkage` took the note height off one object and `getTargetLength` read it back off the other, so page 1's target never shrank. 70pt of overprinting on the opening page of Mark, and nothing wrong on any page after it.
+2. **A column already committed could still be grown into.** SILE fills column A, breaks it, then fills column B; the notes called in column B steal *after* column A is set. Column A reserves for every note seen while it was being filled, which covers most of them, and the class now caps the note area at the space left beneath the committed column so that the remainder splits to the next page instead of being printed over type. 22 of 47 pages of Mark, before.
+3. **The bottom margin was 38.88pt short**, on every page, silently: SILE's frame grammar makes `-` right-associative, so `100%ph - marginbottom - footsep` means `100%ph - (marginbottom - footsep)`.
+
+Measured after: 0 columns of 50 pages of Mark, in one column and in two, have a line of Scripture inside the note area — asserted from glyph baselines, in `crates/biblecompose-app/tests/apparatus.rs`.
+
+**And one the spike never reached.** `balanced-frames` reads a page-break penalty of −17777 or worse as a request to balance, and `insertions` uses −20000 to force the break after splitting a note that will not fit. Together they loop: 1,742 pages in 20 seconds from a two-column page carrying one 29-line note. A 15-line note does not reach it, which is why S0 never saw it. The package is no longer loaded; nothing in the class ever asked it to balance.
+
+The numbering half is a setting now — per chapter, per book, or never, with numbers, letters or symbols. **Per page is deliberately absent**: a caller is typeset into the paragraph that calls it, and SILE breaks a page only after that whole paragraph is set, so the page a mark will land on is not known when the mark is made. The policy would be right in the middle of a page and wrong at both its edges.
+
 ---
 
 ## S0.5 — Complex script and an uninstalled font
@@ -278,6 +290,10 @@ Unlike fonts, bad image sources stop the build: a missing file, a wrong-format f
 But **location is not checked**. An absolute path to a valid image well outside the project embedded silently and produced a 16,515-byte PDF. SILE validates *format*, never *provenance*.
 
 SRS §15 already requires relative asset references to resolve inside the project directory. The spike confirms the requirement cannot be delegated: the containment check is BibleCompose's, performed after canonicalization so that `..` and symlinks are both covered, and it is the only such check in the pipeline. P4.3.
+
+**Closed at P4.3**, and the spike understated it in one place and overstated it in another. Understated: the class wrapped the draw in a `pcall`, so the loud failures were swallowed too — a project naming two absent figures built to `[completed]` and wrote a PDF with two holes. Overstated: canonicalization alone is not enough, because a `..` naming a file that does not exist has nothing to canonicalize; the check is lexical first and canonical second.
+
+Two things were measured while closing it, and neither can be refused. A PDF placed as artwork becomes a Form XObject with the plate's **whole page box** — `/BBox [0 0 432 648]` for a six-by-nine plate, margins, running head and folio included — and its **embedded font subsets join the output's**: a Tamil plate took a two-font PDF to four. The fonts in a finished book are a licensing fact and a printer's pre-flight will list them, so a build that places a PDF says so once.
 
 ---
 

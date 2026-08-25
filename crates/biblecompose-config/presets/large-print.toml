@@ -1,0 +1,39 @@
+# Large print (P6.2).
+#
+# Sized against the RNIB's clear-print guidance rather than against taste: 14pt
+# is the smallest size that guidance calls large print, and the leading goes up
+# with it — a larger face on the same leading is harder to read rather than
+# easier, because the eye returning to the left margin has less to aim at.
+#
+# One column, necessarily. 14pt in a 6-inch page divided in two leaves about
+# twenty characters to a line, which hyphenates into nonsense; the trim goes up
+# to 7x10 for the same reason.
+#
+# Justification is off. A justified line at this size has to stretch its spaces
+# a long way to reach the margin, and rivers of white space are exactly what a
+# reader with low vision does not need. Ragged right costs nothing here.
+
+[page]
+size = "7x10in"
+columns = 1
+margin_inner = "0.8in"
+margin_outer = "0.6in"
+margin_top = "0.7in"
+margin_bottom = "0.8in"
+
+[typography]
+font_size = "14pt"
+leading = "19pt"
+justify = false
+
+[numbering]
+show_chapter_numbers = true
+show_verse_numbers = true
+hide_first_verse_number = true
+
+# Footnotes stay; cross-references go. Both would be set at a size a reader who
+# needs large print cannot read, and of the two the footnote is the one that
+# carries meaning rather than navigation.
+[notes]
+show_footnotes = true
+show_cross_references = false

@@ -14,6 +14,8 @@
    * owns a problem.
    */
   import { session } from "../lib/session.svelte";
+  import type { Testament } from "../lib/services/backend";
+  import { phrases, t } from "../lib/i18n";
 
   let dragging = $state<string | null>(null);
   /** The arrangement being dragged, before it is committed on drop. */
@@ -24,6 +26,44 @@
     order.map((code) => session.books.find((b) => b.code === code)).filter((b) => b !== undefined),
   );
   const included = $derived(new Set(session.books.filter((b) => b.included).map((b) => b.code)));
+
+  /**
+   * The columns, in canonical order of testament, and only the ones this
+   * project has books in.
+   *
+   * A New Testament on its own is an ordinary publication and so is a Bible
+   * with deuterocanonical books; an empty column headed "Old Testament" would
+   * be furniture in the first case, and a book with nowhere to go would be a
+   * book you could not reach in the second.
+   */
+  const TESTAMENTS: readonly { id: Testament; title: string }[] = [
+    { id: "old", title: "Old Testament" },
+    { id: "new", title: "New Testament" },
+    { id: "deuterocanon", title: "Deuterocanonical" },
+  ];
+
+  const columns = $derived(
+    TESTAMENTS.map((t) => ({
+      ...t,
+      books: rows.filter((b) => b.testament === t.id),
+    })).filter((c) => c.books.length > 0),
+  );
+
+  /**
+   * One testament's books, permuted, back into the whole order.
+   *
+   * **The other testaments do not move.** The two columns are a view of a
+   * single `books.order`, and the honest way to show any order in two columns
+   * is to keep each book's *slot* in the full list and change only which book
+   * sits in which of its own testament's slots. A project that prints the New
+   * Testament first, or interleaves, keeps that arrangement while its Gospels
+   * are being reordered.
+   */
+  function withGroupReordered(full: string[], group: readonly string[], next: string[]): string[] {
+    const inGroup = new Set(group);
+    const queue = [...next];
+    return full.map((code) => (inGroup.has(code) ? (queue.shift() ?? code) : code));
+  }
 
   /**
    * The canon's own order, from the shell — the canon table is Rust's and
@@ -39,13 +79,21 @@
     return "ok";
   }
 
-  function move(code: string, to: number): void {
-    const from = order.indexOf(code);
-    if (from < 0 || to < 0 || to >= order.length || from === to) return;
-    const next = [...order];
+  /**
+   * Move a book to a position *within its own column*.
+   *
+   * `column` is the codes that column shows, so a book dragged from one
+   * testament to another finds itself absent from the target's list and
+   * nothing happens — which is the right answer: a book's testament is the
+   * canon's to say and not a publisher's.
+   */
+  function move(code: string, to: number, column: readonly string[]): void {
+    const from = column.indexOf(code);
+    if (from < 0 || to < 0 || to >= column.length || from === to) return;
+    const next = [...column];
     next.splice(from, 1);
     next.splice(to, 0, code);
-    pending = next;
+    pending = withGroupReordered(order, column, next);
   }
 
   /**
@@ -81,6 +129,23 @@
   }
 
   /**
+   * The same, for one testament.
+   *
+   * A New Testament edition is one of the commonest things anybody makes with
+   * this, and making one from a whole Bible was thirty-nine clicks. It leaves
+   * the other columns exactly as they are — which is the point, and is why
+   * this is not the pair above with a filter on it.
+   */
+  function selectGroup(codes: readonly string[], on: boolean): void {
+    const next = new Set(included);
+    for (const code of codes) {
+      if (on) next.add(code);
+      else next.delete(code);
+    }
+    void session.setBooks(order, next);
+  }
+
+  /**
    * Back to the canon's order.
    *
    * This *clears* `books.order` rather than writing the canonical sequence
@@ -95,13 +160,14 @@
   }
 </script>
 
-<section class="pane" aria-labelledby="books-heading">
-  <h2 id="books-heading">Books</h2>
-
+<!-- No heading of its own: the tab above it says Scripture, and each column
+     says which testament it is. A third title between them would be a label
+     for a thing already labelled twice. -->
+<section class="pane" aria-label={t("booksRegion")}>
   {#if !session.project}
-    <p class="empty">No project open.</p>
+    <p class="empty">{t("noProjectOpen")}</p>
   {:else if session.books.length === 0}
-    <p class="empty">This folder has no USFM in it.</p>
+    <p class="empty">{t("noUsfmHere")}</p>
   {:else}
     <p class="hint">
       <span>
@@ -113,104 +179,144 @@
         <button
           type="button"
           disabled={!session.editable || included.size === session.books.length}
-          onclick={() => selectAll(true)}>Select all</button
+          onclick={() => selectAll(true)}>{t("selectAll")}</button
         >
         <button
           type="button"
           disabled={!session.editable || included.size === 0}
-          onclick={() => selectAll(false)}>Clear all</button
+          onclick={() => selectAll(false)}>{t("clearAll")}</button
         >
         <button
           type="button"
           disabled={!session.editable || isCanonical}
-          title="Put the books back in the order the canon gives them"
-          onclick={restoreCanonical}>Canonical order</button
+          title={t("canonicalOrderHint")}
+          onclick={restoreCanonical}>{t("canonicalOrder")}</button
         >
       </span>
     </p>
-    <ul>
-      {#each rows as book, i (book.code)}
-        <li
-          class:dragging={dragging === book.code}
-          class:out={!book.included}
-          draggable={session.editable}
-          ondragstart={(e) => {
-            dragging = book.code;
-            // Firefox starts no drag at all without payload, and the move
-            // cursor is the difference between "this will reorder" and "this
-            // will copy something somewhere".
-            e.dataTransfer?.setData("text/plain", book.code);
-            if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
-          }}
-          ondragend={commitOrder}
-          ondragover={(e) => {
-            // Without this the drop is refused and `dragend` reports a
-            // cancelled drag, whatever the rest of the handlers do.
-            e.preventDefault();
-            if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-          }}
-          ondragenter={() => {
-            // The reorder happens on enter rather than on over: `dragover`
-            // fires continuously while the pointer sits still, and moving the
-            // row under it each time makes the list flicker between two
-            // arrangements.
-            if (dragging && dragging !== book.code) move(dragging, i);
-          }}
-          ondrop={(e) => {
-            e.preventDefault();
-            commitOrder();
-          }}
-        >
-          <span class="grip" aria-hidden="true">⋮⋮</span>
-          <input
-            type="checkbox"
-            checked={book.included}
-            disabled={!session.editable}
-            aria-label={`Include ${book.code}`}
-            onchange={(e) => toggle(book.code, e.currentTarget.checked)}
-          />
-          <button
-            type="button"
-            class="row"
-            class:selected={session.selectedBook === book.code}
-            aria-current={session.selectedBook === book.code ? "true" : undefined}
-            onclick={() => (session.selectedBook = book.code)}
-          >
-            <span class="dot {status(book)}" aria-hidden="true"></span>
-            <span class="name">{book.name}</span>
-            <span class="code">{book.code}</span>
-            <span class="chapters">{book.included ? `${book.chapters} ch` : "not included"}</span>
-            {#if book.errors > 0}
-              <span class="count error">{book.errors} error{book.errors === 1 ? "" : "s"}</span>
-            {:else if book.warnings > 0}
-              <span class="count warning">
-                {book.warnings} warning{book.warnings === 1 ? "" : "s"}
+    <!-- Side by side, because the two testaments are two lists and a reader
+         looking for Habakkuk should not have to scroll past the Gospels. One
+         column each, each scrolling on its own so a long Old Testament does
+         not decide how much of the New is visible. -->
+    <div class="testaments">
+      {#each columns as column (column.id)}
+        {@const codes = column.books.map((b) => b.code)}
+        {@const chosen = codes.filter((c) => included.has(c)).length}
+        <section class="testament" aria-label={column.title}>
+          <h3>
+            <span class="what">
+              {column.title}
+              <span class="tally">{chosen} of {column.books.length}</span>
+            </span>
+            <!-- Only where there is more than one column. With a single
+                 testament these would be the pair above it, twice. -->
+            {#if columns.length > 1}
+              <span class="tools">
+                <button
+                  type="button"
+                  disabled={!session.editable || chosen === codes.length}
+                  title={`Put every book of the ${column.title} in the publication`}
+                  onclick={() => selectGroup(codes, true)}>{t("selectAll")}</button
+                >
+                <button
+                  type="button"
+                  disabled={!session.editable || chosen === 0}
+                  title={`Take every book of the ${column.title} out`}
+                  onclick={() => selectGroup(codes, false)}>{t("clearAll")}</button
+                >
               </span>
             {/if}
-          </button>
-          <span class="nudge">
-            <button
-              type="button"
-              disabled={!session.editable || i === 0}
-              aria-label={`Move ${book.code} earlier`}
-              onclick={() => {
-                move(book.code, i - 1);
-                commitOrder();
-              }}>↑</button
-            >
-            <button
-              type="button"
-              disabled={!session.editable || i === rows.length - 1}
-              aria-label={`Move ${book.code} later`}
-              onclick={() => {
-                move(book.code, i + 1);
-                commitOrder();
-              }}>↓</button
-            >
-          </span>
-        </li>
+          </h3>
+          <ul>
+            {#each column.books as book, i (book.code)}
+              <li
+                class:dragging={dragging === book.code}
+                class:out={!book.included}
+                draggable={session.editable}
+                ondragstart={(e) => {
+                  dragging = book.code;
+                  // Firefox starts no drag at all without payload, and the move
+                  // cursor is the difference between "this will reorder" and
+                  // "this will copy something somewhere".
+                  e.dataTransfer?.setData("text/plain", book.code);
+                  if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+                }}
+                ondragend={commitOrder}
+                ondragover={(e) => {
+                  // Without this the drop is refused and `dragend` reports a
+                  // cancelled drag, whatever the rest of the handlers do.
+                  e.preventDefault();
+                  if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+                }}
+                ondragenter={() => {
+                  // The reorder happens on enter rather than on over:
+                  // `dragover` fires continuously while the pointer sits still,
+                  // and moving the row under it each time makes the list
+                  // flicker between two arrangements.
+                  if (dragging && dragging !== book.code) move(dragging, i, codes);
+                }}
+                ondrop={(e) => {
+                  e.preventDefault();
+                  commitOrder();
+                }}
+              >
+                <span class="grip" aria-hidden="true">⋮⋮</span>
+                <input
+                  type="checkbox"
+                  checked={book.included}
+                  disabled={!session.editable}
+                  aria-label={phrases().includeBook(book.code)}
+                  onchange={(e) => toggle(book.code, e.currentTarget.checked)}
+                />
+                <button
+                  type="button"
+                  class="row"
+                  class:selected={session.selectedBook === book.code}
+                  aria-current={session.selectedBook === book.code ? "true" : undefined}
+                  onclick={() => (session.selectedBook = book.code)}
+                >
+                  <span class="dot {status(book)}" aria-hidden="true"></span>
+                  <span class="name">{book.name}</span>
+                  <span class="code">{book.code}</span>
+                  <span class="chapters">
+                    {book.included ? `${book.chapters} ch` : "not included"}
+                  </span>
+                  {#if book.errors > 0}
+                    <span class="count error">
+                      {book.errors} error{book.errors === 1 ? "" : "s"}
+                    </span>
+                  {:else if book.warnings > 0}
+                    <span class="count warning">
+                      {book.warnings} warning{book.warnings === 1 ? "" : "s"}
+                    </span>
+                  {/if}
+                </button>
+                <span class="nudge">
+                  <button
+                    type="button"
+                    disabled={!session.editable || i === 0}
+                    aria-label={phrases().moveEarlier(book.code)}
+                    onclick={() => {
+                      move(book.code, i - 1, codes);
+                      commitOrder();
+                    }}>↑</button
+                  >
+                  <button
+                    type="button"
+                    disabled={!session.editable || i === column.books.length - 1}
+                    aria-label={phrases().moveLater(book.code)}
+                    onclick={() => {
+                      move(book.code, i + 1, codes);
+                      commitOrder();
+                    }}>↓</button
+                  >
+                </span>
+              </li>
+            {/each}
+          </ul>
+        </section>
       {/each}
-    </ul>
+    </div>
   {/if}
 </section>
 
@@ -221,9 +327,59 @@
     flex-direction: column;
     min-block-size: 0;
   }
-  h2,
   .hint {
     flex: none;
+  }
+  /* Equal columns whatever their length, so the two testaments read as two
+     lists of the same kind of thing rather than as a big one and a small one.
+     They wrap to a single column when the window cannot give each a usable
+     measure. */
+  .testaments {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+    gap: 0 1.4rem;
+    flex: 1;
+    min-block-size: 0;
+  }
+  .testament {
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
+    min-inline-size: 0;
+  }
+  h3 {
+    display: flex;
+    gap: 0.6rem;
+    align-items: baseline;
+    justify-content: space-between;
+    flex: none;
+    margin: 0 0 0.25rem;
+    padding-block-end: 0.2rem;
+    border-block-end: 1px solid color-mix(in oklab, currentColor 15%, transparent);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.7;
+  }
+  h3 .what {
+    display: flex;
+    gap: 0.4rem;
+    align-items: baseline;
+    min-inline-size: 0;
+  }
+  h3 .tally {
+    font-weight: 400;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.7;
+  }
+  /* Lower case and un-tracked, against the heading they sit on: they are
+     things to do, not part of its name. */
+  h3 .tools {
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 400;
   }
   ul {
     list-style: none;

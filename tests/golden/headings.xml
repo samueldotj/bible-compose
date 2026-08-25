@@ -1,0 +1,17 @@
+<biblecompose version="1" class="biblecompose">
+<book code="PSA" name="Psalms" altname="Psalms">
+<heading style="d" level="1"><chapter n="3"/>A Psalm of David, when he fled from Absalom his son.</heading>
+<heading style="s" level="1">A first-level heading</heading>
+<heading style="r" level="1">(2 Samuel 15:13-30)</heading>
+<para style="p"><verse n="1" start="1" end="1"/>O LORD, how many are my foes!</para>
+<heading style="s" level="2">A second-level heading</heading>
+<para style="p"><verse n="2" start="2" end="2"/>Many are saying of me.</para>
+<heading style="s" level="3">A third-level heading</heading>
+<para style="p"><verse n="3" start="3" end="3"/>But You, O LORD, are a shield around me.</para>
+<heading style="s" level="4">A fourth-level heading</heading>
+<para style="p"><verse n="4" start="4" end="4"/>To the LORD I cry aloud.</para>
+<heading style="sp" level="1">The Beloved</heading>
+<para style="p"><verse n="5" start="5" end="5"/>I lie down and sleep.</para>
+<heading style="sr" level="1">(3:1-8)</heading>
+<para style="p"><verse n="6" start="6" end="6"/>I will not fear the tens of thousands.</para>
+</book></biblecompose>

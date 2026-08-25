@@ -13,9 +13,10 @@
    * batching buys nothing.
    */
   import FontPicker from "./FontPicker.svelte";
-  import { EDITED_ELSEWHERE, GROUPS, labelFor, PLACEHOLDERS } from "../lib/labels";
+  import { EDITED_ELSEWHERE, GROUPS, labelFor, placeholderFor, wordsFor } from "../lib/labels";
   import { session } from "../lib/session.svelte";
   import type { Setting } from "../lib/services/backend";
+  import { t } from "../lib/i18n";
 
   /**
    * Which groups to show, and whether to sweep up the settings that belong to
@@ -73,9 +74,9 @@
   }
 </script>
 
-<section class="pane" aria-label="Settings">
+<section class="pane" aria-label={t("settingsRegion")}>
   {#if session.settings.length === 0}
-    <p class="empty">Loading…</p>
+    <p class="empty">{t("loading")}</p>
   {:else}
     {#each grouped as group (group.id)}
       <fieldset>
@@ -103,6 +104,22 @@
                 disabled={!session.editable}
                 onchange={(e) => commit(setting, e.currentTarget.value)}
               />
+            {:else if setting.kind === "choice"}
+              <!--
+                The options come with the setting, from the same table the
+                resolver parses with — so this control cannot offer a value
+                the file would then reject.
+              -->
+              <select
+                id={`set-${setting.key}`}
+                value={setting.value}
+                disabled={!session.editable}
+                onchange={(e) => commit(setting, e.currentTarget.value)}
+              >
+                {#each setting.choices ?? [] as choice (choice)}
+                  <option value={choice}>{wordsFor(choice)}</option>
+                {/each}
+              </select>
             {:else if setting.kind === "font"}
               <!--
                 Typed as well as picked. The field stays editable because a
@@ -114,12 +131,13 @@
                 <input
                   id={`set-${setting.key}`}
                   type="text"
+                  dir="auto"
                   value={setting.value}
                   spellcheck="false"
                   disabled={!session.editable}
                   onchange={(e) => commit(setting, e.currentTarget.value)}
                 />
-                <button type="button" onclick={() => (picking = setting.key)}>Choose…</button>
+                <button type="button" onclick={() => (picking = setting.key)}>{t("choose")}</button>
               </span>
               {#if picking === setting.key}
                 <FontPicker
@@ -132,8 +150,9 @@
               <input
                 id={`set-${setting.key}`}
                 type="text"
+                dir="auto"
                 value={setting.value}
-                placeholder={PLACEHOLDERS[setting.key] ?? ""}
+                placeholder={placeholderFor(setting.key) ?? ""}
                 spellcheck="false"
                 disabled={!session.editable}
                 onchange={(e) => commit(setting, e.currentTarget.value)}

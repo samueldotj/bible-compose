@@ -10,7 +10,7 @@
     "app": "node scripts/dev.mjs",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "node scripts/lint-frontend.mjs",
+    "lint": "node scripts/lint-frontend.mjs && node scripts/lint-workflows.mjs",
     "check": "npm run lint && svelte-check --tsconfig ./tsconfig.json",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",

@@ -100,7 +100,11 @@ jobs:
             # widely enough to show the linker's own words: a missing package,
             # a missing header path, and a C23 diagnostic. It was none of them.
             echo "LDFLAGS=-L$(brew --prefix zlib)/lib -L$(brew --prefix libpng)/lib"
-            echo "CPPFLAGS=-I$(brew --prefix zlib)/include -I$(brew --prefix libpng)/include"
+            # luajit's headers are in here too, and have to be: setting CPPFLAGS
+            # at all *replaces* the empty default, so a later rock compiled by
+            # luarocks — which honours CPPFLAGS and not `LUA_INCLUDE` — stops
+            # finding `lua.h` the moment this variable exists.
+            echo "CPPFLAGS=-I$(brew --prefix zlib)/include -I$(brew --prefix libpng)/include -I$(brew --prefix luajit)/include/luajit-2.1"
             # Precautionary, and honestly so: these were added on the theory
             # that C23 promoting old warnings to errors was breaking the
             # conftest, and they changed nothing — the failure was the linker,

@@ -164,7 +164,7 @@ checksum = "3a8241f3ebb85c056b509d4327ad0358fbbba6ffb340bf388f26350aeda225b1"
 
 [[package]]
 name = "biblecompose-app"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "biblecompose-config",
  "biblecompose-diagnostics",
@@ -182,7 +182,7 @@ dependencies = [
 
 [[package]]
 name = "biblecompose-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "biblecompose-app",
  "biblecompose-config",
@@ -196,7 +196,7 @@ dependencies = [
 
 [[package]]
 name = "biblecompose-config"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "biblecompose-diagnostics",
  "biblecompose-scripture",
@@ -208,7 +208,7 @@ dependencies = [
 
 [[package]]
 name = "biblecompose-diagnostics"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "camino",
  "serde",
@@ -216,7 +216,7 @@ dependencies = [
 
 [[package]]
 name = "biblecompose-project"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "biblecompose-diagnostics",
  "biblecompose-scripture",
@@ -226,7 +226,7 @@ dependencies = [
 
 [[package]]
 name = "biblecompose-scripture"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "biblecompose-diagnostics",
  "camino",
@@ -237,7 +237,7 @@ dependencies = [
 
 [[package]]
 name = "biblecompose-sile"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "biblecompose-diagnostics",
  "biblecompose-scripture",
@@ -253,7 +253,7 @@ dependencies = [
 
 [[package]]
 name = "biblecompose-tauri"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "biblecompose-app",
  "biblecompose-config",
@@ -271,7 +271,7 @@ dependencies = [
 
 [[package]]
 name = "biblecompose-testkit"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "biblecompose-diagnostics",
  "biblecompose-scripture",

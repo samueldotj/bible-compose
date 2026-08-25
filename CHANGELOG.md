@@ -2,7 +2,25 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
-## 0.1.0 — unreleased
+## 0.1.1
+
+The start screen now says how to get a Bible.
+
+* **Where to find Scripture to typeset.** The screen used to explain what a
+  project is — true, and no use to somebody who has no USFM, which is most
+  people opening this for the first time. It now links to
+  [Open.Bible](https://www.open.bible/bibles), says how to unpack what you
+  download, and says that starting a new translation means selecting an empty
+  folder.
+* A link on that screen opens in your own browser rather than in the
+  application's window, and only `https` addresses are opened.
+* Fixed: the three steps were laid out as separate boxes rather than as
+  sentences, so the link sat apart from the words before it.
+
+## 0.1.0 — never published
+
+Superseded by 0.1.1 before any artefact was built. Its contents are below
+because they are the substance of the first release rather than history.
 
 The first release. A folder of USFM becomes a printable PDF, on a machine with
 nothing else installed.

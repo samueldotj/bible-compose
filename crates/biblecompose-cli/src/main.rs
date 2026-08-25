@@ -143,13 +143,76 @@ fn document(books: Option<&Utf8Path>, fixture: &str) -> Result<project::Opened, 
 }
 
 fn main() -> ExitCode {
-    match run(Cli::parse()) {
-        Ok(code) => code,
-        Err(message) => {
-            eprintln!("biblecompose: {message}");
-            ExitCode::FAILURE
+    // **This is a command-line tool, and on Windows it gets double-clicked.**
+    //
+    // Explorer opens a console, the program prints its usage because it was
+    // given no command, exits, and the console closes with it — in well under
+    // a second. What a person sees is a window that flashes and disappears,
+    // which is indistinguishable from a crash, and the reasonable conclusion
+    // about an unsigned executable that flashes and disappears is the worst
+    // one available.
+    //
+    // Reported by the first person to download a release, who had every reason
+    // to think the file named after the platform was the application.
+    let launched_from_explorer = own_console() && std::env::args_os().len() == 1;
+
+    // `parse` exits the process itself when there is no command to run, which
+    // is exactly the case being handled — so the parse is taken back here.
+    let code = match Cli::try_parse() {
+        Ok(cli) => match run(cli) {
+            Ok(code) => code,
+            Err(message) => {
+                eprintln!("biblecompose: {message}");
+                ExitCode::FAILURE
+            }
+        },
+        Err(complaint) => {
+            let _ = complaint.print();
+            if complaint.use_stderr() {
+                ExitCode::FAILURE
+            } else {
+                // `--help` and `--version` are not failures.
+                ExitCode::SUCCESS
+            }
         }
+    };
+
+    if launched_from_explorer {
+        println!();
+        println!("This is the command-line tool. For the application with a window,");
+        println!("install BibleCompose from the .msi or the setup .exe.");
+        println!();
+        println!("Press Enter to close.");
+        let mut ignored = String::new();
+        let _ = std::io::stdin().read_line(&mut ignored);
     }
+
+    code
+}
+
+/// Whether this process is the only one attached to its console.
+///
+/// True when Explorer made the console for us, and false at a prompt, in a
+/// script, or under CI — where the shell is attached as well. That is the
+/// distinction that decides whether exiting takes the window with it.
+///
+/// Declared here rather than by adding a dependency: it is one call, and a
+/// crate for it would be a crate to keep current.
+#[cfg(windows)]
+fn own_console() -> bool {
+    unsafe extern "system" {
+        fn GetConsoleProcessList(lpdwProcessList: *mut u32, dwProcessCount: u32) -> u32;
+    }
+    let mut pids = [0u32; 4];
+    // Returns how many processes are attached, however few fit in the buffer.
+    let attached = unsafe { GetConsoleProcessList(pids.as_mut_ptr(), pids.len() as u32) };
+    attached == 1
+}
+
+/// Everywhere else a terminal outlives the program that ran in it.
+#[cfg(not(windows))]
+fn own_console() -> bool {
+    false
 }
 
 fn run(cli: Cli) -> Result<ExitCode, String> {

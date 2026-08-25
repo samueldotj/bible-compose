@@ -225,8 +225,8 @@ jobs:
             macOS) os=macos ;;
           esac
           mkdir -p dist
-          cp target/release/biblecompose "dist/biblecompose-$os-$arch"
-          echo "artefact=biblecompose-$os-$arch" >> "$GITHUB_OUTPUT"
+          cp target/release/biblecompose "dist/biblecompose-cli-$os-$arch"
+          echo "artefact=biblecompose-cli-$os-$arch" >> "$GITHUB_OUTPUT"
         id: name
 
       - uses: actions/upload-artifact@v4
@@ -304,8 +304,12 @@ jobs:
       - name: name the executable for its platform
         run: |
           mkdir -p dist
+          # **`biblecompose-windows-x86_64.exe` reads as "BibleCompose, for
+          # Windows".** It is the command-line tool, and the first person to
+          # download a release picked it, double-clicked it, and watched a
+          # console flash and vanish. The name says which one it is now.
           cp target/x86_64-pc-windows-gnu/release/biblecompose.exe \
-             dist/biblecompose-windows-x86_64.exe
+             dist/biblecompose-cli-windows-x86_64.exe
 
       # Under its own name for the release, and under the old one as well,
       # because `windows-smoke` downloads it by that name and a smoke test
@@ -313,7 +317,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: cli-windows-latest
-          path: dist/biblecompose-windows-x86_64.exe
+          path: dist/biblecompose-cli-windows-x86_64.exe
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
@@ -566,7 +570,7 @@ jobs:
         run: |
           mkdir -p release
           find incoming -type f \
-            \( -name 'biblecompose-*' -o -name '*.msi' -o -name '*.exe' \
+            \( -name 'biblecompose-cli-*' -o -name '*.msi' -o -name '*.exe' \
                -o -name '*.dmg' -o -name '*.deb' -o -name '*.AppImage' \) \
             -exec cp {} release/ ";"
           cd release
@@ -595,11 +599,15 @@ jobs:
             echo "is nothing to install alongside it and no internet connection"
             echo "needed to build a PDF."
             echo
-            echo "| | |"
-            echo "|---|---|"
-            echo "| Windows | \`.msi\` or \`-setup.exe\` to install, \`biblecompose-windows-x86_64.exe\` for the command line |"
-            echo "| macOS | \`.dmg\` to install, \`biblecompose-macos-*\` for the command line |"
-            echo "| Linux | \`.deb\` or \`.AppImage\`, \`biblecompose-linux-*\` for the command line |"
+            echo "**Most people want the installer.** The \`biblecompose-cli-*\` files"
+            echo "are the command-line tool: double-clicking one opens a console, prints"
+            echo "its usage and closes again, which looks like a crash and is not."
+            echo
+            echo "| | To install | For the command line |"
+            echo "|---|---|---|"
+            echo "| **Windows** | \`.msi\` or \`-setup.exe\` | \`biblecompose-cli-windows-x86_64.exe\` |"
+            echo "| **macOS** | \`.dmg\` | \`biblecompose-cli-macos-arm64\` |"
+            echo "| **Linux** | \`.deb\` or \`.AppImage\` | \`biblecompose-cli-linux-x86_64\` |"
             echo
             echo "\`SHA256SUMS\` covers every file above."
             echo

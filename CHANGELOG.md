@@ -2,7 +2,10 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
-## Unreleased
+## 0.1.2
+
+The page is more yours to arrange: what a chapter opens with, what a head
+says, which side of the spread it is on — and a box to find any of it.
 
 * **Drop caps.** On the Contents tab: each chapter opens with its first letter
   dropped into the text, spanning a chosen number of lines. The letter is the

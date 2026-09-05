@@ -2,7 +2,7 @@
 <book code="PSA" name="Psalms" altname="The Book of Psalms">
 <heading style="s" level="1">A heading</heading>
 <heading style="r" level="1">(Genesis 1:1-2)</heading>
-<para style="p"><chapter n="23"/><verse n="1" start="1" end="1"/>Plain text, then <char style="nd">the LORD</char>, then <char style="wj">words of Jesus with <char style="it">nesting</char></char>.<note style="f" caller="+" origin="23:1">
+<para style="p"><chapter n="23"/><verse n="1" start="1" end="1"/><initial>P</initial>lain text, then <char style="nd">the LORD</char>, then <char style="wj">words of Jesus with <char style="it">nesting</char></char>.<note style="f" caller="+" origin="23:1">
 <para style="p">A footnote body.</para></note><xref caller="-" origin="23:1">John 10:11; Isaiah 40:11</xref><milestone marker="qt-s" start="true" who="David"/> quoted speech <milestone marker="qt-e" start="false"/><unsupported marker="zmystery">custom content</unsupported></para>
 <poetry style="q" level="1"><verse n="2" start="2" end="2"/>A line of poetry,</poetry>
 <poetry style="q" level="2">indented further.</poetry>

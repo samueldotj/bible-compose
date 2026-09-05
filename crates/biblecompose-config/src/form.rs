@@ -269,6 +269,16 @@ impl Settings {
             Boolean,
             self.contents.show_section_headings.to_string(),
         );
+        push(
+            "contents.drop_caps",
+            Boolean,
+            self.contents.drop_caps.to_string(),
+        );
+        push(
+            "contents.drop_cap_lines",
+            Integer,
+            self.contents.drop_cap_lines.to_string(),
+        );
 
         push(
             "notes.show_footnotes",

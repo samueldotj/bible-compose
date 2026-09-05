@@ -163,6 +163,14 @@ pub struct Contents {
     pub show_book_introductions: Sourced<bool>,
     pub show_introductory_outlines: Sourced<bool>,
     pub show_section_headings: Sourced<bool>,
+    /// Whether each chapter opens with its first letter dropped into the
+    /// text. When it does, the chapter number moves to a line of its own —
+    /// two large things at the same corner would fight — and the first verse
+    /// of the chapter goes unnumbered, because the initial is its marker.
+    pub drop_caps: Sourced<bool>,
+    /// How many lines the initial spans. Three is the convention; two is
+    /// modest and five is a display face's job.
+    pub drop_cap_lines: Sourced<u8>,
 }
 
 /// Footnotes and cross-references: whether, how marked, and — for references —
@@ -516,6 +524,10 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             show_introductory_outlines: r
                 .value("contents.show_introductory_outlines", |n| n.boolean()),
             show_section_headings: r.value("contents.show_section_headings", |n| n.boolean()),
+            drop_caps: r.value("contents.drop_caps", |n| n.boolean()),
+            drop_cap_lines: r.value("contents.drop_cap_lines", |n| {
+                value::integer_in(n, 2, 6).map(|l| l.map(|v| v as u8))
+            }),
         },
         notes: Notes {
             show_footnotes: r.value("notes.show_footnotes", |n| n.boolean()),

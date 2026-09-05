@@ -2,6 +2,18 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+* **Drop caps.** On the Contents tab: each chapter opens with its first letter
+  dropped into the text, spanning a chosen number of lines. The letter is the
+  chapter's first *syllable* — a Tamil consonant with its vowel sign, a
+  Devanagari conjunct — rather than its first code point, which would set half
+  a syllable three lines tall. With drop caps on, the chapter number takes a
+  line of its own and the first verse goes unnumbered.
+* The three templates have a tab of their own.
+* The command-line executable, double-clicked, now says what it is and waits
+  instead of closing; it is named `biblecompose-cli-*` on the release page.
+
 ## 0.1.1
 
 The start screen now says how to get a Bible.

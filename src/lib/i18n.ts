@@ -217,6 +217,8 @@ export const EN_LABELS: Readonly<Record<string, string>> = {
   "contents.show_book_introductions": "Book introductions",
   "contents.show_introductory_outlines": "Introductory outlines",
   "contents.show_section_headings": "Section headings",
+  "contents.drop_caps": "Drop caps",
+  "contents.drop_cap_lines": "Lines a drop cap spans",
   "typography.justify": "Justify paragraphs",
   "typography.keep_poetry_indentation": "Keep poetry indentation",
   "notes.show_footnotes": "Footnotes",

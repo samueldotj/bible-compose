@@ -22,6 +22,11 @@ biblecompose-diagnostics.workspace = true
 biblecompose-scripture.workspace = true
 camino.workspace = true
 quick-xml.workspace = true
+# The chapter's opening initial is one *grapheme cluster*, not one `char`: a
+# Tamil syllable is a consonant and a vowel sign, and a Devanagari conjunct is
+# consonant, virama, consonant. The class cannot split those, so the emitter
+# does, and says which run is the initial.
+unicode-segmentation.workspace = true
 # interpolate-folder-path: `#[folder = "$BIBLECOMPOSE_SILE_BUNDLE"]` is not
 #   expanded without it. debug-embed: otherwise a debug build reads the bundle
 #   off disk at run time, which is the opposite of what this feature is for.

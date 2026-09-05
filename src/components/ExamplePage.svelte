@@ -55,6 +55,31 @@
   const intros = $derived(on("contents.show_book_introductions"));
   const outlines = $derived(on("contents.show_introductory_outlines"));
   const headings = $derived(on("contents.show_section_headings"));
+  const dropcaps = $derived(on("contents.drop_caps"));
+
+  type Section = (typeof SAMPLE)[number]["sections"][number];
+  type Verse = Section["verses"][number];
+
+  /**
+   * The opening initial of a section's first verse — one grapheme cluster,
+   * which is what the backend drops too. `Intl.Segmenter` is the browser's
+   * UAX #29, so an example in Tamil would show a syllable and not half of one.
+   */
+  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+  function opening(section: Section): string {
+    const text = section.verses[0]?.text.trimStart() ?? "";
+    const first = segmenter.segment(text)[Symbol.iterator]().next();
+    return first.done ? "" : first.value.segment;
+  }
+
+  /** The verses to set, with the initial taken off the first when it drops. */
+  function versesFor(section: Section, i: number): readonly (Verse & { opened?: boolean })[] {
+    if (!(dropcaps && i === 0)) return section.verses;
+    const [first, ...rest] = section.verses;
+    if (!first) return section.verses;
+    const initial = opening(section);
+    return [{ ...first, text: first.text.trimStart().slice(initial.length), opened: true }, ...rest];
+  }
   const justified = $derived(on("typography.justify"));
 
   /** What one slot holds, and what that looks like on this page. */
@@ -135,6 +160,11 @@
     {
       title: "Setting",
       switches: [
+        {
+          key: "contents.drop_caps",
+          label: "Drop caps",
+          note: "The chapter number takes a line of its own, and the first verse goes unnumbered.",
+        },
         { key: "typography.justify", label: "Justify paragraphs" },
         {
           key: "typography.keep_poetry_indentation",
@@ -304,7 +334,11 @@
 
           <p class="prose">
             {#if i === 0 && chapters}
-              <span class="chapter" class:lit={shows("numbering.show_chapter_numbers")}>
+              <span
+                class="chapter"
+                class:own-line={dropcaps}
+                class:lit={shows("numbering.show_chapter_numbers")}
+              >
                 {chapter.number}
               </span>
             {/if}
@@ -317,8 +351,13 @@
                 {chapter.label}
               </span>
             {/if}
-            {#each section.verses as verse (verse.number)}
-              {#if verses}<span class="verse" class:lit={shows("numbering.show_verse_numbers")}
+            {#if dropcaps && i === 0 && opening(section)}<span
+                class="initial"
+                class:lit={shows("contents.drop_caps")}>{opening(section)}</span
+              >{/if}{#each versesFor(section, i) as verse (verse.number)}
+              {#if verses && !verse.opened}<span
+                  class="verse"
+                  class:lit={shows("numbering.show_verse_numbers")}
                   >{verse.number}</span
                 >{/if}{#if verse.reference}{@const parts = around(verse.text, verse.reference.after)}
                 {parts[0]}{#if refs}<sup class="ref" class:lit={shows("notes.show_cross_references")}
@@ -682,5 +721,19 @@
     align-items: center;
     cursor: pointer;
     white-space: nowrap;
+  }
+  /* A dropped initial: three lines tall, the text wrapping round it. The
+     number above it takes its own line, as the backend sets it. */
+  .chapter.own-line {
+    display: block;
+    line-height: 1.1;
+  }
+  .initial {
+    float: left;
+    font-size: 3.1em;
+    line-height: 0.82;
+    font-weight: 600;
+    padding-inline-end: 0.06em;
+    margin-block-start: 0.04em;
   }
 </style>

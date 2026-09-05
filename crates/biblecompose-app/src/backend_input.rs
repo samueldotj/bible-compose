@@ -99,6 +99,11 @@ pub fn class_options_with(
     put("chapternumbers", flag(*s.numbering.show_chapter_numbers));
     put("versenumbers", flag(*s.numbering.show_verse_numbers));
     put("hidefirstverse", flag(*s.numbering.hide_first_verse_number));
+    // The initial itself is marked in the document (`<initial>`), since what
+    // a chapter's first syllable *is* takes Unicode segmentation the class
+    // has not got; whether it drops, and how far, is the class's to decide.
+    put("dropcaps", flag(*s.contents.drop_caps));
+    put("dropcaplines", s.contents.drop_cap_lines.to_string());
     put("justify", flag(*s.typography.justify));
     put("poetryindent", flag(*s.typography.keep_poetry_indentation));
     put("footnotes", flag(*s.notes.show_footnotes));

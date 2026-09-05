@@ -72,6 +72,14 @@ hyphenation = true
 show_book_introductions = true
 show_introductory_outlines = true
 show_section_headings = true
+# Off, because the built-in page opens each chapter with a large number the
+# text runs into, and a dropped initial beside it would be two large things at
+# one corner. Turning this on moves the number to a line of its own and lets
+# the chapter's first letter — its first *syllable*, in a script that writes
+# one as several characters — drop into the text instead.
+drop_caps = false
+# Lines the initial spans. Two to six.
+drop_cap_lines = 3
 
 [numbering]
 show_chapter_numbers = true

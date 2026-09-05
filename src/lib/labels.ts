@@ -70,6 +70,7 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   "contents.show_book_introductions",
   "contents.show_introductory_outlines",
   "contents.show_section_headings",
+  "contents.drop_caps",
   "typography.justify",
   "typography.keep_poetry_indentation",
   "notes.show_footnotes",

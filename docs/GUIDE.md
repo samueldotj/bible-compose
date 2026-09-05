@@ -78,7 +78,7 @@ beside it puts the built-in value back.
 |---|---|
 | **Scripture** | Which books, and in what order |
 | **Template** | Three kinds of book to start from |
-| **Contents** | What appears — introductions, headings, chapter labels |
+| **Contents** | What appears — introductions, headings, chapter labels, drop caps |
 | **Headers & Footers** | What goes in each of the six slots |
 | **Page** | Trim size, columns, margins |
 | **Styles** | Typography, and every marker's appearance |

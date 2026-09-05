@@ -248,6 +248,7 @@ dependencies = [
  "rust-embed",
  "serde",
  "tempfile",
+ "unicode-segmentation",
  "windows-sys 0.59.0",
 ]
 

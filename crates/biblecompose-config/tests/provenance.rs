@@ -52,6 +52,8 @@ keep_poetry_indentation = false
 show_book_introductions = false
 show_introductory_outlines = false
 show_section_headings = false
+drop_caps = true
+drop_cap_lines = 4
 
 [numbering]
 show_chapter_numbers = false

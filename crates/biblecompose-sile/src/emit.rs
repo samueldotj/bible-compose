@@ -185,6 +185,19 @@ struct EmitState {
     chapter: u16,
     /// Parts of each book this project does not print.
     hidden: Hidden,
+    /// A chapter has begun and its opening initial has not yet been marked.
+    ///
+    /// Set by the chapter anchor and consumed by the first paragraph after
+    /// it. Not by a heading — a psalm's superscription carries the anchor and
+    /// is not where the psalm starts — and not by poetry, where each line is
+    /// its own paragraph and an initial spanning three of them would hang
+    /// over the next two with nothing making room for it. Those clear it, so
+    /// a paragraph halfway through the chapter does not get one.
+    awaiting_initial: bool,
+    /// Whether the text being emitted is a paragraph's own — the only place an
+    /// initial may be marked. A heading's text follows the chapter anchor too,
+    /// and is not the chapter's opening.
+    in_paragraph: bool,
 }
 
 impl EmitState {
@@ -342,11 +355,23 @@ fn emit_block(w: &mut Writer<Cursor<Vec<u8>>>, block: &Block, state: &mut EmitSt
                 emit_anchors(w, content, state);
                 return;
             }
+            // A chapter label — `\cl`, "Chapter One" — is a paragraph that
+            // carries the anchor the way a heading does, and is no more the
+            // chapter's opening than a heading is. It neither takes the
+            // initial nor clears it; the text after it does.
+            let label = style.marker() == "cl";
             let mut el = BytesStart::new("para");
             el.push_attribute(("style", style.marker()));
             write(w, Event::Start(el), state);
+            let was = std::mem::replace(&mut state.in_paragraph, !label);
             emit_inlines(w, content, state);
+            state.in_paragraph = was;
             write(w, Event::End(BytesEnd::new("para")), state);
+            // Consumed by the text above if there was any; cleared either way,
+            // so a later paragraph does not open the chapter twice.
+            if !label {
+                state.awaiting_initial = false;
+            }
         }
         Block::Poetry {
             style,
@@ -356,6 +381,9 @@ fn emit_block(w: &mut Writer<Cursor<Vec<u8>>>, block: &Block, state: &mut EmitSt
             let mut el = BytesStart::new("poetry");
             el.push_attribute(("style", style.marker()));
             el.push_attribute(("level", level.to_string().as_str()));
+            // Poetry does not take the initial, and does not leave it for the
+            // prose after the stanza either — see `awaiting_initial`.
+            state.awaiting_initial = false;
             write(w, Event::Start(el), state);
             emit_inlines(w, content, state);
             write(w, Event::End(BytesEnd::new("poetry")), state);
@@ -484,6 +512,24 @@ fn emit_anchors(w: &mut Writer<Cursor<Vec<u8>>>, items: &[Inline], state: &mut E
 
 fn emit_inline(w: &mut Writer<Cursor<Vec<u8>>>, item: &Inline, state: &mut EmitState) {
     match item {
+        Inline::Text(t) if state.awaiting_initial && state.in_paragraph => {
+            match initial(t) {
+                Some((lead, first, rest)) => {
+                    state.awaiting_initial = false;
+                    // Whitespace before the initial is dropped rather than
+                    // set: the class would discard it at the start of a
+                    // paragraph anyway, and inside `<initial>` it would drop
+                    // a space three lines tall.
+                    let _ = lead;
+                    write(w, Event::Start(BytesStart::new("initial")), state);
+                    text_node(w, first, state);
+                    write(w, Event::End(BytesEnd::new("initial")), state);
+                    text_node(w, rest, state);
+                }
+                // Nothing but space: pass it through and keep waiting.
+                None => text_node(w, t, state),
+            }
+        }
         Inline::Text(t) => text_node(w, t, state),
 
         Inline::Chapter {
@@ -493,6 +539,7 @@ fn emit_inline(w: &mut Writer<Cursor<Vec<u8>>>, item: &Inline, state: &mut EmitS
         } => {
             state.chapter = *number;
             state.record(None);
+            state.awaiting_initial = true;
             let mut el = BytesStart::new("chapter");
             // `n` is a string on the wire and a string in the model's own
             // hands before it gets here: spike F-9 found that anything SILE
@@ -553,6 +600,14 @@ fn emit_inline(w: &mut Writer<Cursor<Vec<u8>>>, item: &Inline, state: &mut EmitS
 }
 
 fn emit_note(w: &mut Writer<Cursor<Vec<u8>>>, note: &Note, state: &mut EmitState) {
+    // A footnote's text is not the chapter's opening, however early it falls.
+    // The flag is put aside for the note's own blocks and restored after.
+    let awaiting = std::mem::replace(&mut state.awaiting_initial, false);
+    emit_note_body(w, note, state);
+    state.awaiting_initial = awaiting;
+}
+
+fn emit_note_body(w: &mut Writer<Cursor<Vec<u8>>>, note: &Note, state: &mut EmitState) {
     let mut el = BytesStart::new("note");
     el.push_attribute((
         "style",
@@ -573,6 +628,14 @@ fn emit_note(w: &mut Writer<Cursor<Vec<u8>>>, note: &Note, state: &mut EmitState
 }
 
 fn emit_ref(w: &mut Writer<Cursor<Vec<u8>>>, r: &CrossReference, state: &mut EmitState) {
+    // As for a note: a cross-reference set before the first word is not the
+    // first word.
+    let awaiting = std::mem::replace(&mut state.awaiting_initial, false);
+    emit_ref_body(w, r, state);
+    state.awaiting_initial = awaiting;
+}
+
+fn emit_ref_body(w: &mut Writer<Cursor<Vec<u8>>>, r: &CrossReference, state: &mut EmitState) {
     let mut el = BytesStart::new("xref");
     el.push_attribute(("caller", r.caller.as_str()));
     if let Some(o) = &r.origin {
@@ -591,6 +654,55 @@ fn emit_milestone(w: &mut Writer<Cursor<Vec<u8>>>, m: &Milestone, state: &mut Em
         el.push_attribute((key.as_str(), value.as_str()));
     }
     write(w, Event::Empty(el), state);
+}
+
+/// The opening initial of a run of text: `(leading whitespace, initial, rest)`.
+///
+/// **The initial is a grapheme cluster, not a `char`.** In Tamil, "தி" is a
+/// consonant followed by a vowel sign, two code points that draw as one
+/// syllable; a drop cap of the consonant alone would set "த" three lines tall
+/// with the vowel sign stranded at body size on the next run, which is not a
+/// syllable of anything. Devanagari conjuncts are consonant, virama,
+/// consonant, and Unicode has treated those as one cluster since 15.1. So the
+/// split follows UAX #29's extended grapheme clusters, and a script's own
+/// idea of a letter comes with it.
+///
+/// An opening quotation mark or bracket is taken *with* the letter: "“In the
+/// beginning" drops as “I, since a body-size quote hanging off a three-line
+/// initial reads as a mistake either way and the larger one at least reads
+/// as deliberate.
+///
+/// `None` when there is nothing to open with — a run that is only whitespace.
+fn initial(text: &str) -> Option<(&str, &str, &str)> {
+    use unicode_segmentation::UnicodeSegmentation;
+
+    let trimmed = text.trim_start();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let lead = &text[..text.len() - trimmed.len()];
+
+    // Clusters that are only punctuation an opening leans on. Unicode's
+    // *Ps* and *Pi* categories in the forms Scripture actually uses, spelled
+    // rather than looked up so the rule is readable here.
+    const OPENERS: &[&str] = &["“", "‘", "\"", "'", "(", "[", "«", "‹", "¿", "¡", "„", "‚"];
+
+    let mut end = 0;
+    let mut took_letter = false;
+    for cluster in trimmed.graphemes(true) {
+        if !took_letter && OPENERS.contains(&cluster) {
+            end += cluster.len();
+            continue;
+        }
+        end += cluster.len();
+        took_letter = true;
+        break;
+    }
+    if !took_letter {
+        // Only openers, no letter: nothing to make an initial of.
+        return None;
+    }
+    Some((lead, &trimmed[..end], &trimmed[end..]))
 }
 
 /// The whole security argument, in one function.
@@ -715,8 +827,12 @@ mod tests {
     fn sil_syntax_in_scripture_becomes_inert_text() {
         let out = emit(&fixtures::adversarial(), &[]);
 
-        // A backslash survives as a backslash — it is not a command.
-        assert!(out.xml.contains(r"Backslash \bd and \par"));
+        // A backslash survives as a backslash — it is not a command. (The
+        // paragraph opens the chapter, so its first letter is the initial; the
+        // backslashes after it are as inert as they were before it.)
+        assert!(out
+            .xml
+            .contains(r"<initial>B</initial>ackslash \bd and \par"));
         assert!(out.xml.contains(r"\skip[height=40pt]"));
         // Braces and percent are not special in XML and must pass through.
         assert!(out.xml.contains("{like this}"));
@@ -1003,5 +1119,162 @@ mod tests {
             out.xml
         );
         assert!(!out.xml.contains("Chapter One"), "{}", out.xml);
+    }
+}
+
+/// The chapter's opening initial: which run it is, and where it is not.
+#[cfg(test)]
+mod initial_tests {
+    use super::*;
+    use biblecompose_scripture::fixtures;
+
+    // ------------------------------------------------------- the split ----
+
+    #[test]
+    fn a_latin_opening_is_one_letter() {
+        assert_eq!(
+            initial("In the beginning"),
+            Some(("", "I", "n the beginning"))
+        );
+    }
+
+    /// Whitespace before the opening is handed back separately, and dropped by
+    /// the caller: inside `<initial>` it would be a space three lines tall.
+    #[test]
+    fn leading_whitespace_is_set_aside() {
+        assert_eq!(initial("  In the"), Some(("  ", "I", "n the")));
+        assert_eq!(initial("   "), None);
+        assert_eq!(initial(""), None);
+    }
+
+    /// An opening quotation mark goes with the letter it opens.
+    #[test]
+    fn an_opening_quote_is_taken_with_the_letter() {
+        assert_eq!(
+            initial("“In the beginning"),
+            Some(("", "“I", "n the beginning"))
+        );
+        assert_eq!(initial("\"In the"), Some(("", "\"I", "n the")));
+        assert_eq!(initial("(For the"), Some(("", "(F", "or the")));
+        // Only openers and nothing to open: no initial.
+        assert_eq!(initial("“"), None);
+    }
+
+    /// **A syllable, not a code point.** தி is த followed by the vowel sign ி;
+    /// an initial of த alone would strand the vowel sign at body size on the
+    /// next run, which is not a syllable of anything.
+    #[test]
+    fn a_tamil_opening_is_the_whole_syllable() {
+        let (_, first, rest) = initial("திருவிவிலியம்").expect("an opening");
+        assert_eq!(first, "தி");
+        assert_eq!(first.chars().count(), 2, "consonant and vowel sign");
+        assert_eq!(rest, "ருவிவிலியம்");
+    }
+
+    /// A Devanagari conjunct — consonant, virama, consonant — is one cluster
+    /// since Unicode 15.1, and the segmenter in the tree implements 16.
+    #[test]
+    fn a_devanagari_conjunct_stays_together() {
+        let (_, first, _) = initial("क्षमा").expect("an opening");
+        assert_eq!(
+            first, "क्ष",
+            "the conjunct is one initial, not a dead consonant"
+        );
+    }
+
+    // ------------------------------------------------- in the document ----
+
+    #[test]
+    fn a_chapters_first_paragraph_marks_its_initial() {
+        let out = emit(&fixtures::john_1_1_5(), &[]);
+        assert!(
+            out.xml.contains(r#"<chapter n="1"/><verse n="1" start="1" end="1"/><initial>I</initial>n the beginning"#),
+            "{}",
+            out.xml
+        );
+        // Once per chapter, however many paragraphs follow.
+        assert_eq!(out.xml.matches("<initial>").count(), 1, "{}", out.xml);
+    }
+
+    /// The anchor lives in a psalm's superscription; the psalm starts after
+    /// it. The heading does not take the initial, and the first paragraph
+    /// does.
+    #[test]
+    fn a_heading_carrying_the_anchor_leaves_the_initial_for_the_text() {
+        let out = emit(&fixtures::headings(), &[]);
+        assert!(
+            !out.xml
+                .contains("<heading style=\"d\" level=\"1\"><chapter n=\"3\"/><initial>"),
+            "the superscription is not the opening: {}",
+            out.xml
+        );
+        assert!(
+            out.xml
+                .contains(r#"<verse n="1" start="1" end="1"/><initial>O</initial> LORD, how many"#),
+            "{}",
+            out.xml
+        );
+        assert_eq!(out.xml.matches("<initial>").count(), 1);
+    }
+
+    /// Text inside a footnote or a cross-reference is never the opening, and
+    /// the initial waits for the first word outside them.
+    #[test]
+    fn a_note_before_the_first_word_is_not_the_first_word() {
+        let out = emit(&fixtures::kitchen_sink(), &[]);
+        assert!(
+            out.xml.contains(r#"<initial>P</initial>lain text"#),
+            "{}",
+            out.xml
+        );
+        assert_eq!(out.xml.matches("<initial>").count(), 1, "{}", out.xml);
+    }
+
+    /// A chapter label is not the chapter's opening. `\cl` is a paragraph in
+    /// the model and a heading in every other respect: it carries the anchor,
+    /// and the text starts after it.
+    #[test]
+    fn a_chapter_label_leaves_the_initial_for_the_text() {
+        use biblecompose_scripture::{Block, Inline, ParaStyle};
+        let mut doc = fixtures::john_1_1_5();
+        doc.books[0].blocks = vec![
+            Block::Paragraph {
+                style: ParaStyle::Cl,
+                content: vec![
+                    Inline::Chapter {
+                        number: 1,
+                        published: None,
+                        alternate: None,
+                    },
+                    Inline::Text("Chapter One".to_owned()),
+                ],
+            },
+            Block::Paragraph {
+                style: ParaStyle::P,
+                content: vec![Inline::Text("In the beginning".to_owned())],
+            },
+        ];
+        let out = emit(&doc, &[]);
+        assert!(
+            !out.xml.contains("<initial>C</initial>hapter"),
+            "{}",
+            out.xml
+        );
+        assert!(
+            out.xml.contains("<initial>I</initial>n the beginning"),
+            "{}",
+            out.xml
+        );
+        assert_eq!(out.xml.matches("<initial>").count(), 1);
+    }
+
+    /// Every fixture still emits deterministically with the initial marked.
+    #[test]
+    fn the_initial_does_not_disturb_determinism() {
+        for (name, doc) in fixtures::all() {
+            let a = emit(&doc, &[]).xml;
+            let b = emit(&doc, &[]).xml;
+            assert_eq!(a, b, "fixture {name} is not deterministic");
+        }
     }
 }

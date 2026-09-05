@@ -1,6 +1,6 @@
 <biblecompose version="1" class="biblecompose">
 <book code="EZR" name="Ezra" altname="Ezra">
-<para style="p"><chapter n="2"/><verse n="1" start="1" end="1"/>Now these are the people of the province who came up.</para>
+<para style="p"><chapter n="2"/><verse n="1" start="1" end="1"/><initial>N</initial>ow these are the people of the province who came up.</para>
 <para style="lh">The number of the men of the people of Israel:</para>
 <item style="li" level="1">the descendants of Parosh</item>
 <item style="li" level="2">the descendants of Shephatiah</item>

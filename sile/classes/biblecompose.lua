@@ -94,6 +94,12 @@ local OPTIONS = {
    { key = "versenumbers", kind = "boolean", default = true },
    -- Verse 1 goes unnumbered where the chapter number already marks it.
    { key = "hidefirstverse", kind = "boolean", default = false },
+   -- Whether a chapter's opening initial drops into the text, and how far.
+   -- Which run *is* the initial arrives in the document as `<initial>`: a
+   -- syllable in an Indic script is several characters, and telling them
+   -- apart takes Unicode segmentation this class has not got.
+   { key = "dropcaps", kind = "boolean", default = false },
+   { key = "dropcaplines", kind = "string", default = "3" },
    -- How a paragraph and a line of verse are set.
    { key = "justify", kind = "boolean", default = true },
    { key = "poetryindent", kind = "boolean", default = true },
@@ -299,6 +305,47 @@ function class:_init (options)
    self:loadPackage("image")
    -- Destinations, bookmarks and document properties (PDF-005, SCR-008).
    self:loadPackage("pdf")
+   -- The dropped initial, when `dropcaps` asks for one.
+   self:loadPackage("dropcaps")
+   -- **A paragraph shorter than its initial is padded to clear it.** The
+   -- package makes room for the initial by indenting the paragraph's own
+   -- lines and nothing else: a one-line opening — a psalm's first verse, say
+   -- — leaves the initial hanging two lines below the paragraph, and whatever
+   -- follows sets straight through it. Measured: a section heading's baseline
+   -- 5.6pt above the initial's own.
+   --
+   -- `boxUpNodes` is where a paragraph becomes lines, so it is where their
+   -- number is known. When the paragraph carrying the initial comes through
+   -- short, the missing lines are added as glue behind it.
+   self:registerPostinit(function (_)
+      local box_up = SILE.typesetter.boxUpNodes
+      SILE.typesetter.boxUpNodes = function (typesetter)
+         local vboxes = box_up(typesetter)
+         -- Read off `SILE.scratch` directly rather than through `scratch()`:
+         -- that helper is a file-level local defined further down, and a
+         -- closure made here would resolve the name to a global that does
+         -- not exist. The table is created by the first `scratch()` call, so
+         -- before that there is nothing pending and nothing to do.
+         local s = SILE.scratch.biblecompose
+         -- A footnote called from the opening paragraph is boxed up first,
+         -- mid-paragraph, and is not the paragraph.
+         if s and s.initial_lines and not s.in_note then
+            local want = s.initial_lines
+            s.initial_lines = nil
+            local got = 0
+            for _, v in ipairs(vboxes) do
+               if v.is_vbox then
+                  got = got + 1
+               end
+            end
+            if got > 0 and got < want then
+               local bs = SILE.settings:get("document.baselineskip").height:tonumber()
+               vboxes[#vboxes + 1] = SILE.types.node.vglue((bs * (want - got)) .. "pt")
+            end
+         end
+         return vboxes
+      end
+   end)
 
    self:registerPostinit(function (self_)
       local o = self_._bcopts
@@ -492,7 +539,11 @@ function class:registerCommands ()
       -- depend on whether a reader can see its number.
       local s = scratch()
       destination(anchor(s.code, s.chapter, options.start or options.n), "verse")
-      local first = self._bcopts.hidefirstverse and tostring(options.start) == "1"
+      -- With a dropped initial the opening is already marked — a superscript
+      -- "1" wedged between the chapter's own line and a three-line letter is
+      -- a second marker for the same place — so drop caps imply the setting.
+      local first = (self._bcopts.hidefirstverse or self._bcopts.dropcaps)
+         and tostring(options.start) == "1"
       if self._bcopts.versenumbers and not first then
          SILE.call("bc:verse-number", options, content)
       end
@@ -1629,7 +1680,59 @@ function class:registerXmlCommands ()
       styled("chapter", function ()
          SILE.process(content)
       end)
-      SILE.call("kern", { width = "4pt" })
+      if self._bcopts.dropcaps then
+         -- On a line of its own. The number used to be the large thing at the
+         -- chapter's corner, with the text running into it; when the initial
+         -- takes that role, two large things at one corner would fight, so
+         -- the number becomes a line above and the initial opens the text.
+         SILE.call("par")
+      else
+         SILE.call("kern", { width = "4pt" })
+      end
+   end)
+
+   -- The chapter's opening initial: its first syllable, marked by the
+   -- emitter. Dropped when the option says so; plain text otherwise, and in
+   -- both cases followed by the rest of the word with nothing between, since
+   -- the document put nothing between.
+   self:registerCommand("initial", function (_, content)
+      if not self._bcopts.dropcaps then
+         SILE.process(content)
+         return
+      end
+      -- **The initial has to be the first thing in its paragraph, and it is
+      -- not.** The verse anchor comes before it — a PDF destination and the
+      -- running head's note of where the verse is — and pushing those opens
+      -- the paragraph: SILE's `newPar` runs on the first node, pushes the
+      -- paragraph indent, and copies `current.hangIndent` into what the
+      -- line-breaker reads. By the time `\dropcap` sets it, nobody copies it
+      -- again, and the result is the initial hanging in the margin with the
+      -- text at the margin beside it. Upstream never sees this because
+      -- nothing precedes `\dropcap` there.
+      --
+      -- So the paragraph is put back to unopened: its nodes are taken off,
+      -- the package opens it — with the hang set and no indent — and the
+      -- anchors go back in after the initial, a few points to the right of
+      -- where they were. The first two nodes are `newPar`'s own, the zero
+      -- box and the indent glue, and are not kept.
+      local nodes = SILE.typesetter.state.nodes
+      local anchors = {}
+      for i = #nodes, 3, -1 do
+         anchors[#anchors + 1] = table.remove(nodes, i)
+      end
+      for i = #nodes, 1, -1 do
+         nodes[i] = nil
+      end
+      -- `join` sets the first line hard against the initial, which is right
+      -- for a letter that is the start of its word; the standoff applies to
+      -- the lines below it.
+      local lines = tonumber(self._bcopts.dropcaplines) or 3
+      SILE.call("dropcap", { lines = lines, join = true }, content)
+      -- For the padding above: this paragraph has to run to that many lines.
+      scratch().initial_lines = lines
+      for i = #anchors, 1, -1 do
+         SILE.typesetter:pushHorizontal(anchors[i])
+      end
    end)
 
    self:registerCommand("verse", function (options, _)

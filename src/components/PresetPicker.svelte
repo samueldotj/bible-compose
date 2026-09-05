@@ -8,9 +8,10 @@
    * "Large print" after the publisher changed the page size would be claiming
    * something untrue, and this is the tab where they would change it.
    *
-   * It sits above the page diagram for the same reason it exists: it is the
-   * thing to reach for before adjusting the measurements one at a time, and
-   * the diagram beside it shows what each one did.
+   * It has a tab of its own — Template — rather than a place above the page
+   * diagram, where it started. A template rewrites a dozen settings across
+   * every other tab at once, and a control that does that sitting above the
+   * margin fields read as one more margin field.
    */
   import { session } from "../lib/session.svelte";
   import { t } from "../lib/i18n";

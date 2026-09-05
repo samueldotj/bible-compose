@@ -148,6 +148,18 @@ export interface Tab {
    */
   readonly diagram?: boolean;
   /**
+   * Whether this tab is the templates — the three editions a project can be
+   * started from.
+   *
+   * Its own tab rather than a section of Page, where it began: a template
+   * rewrites a dozen settings across every other tab at once, and a control
+   * that does that sitting above the margin fields read as one more margin
+   * field. Second in the strip because it is the second decision — which
+   * Scripture, then which kind of book — and everything after it is
+   * adjustment.
+   */
+  readonly template?: boolean;
+  /**
    * Which set of switches the example page carries, if this tab has one.
    *
    * "Reference range in head" names a thing without showing it. A publisher
@@ -186,6 +198,7 @@ export interface Tab {
  */
 export const TABS: readonly Tab[] = [
   { id: "scripture", title: "Scripture", settingGroups: [], books: true },
+  { id: "template", title: "Template", settingGroups: [], template: true },
   // Claims the strays now that the Project tab is gone. Exactly one tab does,
   // so a key added to the schema is visible somewhere rather than nowhere.
   { id: "contents", title: "Contents", settingGroups: [], example: "contents", orphans: true },

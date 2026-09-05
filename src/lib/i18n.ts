@@ -344,8 +344,8 @@ export const EN: Catalogue = {
     stylesRegion: "Styles",
     pageToScale: "The page, to scale",
     commonTrimSizes: "Common trim sizes",
-    editionsRegion: "Editions",
-    startFrom: "Start from an edition",
+    editionsRegion: "Templates",
+    startFrom: "Start from a template",
     presetNote:
       "Each one writes its settings into this project, where you can change them one at a time.",
     use: "Use",

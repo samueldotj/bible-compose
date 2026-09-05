@@ -52,9 +52,9 @@ Click the path on the bar to open it in your usual PDF reader.
 
 ## Making it look like your edition
 
-### Start from an edition
+### Start from a template
 
-The **Page** tab offers three to start from:
+The **Template** tab offers three to start from:
 
 | | |
 |---|---|
@@ -77,6 +77,7 @@ beside it puts the built-in value back.
 | Tab | |
 |---|---|
 | **Scripture** | Which books, and in what order |
+| **Template** | Three kinds of book to start from |
 | **Contents** | What appears — introductions, headings, chapter labels |
 | **Headers & Footers** | What goes in each of the six slots |
 | **Page** | Trim size, columns, margins |

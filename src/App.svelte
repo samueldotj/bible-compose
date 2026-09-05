@@ -168,10 +168,7 @@
               <StyleEditor groups={styleTab.styleGroups} />
             {/if}
           {:else}
-            {#if tab.diagram}
-              <!-- Above the diagram, because it is the thing to reach for
-                   before adjusting the measurements one at a time, and the
-                   diagram beside it shows what each one did. -->
+            {#if tab.template}
               <PresetPicker />
             {/if}
             {#if tab.diagram && session.geometry}

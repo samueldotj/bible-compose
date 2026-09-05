@@ -106,7 +106,7 @@ fn a_missing_figure_stops_the_build_by_default() {
     assert!(d.iter().next().unwrap().message.contains("art/map.png"));
 }
 
-/// And the other policy: warn, leave it out, carry on — which is what a draft
+/// And the other policy: warn, leave it out, carry on — which is what a proof
 /// wants while the artwork is still being drawn.
 #[test]
 fn omit_warns_and_names_the_figure_to_withhold() {
@@ -116,7 +116,7 @@ fn omit_warns_and_names_the_figure_to_withhold() {
     let out = asset::preflight(&doc, &root, MissingAsset::Omit, 1, &mut d);
 
     assert_eq!(codes(&d), ["ASSET-001"]);
-    assert!(!d.has_blocking(), "a draft build is not stopped by this");
+    assert!(!d.has_blocking(), "the build is not stopped by this");
     assert_eq!(d.iter().next().unwrap().severity, Severity::Warning);
     assert_eq!(out.omitted, [Utf8PathBuf::from("art/map.png")]);
 }

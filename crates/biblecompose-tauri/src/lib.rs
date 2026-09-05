@@ -1050,12 +1050,6 @@ fn start_build(
     app: tauri::AppHandle,
     session: tauri::State<'_, Arc<Session>>,
     root: String,
-    // A proof rather than the publication (P5.4). An argument and not a
-    // setting: it is what this one run is, and a project that remembered it
-    // was drafting would eventually ship a stamped book.
-    draft: bool,
-    // Run the backend even if nothing that reaches it has changed (BLD-007).
-    clean: bool,
 ) -> Result<(), String> {
     let mut running = session
         .running
@@ -1093,13 +1087,9 @@ fn start_build(
             .keeping_intermediates(*opened.settings.output.keep_intermediates)
             .with_settings(opened.settings.clone())
             .with_styles(opened.styles.clone());
-        request.clean = clean;
         // Handed to the build rather than only announced, so a project that
         // cannot be opened cannot be built (SRS §16.2 scenario H).
         request.prior = opened.diagnostics.clone();
-        if draft {
-            request.draft = Some(biblecompose_app::draft_note(opened.document.books.len()));
-        }
 
         let mut reporter = reporter;
         // Everything opening the project had to say reaches the panel before

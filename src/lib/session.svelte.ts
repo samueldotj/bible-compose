@@ -393,9 +393,8 @@ export class Session {
   /**
    * Open the PDF this build wrote, in the platform's own viewer (GUI-009).
    *
-   * `this.output` and not the project's configured path: a draft goes
-   * somewhere else, and the button should open the file that was just made
-   * rather than the one that would have been.
+   * `this.output` — the path the build reported — rather than one worked out
+   * here, so the button opens the file that was just made.
    */
   async showPdf(): Promise<void> {
     const pdf = this.output;
@@ -583,25 +582,6 @@ export class Session {
     }
   }
 
-  /**
-   * Whether the next build is a proof.
-   *
-   * Lives here and not in the settings file on purpose: it describes one
-   * run rather than the publication, so reopening the project starts you
-   * on a real build again (P5.4).
-   */
-  draft = $state(false);
-
-  /**
-   * Whether the next build ignores the fingerprint (BLD-007).
-   *
-   * A build with nothing to do is skipped, which is almost always what a
-   * publisher wants and occasionally is not: the fingerprint is a promise
-   * about the project's own files, and a build also reads a system font and
-   * artwork that may live anywhere. This is how you make it wrong again.
-   */
-  clean = $state(false);
-
   async build(): Promise<void> {
     if (!this.project || this.building) return;
     this.#forgetBuild();
@@ -609,7 +589,7 @@ export class Session {
     this.built = true;
     this.buildState = "loading";
     try {
-      await backend().startBuild(this.project.root, this.draft, this.clean);
+      await backend().startBuild(this.project.root);
     } catch (e: unknown) {
       this.building = false;
       this.fault = String(e);

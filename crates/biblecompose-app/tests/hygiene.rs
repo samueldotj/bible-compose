@@ -8,8 +8,7 @@
 //!
 //! **What the answer turns out to be** is that a successful build leaves
 //! nothing at all — the working directory is removed on success, so the only
-//! files under `.biblecompose` are a fingerprint and a page count, neither of
-//! which is text. The two ways Scripture *can* reach the disk are both asked
+//! file under `.biblecompose` is a page count, which is not text. The two ways Scripture *can* reach the disk are both asked
 //! for: `keep_intermediates`, which exists to be asked for (BLD-008), and a
 //! failed build, which keeps its log because a failure nobody can read is a
 //! failure nobody can fix.

@@ -160,42 +160,6 @@ pub fn attempt(
     (guard, report)
 }
 
-/// The same as [`typeset`], as a draft.
-pub fn typeset_draft(fixture: &str, overrides: &str, note: &str) -> (tempfile::TempDir, Vec<Line>) {
-    let (guard, report) = attempt_draft(fixture, overrides, note);
-    let pdf = report
-        .output
-        .unwrap_or_else(|| panic!("{fixture} failed to build as a draft"));
-    let raw = std::fs::read(pdf.as_std_path()).expect("read the PDF");
-    (guard, Pdf::lines(&raw))
-}
-
-/// A draft build of one fixture, with a file already sitting at the real
-/// output path — so a test can prove the draft did not touch it.
-pub fn attempt_draft(
-    fixture: &str,
-    overrides: &str,
-    note: &str,
-) -> (tempfile::TempDir, biblecompose_app::BuildReport) {
-    let guard = tempfile::tempdir().expect("temp dir");
-    let root = Utf8PathBuf::from_path_buf(guard.path().to_path_buf()).expect("UTF-8 temp path");
-    let doc = fixtures::by_name(fixture).expect("a known fixture");
-    biblecompose_testkit::place_fixture_assets(&root);
-
-    let output = root.join("out.pdf");
-    std::fs::write(output.as_std_path(), b"not a pdf").expect("stand in for a finished PDF");
-
-    let mut request = BuildRequest::new(root.clone(), output);
-    request.sile_path = vec![biblecompose_testkit::repo_root().join("sile")];
-    request.settings = settings(overrides);
-    request.styles = cascade::resolve(None, false).0;
-    request.draft = Some(note.to_owned());
-
-    let (mut reporter, _events) = BuildReporter::new();
-    let report = build(&doc, &request, &CancelToken::new(), &mut reporter);
-    (guard, report)
-}
-
 /// A single column, so "the note area" and "the measure" each mean one thing.
 pub const ONE_COLUMN: &str = "[page]\ncolumns = 1\n";
 

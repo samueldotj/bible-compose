@@ -310,14 +310,10 @@ export interface Backend {
    */
   fonts(root: string | null): Promise<readonly FontChoice[]>;
   /**
-   * Returns as soon as the build is handed to a thread (GUI-012).
-   *
-   * `draft` stamps every page and writes beside the finished PDF rather
-   * than over it (P5.4). It is an argument and not a setting because it is
-   * what this one run is: a project that remembered it was drafting would
-   * eventually ship a stamped book.
+   * Returns as soon as the build is handed to a thread (GUI-012). Every
+   * build is the whole publication, typeset afresh.
    */
-  startBuild(root: string, draft: boolean, clean: boolean): Promise<void>;
+  startBuild(root: string): Promise<void>;
   /** Ask the running build to stop. `false` if there was not one. */
   cancelBuild(): Promise<boolean>;
   /** Everything the build has to say, in order. */
@@ -353,7 +349,7 @@ export const tauriBackend: Backend = {
   resetStyle: (root, selector, property) =>
     invoke("reset_style", { root, selector, property }),
   fonts: (root) => invoke("fonts", { root }),
-  startBuild: (root, draft, clean) => invoke("start_build", { root, draft, clean }),
+  startBuild: (root) => invoke("start_build", { root }),
   cancelBuild: () => invoke("cancel_build"),
   onBuildEvent: async (handler) => {
     const stop = await listen<BuildEvent>("build", (event) => handler(event.payload));

@@ -153,26 +153,6 @@ Backend log: ${session.logFile}` : where;
   -->
   <div class="go">
     <QuickSettings keys={["output.keep_intermediates", "strict"]} />
-    <!--
-      A proof rather than the publication. Beside the button and not in the
-      settings form, because it describes the run you are about to start and
-      not the project — and because the button's own label changes with it,
-      which is the clearest possible statement of what pressing it will do.
-    -->
-    <label class="draft">
-      <input type="checkbox" bind:checked={session.draft} disabled={session.building} />
-      {t("draft")}
-    </label>
-    <!--
-      A build with nothing to do is skipped. This is how you make it do the work
-      anyway, which is the answer when something outside the project changed —
-      a system font, artwork on another disk — because the fingerprint is a
-      promise about the project's own files and says so (BLD-007).
-    -->
-    <label class="draft" title={t("cleanHint")}>
-      <input type="checkbox" bind:checked={session.clean} disabled={session.building} />
-      {t("clean")}
-    </label>
     {#if session.building}
       <button type="button" class="primary" onclick={() => void session.cancel()}>{t("cancel")}</button>
     {:else}
@@ -182,7 +162,7 @@ Backend log: ${session.logFile}` : where;
         disabled={!session.canBuild}
         onclick={() => void session.build()}
       >
-        {session.draft ? t("generateDraft") : t("generatePdf")}
+        {t("generatePdf")}
       </button>
     {/if}
   </div>
@@ -234,12 +214,6 @@ Backend log: ${session.logFile}` : where;
     min-inline-size: 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .draft {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
     white-space: nowrap;
   }
   .go {

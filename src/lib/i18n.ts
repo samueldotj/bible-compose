@@ -68,11 +68,7 @@ export interface Chrome {
 
   // The build bar.
   readonly generatePdf: string;
-  readonly generateDraft: string;
   readonly cancel: string;
-  readonly draft: string;
-  readonly clean: string;
-  readonly cleanHint: string;
   readonly problems: string;
   readonly openFolder: string;
   readonly closeProject: string;
@@ -328,11 +324,7 @@ export const EN: Catalogue = {
     noProjectOpen: "No project open.",
 
     generatePdf: "Generate PDF",
-    generateDraft: "Generate draft",
     cancel: "Cancel",
-    draft: "Draft",
-    clean: "Clean",
-    cleanHint: "Run the typesetter even if nothing has changed",
     problems: "Problems",
     openFolder: "Open folder",
     closeProject: "Close project",

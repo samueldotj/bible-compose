@@ -503,7 +503,7 @@ spelled! {
         /// Refuse to build. The default: a printed book with a hole where an
         /// illustration should be is worse than a build that says why.
         Stop => "stop",
-        /// Leave the figure out, warn, and carry on — which is what a draft
+        /// Leave the figure out, warn, and carry on — which is what a proof
         /// wants while the artwork is still being drawn.
         Omit => "omit",
     }

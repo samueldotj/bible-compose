@@ -594,9 +594,6 @@ fn i_backend_failure() {
     request.sile_path = vec![project.root.join("broken")];
     request.settings = opened.settings.clone();
     request.styles = opened.styles.clone();
-    // Otherwise the fingerprint from the good build would skip the backend and
-    // the scenario would test nothing.
-    request.clean = true;
 
     let (mut reporter, events) = BuildReporter::new();
     let report = build(

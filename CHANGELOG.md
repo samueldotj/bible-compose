@@ -11,6 +11,10 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   a syllable three lines tall. With drop caps on, the chapter number takes a
   line of its own and the first verse goes unnumbered — and "Hide first
   verse number" is set with it, and held while drop caps are on.
+* **Every build is a full, fresh build.** The Draft and Clean boxes beside
+  Generate PDF are gone, with the draft mark, the `-draft.pdf` file and the
+  build cache that let an unchanged project skip the typesetter. The CLI's
+  `--draft` and `--clean` are gone with them.
 * **Head and foot slots are templates.** Each slot is text with fields in
   braces — `{Book}:{FirstChapter}-{FirstVerse}` — chosen from a dropdown of
   the fields or typed into a Custom box; a **?** beside the box opens the list

@@ -7,7 +7,6 @@
 
 pub mod asset;
 pub mod backend_input;
-pub mod cache;
 pub mod font;
 pub mod hyphenation;
 pub mod project;
@@ -107,36 +106,6 @@ pub fn build(
     build_with(doc, request, &backend, cancel, reporter)
 }
 
-/// The name a draft of `output` is published under.
-///
-/// `Bible.pdf` becomes `Bible-draft.pdf`, in the same folder, so a publisher
-/// looking for their proof finds it next to the real thing rather than
-/// wondering which of the two they are holding.
-pub fn draft_path(output: &Utf8Path) -> Utf8PathBuf {
-    let stem = output.file_stem().unwrap_or("output");
-    let name = match output.extension() {
-        Some(ext) => format!("{stem}-draft.{ext}"),
-        None => format!("{stem}-draft"),
-    };
-    output.with_file_name(name)
-}
-
-/// What a draft says about itself on the page.
-///
-/// The book count, because that is what a proof is usually missing and the one
-/// thing a reader of a stray PDF cannot tell by looking. **No date**: two runs
-/// of the same build have to produce the same bytes (DET-001), and a timestamp
-/// is the shortest route to breaking that.
-///
-/// Here rather than in either front end, so the CLI and the window stamp the
-/// same words.
-pub fn draft_note(books: usize) -> String {
-    match books {
-        1 => "DRAFT - 1 book".to_owned(),
-        n => format!("DRAFT - {n} books"),
-    }
-}
-
 /// What a build needs to know that is not in the document.
 #[derive(Debug, Clone)]
 pub struct BuildRequest {
@@ -167,21 +136,6 @@ pub struct BuildRequest {
     /// The CLI guarded itself against this and the window did not, which is
     /// the argument for it living here rather than in either of them.
     pub prior: Diagnostics,
-    /// Ignore the fingerprint and run the backend regardless (BLD-007).
-    ///
-    /// The escape hatch, and the reason one is needed: the fingerprint is a
-    /// promise about this project's own inputs, and a build also reads things
-    /// outside it — a system font, artwork on another disk. When the answer
-    /// looks wrong, this is what makes it wrong again reproducibly.
-    pub clean: bool,
-    /// A draft, and what to say about it on the page.
-    ///
-    /// `None` is a real build. `Some(note)` stamps the note across the top of
-    /// every page **and publishes beside `output` rather than to it**: a draft
-    /// of two books must not replace the finished PDF of sixty-six, and the
-    /// only reliable way to guarantee that is for a draft to be unable to
-    /// name it.
-    pub draft: Option<String>,
 }
 
 impl BuildRequest {
@@ -195,17 +149,14 @@ impl BuildRequest {
             styles: biblecompose_config::cascade::resolve(None, false).0,
             build_id: "current".to_owned(),
             prior: Diagnostics::new(),
-            clean: false,
-            draft: None,
         }
     }
 
-    /// Where this request actually writes.
+    /// Where this request writes: `output`, always. Every build is the whole
+    /// publication — there is no draft written beside it and no cached PDF
+    /// kept in its place — so the answer is the one the request was given.
     pub fn destination(&self) -> Utf8PathBuf {
-        match &self.draft {
-            Some(_) => draft_path(&self.output),
-            None => self.output.clone(),
-        }
+        self.output.clone()
     }
 
     pub fn with_sile_path(mut self, dirs: Vec<Utf8PathBuf>) -> Self {
@@ -378,62 +329,15 @@ pub fn build_with(
         sile_path: request.sile_path.clone(),
         project_root: request.project_root.clone(),
         class: "biblecompose".to_owned(),
-        class_options: {
-            // The draft mark is not a setting — it is what this one run is —
-            // so it is appended here rather than resolved with the rest.
-            // Appended, so a real build's argument list is byte-for-byte what
-            // it was before drafts existed (DET-001).
-            let mut options = backend_input::class_options_with(
-                &request.settings,
-                body_font.as_ref(),
-                Some(&hyphenation),
-            );
-            if let Some(note) = &request.draft {
-                options.push(("draftmark".to_owned(), note.clone()));
-            }
-            options
-        },
+        class_options: backend_input::class_options_with(
+            &request.settings,
+            body_font.as_ref(),
+            Some(&hyphenation),
+        ),
     };
 
     if cancel.is_cancelled() {
         return cancelled(reporter, diagnostics);
-    }
-
-    // ---- reuse -------------------------------------------------------------
-    //
-    // Everything that reaches the backend now exists, so this is the first
-    // moment the question can be asked and the last moment it is worth
-    // asking: has anything that could change the PDF changed since the last
-    // build of this project? If not, the finished PDF at the destination is
-    // already the right answer, and running SILE again would take minutes to
-    // produce the same bytes.
-    //
-    // Guarded on the file still being there, because the publisher may have
-    // moved it — a stamp is a record of what was built, not a claim that it
-    // still exists.
-    let fingerprint = cache::Fingerprint::of(
-        &job.xml,
-        &job.class_options,
-        backend
-            .version()
-            .map(|v| v.raw)
-            .unwrap_or_default()
-            .as_str(),
-    );
-    let stamp_dir = cache::stamp_dir(&request.project_root);
-    if !request.clean && destination.exists() && fingerprint.matches(&stamp_dir) {
-        reporter.log(
-            "biblecompose",
-            format!("unchanged since the last build; kept {destination}"),
-        );
-        reporter.advance(BuildState::Succeeded);
-        reporter.output(destination.clone());
-        return BuildReport {
-            state: BuildState::Succeeded,
-            diagnostics,
-            output: Some(destination),
-            backend: backend.version().ok().map(|v| v.raw),
-        };
     }
 
     // ---- typeset -----------------------------------------------------------
@@ -511,10 +415,6 @@ pub fn build_with(
     if request.keep_intermediates {
         build_dir.keep();
     }
-
-    // Recorded only now. A stamp written before the backend ran would claim a
-    // PDF that a failed run never produced, and the next build would trust it.
-    fingerprint.write(&stamp_dir);
 
     reporter.advance(BuildState::Succeeded);
     reporter.output(destination.clone());

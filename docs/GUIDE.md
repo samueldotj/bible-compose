@@ -159,15 +159,12 @@ and the **Open folder** button's tooltip says where it is.
 
 ### It is slow
 
-A full Bible takes minutes, and almost all of it is the typesetter.
+A full Bible takes minutes, and almost all of it is the typesetter. Every
+build typesets the whole of what is ticked, afresh — there is no cached
+result to be stale, and nothing outside the project can be missed.
 
-* **Tick Draft.** A draft is stamped on every page and written *beside* your
-  real PDF rather than over it, so a proof can never be mistaken for the book.
-* **Untick some books** on the Scripture tab. A draft of one book is one book's
-  work.
-* A build with nothing changed is skipped entirely and returns at once. If you
-  changed something outside the project — a system font, artwork elsewhere on
-  the disk — tick **Clean** to make it run anyway.
+* **Untick some books** on the Scripture tab while you are adjusting things.
+  One book is one book's work; tick the rest back when the page is right.
 
 ### The italics are not italic
 
@@ -210,5 +207,5 @@ biblecompose build --books ./My\ Bible --project ./My\ Bible
 biblecompose validate --books ./My\ Bible
 ```
 
-`build` takes `--draft`, `--clean`, `--output` and `--keep-intermediates`.
+`build` takes `--output` and `--keep-intermediates`.
 `biblecompose version` reports the application and the typesetter it carries.

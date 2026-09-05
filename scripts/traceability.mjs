@@ -67,8 +67,11 @@ const BY_HAND = {
     "a_folder_of_usfm_opens_with_its_books_and_its_defaults",
   ],
   "GUI-005": ["crates/biblecompose-app/tests/acceptance.rs", "h_invalid_config"],
-  "GUI-009": ["crates/biblecompose-app/tests/drafts.rs", "a_draft_is_written_beside_the_real_pdf"],
-  "GUI-012": ["crates/biblecompose-app/tests/reuse.rs", "a_second_identical_build_does_not_run_the_backend"],
+  // The PDF is written where the report says, which is what Open PDF and
+  // Open folder act on; the viewer itself is the platform's.
+  "GUI-009": ["crates/biblecompose-app/tests/acceptance.rs", "a_defaults_only"],
+  // The build runs off the UI thread and cancel reaches it while it runs.
+  "GUI-012": ["crates/biblecompose-app/tests/acceptance.rs", "j_cancel"],
   "NFR-003": ["crates/biblecompose-app/tests/opening.rs", "a_whole_canon_opens_in_well_under_a_second"],
   "NFR-005": ["crates/biblecompose-app/tests/metadata.rs", "a_title_in_another_script_survives"],
   "NFR-006": ["crates/biblecompose-app/tests/style_golden.rs", "the_styles_block_is_byte_stable"],

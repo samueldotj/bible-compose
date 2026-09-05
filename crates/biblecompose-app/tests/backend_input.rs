@@ -148,22 +148,12 @@ fn every_option_the_class_declares_is_one_the_application_sends() {
         .filter_map(|rest| rest.split('"').next())
         .collect();
 
-    // Options that describe *this run* rather than the publication, and so
-    // come from the build request instead of the settings file. Listed rather
-    // than pattern-matched, so adding one is a deliberate act: the rule here is
-    // that a knob with nothing attached to it is a defect, and an unexamined
-    // exemption is how a rule like that stops holding.
-    const FROM_THE_REQUEST: [&str; 1] = [
-        // `BuildRequest::draft` (P5.4). Not a setting on purpose: a project
-        // that remembered it was drafting would eventually ship a stamped book.
-        "draftmark",
-    ];
-
+    // Every option comes from the settings file: nothing describes *this run*
+    // rather than the publication, since a build is always the whole
+    // publication. The rule is that a knob with nothing attached to it is a
+    // defect, and there are no exemptions to examine.
     let sent = class_options(&Settings::builtin());
     for key in declared {
-        if FROM_THE_REQUEST.contains(&key) {
-            continue;
-        }
         assert!(
             sent.iter().any(|(k, _)| k == key),
             "the class declares `{key}`, but no setting reaches it — it is a knob \

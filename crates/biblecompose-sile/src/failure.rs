@@ -102,7 +102,7 @@ const KNOWN: &[Known] = &[
         needle: "not enough memory",
         code: code::BACKEND_EXHAUSTED,
         message: "the typesetter ran out of memory",
-        help: "build fewer books at a time, or use Draft while you work",
+        help: "build fewer books at a time: untick some on the Scripture tab",
     },
     Known {
         // Last, because a Lua error is how *every* SILE failure arrives and

@@ -97,7 +97,8 @@ right-hand one, each with three slots across the head and three across the
 foot. Every slot is a small template — text with fields in braces — so
 `{Book} {Range}` reads “1 John 1:1–2:6”, and `{Book}:{FirstChapter}-{FirstVerse}`
 reads “1 John:1-1”. Each slot's dropdown offers the fields one at a time;
-**Custom…** opens a box for anything else.
+**Custom…** opens a box for anything else, with a **?** beside it that lists the
+fields.
 
 | Field | What it reads | For example |
 |---|---|---|

@@ -13,7 +13,8 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   verse number" is set with it, and held while drop caps are on.
 * **Head and foot slots are templates.** Each slot is text with fields in
   braces — `{Book}:{FirstChapter}-{FirstVerse}` — chosen from a dropdown of
-  the fields or typed into a Custom box, and the tab documents every field.
+  the fields or typed into a Custom box; a **?** beside the box opens the list
+  of fields.
   The old names (`book_name`, `page_number`…) still read.
 * **Left and right pages have their own heads and feet.** The Headers &
   Footers tab shows the spread — the left-hand page beside the right-hand

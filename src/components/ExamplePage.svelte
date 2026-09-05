@@ -34,6 +34,7 @@
   import { wordsFor } from "../lib/labels";
   import { session } from "../lib/session.svelte";
   import { phrases, t } from "../lib/i18n";
+  import HeadFieldsHelp from "./HeadFieldsHelp.svelte";
 
   /**
    * Which set of switches to put beside the page — and, for the head and
@@ -168,6 +169,9 @@
 
   /** Slots whose box is open because Custom… was chosen, template or not. */
   let customising = $state<Record<string, boolean>>({});
+
+  /** Whether the dialog listing the fields is open. */
+  let help = $state(false);
 
   function pick(key: string, entry: string): void {
     if (entry === "custom") {
@@ -377,16 +381,28 @@
               <option value="custom">{t("customSlot")}</option>
             </select>
             {#if customising[s.key] || entry === "custom"}
-              <input
-                type="text"
-                class="template"
-                aria-label={phrases().headerSlot(sideName, s.label.toLowerCase())}
-                value={chosen(s.key)}
-                placeholder={t("templateHint")}
-                spellcheck="false"
-                disabled={!session.editable}
-                onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}
-              />
+              <span class="box">
+                <input
+                  type="text"
+                  class="template"
+                  aria-label={phrases().headerSlot(sideName, s.label.toLowerCase())}
+                  value={chosen(s.key)}
+                  placeholder={t("templateHint")}
+                  spellcheck="false"
+                  disabled={!session.editable}
+                  onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}
+                />
+                <button
+                  type="button"
+                  class="help"
+                  aria-label={t("headFieldsTitle")}
+                  title={t("headFieldsTitle")}
+                  onclick={(e) => {
+                    e.preventDefault();
+                    help = true;
+                  }}>{t("fieldsHelp")}</button
+                >
+              </span>
               {#each session.fieldErrors[s.key] ?? [] as problem (problem.message)}
                 <span class="error">{problem.message}</span>
               {/each}
@@ -533,16 +549,28 @@
               <option value="custom">{t("customSlot")}</option>
             </select>
             {#if customising[s.key] || entry === "custom"}
-              <input
-                type="text"
-                class="template"
-                aria-label={phrases().footerSlot(sideName, s.label.toLowerCase())}
-                value={chosen(s.key)}
-                placeholder={t("templateHint")}
-                spellcheck="false"
-                disabled={!session.editable}
-                onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}
-              />
+              <span class="box">
+                <input
+                  type="text"
+                  class="template"
+                  aria-label={phrases().footerSlot(sideName, s.label.toLowerCase())}
+                  value={chosen(s.key)}
+                  placeholder={t("templateHint")}
+                  spellcheck="false"
+                  disabled={!session.editable}
+                  onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}
+                />
+                <button
+                  type="button"
+                  class="help"
+                  aria-label={t("headFieldsTitle")}
+                  title={t("headFieldsTitle")}
+                  onclick={(e) => {
+                    e.preventDefault();
+                    help = true;
+                  }}>{t("fieldsHelp")}</button
+                >
+              </span>
               {#each session.fieldErrors[s.key] ?? [] as problem (problem.message)}
                 <span class="error">{problem.message}</span>
               {/each}
@@ -617,6 +645,10 @@
     </div>
   {/if}
 </div>
+
+{#if help}
+  <HeadFieldsHelp onclose={() => (help = false)} />
+{/if}
 
 <style>
   .example {
@@ -701,8 +733,32 @@
     gap: 0.25rem;
     white-space: normal;
   }
+  .box {
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+  }
+  .help {
+    flex: none;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    padding: 0;
+    border: 1px solid color-mix(in oklab, currentColor 30%, transparent);
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .help:hover {
+    background: color-mix(in oklab, currentColor 10%, transparent);
+  }
   .template {
-    min-inline-size: 13rem;
+    flex: 1;
+    min-inline-size: 11rem;
     padding: 0.2rem 0.35rem;
     border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
     border-radius: 4px;

@@ -108,6 +108,9 @@ export interface Chrome {
   /** The field documentation under the spread. */
   readonly headFieldsTitle: string;
   readonly headFieldsNote: string;
+  readonly close: string;
+  /** The `?` beside the template box. */
+  readonly fieldsHelp: string;
   readonly fieldColumn: string;
   readonly meaningColumn: string;
   readonly exampleColumn: string;
@@ -365,6 +368,8 @@ export const EN: Catalogue = {
       "or underscores. A slot whose fields all have nothing on a page prints nothing there; a " +
       "field with nothing among fields with something is left out. Write {{ or }} for a brace " +
       "of your own.",
+    close: "Close",
+    fieldsHelp: "?",
     fieldColumn: "Field",
     meaningColumn: "What it reads",
     exampleColumn: "For example",

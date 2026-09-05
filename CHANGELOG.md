@@ -9,7 +9,8 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   chapter's first *syllable* — a Tamil consonant with its vowel sign, a
   Devanagari conjunct — rather than its first code point, which would set half
   a syllable three lines tall. With drop caps on, the chapter number takes a
-  line of its own and the first verse goes unnumbered.
+  line of its own and the first verse goes unnumbered — and "Hide first
+  verse number" is set with it, and held while drop caps are on.
 * The three templates have a tab of their own.
 * The command-line executable, double-clicked, now says what it is and waits
   instead of closing; it is named `biblecompose-cli-*` on the release page.

@@ -43,8 +43,15 @@
     return session.settings.find((s) => s.key === key)?.value !== "false";
   }
 
-  function toggle(key: string, next: boolean): void {
-    void session.setSetting(key, next ? "true" : "false");
+  async function toggle(key: string, next: boolean): Promise<void> {
+    await session.setSetting(key, next ? "true" : "false");
+    // Drop caps decide the first verse's number: the initial is its marker,
+    // so the number goes. Written into the project rather than only implied
+    // by the backend, so the setting says what the page does. Switching
+    // drop caps off hands the choice back and does not undo it.
+    if (key === "contents.drop_caps" && next) {
+      await session.setSetting("numbering.hide_first_verse_number", "true");
+    }
   }
 
   const chapters = on("numbering.show_chapter_numbers");
@@ -147,7 +154,15 @@
   /** The Contents switches, grouped by the question they answer. */
   const CONTENTS: readonly {
     title: string;
-    switches: readonly { key: string; label: string; under?: string; note?: string }[];
+    switches: readonly {
+      key: string;
+      label: string;
+      /** Idle unless this setting is on: there is nothing for it to act on. */
+      under?: string;
+      /** Decided, and shown on, while this setting is on. */
+      implied?: string;
+      note?: string;
+    }[];
   }[] = [
     {
       title: "Front matter",
@@ -192,6 +207,9 @@
           label: "Hide first verse number",
           // Nothing to hide when no verse number is shown at all.
           under: "numbering.show_verse_numbers",
+          // And nothing to decide under a dropped initial, which is the
+          // first verse's marker.
+          implied: "contents.drop_caps",
         },
       ],
     },
@@ -333,22 +351,25 @@
           {/if}
 
           <p class="prose">
-            {#if i === 0 && chapters}
-              <span
-                class="chapter"
-                class:own-line={dropcaps}
-                class:lit={shows("numbering.show_chapter_numbers")}
-              >
-                {chapter.number}
-              </span>
-            {/if}
-            <!-- Beside the figure and not instead of it, which is where the
+            <!-- The number and, beside it, the label — which is where the
                  backend puts it: `\cl` is its own paragraph and the chapter
                  anchor sits inside it, so the number is set and then the
-                 label. An edition that wants one or the other turns one off. -->
-            {#if i === 0 && chapter.label && labels}
-              <span class="label" class:lit={shows("numbering.show_chapter_labels")}>
-                {chapter.label}
+                 label. An edition that wants one or the other turns one off.
+                 With a dropped initial the pair takes a line of its own, as
+                 the backend sets it: the initial is the large thing at the
+                 corner then, and the number is not set beside it. -->
+            {#if i === 0 && (chapters || (chapter.label && labels))}
+              <span class="opening" class:own-line={dropcaps}>
+                {#if chapters}
+                  <span class="chapter" class:lit={shows("numbering.show_chapter_numbers")}>
+                    {chapter.number}
+                  </span>
+                {/if}
+                {#if chapter.label && labels}
+                  <span class="label" class:lit={shows("numbering.show_chapter_labels")}>
+                    {chapter.label}
+                  </span>
+                {/if}
               </span>
             {/if}
             {#if dropcaps && i === 0 && opening(section)}<span
@@ -428,7 +449,8 @@
           <legend>{group.title}</legend>
           <ul class="switches">
             {#each group.switches as s (s.key)}
-              {@const idle = s.under !== undefined && !on(s.under)}
+              {@const implied = s.implied !== undefined && on(s.implied)}
+              {@const idle = (s.under !== undefined && !on(s.under)) || implied}
               {@const setting = session.settings.find((x) => x.key === s.key)}
               <li class:nested={s.under !== undefined} class:idle>
                 <label
@@ -456,9 +478,9 @@
                   {:else}
                     <input
                       type="checkbox"
-                      checked={on(s.key)}
+                      checked={on(s.key) || implied}
                       disabled={!session.editable || idle}
-                      onchange={(e) => toggle(s.key, e.currentTarget.checked)}
+                      onchange={(e) => void toggle(s.key, e.currentTarget.checked)}
                     />
                     {s.label}
                   {/if}
@@ -723,10 +745,15 @@
     white-space: nowrap;
   }
   /* A dropped initial: three lines tall, the text wrapping round it. The
-     number above it takes its own line, as the backend sets it. */
-  .chapter.own-line {
+     number above it takes its own line, as the backend sets it — and stops
+     floating, or it would sit beside the initial and read as one glyph. */
+  .opening.own-line {
     display: block;
     line-height: 1.1;
+  }
+  .opening.own-line .chapter {
+    float: none;
+    margin-inline-end: 0.15rem;
   }
   .initial {
     float: left;

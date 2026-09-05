@@ -175,7 +175,20 @@
       ],
     },
     {
-      title: "Setting",
+      title: "Paragraph",
+      switches: [
+        { key: "typography.justify", label: "Justify paragraphs" },
+        {
+          key: "typography.keep_poetry_indentation",
+          label: "Keep poetry indentation",
+          // 1 John is prose throughout. Saying so beats a switch that looks
+          // broken because the passage gives it nothing to do.
+          note: "no poetry in this passage",
+        },
+      ],
+    },
+    {
+      title: "Drop caps",
       switches: [
         {
           key: "contents.drop_caps",
@@ -190,14 +203,6 @@
           // The resolver's own bounds, so the field cannot offer a number
           // the file would refuse.
           range: [2, 6],
-        },
-        { key: "typography.justify", label: "Justify paragraphs" },
-        {
-          key: "typography.keep_poetry_indentation",
-          label: "Keep poetry indentation",
-          // 1 John is prose throughout. Saying so beats a switch that looks
-          // broken because the passage gives it nothing to do.
-          note: "no poetry in this passage",
         },
       ],
     },

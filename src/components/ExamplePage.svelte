@@ -543,8 +543,22 @@
     flex-direction: column;
     align-items: stretch;
     gap: 0.5rem;
-    /* So the page below can size its type to the width it is given. */
-    container-type: inline-size;
+    /* The height it is given, all of it: the tab hands this the rest of the
+       window, and the page takes it. A size container, so the type below
+       can be sized to both dimensions. */
+    flex: 1;
+    min-block-size: 0;
+    container-type: size;
+  }
+  /* The paper stretches to the foot of the window with its foot line at the
+     bottom; the body between scrolls if the window is too short for it. */
+  .example.stacked .paper {
+    flex: 1;
+    min-block-size: 0;
+  }
+  .example.stacked .paper .body {
+    min-block-size: 0;
+    overflow-y: auto;
   }
   .controls {
     margin: 0;
@@ -590,15 +604,16 @@
     font-size: 0.82rem;
     line-height: 1.45;
   }
-  /* On the Headers & Footers tab the page has the whole window's width, and
-     a page whose type stayed at form size while its measure grew to a metre
-     would be a strip of text, not a page. The type grows with the width —
-     everything inside the paper is sized in em for this reason — and stops
-     at a size where it is plainly still a page and not a poster. The
-     padding stays in rem: the dropdowns above and below line up with the
-     slots by sharing it. */
+  /* On the Headers & Footers tab the page has the whole window, and a page
+     whose type stayed at form size while its measure grew to a metre would
+     be a strip of text, not a page. The type grows with the window — the
+     smaller of its width and its height, so a wide, short window does not
+     get type its page cannot hold — and stops at a size where it is plainly
+     still a page and not a poster. Everything inside the paper is sized in
+     em for this reason. The padding stays in rem: the dropdowns above and
+     below line up with the slots by sharing it. */
   .example.stacked .paper {
-    font-size: clamp(0.82rem, 1.05cqi, 1.9rem);
+    font-size: clamp(0.82rem, min(1.05cqi, 1.6cqb), 1.9rem);
   }
 
   /* Three slots on one line: the outer two at the margins, the middle one

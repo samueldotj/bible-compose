@@ -156,7 +156,11 @@
                one you are dragging. -->
           <ProjectPane />
         {:else}
-        <div class="scroller">
+        <!-- The Headers & Footers page fills the window rather than sitting
+             at the top of it: its example is a page, and a page is the size of
+             the room it is given. The other tabs are forms, which are as tall
+             as their rows. -->
+        <div class="scroller" class:fill={tab.example === "headers"}>
           {#if tab.styles}
             {#if styleTab.inspector}
               <StyleInspector />
@@ -349,6 +353,11 @@
     /* Room for the scrollbar, so a value in the rightmost column is never
        under it. */
     padding-inline-end: 0.4rem;
+  }
+  .scroller.fill {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
   }
   .hint {
     margin-block: 0;

@@ -147,6 +147,16 @@ export interface Preset {
   readonly description: string;
 }
 
+/** A field a head or foot template can name, with its documentation. */
+export interface HeadField {
+  /** The canonical spelling, without braces: `FirstChapter`. */
+  readonly name: string;
+  readonly label: string;
+  readonly description: string;
+  /** What it might read on a page of 1 John. */
+  readonly example: string;
+}
+
 /** A project the window has opened before (GUI-001). */
 export interface Recent {
   readonly root: string;
@@ -259,6 +269,12 @@ export interface Backend {
   /** The editions a project can be started from (P6.2). */
   presets(): Promise<readonly Preset[]>;
   /**
+   * The fields a head or foot template can name — from the table the
+   * backend checks templates against, so what the window documents is what
+   * the file accepts.
+   */
+  headFields(): Promise<readonly HeadField[]>;
+  /**
    * Write one into the project's settings file.
    *
    * A preset is written rather than layered, so what comes back is a project
@@ -323,6 +339,7 @@ export const tauriBackend: Backend = {
   openPdf: (path) => invoke("open_pdf", { path }),
   openUrl: (url) => invoke("open_url", { url }),
   presets: () => invoke("presets"),
+  headFields: () => invoke("head_fields"),
   applyPreset: (root, id) => invoke("apply_preset", { root, id }),
   recentProjects: () => invoke("recent_projects"),
   forgetProject: (root) => invoke("forget_project", { root }),

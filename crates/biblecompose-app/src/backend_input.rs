@@ -121,28 +121,30 @@ pub fn class_options_with(
     // Twelve slots rather than four switches: where a thing goes is as much
     // a decision as whether it is there, and which side of the spread it is
     // on is part of where. The class picks a side by the page's parity.
+    //
+    // Each is a template — `{Book} {Range}` — and crosses **quoted**. SILE
+    // reads `-O` with the grammar it reads command parameters with, where an
+    // unquoted value ends at a comma or a semicolon and loses its outer
+    // spaces; a quoted one keeps everything, with `\"` for a quote.
+    let quoted = |t: &biblecompose_config::value::HeadTemplate| {
+        format!("\"{}\"", t.as_str().replace('"', "\\\""))
+    };
     for (prefix, side) in [
         ("verso", &s.headers.left_page),
         ("recto", &s.headers.right_page),
     ] {
-        put(&format!("{prefix}headerleft"), side.header_left.to_string());
+        put(&format!("{prefix}headerleft"), quoted(&side.header_left));
         put(
             &format!("{prefix}headercenter"),
-            side.header_center.to_string(),
+            quoted(&side.header_center),
         );
-        put(
-            &format!("{prefix}headerright"),
-            side.header_right.to_string(),
-        );
-        put(&format!("{prefix}footerleft"), side.footer_left.to_string());
+        put(&format!("{prefix}headerright"), quoted(&side.header_right));
+        put(&format!("{prefix}footerleft"), quoted(&side.footer_left));
         put(
             &format!("{prefix}footercenter"),
-            side.footer_center.to_string(),
+            quoted(&side.footer_center),
         );
-        put(
-            &format!("{prefix}footerright"),
-            side.footer_right.to_string(),
-        );
+        put(&format!("{prefix}footerright"), quoted(&side.footer_right));
     }
 
     out

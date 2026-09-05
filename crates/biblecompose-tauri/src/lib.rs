@@ -149,6 +149,15 @@ pub struct WirePreset {
     pub description: String,
 }
 
+/// A field a head or foot template can name, with its documentation.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct WireHeadField {
+    pub name: String,
+    pub label: String,
+    pub description: String,
+    pub example: String,
+}
+
 /// A project the window has opened before (GUI-001).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WireRecent {
@@ -886,6 +895,22 @@ fn presets() -> Vec<WirePreset> {
         .collect()
 }
 
+/// The fields a head or foot template can name, from the one table the
+/// resolver checks templates against — so the window documents exactly what
+/// the file accepts.
+#[tauri::command]
+fn head_fields() -> Vec<WireHeadField> {
+    biblecompose_config::value::HEAD_FIELDS
+        .iter()
+        .map(|f| WireHeadField {
+            name: f.name.to_owned(),
+            label: f.label.to_owned(),
+            description: f.description.to_owned(),
+            example: f.example.to_owned(),
+        })
+        .collect()
+}
+
 /// Write a preset's settings into the project's file.
 #[tauri::command]
 fn apply_preset(
@@ -1550,6 +1575,7 @@ pub fn run() {
             open_pdf,
             open_url,
             presets,
+            head_fields,
             apply_preset,
             start_build,
             cancel_build,

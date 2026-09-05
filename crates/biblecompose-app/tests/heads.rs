@@ -12,7 +12,9 @@ mod common;
 
 use common::{folio, have_backend, head, pages, typeset, ONE_COLUMN};
 
-/// Each of the seven things a slot can hold, in a slot of its own.
+/// Each of the seven things a slot used to be able to hold, in a slot of its
+/// own — written in the old names, which still read as the template each one
+/// meant, so a file from before templates sets the page it always set.
 ///
 /// Three at a time, because a head has three places and the point is that each
 /// one shows what it was assigned rather than what its neighbour was.
@@ -272,5 +274,78 @@ footer_right = \"empty\"
     assert!(
         recto > verso + 100.0,
         "the recto's number ({recto}) sits to the right of the verso's ({verso})"
+    );
+}
+
+/// **A slot is a template.** Text stays as written and every field reads what
+/// it names — all ten of them here, which is what keeps the class's list of
+/// field names in step with the resolver's.
+#[test]
+fn a_slot_is_a_template_of_fields() {
+    if !have_backend() {
+        return;
+    }
+    let (_g, lines) = typeset(
+        "john_1_1_5",
+        "[page]
+columns = 1
+[headers.right_page]
+header_left = \"{Book}:{FirstChapter}-{FirstVerse}\"
+header_center = \"p. {Page}\"
+header_right = \"{first_reference} to {LAST_REFERENCE}\"
+footer_left = \"{Range}\"
+footer_center = \"{{{LastChapter}:{LastVerse}}}\"
+footer_right = \"{AltBook}\"
+",
+    );
+    // `head` joins the marks without their spaces, so "p. 1" reads "p.1".
+    let top = head(&lines, 1);
+    assert!(
+        top.contains("John:1-1"),
+        "text and fields as written: {top:?}"
+    );
+    assert!(
+        top.contains("p.1"),
+        "the page number in a sentence: {top:?}"
+    );
+    assert!(
+        top.contains("1:1to1:5"),
+        "names read without regard to case or underscores: {top:?}"
+    );
+    let bottom = folio(&lines, 1);
+    assert!(bottom.contains("1:1–1:5"), "the range: {bottom:?}");
+    assert!(
+        bottom.contains("{1:5}"),
+        "a doubled brace is a brace of the publisher's own: {bottom:?}"
+    );
+}
+
+/// **Text around a field stays as written**, brackets included — and the
+/// alternate book name of a book that has none is the book's own name, which
+/// is the class's rule and worth pinning: a head asking for the fuller name
+/// never goes blank.
+#[test]
+fn text_around_a_field_stays_and_the_alternate_name_falls_back() {
+    if !have_backend() {
+        return;
+    }
+    let (_g, lines) = typeset(
+        "john_1_1_5",
+        "[page]
+columns = 1
+[headers.right_page]
+header_left = \"[{AltBook}]\"
+header_center = \"\"
+header_right = \"{Book} {AltBook}\"
+footer_left = \"\"
+footer_center = \"\"
+footer_right = \"\"
+",
+    );
+    let top = head(&lines, 1);
+    assert!(top.contains("[John]"), "the brackets stay: {top:?}");
+    assert!(
+        top.contains("JohnJohn"),
+        "both fields read the book: {top:?}"
     );
 }

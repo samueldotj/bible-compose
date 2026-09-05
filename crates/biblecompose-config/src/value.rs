@@ -372,10 +372,11 @@ fn suffix_of(text: &str) -> Option<&'static str> {
 /// A closed set of spellings, its table, and the two impls every one of them
 /// needs.
 ///
-/// Written once because [`HeadSlot`] was the first of five and the fifth would
-/// have been the fifth hand-kept `NAMES` table, `as_str` and `Display` — three
-/// places per type where a variant can be added to one and forgotten in the
-/// others. The table is the single statement of the vocabulary: `as_str` reads
+/// Written once because the head slots were the first of five such types and
+/// the fifth would have been the fifth hand-kept `NAMES` table, `as_str` and
+/// `Display` — three places per type where a variant can be added to one and
+/// forgotten in the others. (The head slots have since become templates, and
+/// are no longer one of these.) The table is the single statement of the vocabulary: `as_str` reads
 /// it, `Display` defers to `as_str`, and [`choice`] both parses from it and
 /// lists it in the diagnostic when a file says something else.
 macro_rules! spelled {
@@ -409,30 +410,6 @@ macro_rules! spelled {
             }
         }
     };
-}
-
-spelled! {
-    /// What goes in one of the six places a running head or a footer has.
-    ///
-    /// Positions rather than switches. `show_book_name` and its neighbours
-    /// could say *whether* a book name appeared but never *where*, so the
-    /// arrangement was the class's to decide and a publisher wanting the page
-    /// number outside and the book inside had nowhere to say so. Three slots a
-    /// side says it.
-    HeadSlot {
-        /// Nothing. The default for five of the six.
-        Empty => "empty",
-        PageNumber => "page_number",
-        /// The span of Scripture on the page — `1:1–2:6`.
-        ReferenceRange => "reference_range",
-        /// Where the page starts, and where it ends.
-        FirstReference => "first_reference",
-        LastReference => "last_reference",
-        /// The name a running head is for: USFM's `\h`.
-        BookName => "book_name",
-        /// The fuller form: `\toc1`, or the title.
-        AltBookName => "alt_book_name",
-    }
 }
 
 spelled! {
@@ -741,5 +718,298 @@ mod color_tests {
         for text in ["red", "#12345", "#gg0000", "c81414", "", "#"] {
             assert_eq!(Color::parse(text), None, "{text:?}");
         }
+    }
+}
+
+// ------------------------------------------------------------------------
+// Head and foot templates
+
+/// A field a head or foot template can name.
+///
+/// The one statement of the vocabulary: the resolver checks a template
+/// against it, the window lists it as documentation, and the example page
+/// renders a template with the `example` of each. The class has its own copy
+/// of the *names* — it is Lua and cannot read this — and the test in
+/// `heads.rs` that sets every field is what keeps the two in step.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct HeadField {
+    /// The name inside the braces, in its canonical spelling. Matched without
+    /// regard to case or underscores, so `{first_chapter}` and `{firstchapter}`
+    /// are `{FirstChapter}`.
+    pub name: &'static str,
+    /// A short label, for a control that offers the field on its own.
+    pub label: &'static str,
+    /// What it puts on the page, in a sentence.
+    pub description: &'static str,
+    /// What it might read on a page of 1 John, for an example.
+    pub example: &'static str,
+}
+
+/// Every field, in the order they are documented.
+pub const HEAD_FIELDS: &[HeadField] = &[
+    HeadField {
+        name: "Book",
+        label: "Book name",
+        description: "The book's running-head name, from USFM's \\h.",
+        example: "1 John",
+    },
+    HeadField {
+        name: "AltBook",
+        label: "Alternate book name",
+        description: "The fuller form of the name: USFM's \\toc1, or the title.",
+        example: "The First Epistle of John",
+    },
+    HeadField {
+        name: "Page",
+        label: "Page number",
+        description: "The page number, in whatever numbering the page uses.",
+        example: "413",
+    },
+    HeadField {
+        name: "Range",
+        label: "Reference range",
+        description: "The span of Scripture on the page, first reference to last. A page inside one verse gives that verse alone.",
+        example: "1:1–2:6",
+    },
+    HeadField {
+        name: "FirstReference",
+        label: "First reference",
+        description: "Chapter and verse where the page starts.",
+        example: "1:1",
+    },
+    HeadField {
+        name: "LastReference",
+        label: "Last reference",
+        description: "Chapter and verse where the page ends.",
+        example: "2:6",
+    },
+    HeadField {
+        name: "FirstChapter",
+        label: "First chapter",
+        description: "The chapter the page starts in.",
+        example: "1",
+    },
+    HeadField {
+        name: "FirstVerse",
+        label: "First verse",
+        description: "The verse the page starts in.",
+        example: "1",
+    },
+    HeadField {
+        name: "LastChapter",
+        label: "Last chapter",
+        description: "The chapter the page ends in.",
+        example: "2",
+    },
+    HeadField {
+        name: "LastVerse",
+        label: "Last verse",
+        description: "The verse the page ends in.",
+        example: "6",
+    },
+];
+
+/// A name as it is compared: lower-case, underscores dropped.
+fn fold(name: &str) -> String {
+    name.chars()
+        .filter(|c| *c != '_')
+        .flat_map(char::to_lowercase)
+        .collect()
+}
+
+impl HeadField {
+    /// The field this name means, however it is cased or underscored.
+    pub fn named(name: &str) -> Option<&'static HeadField> {
+        let want = fold(name.trim());
+        HEAD_FIELDS.iter().find(|f| fold(f.name) == want)
+    }
+
+    /// Every field's name in braces, for a message that lists them.
+    fn listed() -> String {
+        HEAD_FIELDS
+            .iter()
+            .map(|f| format!("{{{}}}", f.name))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+}
+
+/// What one head or foot slot holds: text, with fields in braces.
+///
+/// `"{Book} {Range}"` reads "1 John 1:1–2:6"; `""` is an empty slot. A field
+/// is replaced by what it names on each page; text stays as written; `{{` and
+/// `}}` are a brace of the publisher's own. Checked here, so that a
+/// misspelled field is a diagnostic at its line and not a head reading
+/// `{Bok}` on every page of the book.
+///
+/// The seven names the slots took before they were templates — `page_number`,
+/// `book_name` and the rest — still read, as the template each one meant.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HeadTemplate {
+    text: String,
+}
+
+/// The old names and what each one is now. Read for old files; written by
+/// nobody new.
+const HEAD_ALIASES: &[(&str, &str)] = &[
+    ("empty", ""),
+    ("page_number", "{Page}"),
+    ("reference_range", "{Range}"),
+    ("first_reference", "{FirstReference}"),
+    ("last_reference", "{LastReference}"),
+    ("book_name", "{Book}"),
+    ("alt_book_name", "{AltBook}"),
+];
+
+impl HeadTemplate {
+    /// Read a template, refusing one that names a field that does not exist
+    /// or leaves a brace open. The error is a sentence for the diagnostic.
+    pub fn parse(text: &str) -> Result<Self, String> {
+        let trimmed = text.trim();
+        if let Some((_, meant)) = HEAD_ALIASES
+            .iter()
+            .find(|(old, _)| old.eq_ignore_ascii_case(trimmed))
+        {
+            return Ok(HeadTemplate {
+                text: (*meant).to_owned(),
+            });
+        }
+
+        let mut rest = text;
+        while let Some(at) = rest.find(['{', '}']) {
+            let brace = rest.as_bytes()[at];
+            let after = &rest[at + 1..];
+            // A doubled brace is a literal one.
+            if after.as_bytes().first() == Some(&brace) {
+                rest = &after[1..];
+                continue;
+            }
+            if brace == b'}' {
+                return Err(
+                    "a `}` with no `{` before it; write `}}` for a brace of your own".into(),
+                );
+            }
+            let Some(end) = after.find('}') else {
+                return Err("a `{` with no `}` after it".into());
+            };
+            let name = &after[..end];
+            if name.contains('{') {
+                return Err(format!("a `{{` inside `{{{name}`; fields do not nest"));
+            }
+            if HeadField::named(name).is_none() {
+                return Err(format!(
+                    "`{{{name}}}` is not a field; the fields are {}",
+                    HeadField::listed()
+                ));
+            }
+            rest = &after[end + 1..];
+        }
+        Ok(HeadTemplate {
+            text: text.to_owned(),
+        })
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.text
+    }
+
+    /// An empty slot: nothing is set there.
+    pub fn is_empty(&self) -> bool {
+        self.text.is_empty()
+    }
+}
+
+impl fmt::Display for HeadTemplate {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.text)
+    }
+}
+
+/// A head or foot slot's template, checked.
+pub fn head_template(node: &Node) -> Result<Located<HeadTemplate>, Diagnostic> {
+    let text = node.string()?;
+    match HeadTemplate::parse(&text.value) {
+        Ok(value) => Ok(Located {
+            value,
+            loc: text.loc,
+        }),
+        Err(why) => Err(Diagnostic::error(
+            code::INVALID_VALUE,
+            format!(
+                "`{}` is not a head or foot template: {why}",
+                node.dotted_path()
+            ),
+        )
+        .at(node.loc())
+        .help(format!(
+            "write text with fields in braces, such as \"{{Book}} {{Range}}\"; \
+             the fields are {}",
+            HeadField::listed()
+        ))),
+    }
+}
+
+#[cfg(test)]
+mod head_template_tests {
+    use super::*;
+
+    #[test]
+    fn fields_are_matched_without_regard_to_case_or_underscores() {
+        for spelling in [
+            "{FirstChapter}",
+            "{firstchapter}",
+            "{first_chapter}",
+            "{FIRST_CHAPTER}",
+        ] {
+            assert!(HeadTemplate::parse(spelling).is_ok(), "{spelling}");
+        }
+        assert_eq!(
+            HeadField::named("first_chapter").map(|f| f.name),
+            Some("FirstChapter")
+        );
+    }
+
+    #[test]
+    fn text_around_the_fields_is_kept_as_written() {
+        let t = HeadTemplate::parse("{Book}:{FirstChapter}-{FirstVerse}").expect("a template");
+        assert_eq!(t.as_str(), "{Book}:{FirstChapter}-{FirstVerse}");
+        assert!(HeadTemplate::parse("Page {Page} of the book").is_ok());
+        assert!(HeadTemplate::parse("plain words").is_ok());
+    }
+
+    #[test]
+    fn a_doubled_brace_is_a_brace() {
+        assert!(HeadTemplate::parse("{{{Book}}}").is_ok());
+        assert!(HeadTemplate::parse("{{not a field}}").is_ok());
+    }
+
+    #[test]
+    fn a_field_that_does_not_exist_is_refused_with_the_list() {
+        let why = HeadTemplate::parse("{Bok}").expect_err("no such field");
+        assert!(why.contains("`{Bok}` is not a field"), "{why}");
+        assert!(
+            why.contains("{Book}") && why.contains("{LastVerse}"),
+            "{why}"
+        );
+    }
+
+    #[test]
+    fn an_open_brace_is_refused() {
+        assert!(HeadTemplate::parse("{Book").is_err());
+        assert!(HeadTemplate::parse("Book}").is_err());
+        assert!(HeadTemplate::parse("{Bo{ok}").is_err());
+    }
+
+    /// The old names still read, as the template each one meant.
+    #[test]
+    fn the_old_names_are_the_templates_they_meant() {
+        assert_eq!(
+            HeadTemplate::parse("page_number").unwrap().as_str(),
+            "{Page}"
+        );
+        assert_eq!(HeadTemplate::parse("Book_Name").unwrap().as_str(), "{Book}");
+        assert_eq!(HeadTemplate::parse("empty").unwrap().as_str(), "");
+        assert!(HeadTemplate::parse("empty").unwrap().is_empty());
+        assert!(HeadTemplate::parse("").unwrap().is_empty());
     }
 }

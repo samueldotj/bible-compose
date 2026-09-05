@@ -18,6 +18,7 @@ import {
   type BuildState,
   type Defaults,
   type Diagnostic,
+  type HeadField,
   type Preset,
   type Project,
   type Severity,
@@ -504,6 +505,21 @@ export class Session {
     if (this.presets !== null) return;
     try {
       this.presets = await backend().presets();
+    } catch (e: unknown) {
+      this.fault = String(e);
+    }
+  }
+
+  /**
+   * The fields a head or foot template can name, read once — compiled into
+   * the binary, like the presets.
+   */
+  headFields = $state<readonly HeadField[] | null>(null);
+
+  async loadHeadFields(): Promise<void> {
+    if (this.headFields !== null) return;
+    try {
+      this.headFields = await backend().headFields();
     } catch (e: unknown) {
       this.fault = String(e);
     }

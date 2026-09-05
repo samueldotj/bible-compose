@@ -13,9 +13,7 @@
 use crate::edit::SettingValue;
 use crate::provenance::Origin;
 use crate::settings::Settings;
-use crate::value::{
-    Anchors, CallerStyle, HeadSlot, MissingAsset, ReferencePlacement, RestartNumbering,
-};
+use crate::value::{Anchors, CallerStyle, MissingAsset, ReferencePlacement, RestartNumbering};
 
 /// What kind of control a key needs, and how its text is to be read back.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -326,7 +324,9 @@ impl Settings {
             ("headers.right_page.footer_center", &r.footer_center),
             ("headers.right_page.footer_right", &r.footer_right),
         ] {
-            push(key, Choice(HeadSlot::SPELLINGS), slot.to_string());
+            // Text, because a slot is a template: the window offers the
+            // fields as a list and a box for the rest.
+            push(key, Text, slot.to_string());
         }
 
         push(

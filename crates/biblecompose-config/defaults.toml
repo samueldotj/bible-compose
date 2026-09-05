@@ -117,8 +117,10 @@ restart_numbering = "per_chapter"
 cross_reference_placement = "note_area"
 
 # Three slots at the top of the page and three at the foot, each holding one
-# of: empty, page_number, reference_range, first_reference, last_reference,
-# book_name, alt_book_name.
+# text with fields in braces: {Book}, {AltBook}, {Page}, {Range},
+# {FirstReference}, {LastReference}, {FirstChapter}, {FirstVerse},
+# {LastChapter}, {LastVerse}. "{Book} {Range}" reads "1 John 1:1–2:6"; "" is
+# an empty slot; {{ and }} are a brace of your own.
 #
 # The arrangement below is the one this application had when the same thing was
 # four switches — the book on the left of the head, the range on the right, the
@@ -130,20 +132,20 @@ cross_reference_placement = "note_area"
 # the outer edge puts them in `footer_left` on the left page and
 # `footer_right` on the right. The defaults give both sides the same page.
 [headers.left_page]
-header_left = "book_name"
-header_center = "empty"
-header_right = "reference_range"
-footer_left = "empty"
-footer_center = "page_number"
-footer_right = "empty"
+header_left = "{Book}"
+header_center = ""
+header_right = "{Range}"
+footer_left = ""
+footer_center = "{Page}"
+footer_right = ""
 
 [headers.right_page]
-header_left = "book_name"
-header_center = "empty"
-header_right = "reference_range"
-footer_left = "empty"
-footer_center = "page_number"
-footer_right = "empty"
+header_left = "{Book}"
+header_center = ""
+header_right = "{Range}"
+footer_left = ""
+footer_center = "{Page}"
+footer_right = ""
 
 # Figures and anything else a project points at that is not Scripture.
 [assets]

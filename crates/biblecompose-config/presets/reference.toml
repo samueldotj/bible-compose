@@ -41,15 +41,15 @@ restart_numbering = "per_chapter"
 # First reference at the outer corner's opposite, last at the outer corner,
 # the book between: the head is an index of the page.
 [headers.left_page]
-header_left = "first_reference"
-header_center = "book_name"
-header_right = "last_reference"
-footer_center = "page_number"
+header_left = "{FirstReference}"
+header_center = "{Book}"
+header_right = "{LastReference}"
+footer_center = "{Page}"
 [headers.right_page]
-header_left = "first_reference"
-header_center = "book_name"
-header_right = "last_reference"
-footer_center = "page_number"
+header_left = "{FirstReference}"
+header_center = "{Book}"
+header_right = "{LastReference}"
+footer_center = "{Page}"
 
 # Every verse can be linked into, which is the reference edition's other use.
 [output]

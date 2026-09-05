@@ -33,12 +33,12 @@ show_footnotes = false
 show_cross_references = false
 
 [headers.left_page]
-header_left = "book_name"
-header_center = "empty"
-header_right = "reference_range"
-footer_center = "page_number"
+header_left = "{Book}"
+header_center = ""
+header_right = "{Range}"
+footer_center = "{Page}"
 [headers.right_page]
-header_left = "book_name"
-header_center = "empty"
-header_right = "reference_range"
-footer_center = "page_number"
+header_left = "{Book}"
+header_center = ""
+header_right = "{Range}"
+footer_center = "{Page}"

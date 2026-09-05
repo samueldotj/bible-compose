@@ -119,19 +119,20 @@ local OPTIONS = {
    -- switches, because where a thing goes is as much a decision as whether
    -- it is there, and only the settings layer can make it.
    -- One set per side of the spread: verso is the left-hand (even) page,
-   -- recto the right-hand (odd). `endPage` picks by the page's parity.
-   { key = "versoheaderleft", kind = "string", default = "book_name" },
-   { key = "versoheadercenter", kind = "string", default = "empty" },
-   { key = "versoheaderright", kind = "string", default = "reference_range" },
-   { key = "versofooterleft", kind = "string", default = "empty" },
-   { key = "versofootercenter", kind = "string", default = "page_number" },
-   { key = "versofooterright", kind = "string", default = "empty" },
-   { key = "rectoheaderleft", kind = "string", default = "book_name" },
-   { key = "rectoheadercenter", kind = "string", default = "empty" },
-   { key = "rectoheaderright", kind = "string", default = "reference_range" },
-   { key = "rectofooterleft", kind = "string", default = "empty" },
-   { key = "rectofootercenter", kind = "string", default = "page_number" },
-   { key = "rectofooterright", kind = "string", default = "empty" },
+   -- recto the right-hand (odd). `endPage` picks by the page's parity. Each
+   -- is a template — text with fields in braces — that `slot_content` reads.
+   { key = "versoheaderleft", kind = "string", default = "{Book}" },
+   { key = "versoheadercenter", kind = "string", default = "" },
+   { key = "versoheaderright", kind = "string", default = "{Range}" },
+   { key = "versofooterleft", kind = "string", default = "" },
+   { key = "versofootercenter", kind = "string", default = "{Page}" },
+   { key = "versofooterright", kind = "string", default = "" },
+   { key = "rectoheaderleft", kind = "string", default = "{Book}" },
+   { key = "rectoheadercenter", kind = "string", default = "" },
+   { key = "rectoheaderright", kind = "string", default = "{Range}" },
+   { key = "rectofooterleft", kind = "string", default = "" },
+   { key = "rectofootercenter", kind = "string", default = "{Page}" },
+   { key = "rectofooterright", kind = "string", default = "" },
 }
 
 -- Option values arrive as strings. `SU.boolean` is the coercion upstream is
@@ -865,53 +866,104 @@ end
 -- commands during `plain._init`, and `chapterverse` is loaded after that and
 -- registers its own on top. Reading the collection directly has no ordering to
 -- get wrong.
-local function typeset_reference (ref)
+--- `chapter:verse`, or nothing for a page that has no reference.
+local function reference_text (ref)
    if not (ref and ref.chapter) then
-      return
+      return nil
    end
-   SILE.typesetter:typeset(tostring(ref.chapter) .. ":" .. tostring(ref.verse))
+   return tostring(ref.chapter) .. ":" .. tostring(ref.verse)
 end
 
---- What one slot puts on the page.
---
--- Nothing at all for `empty`, and nothing for a slot whose content this page
--- does not have — a page with no verse on it has no reference range, and a
--- head reading "–" would be worse than a head reading nothing.
-function slot_content (slot)
+--- What one field of a head or foot template reads on this page, or nil for
+-- a field this page has nothing for. The names are the resolver's
+-- `HEAD_FIELDS`, compared the way it compares them: lower-case, without
+-- underscores.
+local function field_value (name)
+   local key = name:gsub("_", ""):lower()
    local s = scratch()
-   if slot == "page_number" then
+   local refs = page_references()
+   local first, last = refs[1], refs[#refs]
+   if key == "page" then
       -- Through the counters package rather than the raw value, so a project
       -- numbering its front matter in roman gets roman here too.
       local counters = SILE.documentState.documentClass.packages.counters
-      SILE.typesetter:typeset(counters:formatCounter(SILE.scratch.counters.folio))
-   elseif slot == "reference_range" then
-      local refs = page_references()
-      if #refs > 0 then
-         local first, last = refs[1], refs[#refs]
-         typeset_reference(first)
-         -- A page holding one verse gets that verse, not `1:5–1:5`: a range
-         -- whose ends are the same place is not a range.
-         if last.chapter ~= first.chapter or last.verse ~= first.verse then
-            SILE.typesetter:typeset("–")
-            typeset_reference(last)
-         end
-      end
-   elseif slot == "first_reference" then
-      typeset_reference(page_references()[1])
-   elseif slot == "last_reference" then
-      local refs = page_references()
-      typeset_reference(refs[#refs])
-   elseif slot == "book_name" then
-      local book = page_book()
-      if book then
-         SILE.typesetter:typeset(book)
-      end
-   elseif slot == "alt_book_name" then
+      return counters:formatCounter(SILE.scratch.counters.folio)
+   elseif key == "book" then
+      return page_book()
+   elseif key == "altbook" then
       local book = page_book()
       local alt = book and s.altbooks[book]
-      if alt and alt ~= "" then
-         SILE.typesetter:typeset(alt)
+      return (alt and alt ~= "") and alt or nil
+   elseif key == "range" then
+      if not first then
+         return nil
       end
+      -- A page holding one verse gets that verse, not `1:5–1:5`: a range
+      -- whose ends are the same place is not a range.
+      if last.chapter ~= first.chapter or last.verse ~= first.verse then
+         return reference_text(first) .. "–" .. reference_text(last)
+      end
+      return reference_text(first)
+   elseif key == "firstreference" then
+      return reference_text(first)
+   elseif key == "lastreference" then
+      return reference_text(last)
+   elseif key == "firstchapter" then
+      return first and first.chapter and tostring(first.chapter) or nil
+   elseif key == "firstverse" then
+      return first and first.chapter and tostring(first.verse) or nil
+   elseif key == "lastchapter" then
+      return last and last.chapter and tostring(last.chapter) or nil
+   elseif key == "lastverse" then
+      return last and last.chapter and tostring(last.verse) or nil
+   end
+   return nil
+end
+
+--- What one slot puts on the page: its template, with each field replaced by
+-- what it reads here.
+--
+-- Nothing at all for an empty template, and nothing for a template whose
+-- fields *all* have nothing on this page — a page with no verse on it has no
+-- reference range, and a head reading "–" or ":" would be worse than a head
+-- reading nothing. A field with nothing among fields with something is simply
+-- left out: "{Book} {Range}" on such a page reads the book alone. The
+-- resolver has already refused a template that names no real field or leaves
+-- a brace open, so this reads what it is given.
+function slot_content (template)
+   local out, any_field, any_value = {}, false, false
+   local i, n = 1, #template
+   while i <= n do
+      local c = template:sub(i, i)
+      local following = template:sub(i + 1, i + 1)
+      if (c == "{" or c == "}") and following == c then
+         -- A doubled brace is a brace of the publisher's own.
+         out[#out + 1] = c
+         i = i + 2
+      elseif c == "{" then
+         local close = template:find("}", i, true)
+         if not close then
+            out[#out + 1] = template:sub(i)
+            break
+         end
+         local v = field_value(template:sub(i + 1, close - 1))
+         any_field = true
+         if v then
+            any_value = true
+            out[#out + 1] = v
+         end
+         i = close + 1
+      else
+         out[#out + 1] = c
+         i = i + 1
+      end
+   end
+   if any_field and not any_value then
+      return
+   end
+   local text = table.concat(out)
+   if text ~= "" then
+      SILE.typesetter:typeset(text)
    end
 end
 
@@ -927,7 +979,7 @@ function set_line (frame, slots)
    end
    local anything = false
    for _, slot in ipairs(slots) do
-      if slot ~= "empty" then
+      if slot ~= "" then
          anything = true
       end
    end

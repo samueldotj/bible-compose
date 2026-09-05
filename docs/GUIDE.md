@@ -84,11 +84,42 @@ beside it puts the built-in value back.
 | **Scripture** | Which books, and in what order |
 | **Template** | Three kinds of book to start from |
 | **Contents** | What appears — introductions, headings, chapter labels, drop caps |
-| **Headers & Footers** | What goes in each of the six slots, on each side of the spread |
+| **Headers & Footers** | What goes in each of the six slots, on each side of the spread — see below |
 | **Page** | Trim size, columns, margins |
 | **Styles** | Typography, and every marker's appearance |
 | **Figures** | What a figure with no file does to the build |
 | **PDF metadata** | Publisher, subject, the file's name, how far its bookmarks reach |
+
+### Heads and feet
+
+The **Headers & Footers** tab shows a spread: the left-hand page beside the
+right-hand one, each with three slots across the head and three across the
+foot. Every slot is a small template — text with fields in braces — so
+`{Book} {Range}` reads “1 John 1:1–2:6”, and `{Book}:{FirstChapter}-{FirstVerse}`
+reads “1 John:1-1”. Each slot's dropdown offers the fields one at a time;
+**Custom…** opens a box for anything else.
+
+| Field | What it reads | For example |
+|---|---|---|
+| `{Book}` | The book's running-head name, from USFM's `\h` | 1 John |
+| `{AltBook}` | The fuller form of the name: `\toc1`, or the title | The First Epistle of John |
+| `{Page}` | The page number | 413 |
+| `{Range}` | The span of Scripture on the page, first to last; a page inside one verse gives that verse alone | 1:1–2:6 |
+| `{FirstReference}` | Chapter and verse where the page starts | 1:1 |
+| `{LastReference}` | Chapter and verse where the page ends | 2:6 |
+| `{FirstChapter}` | The chapter the page starts in | 1 |
+| `{FirstVerse}` | The verse the page starts in | 1 |
+| `{LastChapter}` | The chapter the page ends in | 2 |
+| `{LastVerse}` | The verse the page ends in | 6 |
+
+Names read without regard to case or underscores, so `{first_chapter}` is
+`{FirstChapter}`. Write `{{` or `}}` for a brace of your own. A slot whose
+fields all have nothing on a page — the reference range on a page with no
+verse — prints nothing there rather than a stray dash; a field with nothing
+among fields with something is simply left out. In the file these are
+`[headers.left_page]` and `[headers.right_page]`, each with `header_left`,
+`header_center`, `header_right`, `footer_left`, `footer_center` and
+`footer_right`; an empty slot is `""`.
 
 ### Styles
 

@@ -96,25 +96,86 @@
   }
   const justified = $derived(on("typography.justify"));
 
+  $effect(() => {
+    if (which === "headers") void session.loadHeadFields();
+  });
+
+  /** A field name as it is compared: lower-case, underscores dropped. */
+  const fold = (name: string) => name.replace(/_/g, "").toLowerCase();
+
+  /**
+   * What a template reads on this page — the same reading the class gives
+   * it, with each field's documented example standing in for the page's own
+   * value. The page number is the one thing that differs by side, since a
+   * left-hand page is an even one.
+   */
+  function render(template: string): string {
+    const fields = session.headFields ?? [];
+    let out = "";
+    let anyField = false;
+    let anyValue = false;
+    let i = 0;
+    while (i < template.length) {
+      const c = template[i];
+      const next = template[i + 1];
+      if ((c === "{" || c === "}") && next === c) {
+        out += c;
+        i += 2;
+        continue;
+      }
+      if (c === "{") {
+        const close = template.indexOf("}", i);
+        if (close < 0) {
+          out += template.slice(i);
+          break;
+        }
+        const name = fold(template.slice(i + 1, close));
+        const field = fields.find((f) => fold(f.name) === name);
+        anyField = true;
+        let value = field?.example ?? "";
+        if (field?.name === "Page") value = side === "left" ? "412" : "413";
+        if (field?.name === "Book") value = SAMPLE_BOOK;
+        if (field?.name === "AltBook") value = SAMPLE_ALT_BOOK;
+        if (value) {
+          anyValue = true;
+          out += value;
+        }
+        i = close + 1;
+        continue;
+      }
+      out += c;
+      i += 1;
+    }
+    return anyField && !anyValue ? "" : out;
+  }
+
   /** What one slot holds, and what that looks like on this page. */
   function slot(key: string): string {
-    const value = session.settings.find((s) => s.key === key)?.value ?? "empty";
-    switch (value) {
-      case "page_number":
-        return side === "left" ? "412" : "413";
-      case "reference_range":
-        return "1:1–2:6";
-      case "first_reference":
-        return "1:1";
-      case "last_reference":
-        return "2:6";
-      case "book_name":
-        return SAMPLE_BOOK;
-      case "alt_book_name":
-        return SAMPLE_ALT_BOOK;
-      default:
-        return "";
+    return render(session.settings.find((s) => s.key === key)?.value ?? "");
+  }
+
+  /**
+   * Which dropdown entry a slot's template is: `empty`, one field on its
+   * own, or `custom` for anything else. The dropdown offers the fields one
+   * at a time because that is what most heads are; the box takes the rest.
+   */
+  function entryOf(template: string): string {
+    if (template === "") return "empty";
+    const one = /^\{([A-Za-z_]+)\}$/.exec(template);
+    const field = one && (session.headFields ?? []).find((f) => fold(f.name) === fold(one[1]!));
+    return field ? field.name : "custom";
+  }
+
+  /** Slots whose box is open because Custom… was chosen, template or not. */
+  let customising = $state<Record<string, boolean>>({});
+
+  function pick(key: string, entry: string): void {
+    if (entry === "custom") {
+      customising = { ...customising, [key]: true };
+      return;
     }
+    customising = { ...customising, [key]: false };
+    void session.setSetting(key, entry === "empty" ? "" : `{${entry}}`);
   }
 
   const header = $derived([
@@ -275,18 +336,6 @@
     { key: `${table}.footer_right`, label: "Right" },
   ]);
 
-  /**
-   * What a slot may hold, from the schema rather than from a list here.
-   *
-   * There used to be a list here, and it was a second statement of
-   * `HeadSlot::NAMES` in a language that cannot be checked against the first —
-   * so an eighth thing a head could hold would have reached the file format
-   * and not this dropdown, or, worse, the other way round.
-   */
-  function choicesFor(key: string): readonly string[] {
-    return session.settings.find((s) => s.key === key)?.choices ?? [];
-  }
-
   function chosen(key: string): string {
     return session.settings.find((s) => s.key === key)?.value ?? "empty";
   }
@@ -308,6 +357,7 @@
       <legend>{t("header")}</legend>
       <div class="row">
         {#each HEADER as s (s.key)}
+          {@const entry = entryOf(chosen(s.key))}
           <label
             onpointerenter={() => (lit = s.key)}
             onpointerleave={() => (lit = null)}
@@ -316,14 +366,31 @@
           >
             <select
               aria-label={phrases().headerSlot(sideName, s.label.toLowerCase())}
-              value={chosen(s.key)}
+              value={customising[s.key] ? "custom" : entry}
               disabled={!session.editable}
-              onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}
+              onchange={(e) => pick(s.key, e.currentTarget.value)}
             >
-              {#each choicesFor(s.key) as choice (choice)}
-                <option value={choice}>{wordsFor(choice)}</option>
+              <option value="empty">{t("emptySlot")}</option>
+              {#each session.headFields ?? [] as field (field.name)}
+                <option value={field.name}>{field.label}</option>
               {/each}
+              <option value="custom">{t("customSlot")}</option>
             </select>
+            {#if customising[s.key] || entry === "custom"}
+              <input
+                type="text"
+                class="template"
+                aria-label={phrases().headerSlot(sideName, s.label.toLowerCase())}
+                value={chosen(s.key)}
+                placeholder={t("templateHint")}
+                spellcheck="false"
+                disabled={!session.editable}
+                onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}
+              />
+              {#each session.fieldErrors[s.key] ?? [] as problem (problem.message)}
+                <span class="error">{problem.message}</span>
+              {/each}
+            {/if}
           </label>
         {/each}
       </div>
@@ -446,6 +513,7 @@
       <legend>{t("footer")}</legend>
       <div class="row">
         {#each FOOTER as s (s.key)}
+          {@const entry = entryOf(chosen(s.key))}
           <label
             onpointerenter={() => (lit = s.key)}
             onpointerleave={() => (lit = null)}
@@ -454,14 +522,31 @@
           >
             <select
               aria-label={phrases().footerSlot(sideName, s.label.toLowerCase())}
-              value={chosen(s.key)}
+              value={customising[s.key] ? "custom" : entry}
               disabled={!session.editable}
-              onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}
+              onchange={(e) => pick(s.key, e.currentTarget.value)}
             >
-              {#each choicesFor(s.key) as choice (choice)}
-                <option value={choice}>{wordsFor(choice)}</option>
+              <option value="empty">{t("emptySlot")}</option>
+              {#each session.headFields ?? [] as field (field.name)}
+                <option value={field.name}>{field.label}</option>
               {/each}
+              <option value="custom">{t("customSlot")}</option>
             </select>
+            {#if customising[s.key] || entry === "custom"}
+              <input
+                type="text"
+                class="template"
+                aria-label={phrases().footerSlot(sideName, s.label.toLowerCase())}
+                value={chosen(s.key)}
+                placeholder={t("templateHint")}
+                spellcheck="false"
+                disabled={!session.editable}
+                onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}
+              />
+              {#each session.fieldErrors[s.key] ?? [] as problem (problem.message)}
+                <span class="error">{problem.message}</span>
+              {/each}
+            {/if}
           </label>
         {/each}
       </div>
@@ -607,6 +692,30 @@
   }
   .row label:last-child {
     justify-self: end;
+  }
+  /* A dropdown, and under it the box when Custom… is chosen: stacked, so the
+     box does not push its neighbours sideways. */
+  .row label {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+    white-space: normal;
+  }
+  .template {
+    min-inline-size: 13rem;
+    padding: 0.2rem 0.35rem;
+    border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.82rem;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .error {
+    font-size: 0.72rem;
+    color: #d33;
+    white-space: normal;
   }
 
   .paper {

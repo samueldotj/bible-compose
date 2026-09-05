@@ -100,6 +100,17 @@ export interface Chrome {
   readonly footer: string;
   readonly leftPage: string;
   readonly rightPage: string;
+  /** The slot dropdown's first and last entries. */
+  readonly emptySlot: string;
+  readonly customSlot: string;
+  /** The template box's hint. */
+  readonly templateHint: string;
+  /** The field documentation under the spread. */
+  readonly headFieldsTitle: string;
+  readonly headFieldsNote: string;
+  readonly fieldColumn: string;
+  readonly meaningColumn: string;
+  readonly exampleColumn: string;
   readonly booksRegion: string;
   readonly chooseFolder: string;
   readonly exampleName: string;
@@ -344,6 +355,19 @@ export const EN: Catalogue = {
     footer: "Footer",
     leftPage: "Left page",
     rightPage: "Right page",
+    emptySlot: "Empty",
+    customSlot: "Custom…",
+    templateHint: "{Book} {Range}",
+    headFieldsTitle: "What a slot can say",
+    headFieldsNote:
+      "A slot is text with fields in braces: {Book} {Range} reads “1 John 1:1–2:6”, and " +
+      "{Book}:{FirstChapter}-{FirstVerse} reads “1 John:1-1”. Names read without regard to case " +
+      "or underscores. A slot whose fields all have nothing on a page prints nothing there; a " +
+      "field with nothing among fields with something is left out. Write {{ or }} for a brace " +
+      "of your own.",
+    fieldColumn: "Field",
+    meaningColumn: "What it reads",
+    exampleColumn: "For example",
     booksRegion: "Books",
     chooseFolder: "Choose a folder…",
     exampleName: "My Bible",

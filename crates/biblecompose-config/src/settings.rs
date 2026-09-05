@@ -25,7 +25,7 @@ use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, Severity, SourceLo
 use crate::document::{ConfigDocument, Located, Node};
 use crate::provenance::{Provenance, Sourced};
 use crate::value::{
-    self, Anchors, CallerStyle, HeadSlot, Length, MissingAsset, PageSize, ReferencePlacement,
+    self, Anchors, CallerStyle, HeadTemplate, Length, MissingAsset, PageSize, ReferencePlacement,
     RestartNumbering,
 };
 
@@ -212,14 +212,17 @@ pub struct Headers {
 }
 
 /// The six slots of one side: three across the head, three across the foot.
+///
+/// Each is a template — text with fields in braces, `"{Book} {Range}"` — and
+/// [`HeadTemplate`] says what a field can be.
 #[derive(Debug, Clone, PartialEq)]
 pub struct HeadSide {
-    pub header_left: Sourced<HeadSlot>,
-    pub header_center: Sourced<HeadSlot>,
-    pub header_right: Sourced<HeadSlot>,
-    pub footer_left: Sourced<HeadSlot>,
-    pub footer_center: Sourced<HeadSlot>,
-    pub footer_right: Sourced<HeadSlot>,
+    pub header_left: Sourced<HeadTemplate>,
+    pub header_center: Sourced<HeadTemplate>,
+    pub header_right: Sourced<HeadTemplate>,
+    pub footer_left: Sourced<HeadTemplate>,
+    pub footer_center: Sourced<HeadTemplate>,
+    pub footer_right: Sourced<HeadTemplate>,
 }
 
 /// The files a project points at that are not Scripture (SCR-006).
@@ -245,9 +248,9 @@ pub struct Output {
     pub anchors: Sourced<Anchors>,
 }
 
-/// One of the seven things a head or a footer can hold.
-fn slot(n: &Node) -> Result<Located<HeadSlot>, Diagnostic> {
-    value::choice(n, HeadSlot::NAMES)
+/// What a head or a footer slot holds: a template of fields.
+fn slot(n: &Node) -> Result<Located<HeadTemplate>, Diagnostic> {
+    value::head_template(n)
 }
 
 /// The six slots under one `[headers.<side>]` table.

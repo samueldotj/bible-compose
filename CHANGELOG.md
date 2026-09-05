@@ -11,6 +11,10 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   a syllable three lines tall. With drop caps on, the chapter number takes a
   line of its own and the first verse goes unnumbered — and "Hide first
   verse number" is set with it, and held while drop caps are on.
+* **Head and foot slots are templates.** Each slot is text with fields in
+  braces — `{Book}:{FirstChapter}-{FirstVerse}` — chosen from a dropdown of
+  the fields or typed into a Custom box, and the tab documents every field.
+  The old names (`book_name`, `page_number`…) still read.
 * **Left and right pages have their own heads and feet.** The Headers &
   Footers tab shows the spread — the left-hand page beside the right-hand
   one — with six slots on each, so a page number can sit at the outer edge

@@ -380,6 +380,7 @@
         {#each HEADER as s (s.key)}
           {@const entry = entryOf(chosen(s.key))}
           <label
+            data-search-key={s.key}
             onpointerenter={() => (lit = s.key)}
             onpointerleave={() => (lit = null)}
             onfocusin={() => (lit = s.key)}
@@ -554,6 +555,7 @@
         {#each FOOTER as s (s.key)}
           {@const entry = entryOf(chosen(s.key))}
           <label
+            data-search-key={s.key}
             onpointerenter={() => (lit = s.key)}
             onpointerleave={() => (lit = null)}
             onfocusin={() => (lit = s.key)}
@@ -613,7 +615,7 @@
               {@const implied = s.implied !== undefined && on(s.implied)}
               {@const idle = (s.under !== undefined && !on(s.under)) || implied}
               {@const setting = session.settings.find((x) => x.key === s.key)}
-              <li class:nested={s.under !== undefined} class:idle>
+              <li class:nested={s.under !== undefined} class:idle data-search-key={s.key}>
                 <label
                   onpointerenter={() => (lit = s.key)}
                   onpointerleave={() => (lit = null)}

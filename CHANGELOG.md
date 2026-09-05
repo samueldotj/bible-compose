@@ -11,6 +11,9 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   a syllable three lines tall. With drop caps on, the chapter number takes a
   line of its own and the first verse goes unnumbered — and "Hide first
   verse number" is set with it, and held while drop caps are on.
+* **A search box** at the end of the tab strip finds any tab, setting, style
+  or template by name — including ones added later, since it reads the
+  window's own schema — and opens the tab with the control lit up.
 * **The chapter number has its own page decisions.** Under Styles → Chapter
   and verse: alignment, a line of its own with space above and below, gaps
   before and after, a border of a chosen thickness, and whether each chapter

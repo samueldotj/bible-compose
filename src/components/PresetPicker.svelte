@@ -57,6 +57,7 @@
           <button
             type="button"
             class="template"
+            data-search-key={`preset:${preset.id}`}
             disabled={!session.editable}
             onclick={() => (confirming = { id: preset.id, title: preset.title })}
           >

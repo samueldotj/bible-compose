@@ -68,14 +68,14 @@
         <legend>{group.title}</legend>
 
         {#each group.rows as style (style.selector)}
-          <div class="style">
+          <div class="style" data-search-key={`style:${style.selector}`}>
             <h3>{style.label} <span class="selector">{style.selector}</span></h3>
 
             {#each style.properties as property (property.name)}
               {@const p = held(style.selector, property.name)}
               {@const id = `sty-${key(style.selector, property.name)}`}
               {@const errors = session.styleErrors[key(style.selector, property.name)] ?? []}
-              <div class="row">
+              <div class="row" data-search-key={`style:${key(style.selector, property.name)}`}>
                 <label for={id}>{property.label}</label>
 
                 {#if property.kind === "boolean"}

@@ -90,6 +90,8 @@ export interface Chrome {
   readonly readingFonts: string;
   readonly noElementSelected: string;
   readonly nothingMatches: string;
+  /** The search box at the end of the tab strip. */
+  readonly searchHint: string;
   readonly loading: string;
   readonly from: string;
   readonly header: string;
@@ -153,6 +155,7 @@ export interface Phrases {
   /** A head or foot slot's accessible name: which side, which line, which slot. */
   readonly headerSlot: (side: string, slot: string) => string;
   readonly startFromTemplate: (title: string) => string;
+  readonly searchHits: (count: number) => string;
   readonly footerSlot: (side: string, slot: string) => string;
   readonly colourSwatch: (property: string) => string;
 }
@@ -347,6 +350,7 @@ export const EN: Catalogue = {
     readingFonts: "Reading the fonts on this machine…",
     noElementSelected: "No element selected.",
     nothingMatches: "Nothing matches.",
+    searchHint: "Search tabs and settings…",
     loading: "Loading…",
     from: "From",
     header: "Header",
@@ -403,6 +407,7 @@ export const EN: Catalogue = {
     forgetProject: (name) => `Forget ${name}`,
     headerSlot: (side, slot) => `${side} page, header ${slot}`,
     startFromTemplate: (title) => `Start from “${title}”?`,
+    searchHits: (count) => (count === 1 ? "1 match" : `${count} matches`),
     footerSlot: (side, slot) => `${side} page, footer ${slot}`,
     colourSwatch: (property) => `${property} swatch`,
   },

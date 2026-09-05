@@ -185,6 +185,7 @@
       {@const errors = session.fieldErrors[field.key] ?? []}
       <label
         class="field"
+        data-search-key={field.key}
         class:wide={field.wide}
         class:set={value.overridden}
         class:open={field.key === "page.size" && trims}

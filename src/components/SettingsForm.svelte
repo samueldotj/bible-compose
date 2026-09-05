@@ -84,7 +84,7 @@
 
         {#each group.rows as setting (setting.key)}
           {@const errors = session.fieldErrors[setting.key] ?? []}
-          <div class="row" class:overridden={setting.overridden}>
+          <div class="row" class:overridden={setting.overridden} data-search-key={setting.key}>
             <label for={`set-${setting.key}`}>{labelFor(setting.key)}</label>
 
             {#if setting.kind === "boolean"}

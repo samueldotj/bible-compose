@@ -74,6 +74,9 @@ window claims you are "in" large print.
 
 ### Change one thing at a time
 
+A search box at the end of the tab strip finds any tab, setting, style or
+template by name; choosing a match opens its tab and lights the control up.
+
 Every tab is settings, and every setting writes to `biblecompose.toml` in your
 folder as you change it. There is no Save. Anything you set shows a marker
 saying it came from your file rather than from the defaults, and a **Reset**

@@ -7,6 +7,7 @@
   import HeadersSpread from "./components/HeadersSpread.svelte";
   import PageDiagram from "./components/PageDiagram.svelte";
   import PresetPicker from "./components/PresetPicker.svelte";
+  import SearchBox from "./components/SearchBox.svelte";
   import SettingsForm from "./components/SettingsForm.svelte";
   import StartScreen from "./components/StartScreen.svelte";
   import StyleEditor from "./components/StyleEditor.svelte";
@@ -115,6 +116,10 @@
             {t.title}
           </button>
         {/each}
+        <!-- At the end of the strip: the way to any tab, setting, style or
+             template by name, for the publisher who knows what they want
+             to change and not which of seven tabs it is on. -->
+        <SearchBox />
       </nav>
 
       {#if !session.editable}
@@ -287,6 +292,15 @@
     display: flex;
     gap: 0.25rem;
     border-block-end: 1px solid color-mix(in oklab, currentColor 15%, transparent);
+  }
+  /* What the search landed on, for a moment: the same mark the example
+     page uses for the thing a switch governs, so the two read as one idea. */
+  :global(.spotlit) {
+    outline: 2px solid #b45309;
+    outline-offset: 3px;
+    border-radius: 4px;
+    background: color-mix(in oklab, #b45309 18%, transparent);
+    transition: background 0.6s ease-out;
   }
   .tabs button {
     padding-block: 0.3rem;

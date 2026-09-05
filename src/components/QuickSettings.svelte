@@ -52,7 +52,7 @@
 <span class="quick">
   {#each shown as setting (setting.key)}
     {@const errors = session.fieldErrors[setting.key] ?? []}
-    <span class="field" class:overridden={setting.overridden}>
+    <span class="field" class:overridden={setting.overridden} data-search-key={setting.key}>
       {#if setting.kind === "language"}
         <label for={`quick-${setting.key}`}>{labelFor(setting.key)}</label>
         <select

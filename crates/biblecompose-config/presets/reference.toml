@@ -1,0 +1,51 @@
+# A reference edition.
+#
+# Made for finding a passage rather than for reading one through: two columns
+# of small type on a hand-sized page, every verse numbered, and the running
+# head giving the first and last reference on the page — the two things a
+# reader flipping to Isaiah 53 is looking for. The cross-references stay, at
+# the foot, because they are what a reference edition is for.
+#
+# Smaller than the standard page and denser on it. 8.5pt on 10.5pt is the low
+# end of what a printed Bible is set in, and this is where it is set that way.
+
+[page]
+size = "5.5x8.5in"
+columns = 2
+margin_inner = "0.6in"
+margin_outer = "0.45in"
+margin_top = "0.65in"
+margin_bottom = "0.7in"
+column_gap = "0.2in"
+
+[typography]
+font_size = "8.5pt"
+leading = "10.5pt"
+justify = true
+
+[contents]
+show_section_headings = true
+
+[numbering]
+show_chapter_numbers = true
+show_verse_numbers = true
+hide_first_verse_number = true
+
+[notes]
+show_footnotes = true
+show_cross_references = true
+cross_reference_placement = "note_area"
+cross_reference_callers = "letters"
+restart_numbering = "per_chapter"
+
+# First reference at the outer corner's opposite, last at the outer corner,
+# the book between: the head is an index of the page.
+[headers]
+header_left = "first_reference"
+header_center = "book_name"
+header_right = "last_reference"
+footer_center = "page_number"
+
+# Every verse can be linked into, which is the reference edition's other use.
+[output]
+anchors = "verse"

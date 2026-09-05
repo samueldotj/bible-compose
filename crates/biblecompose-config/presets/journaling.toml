@@ -1,0 +1,39 @@
+# A journaling Bible.
+#
+# One column of text and a two-inch outer margin left empty for the reader's
+# own hand. The margin is the feature: it is on the outer edge of every page,
+# where a pen can reach it with the book open flat, and the text block moves
+# in to make room rather than the type getting smaller to keep its measure.
+#
+# No cross-references and no footnotes at the foot — the margin is for what
+# the reader writes, and an apparatus competing with it is the wrong thing
+# on this page. Verse numbers stay, so a note in the margin has something to
+# be beside.
+
+[page]
+size = "6.5x9in"
+columns = 1
+margin_inner = "0.7in"
+margin_outer = "2in"
+margin_top = "0.8in"
+margin_bottom = "0.9in"
+
+[typography]
+font_size = "9pt"
+leading = "12pt"
+justify = true
+
+[numbering]
+show_chapter_numbers = true
+show_verse_numbers = true
+hide_first_verse_number = true
+
+[notes]
+show_footnotes = false
+show_cross_references = false
+
+[headers]
+header_left = "book_name"
+header_center = "empty"
+header_right = "reference_range"
+footer_center = "page_number"

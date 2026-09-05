@@ -1,4 +1,4 @@
-//! P6.2 — three editions, each of which has to set a page (NFR: GUI-002).
+//! P6.2 — the editions, each of which has to set a page (NFR: GUI-002).
 //!
 //! "Each produces an acceptable PDF from a bare USFM folder." *Acceptable* is
 //! a word a test cannot check, so this checks the four things that make a page

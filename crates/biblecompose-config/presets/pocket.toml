@@ -1,0 +1,41 @@
+# A pocket Bible.
+#
+# A page that fits a coat pocket: 4.25x6.75in, close to the trim of the small
+# New Testaments that are given away. One column, because two columns on a
+# page this narrow leave each with room for four or five words; and small
+# type, tight margins, and no cross-references, since every one of those is a
+# page, and the point of a pocket edition is how few pages it has.
+#
+# The footnotes stay. They are the translation's own words about its text,
+# and a pocket edition without them is a different translation.
+
+[page]
+size = "4.25x6.75in"
+columns = 1
+margin_inner = "0.45in"
+margin_outer = "0.35in"
+margin_top = "0.5in"
+margin_bottom = "0.55in"
+header_gap = "0.22in"
+footer_gap = "0.18in"
+
+[typography]
+font_size = "7.5pt"
+leading = "9pt"
+justify = true
+hyphenation = true
+
+[numbering]
+show_chapter_numbers = true
+show_verse_numbers = true
+hide_first_verse_number = true
+
+[notes]
+show_footnotes = true
+show_cross_references = false
+
+[headers]
+header_left = "book_name"
+header_center = "empty"
+header_right = "reference_range"
+footer_center = "page_number"

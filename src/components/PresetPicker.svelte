@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * The three editions a project can be started from (P6.2).
+   * The editions a project can be started from (P6.2).
    *
    * Buttons rather than a dropdown, and no "current preset" anywhere. A preset
    * is *applied* — its settings are written into the project's own file — so

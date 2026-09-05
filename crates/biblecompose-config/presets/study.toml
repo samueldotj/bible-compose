@@ -1,0 +1,52 @@
+# A study Bible.
+#
+# Everything on: introductions, outlines, section headings, footnotes and
+# cross-references. A larger page — 7x10in, the common study trim — because
+# the apparatus takes room at the foot and the text is not what should give it
+# up; and two columns, because a study page is looked things up in as much as
+# read.
+#
+# A little larger than standard type, with more leading, since a page that
+# carries this much needs the text block to be plainly the text.
+
+[page]
+size = "7x10in"
+columns = 2
+margin_inner = "0.85in"
+margin_outer = "0.7in"
+margin_top = "0.85in"
+margin_bottom = "1.1in"
+column_gap = "0.25in"
+
+[typography]
+font_size = "9.5pt"
+leading = "12pt"
+justify = true
+
+[contents]
+show_book_introductions = true
+show_introductory_outlines = true
+show_section_headings = true
+
+[numbering]
+show_chapter_numbers = true
+show_verse_numbers = true
+hide_first_verse_number = true
+
+[notes]
+show_footnotes = true
+show_cross_references = true
+cross_reference_placement = "note_area"
+footnote_callers = "numbers"
+cross_reference_callers = "letters"
+restart_numbering = "per_chapter"
+
+[headers]
+header_left = "book_name"
+header_center = "empty"
+header_right = "reference_range"
+footer_center = "page_number"
+
+# A study edition is quoted by verse, so every verse is a destination.
+[output]
+anchors = "verse"

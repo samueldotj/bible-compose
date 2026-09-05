@@ -54,13 +54,18 @@ Click the path on the bar to open it in your usual PDF reader.
 
 ### Start from a template
 
-The **Template** tab offers three to start from:
+The **Template** tab offers eight to start from:
 
 | | |
 |---|---|
 | **Standard two-column** | The conventional Bible page |
+| **Single column** | The same page in one column, with slightly larger type |
 | **Reader's edition** | One column, no verse numbers, no apparatus — set like a novel |
 | **Large print** | 14pt in one column, ragged right |
+| **Reference** | Two dense columns on a 5.5×8.5in page; the head gives the page's first and last reference; every verse is a PDF destination |
+| **Study Bible** | 7×10in with introductions, outlines, headings, footnotes and cross-references all on |
+| **Pocket Bible** | 4.25×6.75in, small type in one column, cross-references left out |
+| **Journaling Bible** | One column beside a two-inch outer margin left empty for notes |
 
 Choosing one **writes its settings into your project**, where you can then
 change them one at a time. It is a starting point, not a mode: after you apply

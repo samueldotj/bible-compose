@@ -1,9 +1,10 @@
-//! Three editions, written out (P6.2).
+//! The editions, written out (P6.2).
 //!
 //! A preset is a named set of settings a publisher can start from: the
-//! conventional two-column Bible, a reader's edition, and large print. Each is
-//! a TOML fragment compiled into the binary and listed here with a name and a
-//! sentence.
+//! conventional two-column Bible, the same in one column, a reader's edition,
+//! large print, a reference edition, a study Bible, a pocket Bible and a
+//! journaling Bible. Each is a TOML fragment compiled into the binary and
+//! listed here with a name and a sentence.
 //!
 //! # Applying one writes into the project's file
 //!
@@ -47,7 +48,9 @@ pub struct Preset {
 /// Every preset, in the order they are offered.
 ///
 /// Two-column first because it is what most Bibles are and what the built-in
-/// defaults already produce, so it is the least surprising thing to land on.
+/// defaults already produce, so it is the least surprising thing to land on;
+/// single column beside it as the one-step departure; then the editions that
+/// are each a decision about what the book is for.
 pub const ALL: &[Preset] = &[
     Preset {
         id: "two-column",
@@ -55,6 +58,12 @@ pub const ALL: &[Preset] = &[
         description: "The conventional Bible page: two columns, verse numbers, \
                       footnotes and cross-references at the foot.",
         toml: include_str!("../presets/two-column.toml"),
+    },
+    Preset {
+        id: "single-column",
+        title: "Single column",
+        description: "The conventional page in one column: slightly larger                       type on a longer line, with the numbers and apparatus                       kept.",
+        toml: include_str!("../presets/single-column.toml"),
     },
     Preset {
         id: "reader",
@@ -69,6 +78,30 @@ pub const ALL: &[Preset] = &[
         description: "14pt in one column on a larger page, set ragged right \
                       to avoid the wide word spacing justification would need.",
         toml: include_str!("../presets/large-print.toml"),
+    },
+    Preset {
+        id: "reference",
+        title: "Reference",
+        description: "Two dense columns on a hand-sized page, every verse                       numbered and linkable, the head giving the page's first                       and last reference.",
+        toml: include_str!("../presets/reference.toml"),
+    },
+    Preset {
+        id: "study",
+        title: "Study Bible",
+        description: "A larger page with everything on: introductions,                       outlines, headings, footnotes and cross-references.",
+        toml: include_str!("../presets/study.toml"),
+    },
+    Preset {
+        id: "pocket",
+        title: "Pocket Bible",
+        description: "A page that fits a coat pocket: small type in one                       column, tight margins, footnotes kept and                       cross-references left out.",
+        toml: include_str!("../presets/pocket.toml"),
+    },
+    Preset {
+        id: "journaling",
+        title: "Journaling Bible",
+        description: "One column beside a two-inch outer margin left empty                       for the reader's own notes; no apparatus at the foot.",
+        toml: include_str!("../presets/journaling.toml"),
     },
 ];
 
@@ -182,8 +215,8 @@ mod tests {
         }
     }
 
-    /// And each says something different from the others. Three presets that
-    /// resolve to the same page are one preset with three names.
+    /// And each says something different from the others. Two presets that
+    /// resolve to the same page are one preset with two names.
     #[test]
     fn the_presets_differ() {
         let resolved: Vec<_> = ALL

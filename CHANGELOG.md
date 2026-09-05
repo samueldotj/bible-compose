@@ -11,7 +11,9 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   a syllable three lines tall. With drop caps on, the chapter number takes a
   line of its own and the first verse goes unnumbered — and "Hide first
   verse number" is set with it, and held while drop caps are on.
-* The three templates have a tab of their own, and so does what the PDF says
+* **Five more templates**: single column, reference, study Bible, pocket
+  Bible and journaling Bible, beside the three there were.
+* The templates have a tab of their own, and so does what the PDF says
   about itself: publisher, subject, file name and bookmarks are on a **PDF
   metadata** tab instead of an "Other" box under Contents.
 * The command-line executable, double-clicked, now says what it is and waits

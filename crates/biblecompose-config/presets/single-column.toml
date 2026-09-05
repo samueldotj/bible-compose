@@ -1,0 +1,32 @@
+# Single column.
+#
+# The conventional page with one column instead of two: the same trim, the
+# same apparatus, the same numbering. What changes is the measure — one line
+# across the whole text block — so the type goes up a step to keep the line
+# from running past what the eye can carry back to the margin, and the leading
+# goes up with it.
+#
+# For an edition that is read more than it is looked things up in, but is not
+# yet ready to give up its verse numbers: the reader's edition is the next step
+# from here.
+
+[page]
+size = "6x9in"
+columns = 1
+margin_inner = "0.8in"
+margin_outer = "0.65in"
+
+[typography]
+font_size = "10pt"
+leading = "13pt"
+justify = true
+
+[numbering]
+show_chapter_numbers = true
+show_verse_numbers = true
+hide_first_verse_number = true
+
+[notes]
+show_footnotes = true
+show_cross_references = true
+cross_reference_placement = "note_area"

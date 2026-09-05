@@ -117,8 +117,9 @@ export interface Chrome {
   readonly editionsRegion: string;
   readonly startFrom: string;
   readonly presetNote: string;
-  readonly use: string;
   readonly overwriteSettings: string;
+  /** Under the question, what applying a template does to the file. */
+  readonly overwriteWarning: string;
   readonly coveringOnly: string;
   readonly noProjectToCheckAgainst: string;
 }
@@ -138,6 +139,7 @@ export interface Phrases {
   readonly resetSetting: (label: string) => string;
   readonly forgetProject: (name: string) => string;
   readonly headerSlot: (slot: string) => string;
+  readonly startFromTemplate: (title: string) => string;
   readonly footerSlot: (slot: string) => string;
   readonly colourSwatch: (property: string) => string;
 }
@@ -351,8 +353,9 @@ export const EN: Catalogue = {
     startFrom: "Start from a template",
     presetNote:
       "Each one writes its settings into this project, where you can change them one at a time.",
-    use: "Use",
     overwriteSettings: "Overwrite settings",
+    overwriteWarning:
+      "This writes the template's settings into your project, replacing any of them you have already set. There is no undo.",
     coveringOnly: "Only fonts that can set this Scripture",
     noProjectToCheckAgainst:
       "No project is open, so nothing has been checked against Scripture.",
@@ -364,6 +367,7 @@ export const EN: Catalogue = {
     resetSetting: (label) => `Reset ${label}`,
     forgetProject: (name) => `Forget ${name}`,
     headerSlot: (slot) => `Header ${slot}`,
+    startFromTemplate: (title) => `Start from “${title}”?`,
     footerSlot: (slot) => `Footer ${slot}`,
     colourSwatch: (property) => `${property} swatch`,
   },

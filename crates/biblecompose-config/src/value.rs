@@ -492,6 +492,19 @@ spelled! {
 }
 
 spelled! {
+    /// What drops into the text when a chapter opens with a drop cap.
+    DropCap {
+        /// The chapter's first letter — its first syllable, in a script
+        /// that writes one as several characters. The chapter number then
+        /// takes a line of its own above it.
+        FirstLetter => "first_letter",
+        /// The chapter number itself, set large and dropped into the
+        /// opening lines, with the text's first letter left as it is.
+        ChapterNumber => "chapter_number",
+    }
+}
+
+spelled! {
     /// What a build does about a figure whose file is not there.
     ///
     /// Only this one question is a policy. A figure pointing *outside* the

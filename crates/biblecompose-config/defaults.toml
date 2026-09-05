@@ -74,11 +74,15 @@ show_introductory_outlines = true
 show_section_headings = true
 # Off, because the built-in page opens each chapter with a large number the
 # text runs into, and a dropped initial beside it would be two large things at
-# one corner. Turning this on moves the number to a line of its own and lets
-# the chapter's first letter — its first *syllable*, in a script that writes
-# one as several characters — drop into the text instead.
+# one corner. Turning this on drops one of two things into the opening lines,
+# and the first verse goes unnumbered either way.
 drop_caps = false
-# Lines the initial spans. Two to six.
+# What drops: "first_letter" — the chapter's first letter (its first
+# *syllable*, in a script that writes one as several characters), with the
+# number moved to a line of its own above it — or "chapter_number", the number
+# itself, with the text's first letter left alone.
+drop_cap_of = "first_letter"
+# Lines the drop cap spans. Two to six.
 drop_cap_lines = 3
 
 [numbering]

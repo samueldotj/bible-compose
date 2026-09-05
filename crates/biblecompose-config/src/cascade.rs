@@ -260,7 +260,6 @@ fn take(into: &mut ResolvedStyle, from: &Style, origin: impl Fn(&'static str) ->
         own_line = "own_line",
         gap_before = "gap_before",
         gap_after = "gap_after",
-        drop_cap = "drop_cap",
         new_column = "new_column",
         new_page = "new_page",
     }

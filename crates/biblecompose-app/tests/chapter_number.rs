@@ -350,16 +350,18 @@ fn a_border_is_drawn_round_the_number() {
     }
 }
 
-/// **As a drop cap, the number drops** — set large, with the first lines
-/// indented past it and a later one back at the margin — and the text's own
-/// initial does not drop beside it.
+/// **With the Contents tab's drop cap set to the chapter number, the number
+/// drops** — set large, with the first lines indented past it and a later
+/// one back at the margin — and the text's own initial does not drop beside
+/// it.
 #[test]
 fn the_number_can_drop_into_the_text() {
     if !have_backend() {
         return;
     }
+    const NUMBER_DROPS: &str = "drop_caps = true\ndrop_cap_of = \"chapter_number\"";
     for columns in COLUMNS {
-        let b = built(columns, "[chapter]\ndrop_cap = true\n");
+        let b = built_with(columns, "", NUMBER_DROPS);
         let number = b.number("1");
         assert!(
             number.size > BODY * 2.5,
@@ -395,10 +397,9 @@ fn the_number_can_drop_into_the_text() {
             "{columns} columns: a later line returns to the margin"
         );
 
-        // With the Contents tab's drop caps on as well, the number is the one
-        // dropped thing: no large `I` from "In the beginning".
-        let both = built_with(columns, "[chapter]\ndrop_cap = true\n", "drop_caps = true");
-        let big: Vec<&Mark> = both
+        // The number is the one dropped thing: no large `I` from "In the
+        // beginning".
+        let big: Vec<&Mark> = b
             .lines
             .iter()
             .flat_map(|l| &l.marks)

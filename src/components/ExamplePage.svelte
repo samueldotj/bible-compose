@@ -71,6 +71,12 @@
   const outlines = $derived(on("contents.show_introductory_outlines"));
   const headings = $derived(on("contents.show_section_headings"));
   const dropcaps = $derived(on("contents.drop_caps"));
+  /** Which thing drops: the first letter (the default) or the number. */
+  const numberDrops = $derived(
+    dropcaps &&
+      session.settings.find((s) => s.key === "contents.drop_cap_of")?.value === "chapter_number",
+  );
+  const initialDrops = $derived(dropcaps && !numberDrops);
 
   type Section = (typeof SAMPLE)[number]["sections"][number];
   type Verse = Section["verses"][number];
@@ -87,13 +93,19 @@
     return first.done ? "" : first.value.segment;
   }
 
-  /** The verses to set, with the initial taken off the first when it drops. */
+  /**
+   * The verses to set. With a drop cap the first verse goes unnumbered
+   * (`opened`), and when the dropped thing is the first letter that letter
+   * is taken off the text.
+   */
   function versesFor(section: Section, i: number): readonly (Verse & { opened?: boolean })[] {
     if (!(dropcaps && i === 0)) return section.verses;
     const [first, ...rest] = section.verses;
     if (!first) return section.verses;
-    const initial = opening(section);
-    return [{ ...first, text: first.text.trimStart().slice(initial.length), opened: true }, ...rest];
+    const text = initialDrops
+      ? first.text.trimStart().slice(opening(section).length)
+      : first.text;
+    return [{ ...first, text, opened: true }, ...rest];
   }
   const justified = $derived(on("typography.justify"));
 
@@ -265,7 +277,12 @@
         {
           key: "contents.drop_caps",
           label: "Drop caps",
-          note: "The chapter number takes a line of its own, and the first verse goes unnumbered.",
+          note: "The first verse goes unnumbered; with the first letter dropped, the chapter number takes a line of its own.",
+        },
+        {
+          key: "contents.drop_cap_of",
+          label: "What drops",
+          under: "contents.drop_caps",
         },
         {
           key: "contents.drop_cap_lines",
@@ -467,9 +484,14 @@
                  the backend sets it: the initial is the large thing at the
                  corner then, and the number is not set beside it. -->
             {#if i === 0 && (chapters || (chapter.label && labels))}
-              <span class="opening" class:own-line={dropcaps}>
+              <span class="opening" class:own-line={initialDrops}>
                 {#if chapters}
-                  <span class="chapter" class:lit={shows("numbering.show_chapter_numbers")}>
+                  <span
+                    class="chapter"
+                    class:dropped={numberDrops}
+                    class:lit={shows("numbering.show_chapter_numbers") ||
+                      (numberDrops && shows("contents.drop_cap_of"))}
+                  >
                     {chapter.number}
                   </span>
                 {/if}
@@ -480,9 +502,10 @@
                 {/if}
               </span>
             {/if}
-            {#if dropcaps && i === 0 && opening(section)}<span
+            {#if initialDrops && i === 0 && opening(section)}<span
                 class="initial"
-                class:lit={shows("contents.drop_caps")}>{opening(section)}</span
+                class:lit={shows("contents.drop_caps") || shows("contents.drop_cap_of")}
+                >{opening(section)}</span
               >{/if}{#each versesFor(section, i) as verse (verse.number)}
               {#if verses && !verse.opened}<span
                   class="verse"
@@ -999,12 +1022,19 @@
     float: none;
     margin-inline-end: 0.18em;
   }
-  .initial {
+  .initial,
+  .chapter.dropped {
     float: left;
     font-size: 3.1em;
     line-height: 0.82;
     font-weight: 600;
     padding-inline-end: 0.06em;
     margin-block-start: 0.04em;
+  }
+  /* The dropped number keeps the figure's weight and no trailing gap of
+     its own: the text runs into it as it runs into a dropped letter. */
+  .chapter.dropped {
+    font-weight: 700;
+    margin-inline-end: 0;
   }
 </style>

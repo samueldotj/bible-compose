@@ -103,6 +103,7 @@ pub fn class_options_with(
     // a chapter's first syllable *is* takes Unicode segmentation the class
     // has not got; whether it drops, and how far, is the class's to decide.
     put("dropcaps", flag(*s.contents.drop_caps));
+    put("dropcapof", s.contents.drop_cap_of.to_string());
     put("dropcaplines", s.contents.drop_cap_lines.to_string());
     put("justify", flag(*s.typography.justify));
     put("poetryindent", flag(*s.typography.keep_poetry_indentation));
@@ -265,7 +266,6 @@ fn properties_of(
     put("own_line", s.own_line.map(flag));
     put("gap_before", s.gap_before.map(|l| l.to_sile()));
     put("gap_after", s.gap_after.map(|l| l.to_sile()));
-    put("drop_cap", s.drop_cap.map(flag));
     put("new_column", s.new_column.map(flag));
     put("new_page", s.new_page.map(|p| p.as_str().to_owned()));
 

@@ -13,7 +13,9 @@
 use crate::edit::SettingValue;
 use crate::provenance::Origin;
 use crate::settings::Settings;
-use crate::value::{Anchors, CallerStyle, MissingAsset, ReferencePlacement, RestartNumbering};
+use crate::value::{
+    Anchors, CallerStyle, DropCap, MissingAsset, ReferencePlacement, RestartNumbering,
+};
 
 /// What kind of control a key needs, and how its text is to be read back.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -271,6 +273,11 @@ impl Settings {
             "contents.drop_caps",
             Boolean,
             self.contents.drop_caps.to_string(),
+        );
+        push(
+            "contents.drop_cap_of",
+            Choice(DropCap::SPELLINGS),
+            self.contents.drop_cap_of.to_string(),
         );
         push(
             "contents.drop_cap_lines",

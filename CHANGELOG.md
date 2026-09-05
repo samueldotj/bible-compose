@@ -13,9 +13,10 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   verse number" is set with it, and held while drop caps are on.
 * **The chapter number has its own page decisions.** Under Styles → Chapter
   and verse: alignment, a line of its own with space above and below, gaps
-  before and after, a border of a chosen thickness, setting as a drop cap,
-  and whether each chapter opens a new column or a new page — the next one,
-  or a left- or right-hand one.
+  before and after, a border of a chosen thickness, and whether each chapter
+  opens a new column or a new page — the next one, or a left- or right-hand
+  one. On the Contents tab, a drop cap can be the chapter's first letter or
+  the chapter number.
 * **Every build is a full, fresh build.** The Draft and Clean boxes beside
   Generate PDF are gone, with the draft mark, the `-draft.pdf` file and the
   build cache that let an unchanged project skip the typesetter. The CLI's

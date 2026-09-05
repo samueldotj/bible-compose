@@ -1179,9 +1179,7 @@ fn open_or_create(path: &Utf8Path, header: &str) -> Result<TomlFile, AppDiagnost
 fn style_kind(property: &str) -> form::Kind {
     match property {
         "weight" => form::Kind::Integer,
-        "italic" | "smallcaps" | "border" | "own_line" | "drop_cap" | "new_column" => {
-            form::Kind::Boolean
-        }
+        "italic" | "smallcaps" | "border" | "own_line" | "new_column" => form::Kind::Boolean,
         "font_family" => form::Kind::Font,
         // Colour is text on the wire — `#c81414` is a string in TOML, and the
         // reader in `biblecompose-config` is the one thing that decides
@@ -1234,7 +1232,6 @@ fn wire_style_properties(resolved: &biblecompose_config::ResolvedStyle) -> Vec<W
         ("own_line", s.own_line.map(|b| b.to_string())),
         ("gap_before", s.gap_before.map(|l| l.to_string())),
         ("gap_after", s.gap_after.map(|l| l.to_string())),
-        ("drop_cap", s.drop_cap.map(|b| b.to_string())),
         ("new_column", s.new_column.map(|b| b.to_string())),
         ("new_page", s.new_page.map(|p| p.as_str().to_owned())),
     ];

@@ -248,7 +248,7 @@ fn every_property_the_schema_lists_can_actually_be_set() {
         .iter()
         .map(|p| match *p {
             "weight" => "weight = 700\n".to_owned(),
-            "italic" | "smallcaps" | "border" | "own_line" | "drop_cap" | "new_column" => {
+            "italic" | "smallcaps" | "border" | "own_line" | "new_column" => {
                 format!("{p} = true\n")
             }
             "align" => "align = \"end\"\n".to_owned(),

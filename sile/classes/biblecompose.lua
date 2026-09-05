@@ -93,6 +93,8 @@ local OPTIONS = {
    -- syllable in an Indic script is several characters, and telling them
    -- apart takes Unicode segmentation this class has not got.
    { key = "dropcaps", kind = "boolean", default = false },
+   -- What drops: "first_letter" or "chapter_number".
+   { key = "dropcapof", kind = "string", default = "first_letter" },
    { key = "dropcaplines", kind = "string", default = "3" },
    -- How a paragraph and a line of verse are set.
    { key = "justify", kind = "boolean", default = true },
@@ -1826,7 +1828,9 @@ function class:registerXmlCommands ()
          end
       end
 
-      if SU.boolean(s.own_line, false) or self._bcopts.dropcaps then
+      local drops = self._bcopts.dropcaps
+      local number_drops = drops and self._bcopts.dropcapof == "chapter_number"
+      if SU.boolean(s.own_line, false) or (drops and not number_drops) then
          -- On a line of its own, with the style's space around it and its
          -- alignment along it. Also when the initial drops: the number used
          -- to be the large thing at the chapter's corner, and two large
@@ -1848,12 +1852,12 @@ function class:registerXmlCommands ()
          return
       end
 
-      if SU.boolean(s.drop_cap, false) then
-         -- Dropped into the text as an initial is, and for the same reason
-         -- reopening the paragraph. The style's face goes to the package as
-         -- font options and its size does not: the package sets the size
-         -- that spans the lines, and a `\font` inside with the style's own
-         -- size would undo that.
+      if number_drops then
+         -- Dropped into the text as an initial would be, and for the same
+         -- reason reopening the paragraph. The style's face goes to the
+         -- package as font options and its size does not: the package sets
+         -- the size that spans the lines, and a `\font` inside with the
+         -- style's own size would undo that.
          dropped(function ()
             local opts = { lines = tonumber(self._bcopts.dropcaplines) or 3, join = false }
             for key, value in pairs(face(s) or {}) do
@@ -1883,10 +1887,10 @@ function class:registerXmlCommands ()
    -- both cases followed by the rest of the word with nothing between, since
    -- the document put nothing between.
    self:registerCommand("initial", function (_, content)
-      -- Not when the chapter number is the dropped thing: two initials at
-      -- one corner would be the fight the number moved off the line to
-      -- avoid.
-      if not self._bcopts.dropcaps or SU.boolean(style("chapter").drop_cap, false) then
+      -- Only when the first letter is the dropped thing. When the number
+      -- is, the letter stays: two initials at one corner would be the fight
+      -- the number moved off the line to avoid.
+      if not self._bcopts.dropcaps or self._bcopts.dropcapof == "chapter_number" then
          SILE.process(content)
          return
       end

@@ -63,7 +63,6 @@ const BORDER_WIDTH: PropertyRow = { name: "border_width", label: "Border thickne
 const OWN_LINE: PropertyRow = { name: "own_line", label: "On its own line", kind: "boolean" };
 const GAP_BEFORE: PropertyRow = { name: "gap_before", label: "Gap before", kind: "length" };
 const GAP_AFTER: PropertyRow = { name: "gap_after", label: "Gap after", kind: "length" };
-const DROP_CAP: PropertyRow = { name: "drop_cap", label: "As a drop cap", kind: "boolean" };
 const NEW_COLUMN: PropertyRow = { name: "new_column", label: "Starts a new column", kind: "boolean" };
 const NEW_PAGE: PropertyRow = {
   name: "new_page",
@@ -112,7 +111,6 @@ export const ALL_PROPERTIES: readonly PropertyRow[] = [
   OWN_LINE,
   GAP_BEFORE,
   GAP_AFTER,
-  DROP_CAP,
   NEW_COLUMN,
   NEW_PAGE,
 ];
@@ -171,7 +169,6 @@ export const STYLE_GROUPS: readonly StyleGroup[] = [
           GAP_AFTER,
           BORDER,
           BORDER_WIDTH,
-          DROP_CAP,
           NEW_COLUMN,
           NEW_PAGE,
         ],

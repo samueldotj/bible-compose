@@ -83,7 +83,7 @@ beside it puts the built-in value back.
 |---|---|
 | **Scripture** | Which books, and in what order |
 | **Template** | Three kinds of book to start from |
-| **Contents** | What appears — introductions, headings, chapter labels, drop caps |
+| **Contents** | What appears — introductions, headings, chapter labels, drop caps (the first letter or the chapter number) |
 | **Headers & Footers** | What goes in each of the six slots, on each side of the spread — see below |
 | **Page** | Trim size, columns, margins |
 | **Styles** | Typography, and every marker's appearance |
@@ -135,7 +135,6 @@ style, in the file or on the tab:
 | `own_line` | The number takes a line of its own, with `space_above` and `space_below` around it |
 | `gap_before`, `gap_after` | Horizontal space either side of the number when it sits in the text (after: 4pt unless set) |
 | `border`, `border_width` | A rule around the number, and how thick |
-| `drop_cap` | The number drops into the lines that follow, spanning the Contents tab's "Lines a drop cap spans" |
 | `new_column` | Every chapter after a book's first begins a new column — a new page, in one column |
 | `new_page` | Every chapter after a book's first begins a new page: `continue`, `next`, `left` or `right`. A side that is not next leaves a blank page. A book opens on that side too |
 

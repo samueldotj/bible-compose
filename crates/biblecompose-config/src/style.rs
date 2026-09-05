@@ -131,8 +131,6 @@ pub struct Style {
     pub gap_before: Option<Length>,
     /// And after it.
     pub gap_after: Option<Length>,
-    /// The element is dropped into the lines that follow, as an initial is.
-    pub drop_cap: Option<bool>,
     /// The element begins a new column — a new page, in one column.
     pub new_column: Option<bool>,
     /// The element begins a new page, and which side.
@@ -168,7 +166,6 @@ impl Style {
             own_line: other.own_line.or(self.own_line),
             gap_before: other.gap_before.or(self.gap_before),
             gap_after: other.gap_after.or(self.gap_after),
-            drop_cap: other.drop_cap.or(self.drop_cap),
             new_column: other.new_column.or(self.new_column),
             new_page: other.new_page.or(self.new_page),
         }
@@ -183,7 +180,7 @@ pub const INHERITS: &str = "inherits";
 ///
 /// Used to read a style and to detect a misspelled property, so the two
 /// cannot disagree about what is legal.
-pub const PROPERTIES: [&str; 19] = [
+pub const PROPERTIES: [&str; 18] = [
     "font_family",
     "font_size",
     "weight",
@@ -200,7 +197,6 @@ pub const PROPERTIES: [&str; 19] = [
     "own_line",
     "gap_before",
     "gap_after",
-    "drop_cap",
     "new_column",
     "new_page",
 ];
@@ -449,10 +445,6 @@ fn read_into(
     });
     read("gap_after", &mut |n| {
         style.gap_after = Some(value::length_or_zero(n)?.value);
-        Ok(())
-    });
-    read("drop_cap", &mut |n| {
-        style.drop_cap = Some(n.boolean()?.value);
         Ok(())
     });
     read("new_column", &mut |n| {

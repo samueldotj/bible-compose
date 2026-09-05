@@ -233,6 +233,7 @@ export const EN_LABELS: Readonly<Record<string, string>> = {
   "contents.show_introductory_outlines": "Introductory outlines",
   "contents.show_section_headings": "Section headings",
   "contents.drop_caps": "Drop caps",
+  "contents.drop_cap_of": "What drops",
   "contents.drop_cap_lines": "Lines a drop cap spans",
   "typography.justify": "Justify paragraphs",
   "typography.keep_poetry_indentation": "Keep poetry indentation",
@@ -293,6 +294,8 @@ export const EN_CHOICES: Readonly<Record<string, string>> = {
   letters: "a, b, c",
   symbols: "*, †, ‡",
   alt_book_name: "Alt book name",
+  first_letter: "The chapter's first letter",
+  chapter_number: "The chapter number",
 };
 
 /** The English catalogue. */

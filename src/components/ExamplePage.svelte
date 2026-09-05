@@ -162,6 +162,8 @@
       /** Decided, and shown on, while this setting is on. */
       implied?: string;
       note?: string;
+      /** For a number: the range the resolver accepts. */
+      range?: readonly [number, number];
     }[];
   }[] = [
     {
@@ -179,6 +181,15 @@
           key: "contents.drop_caps",
           label: "Drop caps",
           note: "The chapter number takes a line of its own, and the first verse goes unnumbered.",
+        },
+        {
+          key: "contents.drop_cap_lines",
+          label: "Lines a drop cap spans",
+          // Meaningless without an initial to span them.
+          under: "contents.drop_caps",
+          // The resolver's own bounds, so the field cannot offer a number
+          // the file would refuse.
+          range: [2, 6],
         },
         { key: "typography.justify", label: "Justify paragraphs" },
         {
@@ -464,7 +475,18 @@
                     field in the list above, so a setting that becomes a choice
                     gets a dropdown here without anyone remembering to say so.
                   -->
-                  {#if setting?.kind === "choice"}
+                  {#if setting?.kind === "integer"}
+                    {s.label}
+                    <input
+                      type="number"
+                      class="count"
+                      min={s.range?.[0]}
+                      max={s.range?.[1]}
+                      value={setting.value}
+                      disabled={!session.editable || idle}
+                      onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}
+                    />
+                  {:else if setting?.kind === "choice"}
                     {s.label}
                     <select
                       value={setting.value}
@@ -595,6 +617,14 @@
   /* An empty slot still holds its place, or the other two would move. */
   .slot:empty::after {
     content: "";
+  }
+  .count {
+    inline-size: 3.2rem;
+    padding-block: 0.15rem;
+    border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
+    border-radius: 4px;
+    font: inherit;
+    font-size: 0.82rem;
   }
   select {
     padding-block: 0.15rem;

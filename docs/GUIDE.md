@@ -82,6 +82,7 @@ beside it puts the built-in value back.
 | **Headers & Footers** | What goes in each of the six slots |
 | **Page** | Trim size, columns, margins |
 | **Styles** | Typography, and every marker's appearance |
+| **PDF metadata** | Publisher, subject, the file's name, how far its bookmarks reach |
 
 ### Styles
 

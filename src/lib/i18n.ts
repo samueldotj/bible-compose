@@ -235,6 +235,7 @@ export const EN_LABELS: Readonly<Record<string, string>> = {
   "headers.footer_right": "Right",
   "assets.missing_figure": "A figure with no file",
   "output.name": "PDF file name",
+  "output.anchors": "PDF bookmarks reach",
   "output.keep_intermediates": "Keep intermediates",
   strict: "Strict settings",
 };

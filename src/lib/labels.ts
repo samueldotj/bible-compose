@@ -37,6 +37,17 @@ export const GROUPS: readonly Group[] = [
       "typography.hyphenation",
     ],
   },
+  // What a figure with no file does to the build. Content rather than
+  // metadata: it is about what is on the page.
+  { id: "figures", title: "Figures", keys: ["assets.missing_figure"] },
+  // What the PDF says about itself, and what it is called. None of it
+  // changes a page, which is why it has a tab of its own rather than a
+  // corner of Contents.
+  {
+    id: "metadata",
+    title: "PDF metadata",
+    keys: ["project.author", "project.subject", "output.name", "output.anchors"],
+  },
 ];
 
 /**
@@ -71,6 +82,8 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   "contents.show_introductory_outlines",
   "contents.show_section_headings",
   "contents.drop_caps",
+  // Beside the Drop caps switch, since it is meaningless without it.
+  "contents.drop_cap_lines",
   "typography.justify",
   "typography.keep_poetry_indentation",
   "notes.show_footnotes",
@@ -202,7 +215,13 @@ export const TABS: readonly Tab[] = [
   { id: "template", title: "Template", settingGroups: [], template: true },
   // Claims the strays now that the Project tab is gone. Exactly one tab does,
   // so a key added to the schema is visible somewhere rather than nowhere.
-  { id: "contents", title: "Contents", settingGroups: [], example: "contents", orphans: true },
+  {
+    id: "contents",
+    title: "Contents",
+    settingGroups: ["figures"],
+    example: "contents",
+    orphans: true,
+  },
   {
     id: "headers",
     title: "Headers & Footers",
@@ -211,6 +230,8 @@ export const TABS: readonly Tab[] = [
   },
   { id: "page", title: "Page", settingGroups: [], diagram: true },
   { id: "styles", title: "Styles", settingGroups: ["typography"], styles: true },
+  // Last, because it is the one decision that changes nothing on a page.
+  { id: "metadata", title: "PDF metadata", settingGroups: ["metadata"] },
 ];
 
 /**

@@ -25,7 +25,14 @@ fn every_slot_shows_what_it_names() {
         "john_1_1_5",
         "[page]
 columns = 1
-[headers]
+[headers.left_page]
+header_left = \"book_name\"
+header_center = \"alt_book_name\"
+header_right = \"reference_range\"
+footer_left = \"first_reference\"
+footer_center = \"page_number\"
+footer_right = \"last_reference\"
+[headers.right_page]
 header_left = \"book_name\"
 header_center = \"alt_book_name\"
 header_right = \"reference_range\"
@@ -62,7 +69,11 @@ fn an_empty_head_is_absent_rather_than_blank() {
         "john_1_1_5",
         "[page]
 columns = 1
-[headers]
+[headers.left_page]
+header_left = \"empty\"
+header_center = \"empty\"
+header_right = \"empty\"
+[headers.right_page]
 header_left = \"empty\"
 header_center = \"empty\"
 header_right = \"empty\"
@@ -186,7 +197,14 @@ fn the_page_number_goes_where_it_is_put() {
         "long_verse",
         "[page]
 columns = 1
-[headers]
+[headers.left_page]
+header_left = \"page_number\"
+header_center = \"empty\"
+header_right = \"empty\"
+footer_left = \"empty\"
+footer_center = \"empty\"
+footer_right = \"empty\"
+[headers.right_page]
 header_left = \"page_number\"
 header_center = \"empty\"
 header_right = \"empty\"
@@ -203,5 +221,56 @@ footer_right = \"empty\"
         folio(&lines, all[0]),
         "",
         "nothing was asked for at the foot"
+    );
+}
+
+/// **The two sides of a spread are set separately.** The page number at the
+/// outer edge — left on a left-hand page, right on a right-hand one — is the
+/// commonest reason to want that, and it cannot be said with one arrangement
+/// for every page.
+#[test]
+fn each_side_of_the_spread_has_its_own_head() {
+    if !have_backend() {
+        return;
+    }
+    let (_g, lines) = typeset(
+        "long_verse",
+        "[page]
+columns = 1
+[headers.left_page]
+header_left = \"page_number\"
+header_center = \"empty\"
+header_right = \"empty\"
+footer_left = \"empty\"
+footer_center = \"empty\"
+footer_right = \"empty\"
+[headers.right_page]
+header_left = \"empty\"
+header_center = \"empty\"
+header_right = \"page_number\"
+footer_left = \"empty\"
+footer_center = \"empty\"
+footer_right = \"empty\"
+",
+    );
+    let all = pages(&lines);
+    assert!(all.len() >= 2, "the fixture runs to a second page");
+
+    // Page 1 is a recto: its number is at the right. Page 2 is a verso: at
+    // the left. Both heads carry the number and nothing else.
+    let x_of = |page: usize| -> f64 {
+        lines
+            .iter()
+            .filter(|l| l.page == page && l.sizes() == vec![common::HEAD] && l.y > -60.0)
+            .map(|l| l.left())
+            .next()
+            .unwrap_or_else(|| panic!("page {page} has a head"))
+    };
+    assert_eq!(head(&lines, all[0]), "1");
+    assert_eq!(head(&lines, all[1]), "2");
+    let (recto, verso) = (x_of(all[0]), x_of(all[1]));
+    assert!(
+        recto > verso + 100.0,
+        "the recto's number ({recto}) sits to the right of the verso's ({verso})"
     );
 }

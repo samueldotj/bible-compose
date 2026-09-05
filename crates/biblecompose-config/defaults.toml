@@ -124,7 +124,20 @@ cross_reference_placement = "note_area"
 # four switches — the book on the left of the head, the range on the right, the
 # page number centred at the foot — so a project that never touches these gets
 # the page it always got.
-[headers]
+#
+# One table per side of the spread. Left-hand pages are the even-numbered
+# ones, right-hand pages the odd; an edition that wants its page numbers at
+# the outer edge puts them in `footer_left` on the left page and
+# `footer_right` on the right. The defaults give both sides the same page.
+[headers.left_page]
+header_left = "book_name"
+header_center = "empty"
+header_right = "reference_range"
+footer_left = "empty"
+footer_center = "page_number"
+footer_right = "empty"
+
+[headers.right_page]
 header_left = "book_name"
 header_center = "empty"
 header_right = "reference_range"

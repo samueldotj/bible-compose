@@ -35,8 +35,15 @@
   import { session } from "../lib/session.svelte";
   import { phrases, t } from "../lib/i18n";
 
-  /** Which set of switches to put beside the page. */
-  const { which }: { which: "contents" | "headers" } = $props();
+  /**
+   * Which set of switches to put beside the page — and, for the head and
+   * foot, which side of the spread this page is. Left-hand pages are the
+   * even-numbered ones; the example's own page number says so.
+   */
+  const { which, side = "right" }: { which: "contents" | "headers"; side?: "left" | "right" } =
+    $props();
+  const table = $derived(side === "left" ? "headers.left_page" : "headers.right_page");
+  const sideName = $derived(side === "left" ? t("leftPage") : t("rightPage"));
 
   /** A setting's value, defaulting to on so the example is never blank. */
   function on(key: string): boolean {
@@ -94,7 +101,7 @@
     const value = session.settings.find((s) => s.key === key)?.value ?? "empty";
     switch (value) {
       case "page_number":
-        return "412";
+        return side === "left" ? "412" : "413";
       case "reference_range":
         return "1:1–2:6";
       case "first_reference":
@@ -111,14 +118,14 @@
   }
 
   const header = $derived([
-    slot("headers.header_left"),
-    slot("headers.header_center"),
-    slot("headers.header_right"),
+    slot(`${table}.header_left`),
+    slot(`${table}.header_center`),
+    slot(`${table}.header_right`),
   ]);
   const footer = $derived([
-    slot("headers.footer_left"),
-    slot("headers.footer_center"),
-    slot("headers.footer_right"),
+    slot(`${table}.footer_left`),
+    slot(`${table}.footer_center`),
+    slot(`${table}.footer_right`),
   ]);
   const anything = (line: string[]) => line.some((s) => s !== "");
 
@@ -257,16 +264,16 @@
   ];
 
   /** The three places at the top of the page, and the three at the foot. */
-  const HEADER = [
-    { key: "headers.header_left", label: "Left" },
-    { key: "headers.header_center", label: "Centre" },
-    { key: "headers.header_right", label: "Right" },
-  ] as const;
-  const FOOTER = [
-    { key: "headers.footer_left", label: "Left" },
-    { key: "headers.footer_center", label: "Centre" },
-    { key: "headers.footer_right", label: "Right" },
-  ] as const;
+  const HEADER = $derived([
+    { key: `${table}.header_left`, label: "Left" },
+    { key: `${table}.header_center`, label: "Centre" },
+    { key: `${table}.header_right`, label: "Right" },
+  ]);
+  const FOOTER = $derived([
+    { key: `${table}.footer_left`, label: "Left" },
+    { key: `${table}.footer_center`, label: "Centre" },
+    { key: `${table}.footer_right`, label: "Right" },
+  ]);
 
   /**
    * What a slot may hold, from the schema rather than from a list here.
@@ -295,6 +302,8 @@
       width in that order. A dropdown standing over the slot it fills needs no
       label saying which slot that is.
     -->
+    <!-- Which page of the spread this is, over its header. -->
+    <p class="side">{sideName}</p>
     <fieldset class="controls">
       <legend>{t("header")}</legend>
       <div class="row">
@@ -306,7 +315,7 @@
             onfocusout={() => (lit = null)}
           >
             <select
-              aria-label={phrases().headerSlot(s.label.toLowerCase())}
+              aria-label={phrases().headerSlot(sideName, s.label.toLowerCase())}
               value={chosen(s.key)}
               disabled={!session.editable}
               onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}
@@ -444,7 +453,7 @@
             onfocusout={() => (lit = null)}
           >
             <select
-              aria-label={phrases().footerSlot(s.label.toLowerCase())}
+              aria-label={phrases().footerSlot(sideName, s.label.toLowerCase())}
               value={chosen(s.key)}
               disabled={!session.editable}
               onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}
@@ -559,6 +568,14 @@
   .example.stacked .paper .body {
     min-block-size: 0;
     overflow-y: auto;
+  }
+  .side {
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.7;
   }
   .controls {
     margin: 0;

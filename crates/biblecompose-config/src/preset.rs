@@ -121,21 +121,32 @@ impl Preset {
         let doc = ConfigDocument::parse(format!("{}.toml", self.id), self.toml.to_owned())?;
         let root = doc.root().table()?;
         let mut out = Vec::new();
-        // Two levels, which is every shape a settings file has: `[section]`
-        // and a key under it. A preset that grew a third would fail the test
-        // below rather than be silently half-applied.
-        for section in root.names() {
-            let Some(node) = root.get(section) else {
-                continue;
-            };
-            let Ok(table) = node.table() else { continue };
-            for key in table.names() {
-                let Some(leaf) = table.get(key) else { continue };
-                if let Some(value) = value_of(&leaf) {
-                    out.push((format!("{section}.{key}"), value));
+        // Tables all the way down — `[headers.left_page]` is a table under a
+        // table — and a leaf wherever one is found. A leaf that is neither a
+        // table nor a value the editor takes is dropped here and caught by
+        // the test below, which resolves every preset.
+        fn walk(
+            table: &crate::document::Table<'_>,
+            prefix: &str,
+            out: &mut Vec<(String, SettingValue)>,
+        ) {
+            for name in table.names() {
+                let Some(node) = table.get(name) else {
+                    continue;
+                };
+                let key = if prefix.is_empty() {
+                    name.to_owned()
+                } else {
+                    format!("{prefix}.{name}")
+                };
+                if let Ok(inner) = node.table() {
+                    walk(&inner, &key, out);
+                } else if let Some(value) = value_of(&node) {
+                    out.push((key, value));
                 }
             }
         }
+        walk(&root, "", &mut out);
         Ok(out)
     }
 }

@@ -4,6 +4,7 @@
   import ProjectPane from "./components/ProjectPane.svelte";
   import QuickSettings from "./components/QuickSettings.svelte";
   import ExamplePage from "./components/ExamplePage.svelte";
+  import HeadersSpread from "./components/HeadersSpread.svelte";
   import PageDiagram from "./components/PageDiagram.svelte";
   import PresetPicker from "./components/PresetPicker.svelte";
   import SettingsForm from "./components/SettingsForm.svelte";
@@ -178,7 +179,9 @@
             {#if tab.diagram && session.geometry}
               <PageDiagram geometry={session.geometry} />
             {/if}
-            {#if tab.example}
+            {#if tab.example === "headers"}
+              <HeadersSpread />
+            {:else if tab.example}
               <ExamplePage which={tab.example} />
             {/if}
             {#if tab.settingGroups.length > 0 || tab.orphans}

@@ -311,13 +311,20 @@ impl Settings {
             self.notes.cross_reference_placement.to_string(),
         );
 
+        let (l, r) = (&self.headers.left_page, &self.headers.right_page);
         for (key, slot) in [
-            ("headers.header_left", &self.headers.header_left),
-            ("headers.header_center", &self.headers.header_center),
-            ("headers.header_right", &self.headers.header_right),
-            ("headers.footer_left", &self.headers.footer_left),
-            ("headers.footer_center", &self.headers.footer_center),
-            ("headers.footer_right", &self.headers.footer_right),
+            ("headers.left_page.header_left", &l.header_left),
+            ("headers.left_page.header_center", &l.header_center),
+            ("headers.left_page.header_right", &l.header_right),
+            ("headers.left_page.footer_left", &l.footer_left),
+            ("headers.left_page.footer_center", &l.footer_center),
+            ("headers.left_page.footer_right", &l.footer_right),
+            ("headers.right_page.header_left", &r.header_left),
+            ("headers.right_page.header_center", &r.header_center),
+            ("headers.right_page.header_right", &r.header_right),
+            ("headers.right_page.footer_left", &r.footer_left),
+            ("headers.right_page.footer_center", &r.footer_center),
+            ("headers.right_page.footer_right", &r.footer_right),
         ] {
             push(key, Choice(HeadSlot::SPELLINGS), slot.to_string());
         }

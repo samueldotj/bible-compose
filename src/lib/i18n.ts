@@ -98,6 +98,8 @@ export interface Chrome {
   readonly from: string;
   readonly header: string;
   readonly footer: string;
+  readonly leftPage: string;
+  readonly rightPage: string;
   readonly booksRegion: string;
   readonly chooseFolder: string;
   readonly exampleName: string;
@@ -138,9 +140,10 @@ export interface Phrases {
   readonly moveLater: (code: string) => string;
   readonly resetSetting: (label: string) => string;
   readonly forgetProject: (name: string) => string;
-  readonly headerSlot: (slot: string) => string;
+  /** A head or foot slot's accessible name: which side, which line, which slot. */
+  readonly headerSlot: (side: string, slot: string) => string;
   readonly startFromTemplate: (title: string) => string;
-  readonly footerSlot: (slot: string) => string;
+  readonly footerSlot: (side: string, slot: string) => string;
   readonly colourSwatch: (property: string) => string;
 }
 
@@ -229,12 +232,18 @@ export const EN_LABELS: Readonly<Record<string, string>> = {
   "notes.cross_reference_callers": "Reference marks",
   "notes.restart_numbering": "Marks start again",
   "notes.cross_reference_placement": "References go",
-  "headers.header_left": "Left",
-  "headers.header_center": "Centre",
-  "headers.header_right": "Right",
-  "headers.footer_left": "Left",
-  "headers.footer_center": "Centre",
-  "headers.footer_right": "Right",
+  "headers.left_page.header_left": "Left",
+  "headers.left_page.header_center": "Centre",
+  "headers.left_page.header_right": "Right",
+  "headers.left_page.footer_left": "Left",
+  "headers.left_page.footer_center": "Centre",
+  "headers.left_page.footer_right": "Right",
+  "headers.right_page.header_left": "Left",
+  "headers.right_page.header_center": "Centre",
+  "headers.right_page.header_right": "Right",
+  "headers.right_page.footer_left": "Left",
+  "headers.right_page.footer_center": "Centre",
+  "headers.right_page.footer_right": "Right",
   "assets.missing_figure": "A figure with no file",
   "output.name": "PDF file name",
   "output.anchors": "PDF bookmarks reach",
@@ -333,6 +342,8 @@ export const EN: Catalogue = {
     from: "From",
     header: "Header",
     footer: "Footer",
+    leftPage: "Left page",
+    rightPage: "Right page",
     booksRegion: "Books",
     chooseFolder: "Choose a folder…",
     exampleName: "My Bible",
@@ -366,9 +377,9 @@ export const EN: Catalogue = {
     moveLater: (code) => `Move ${code} later`,
     resetSetting: (label) => `Reset ${label}`,
     forgetProject: (name) => `Forget ${name}`,
-    headerSlot: (slot) => `Header ${slot}`,
+    headerSlot: (side, slot) => `${side} page, header ${slot}`,
     startFromTemplate: (title) => `Start from “${title}”?`,
-    footerSlot: (slot) => `Footer ${slot}`,
+    footerSlot: (side, slot) => `${side} page, footer ${slot}`,
     colourSwatch: (property) => `${property} swatch`,
   },
   states: {

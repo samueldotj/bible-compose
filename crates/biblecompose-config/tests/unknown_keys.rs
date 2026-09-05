@@ -133,7 +133,14 @@ fn no_supported_key_is_reported_as_unknown() {
          show_footnotes = true\n\
          show_cross_references = false\n\
          \n\
-         [headers]\n\
+         [headers.left_page]\n\
+         header_left = \"book_name\"\n\
+         header_center = \"empty\"\n\
+         header_right = \"reference_range\"\n\
+         footer_left = \"empty\"\n\
+         footer_center = \"page_number\"\n\
+         footer_right = \"empty\"\n\
+         [headers.right_page]\n\
          header_left = \"book_name\"\n\
          header_center = \"empty\"\n\
          header_right = \"reference_range\"\n\

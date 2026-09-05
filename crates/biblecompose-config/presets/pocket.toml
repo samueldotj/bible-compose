@@ -34,7 +34,12 @@ hide_first_verse_number = true
 show_footnotes = true
 show_cross_references = false
 
-[headers]
+[headers.left_page]
+header_left = "book_name"
+header_center = "empty"
+header_right = "reference_range"
+footer_center = "page_number"
+[headers.right_page]
 header_left = "book_name"
 header_center = "empty"
 header_right = "reference_range"

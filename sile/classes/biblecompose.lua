@@ -118,12 +118,20 @@ local OPTIONS = {
    -- last_reference, book_name, alt_book_name. Positions rather than
    -- switches, because where a thing goes is as much a decision as whether
    -- it is there, and only the settings layer can make it.
-   { key = "headerleft", kind = "string", default = "book_name" },
-   { key = "headercenter", kind = "string", default = "empty" },
-   { key = "headerright", kind = "string", default = "reference_range" },
-   { key = "footerleft", kind = "string", default = "empty" },
-   { key = "footercenter", kind = "string", default = "page_number" },
-   { key = "footerright", kind = "string", default = "empty" },
+   -- One set per side of the spread: verso is the left-hand (even) page,
+   -- recto the right-hand (odd). `endPage` picks by the page's parity.
+   { key = "versoheaderleft", kind = "string", default = "book_name" },
+   { key = "versoheadercenter", kind = "string", default = "empty" },
+   { key = "versoheaderright", kind = "string", default = "reference_range" },
+   { key = "versofooterleft", kind = "string", default = "empty" },
+   { key = "versofootercenter", kind = "string", default = "page_number" },
+   { key = "versofooterright", kind = "string", default = "empty" },
+   { key = "rectoheaderleft", kind = "string", default = "book_name" },
+   { key = "rectoheadercenter", kind = "string", default = "empty" },
+   { key = "rectoheaderright", kind = "string", default = "reference_range" },
+   { key = "rectofooterleft", kind = "string", default = "empty" },
+   { key = "rectofootercenter", kind = "string", default = "page_number" },
+   { key = "rectofooterright", kind = "string", default = "empty" },
 }
 
 -- Option values arrive as strings. `SU.boolean` is the coercion upstream is
@@ -505,8 +513,15 @@ local scratch, anchor, destination, o_anchors, stamp_draft
 
 function class:endPage ()
    local o = self._bcopts
-   set_line(SILE.getFrame("runningHead"), { o.headerleft, o.headercenter, o.headerright })
-   set_line(SILE.getFrame("folio"), { o.footerleft, o.footercenter, o.footerright })
+   -- Which side of the spread this page is. `twoside` answers by the folio's
+   -- parity; page 1 is a recto, as in every bound book.
+   local side = (self.oddPage and self:oddPage()) and "recto" or "verso"
+   set_line(SILE.getFrame("runningHead"), {
+      o[side .. "headerleft"], o[side .. "headercenter"], o[side .. "headerright"],
+   })
+   set_line(SILE.getFrame("folio"), {
+      o[side .. "footerleft"], o[side .. "footercenter"], o[side .. "footerright"],
+   })
    stamp_draft(SILE.getFrame("draftmark"), o.draftmark)
    -- **After the head, not before.** The head for this page is built from the
    -- references collected on it; this records the last of them so that the

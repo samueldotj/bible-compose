@@ -40,7 +40,12 @@ restart_numbering = "per_chapter"
 
 # First reference at the outer corner's opposite, last at the outer corner,
 # the book between: the head is an index of the page.
-[headers]
+[headers.left_page]
+header_left = "first_reference"
+header_center = "book_name"
+header_right = "last_reference"
+footer_center = "page_number"
+[headers.right_page]
 header_left = "first_reference"
 header_center = "book_name"
 header_right = "last_reference"

@@ -118,15 +118,32 @@ pub fn class_options_with(
         "crossrefplacement",
         s.notes.cross_reference_placement.to_string(),
     );
-    // Six slots rather than four switches: where a thing goes is as much a
-    // decision as whether it is there, and the class can only honour what it
-    // is told.
-    put("headerleft", s.headers.header_left.to_string());
-    put("headercenter", s.headers.header_center.to_string());
-    put("headerright", s.headers.header_right.to_string());
-    put("footerleft", s.headers.footer_left.to_string());
-    put("footercenter", s.headers.footer_center.to_string());
-    put("footerright", s.headers.footer_right.to_string());
+    // Twelve slots rather than four switches: where a thing goes is as much
+    // a decision as whether it is there, and which side of the spread it is
+    // on is part of where. The class picks a side by the page's parity.
+    for (prefix, side) in [
+        ("verso", &s.headers.left_page),
+        ("recto", &s.headers.right_page),
+    ] {
+        put(&format!("{prefix}headerleft"), side.header_left.to_string());
+        put(
+            &format!("{prefix}headercenter"),
+            side.header_center.to_string(),
+        );
+        put(
+            &format!("{prefix}headerright"),
+            side.header_right.to_string(),
+        );
+        put(&format!("{prefix}footerleft"), side.footer_left.to_string());
+        put(
+            &format!("{prefix}footercenter"),
+            side.footer_center.to_string(),
+        );
+        put(
+            &format!("{prefix}footerright"),
+            side.footer_right.to_string(),
+        );
+    }
 
     out
 }

@@ -11,6 +11,11 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   a syllable three lines tall. With drop caps on, the chapter number takes a
   line of its own and the first verse goes unnumbered — and "Hide first
   verse number" is set with it, and held while drop caps are on.
+* **Left and right pages have their own heads and feet.** The Headers &
+  Footers tab shows the spread — the left-hand page beside the right-hand
+  one — with six slots on each, so a page number can sit at the outer edge
+  of both. In the file, `[headers]` is now `[headers.left_page]` and
+  `[headers.right_page]`; a file with the old keys is told so, key by key.
 * **Five more templates**: single column, reference, study Bible, pocket
   Bible and journaling Bible, beside the three there were.
 * The templates have a tab of their own, and so does what the PDF says

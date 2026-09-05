@@ -194,8 +194,26 @@ pub struct Notes {
     pub cross_reference_placement: Sourced<ReferencePlacement>,
 }
 
+/// The running head and the folio, one arrangement per side of the spread.
+///
+/// A book is read as spreads, and the two pages of a spread are not the same
+/// page: the outer edge of a left-hand page is its left, and of a right-hand
+/// page its right, which is why page numbers sit at the left of one and the
+/// right of the other. Six slots that applied to every page could not say
+/// that, so there are six per side. The built-in defaults give both sides the
+/// same arrangement, so a project that never touches these gets the page it
+/// always got.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Headers {
+    /// Left-hand (verso, even-numbered) pages.
+    pub left_page: HeadSide,
+    /// Right-hand (recto, odd-numbered) pages.
+    pub right_page: HeadSide,
+}
+
+/// The six slots of one side: three across the head, three across the foot.
+#[derive(Debug, Clone, PartialEq)]
+pub struct HeadSide {
     pub header_left: Sourced<HeadSlot>,
     pub header_center: Sourced<HeadSlot>,
     pub header_right: Sourced<HeadSlot>,
@@ -230,6 +248,18 @@ pub struct Output {
 /// One of the seven things a head or a footer can hold.
 fn slot(n: &Node) -> Result<Located<HeadSlot>, Diagnostic> {
     value::choice(n, HeadSlot::NAMES)
+}
+
+/// The six slots under one `[headers.<side>]` table.
+fn side(r: &mut Resolver<'_>, table: &str) -> HeadSide {
+    HeadSide {
+        header_left: r.value(&format!("{table}.header_left"), slot),
+        header_center: r.value(&format!("{table}.header_center"), slot),
+        header_right: r.value(&format!("{table}.header_right"), slot),
+        footer_left: r.value(&format!("{table}.footer_left"), slot),
+        footer_center: r.value(&format!("{table}.footer_center"), slot),
+        footer_right: r.value(&format!("{table}.footer_right"), slot),
+    }
 }
 
 fn caller_style(n: &Node) -> Result<Located<CallerStyle>, Diagnostic> {
@@ -411,7 +441,7 @@ fn report_unknown_keys(
 /// last release. It is still reported as an unknown key — because it is one,
 /// and because a setting silently ignored is a publication quietly losing a
 /// book — but the help says what actually happened.
-const REMOVED: [(&str, &str); 6] = [
+const REMOVED: [(&str, &str); 12] = [
     (
         "books.exclude",
         concat!(
@@ -424,31 +454,77 @@ const REMOVED: [(&str, &str); 6] = [
         "headers.enabled",
         concat!(
             "`headers.enabled` was removed: a head is now what its three slots ",
-            "hold, so an empty head is `headers.header_left`, `header_center` ",
-            "and `header_right` all set to \"empty\"",
+            "hold, so an empty head is `header_left`, `header_center` and ",
+            "`header_right` all set to \"empty\" under `[headers.left_page]` ",
+            "and `[headers.right_page]`",
         ),
     ),
     (
         "headers.show_book_name",
         concat!(
             "`headers.show_book_name` was removed: put \"book_name\" in whichever ",
-            "of `headers.header_left`, `header_center` or `header_right` it ",
-            "should occupy — which is the part the old setting could not say",
+            "of `header_left`, `header_center` or `header_right` it should ",
+            "occupy, under `[headers.left_page]` and `[headers.right_page]` — ",
+            "which is the part the old setting could not say",
         ),
     ),
     (
         "headers.show_reference_range",
         concat!(
             "`headers.show_reference_range` was removed: put \"reference_range\" ",
-            "in one of `headers.header_left`, `header_center` or `header_right`",
+            "in one of `header_left`, `header_center` or `header_right` under ",
+            "`[headers.left_page]` and `[headers.right_page]`",
         ),
     ),
     (
         "headers.show_page_number",
         concat!(
             "`headers.show_page_number` was removed: put \"page_number\" in one ",
-            "of the header or footer slots — `headers.footer_center` is where ",
-            "it used to be",
+            "of the header or footer slots — `footer_center` under ",
+            "`[headers.left_page]` and `[headers.right_page]` is where it used ",
+            "to be",
+        ),
+    ),
+    (
+        "headers.header_left",
+        concat!(
+            "`headers.header_left` now has one value per side of the spread: ",
+            "write it under `[headers.left_page]` and `[headers.right_page]`",
+        ),
+    ),
+    (
+        "headers.header_center",
+        concat!(
+            "`headers.header_center` now has one value per side of the spread: ",
+            "write it under `[headers.left_page]` and `[headers.right_page]`",
+        ),
+    ),
+    (
+        "headers.header_right",
+        concat!(
+            "`headers.header_right` now has one value per side of the spread: ",
+            "write it under `[headers.left_page]` and `[headers.right_page]`",
+        ),
+    ),
+    (
+        "headers.footer_left",
+        concat!(
+            "`headers.footer_left` now has one value per side of the spread: ",
+            "write it under `[headers.left_page]` and `[headers.right_page]`",
+        ),
+    ),
+    (
+        "headers.footer_center",
+        concat!(
+            "`headers.footer_center` now has one value per side of the spread: ",
+            "write it under `[headers.left_page]` and `[headers.right_page]`",
+        ),
+    ),
+    (
+        "headers.footer_right",
+        concat!(
+            "`headers.footer_right` now has one value per side of the spread: ",
+            "write it under `[headers.left_page]` and `[headers.right_page]`",
         ),
     ),
     (
@@ -538,12 +614,8 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             cross_reference_placement: r.value("notes.cross_reference_placement", placement),
         },
         headers: Headers {
-            header_left: r.value("headers.header_left", slot),
-            header_center: r.value("headers.header_center", slot),
-            header_right: r.value("headers.header_right", slot),
-            footer_left: r.value("headers.footer_left", slot),
-            footer_center: r.value("headers.footer_center", slot),
-            footer_right: r.value("headers.footer_right", slot),
+            left_page: side(r, "headers.left_page"),
+            right_page: side(r, "headers.right_page"),
         },
         assets: Assets {
             missing_figure: r.value("assets.missing_figure", missing_asset),

@@ -41,7 +41,12 @@ footnote_callers = "numbers"
 cross_reference_callers = "letters"
 restart_numbering = "per_chapter"
 
-[headers]
+[headers.left_page]
+header_left = "book_name"
+header_center = "empty"
+header_right = "reference_range"
+footer_center = "page_number"
+[headers.right_page]
 header_left = "book_name"
 header_center = "empty"
 header_right = "reference_range"

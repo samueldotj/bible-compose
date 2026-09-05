@@ -69,7 +69,14 @@ cross_reference_callers = \"none\"
 restart_numbering = \"per_book\"
 cross_reference_placement = \"inline\"
 
-[headers]
+[headers.left_page]
+header_left = \"alt_book_name\"
+header_center = \"empty\"
+header_right = \"empty\"
+footer_left = \"first_reference\"
+footer_center = \"empty\"
+footer_right = \"last_reference\"
+[headers.right_page]
 header_left = \"alt_book_name\"
 header_center = \"empty\"
 header_right = \"empty\"

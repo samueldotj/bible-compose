@@ -38,7 +38,12 @@ show_cross_references = false
 
 # The book, and the page number. No reference range: there are no verse numbers
 # on the page for it to point at.
-[headers]
+[headers.left_page]
+header_left = "book_name"
+header_center = "empty"
+header_right = "empty"
+footer_center = "page_number"
+[headers.right_page]
 header_left = "book_name"
 header_center = "empty"
 header_right = "empty"

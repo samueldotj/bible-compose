@@ -543,6 +543,8 @@
     flex-direction: column;
     align-items: stretch;
     gap: 0.5rem;
+    /* So the page below can size its type to the width it is given. */
+    container-type: inline-size;
   }
   .controls {
     margin: 0;
@@ -588,6 +590,16 @@
     font-size: 0.82rem;
     line-height: 1.45;
   }
+  /* On the Headers & Footers tab the page has the whole window's width, and
+     a page whose type stayed at form size while its measure grew to a metre
+     would be a strip of text, not a page. The type grows with the width —
+     everything inside the paper is sized in em for this reason — and stops
+     at a size where it is plainly still a page and not a poster. The
+     padding stays in rem: the dropdowns above and below line up with the
+     slots by sharing it. */
+  .example.stacked .paper {
+    font-size: clamp(0.82rem, 1.05cqi, 1.9rem);
+  }
 
   /* Three slots on one line: the outer two at the margins, the middle one
      between them. The same arrangement top and bottom, because a head and a
@@ -596,8 +608,8 @@
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: baseline;
-    min-block-size: 1.4rem;
-    font-size: 0.72rem;
+    min-block-size: 1.7em;
+    font-size: 0.88em;
     font-variant: small-caps;
     letter-spacing: 0.04em;
   }
@@ -608,11 +620,11 @@
     text-align: end;
   }
   .head {
-    padding-block-end: 0.3rem;
+    padding-block-end: 0.37em;
     border-block-end: 1px solid color-mix(in oklab, currentColor 18%, transparent);
   }
   .foot {
-    padding-block-start: 0.4rem;
+    padding-block-start: 0.49em;
   }
   /* Kept in the layout when empty, so filling a slot does not shift the page
      under the pointer that filled it. */
@@ -641,19 +653,19 @@
 
   .body {
     flex: 1;
-    padding-block-start: 0.6rem;
+    padding-block-start: 0.73em;
   }
   h3 {
-    margin: 0.7rem 0 0.1rem;
-    font-size: 0.82rem;
+    margin: 0.85em 0 0.12em;
+    font-size: 1em;
     font-weight: 700;
   }
   h3:first-child {
     margin-block-start: 0;
   }
   .parallels {
-    margin: 0 0 0.25rem;
-    font-size: 0.72rem;
+    margin: 0 0 0.3em;
+    font-size: 0.88em;
     font-style: italic;
     opacity: 0.7;
   }
@@ -667,21 +679,21 @@
     text-align: start;
   }
   .front {
-    margin-block-end: 0.6rem;
+    margin-block-end: 0.73em;
   }
   .outline {
     list-style: none;
-    margin: 0.15rem 0 0;
+    margin: 0.18em 0 0;
     padding: 0;
-    font-size: 0.78rem;
+    font-size: 0.95em;
   }
   .outline li {
     display: flex;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: 0.6em;
   }
   .outline li.deep {
-    padding-inline-start: 1rem;
+    padding-inline-start: 1.22em;
   }
   .outline .ref {
     opacity: 0.65;
@@ -694,30 +706,30 @@
   }
   .chapter {
     float: inline-start;
-    margin-inline-end: 0.3rem;
-    font-size: 2.1rem;
+    margin-inline-end: 0.37em;
+    font-size: 2.56em;
     font-weight: 700;
     line-height: 0.9;
   }
   .verse {
-    margin-inline-end: 0.15rem;
-    font-size: 0.62rem;
+    margin-inline-end: 0.18em;
+    font-size: 0.76em;
     font-weight: 700;
     vertical-align: super;
   }
   sup.note,
   sup.ref {
-    font-size: 0.62rem;
+    font-size: 0.76em;
   }
   sup.ref {
     font-style: italic;
   }
 
   .apparatus {
-    margin-block-start: 0.7rem;
-    padding-block-start: 0.4rem;
+    margin-block-start: 0.85em;
+    padding-block-start: 0.49em;
     border-block-start: 1px solid color-mix(in oklab, currentColor 25%, transparent);
-    font-size: 0.68rem;
+    font-size: 0.83em;
     line-height: 1.35;
   }
   .apparatus p {
@@ -788,7 +800,7 @@
   }
   .opening.own-line .chapter {
     float: none;
-    margin-inline-end: 0.15rem;
+    margin-inline-end: 0.18em;
   }
   .initial {
     float: left;

@@ -37,8 +37,7 @@ export const GROUPS: readonly Group[] = [
       "typography.hyphenation",
     ],
   },
-  // What a figure with no file does to the build. Content rather than
-  // metadata: it is about what is on the page.
+  // What a figure with no file does to the build.
   { id: "figures", title: "Figures", keys: ["assets.missing_figure"] },
   // What the PDF says about itself, and what it is called. None of it
   // changes a page, which is why it has a tab of its own rather than a
@@ -215,13 +214,7 @@ export const TABS: readonly Tab[] = [
   { id: "template", title: "Template", settingGroups: [], template: true },
   // Claims the strays now that the Project tab is gone. Exactly one tab does,
   // so a key added to the schema is visible somewhere rather than nowhere.
-  {
-    id: "contents",
-    title: "Contents",
-    settingGroups: ["figures"],
-    example: "contents",
-    orphans: true,
-  },
+  { id: "contents", title: "Contents", settingGroups: [], example: "contents", orphans: true },
   {
     id: "headers",
     title: "Headers & Footers",
@@ -230,6 +223,7 @@ export const TABS: readonly Tab[] = [
   },
   { id: "page", title: "Page", settingGroups: [], diagram: true },
   { id: "styles", title: "Styles", settingGroups: ["typography"], styles: true },
+  { id: "figures", title: "Figures", settingGroups: ["figures"] },
   // Last, because it is the one decision that changes nothing on a page.
   { id: "metadata", title: "PDF metadata", settingGroups: ["metadata"] },
 ];

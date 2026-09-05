@@ -87,6 +87,17 @@
                     onchange={(e) =>
                       commit(style.selector, property, e.currentTarget.checked ? "true" : "false")}
                   />
+                {:else if property.kind === "choice"}
+                  <select
+                    {id}
+                    value={p?.value ?? property.choices?.[0]?.value ?? ""}
+                    disabled={!session.editable}
+                    onchange={(e) => commit(style.selector, property, e.currentTarget.value)}
+                  >
+                    {#each property.choices ?? [] as choice (choice.value)}
+                      <option value={choice.value}>{choice.label}</option>
+                    {/each}
+                  </select>
                 {:else if property.kind === "align"}
                   <select
                     {id}

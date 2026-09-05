@@ -15,12 +15,21 @@
  * by hand and the cascade will honour it.
  */
 
-export type PropertyKind = "length" | "integer" | "boolean" | "align" | "font" | "color";
+export type PropertyKind =
+  | "length"
+  | "integer"
+  | "boolean"
+  | "align"
+  | "font"
+  | "color"
+  | "choice";
 
 export interface PropertyRow {
   readonly name: string;
   readonly label: string;
   readonly kind: PropertyKind;
+  /** For a `choice`: the spellings the file takes, and what to call each. */
+  readonly choices?: readonly { readonly value: string; readonly label: string }[];
 }
 
 export interface StyleRow {
@@ -46,6 +55,27 @@ const INDENT: PropertyRow = { name: "indent", label: "Indent", kind: "length" };
 const RAISE: PropertyRow = { name: "raise", label: "Raise", kind: "length" };
 const ALIGN: PropertyRow = { name: "align", label: "Alignment", kind: "align" };
 const COLOR: PropertyRow = { name: "color", label: "Colour", kind: "color" };
+
+// The chapter number's own decisions. Where it sits, whether it takes a line
+// or drops into the text, whether a chapter opens a column or a page.
+const BORDER: PropertyRow = { name: "border", label: "Border", kind: "boolean" };
+const BORDER_WIDTH: PropertyRow = { name: "border_width", label: "Border thickness", kind: "length" };
+const OWN_LINE: PropertyRow = { name: "own_line", label: "On its own line", kind: "boolean" };
+const GAP_BEFORE: PropertyRow = { name: "gap_before", label: "Gap before", kind: "length" };
+const GAP_AFTER: PropertyRow = { name: "gap_after", label: "Gap after", kind: "length" };
+const DROP_CAP: PropertyRow = { name: "drop_cap", label: "As a drop cap", kind: "boolean" };
+const NEW_COLUMN: PropertyRow = { name: "new_column", label: "Starts a new column", kind: "boolean" };
+const NEW_PAGE: PropertyRow = {
+  name: "new_page",
+  label: "Starts a new page",
+  kind: "choice",
+  choices: [
+    { value: "continue", label: "No — continue" },
+    { value: "next", label: "Next page" },
+    { value: "left", label: "Left page" },
+    { value: "right", label: "Right page" },
+  ],
+};
 
 // Alignment was missing here while the schema, the cascade and the class all
 // supported it, so a centred section heading — one of the most ordinary
@@ -77,6 +107,14 @@ export const ALL_PROPERTIES: readonly PropertyRow[] = [
   RAISE,
   ALIGN,
   COLOR,
+  BORDER,
+  BORDER_WIDTH,
+  OWN_LINE,
+  GAP_BEFORE,
+  GAP_AFTER,
+  DROP_CAP,
+  NEW_COLUMN,
+  NEW_PAGE,
 ];
 
 export const STYLE_GROUPS: readonly StyleGroup[] = [
@@ -116,7 +154,28 @@ export const STYLE_GROUPS: readonly StyleGroup[] = [
     id: "numbers",
     title: "Chapter and verse",
     rows: [
-      { selector: "chapter", label: "Chapter number", properties: [FACE, SIZE, WEIGHT, ITALIC, COLOR] },
+      {
+        selector: "chapter",
+        label: "Chapter number",
+        properties: [
+          FACE,
+          SIZE,
+          WEIGHT,
+          ITALIC,
+          COLOR,
+          ALIGN,
+          OWN_LINE,
+          ABOVE,
+          BELOW,
+          GAP_BEFORE,
+          GAP_AFTER,
+          BORDER,
+          BORDER_WIDTH,
+          DROP_CAP,
+          NEW_COLUMN,
+          NEW_PAGE,
+        ],
+      },
       { selector: "verse", label: "Verse number", properties: [SIZE, WEIGHT, RAISE, COLOR] },
     ],
   },

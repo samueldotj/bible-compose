@@ -78,7 +78,15 @@ fn every_property() -> String {
      indent = \"7.5pt\"\n\
      raise = \"1.5pt\"\n\
      align = \"center\"\n\
-     color = \"#c81414\"\n"
+     color = \"#c81414\"\n\
+     border = true\n\
+     border_width = \"0.75pt\"\n\
+     own_line = true\n\
+     gap_before = \"2pt\"\n\
+     gap_after = \"6pt\"\n\
+     drop_cap = false\n\
+     new_column = false\n\
+     new_page = \"next\"\n"
         .to_owned()
 }
 

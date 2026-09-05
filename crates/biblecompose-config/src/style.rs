@@ -55,6 +55,37 @@ impl Align {
     }
 }
 
+/// Where a chapter begins on the page, when it does not simply continue.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NewPage {
+    /// Where the text happens to be.
+    Continue,
+    /// The next page, whichever side it is.
+    Next,
+    /// A left-hand page, leaving a blank if the next one is a right.
+    Left,
+    /// A right-hand page, likewise.
+    Right,
+}
+
+impl NewPage {
+    pub const NAMES: [(&'static str, NewPage); 4] = [
+        ("continue", NewPage::Continue),
+        ("next", NewPage::Next),
+        ("left", NewPage::Left),
+        ("right", NewPage::Right),
+    ];
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            NewPage::Continue => "continue",
+            NewPage::Next => "next",
+            NewPage::Left => "left",
+            NewPage::Right => "right",
+        }
+    }
+}
+
 /// Every property a style may set.
 ///
 /// One flat set rather than per-selector shapes. A `space_above` on a
@@ -86,6 +117,26 @@ pub struct Style {
     /// Ink. A red-letter edition is the reason this exists — `\wj` has always
     /// parsed and always rendered in black, which is a Bible nobody asked for.
     pub color: Option<Color>,
+
+    // The chapter number's own decisions. On any other selector the class
+    // ignores them, which is the bargain the comment above strikes.
+    /// A rule around the element.
+    pub border: Option<bool>,
+    /// How thick that rule is.
+    pub border_width: Option<Length>,
+    /// The element takes a line of its own, with `space_above` and
+    /// `space_below` around it and `align` deciding where on the line.
+    pub own_line: Option<bool>,
+    /// Horizontal space before the element, when it sits in the text.
+    pub gap_before: Option<Length>,
+    /// And after it.
+    pub gap_after: Option<Length>,
+    /// The element is dropped into the lines that follow, as an initial is.
+    pub drop_cap: Option<bool>,
+    /// The element begins a new column — a new page, in one column.
+    pub new_column: Option<bool>,
+    /// The element begins a new page, and which side.
+    pub new_page: Option<NewPage>,
 }
 
 impl Style {
@@ -112,6 +163,14 @@ impl Style {
             raise: other.raise.or(self.raise),
             align: other.align.or(self.align),
             color: other.color.or(self.color),
+            border: other.border.or(self.border),
+            border_width: other.border_width.or(self.border_width),
+            own_line: other.own_line.or(self.own_line),
+            gap_before: other.gap_before.or(self.gap_before),
+            gap_after: other.gap_after.or(self.gap_after),
+            drop_cap: other.drop_cap.or(self.drop_cap),
+            new_column: other.new_column.or(self.new_column),
+            new_page: other.new_page.or(self.new_page),
         }
     }
 }
@@ -124,7 +183,7 @@ pub const INHERITS: &str = "inherits";
 ///
 /// Used to read a style and to detect a misspelled property, so the two
 /// cannot disagree about what is legal.
-pub const PROPERTIES: [&str; 11] = [
+pub const PROPERTIES: [&str; 19] = [
     "font_family",
     "font_size",
     "weight",
@@ -136,6 +195,14 @@ pub const PROPERTIES: [&str; 11] = [
     "raise",
     "align",
     "color",
+    "border",
+    "border_width",
+    "own_line",
+    "gap_before",
+    "gap_after",
+    "drop_cap",
+    "new_column",
+    "new_page",
 ];
 
 /// One selector's entry in a sheet: what it says, what it inherits from, and
@@ -362,6 +429,38 @@ fn read_into(
     });
     read("color", &mut |n| {
         style.color = Some(value::color(n)?.value);
+        Ok(())
+    });
+    read("border", &mut |n| {
+        style.border = Some(n.boolean()?.value);
+        Ok(())
+    });
+    read("border_width", &mut |n| {
+        style.border_width = Some(value::length_or_zero(n)?.value);
+        Ok(())
+    });
+    read("own_line", &mut |n| {
+        style.own_line = Some(n.boolean()?.value);
+        Ok(())
+    });
+    read("gap_before", &mut |n| {
+        style.gap_before = Some(value::length_or_zero(n)?.value);
+        Ok(())
+    });
+    read("gap_after", &mut |n| {
+        style.gap_after = Some(value::length_or_zero(n)?.value);
+        Ok(())
+    });
+    read("drop_cap", &mut |n| {
+        style.drop_cap = Some(n.boolean()?.value);
+        Ok(())
+    });
+    read("new_column", &mut |n| {
+        style.new_column = Some(n.boolean()?.value);
+        Ok(())
+    });
+    read("new_page", &mut |n| {
+        style.new_page = Some(value::choice(n, &NewPage::NAMES)?.value);
         Ok(())
     });
 

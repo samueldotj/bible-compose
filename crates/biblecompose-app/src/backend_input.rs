@@ -260,6 +260,14 @@ fn properties_of(
     put("raise", s.raise.map(|l| l.to_sile()));
     put("align", s.align.map(|a| a.as_str().to_owned()));
     put("color", s.color.map(|c| c.to_string()));
+    put("border", s.border.map(flag));
+    put("border_width", s.border_width.map(|l| l.to_sile()));
+    put("own_line", s.own_line.map(flag));
+    put("gap_before", s.gap_before.map(|l| l.to_sile()));
+    put("gap_after", s.gap_after.map(|l| l.to_sile()));
+    put("drop_cap", s.drop_cap.map(flag));
+    put("new_column", s.new_column.map(flag));
+    put("new_page", s.new_page.map(|p| p.as_str().to_owned()));
 
     debug_assert!(
         out.len() <= PROPERTIES.len(),

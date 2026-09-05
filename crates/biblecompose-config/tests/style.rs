@@ -248,8 +248,11 @@ fn every_property_the_schema_lists_can_actually_be_set() {
         .iter()
         .map(|p| match *p {
             "weight" => "weight = 700\n".to_owned(),
-            "italic" | "smallcaps" => format!("{p} = true\n"),
+            "italic" | "smallcaps" | "border" | "own_line" | "drop_cap" | "new_column" => {
+                format!("{p} = true\n")
+            }
             "align" => "align = \"end\"\n".to_owned(),
+            "new_page" => "new_page = \"right\"\n".to_owned(),
             "color" => "color = \"#c81414\"\n".to_owned(),
             "font_family" => "font_family = \"Some Serif\"\n".to_owned(),
             _ => format!("{p} = \"3pt\"\n"),
@@ -263,6 +266,12 @@ fn every_property_the_schema_lists_can_actually_be_set() {
     assert!(!chapter.is_empty());
     assert_eq!(chapter.align, Some(Align::End));
     assert_eq!(chapter.italic, Some(true));
+    assert_eq!(
+        chapter.new_page,
+        Some(biblecompose_config::style::NewPage::Right)
+    );
+    assert_eq!(chapter.border, Some(true));
+    assert_eq!(chapter.gap_after.map(|l| l.points()), Some(3.0));
     assert_eq!(chapter.font_family.as_deref(), Some("Some Serif"));
     assert_eq!(
         chapter.color.map(|c| c.to_string()).as_deref(),

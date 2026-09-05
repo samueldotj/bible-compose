@@ -11,6 +11,11 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   a syllable three lines tall. With drop caps on, the chapter number takes a
   line of its own and the first verse goes unnumbered — and "Hide first
   verse number" is set with it, and held while drop caps are on.
+* **The chapter number has its own page decisions.** Under Styles → Chapter
+  and verse: alignment, a line of its own with space above and below, gaps
+  before and after, a border of a chosen thickness, setting as a drop cap,
+  and whether each chapter opens a new column or a new page — the next one,
+  or a left- or right-hand one.
 * **Every build is a full, fresh build.** The Draft and Clean boxes beside
   Generate PDF are gone, with the draft mark, the `-draft.pdf` file and the
   build cache that let an unchanged project skip the typesetter. The CLI's

@@ -492,7 +492,7 @@ local slot_content, set_line, restart_notes, carry_reference
 -- `scratch` and the two anchor helpers, for the same reason: the chapter
 -- and verse commands name a place in Scripture, and both are registered
 -- above the state they read it from.
-local scratch, anchor, destination, o_anchors
+local scratch, anchor, destination, o_anchors, open_page
 
 function class:endPage ()
    local o = self._bcopts
@@ -548,6 +548,33 @@ function class:registerCommands ()
    end)
 
    self:registerCommand("bc:chapter", function (options, content)
+      -- Where the chapter begins, for every chapter but a book's first: the
+      -- book's own opening decides that one (see `book`). A page wins over a
+      -- column, since a new page is a new column too.
+      -- Through `scratch` and not `style`: this closure is written before
+      -- `style` is declared, and would read a nil global.
+      local s0 = scratch()
+      local cs = (s0.styles or {}).chapter or {}
+      s0.chapters_in_book = (s0.chapters_in_book or 0) + 1
+      if s0.chapters_in_book > 1 then
+         local where = cs.new_page or "continue"
+         if where ~= "continue" then
+            open_page(where)
+         elseif SU.boolean(cs.new_column, false) then
+            SILE.typesetter:leaveHmode()
+            -- A forced break moves to the next frame, which in two columns
+            -- is the next column. Not `\eject`: it is built on `reak`,
+            -- and `reak` here is USFM's ``, a blank line. In one column
+            -- there is no next frame, and only a `supereject` reaches the
+            -- next page.
+            SILE.call("vfill")
+            if tonumber(self._bcopts.columns) == 1 then
+               SILE.call("penalty", { penalty = -20000 })
+            else
+               SILE.call("penalty", { penalty = -10000 })
+            end
+         end
+      end
       SILE.call("save-chapter-number", options, flat(content))
       -- Outside the `chapternumbers` guard below, and that is the point:
       -- SCR-001 says hiding a number does not remove its anchor, and an
@@ -998,6 +1025,84 @@ local function alignment (s)
       return ALIGNMENT.start
    end
    return nil
+end
+
+--- Begin a page: the next one, or one on the side asked for, with a blank
+-- page (no head, no folio) in between when the side needs it. `twoside`'s
+-- `open-spread` does the measuring — it cannot know which page comes next
+-- without ejecting and looking.
+function open_page (where)
+   SILE.typesetter:leaveHmode()
+   if where == "left" then
+      SILE.call("open-spread", { double = false, odd = false, blank = true })
+   elseif where == "right" then
+      SILE.call("open-spread", { double = false, odd = true, blank = true })
+   else
+      SILE.call("supereject")
+   end
+end
+
+--- Set `body` as the first thing in its paragraph, though it is not.
+--
+-- The chapter's anchor — and, for an initial, the verse's — comes before it:
+-- a PDF destination and the running head's note of where the verse is. Those
+-- open the paragraph: SILE's `newPar` runs on the first node, pushes the
+-- paragraph indent, and copies `current.hangIndent` into what the
+-- line-breaker reads. By the time `\dropcap` sets it, nobody copies it
+-- again, and the result is the dropped thing hanging in the margin with the
+-- text at the margin beside it. Upstream never sees this because nothing
+-- precedes `\dropcap` there.
+--
+-- So the paragraph is put back to unopened: its nodes are taken off, `body`
+-- opens it — the package sets the hang and no indent — and the anchors go
+-- back in after, a few points to the right of where they were. The first two
+-- nodes are `newPar`'s own, the zero box and the indent glue, and are not
+-- kept.
+local function dropped (body)
+   local nodes = SILE.typesetter.state.nodes
+   local anchors = {}
+   for i = #nodes, 3, -1 do
+      anchors[#anchors + 1] = table.remove(nodes, i)
+   end
+   for i = #nodes, 1, -1 do
+      nodes[i] = nil
+   end
+   body()
+   for i = #anchors, 1, -1 do
+      SILE.typesetter:pushHorizontal(anchors[i])
+   end
+end
+
+--- Set `body` inside a rule of the given thickness, a little padding between.
+--
+-- Drawn the way the `rules` package draws a rule — four of them, on the box's
+-- own `outputYourself` — because the framebox package is not in this
+-- runtime and a rule is all a border is.
+local function bordered (thickness, body)
+   local hbox = SILE.typesetter:makeHbox(body)
+   local bw = SILE.types.measurement(thickness):tonumber()
+   local pad = bw + 1.5
+   local width = hbox.width:tonumber() + 2 * pad
+   local height = hbox.height:tonumber() + pad
+   local depth = hbox.depth:tonumber() + pad
+   SILE.typesetter:pushHbox({
+      width = SILE.types.length(width),
+      height = SILE.types.length(height),
+      depth = SILE.types.length(depth),
+      value = hbox,
+      outputYourself = function (node, typesetter, line)
+         local x = typesetter.frame.state.cursorX
+         local y = typesetter.frame.state.cursorY
+         local top = y - height
+         SILE.outputter:drawRule(x, top, width, bw)
+         SILE.outputter:drawRule(x, y + depth - bw, width, bw)
+         SILE.outputter:drawRule(x, top, bw, height + depth)
+         SILE.outputter:drawRule(x + width - bw, top, bw, height + depth)
+         typesetter.frame:advanceWritingDirection(pad)
+         node.value:outputYourself(typesetter, line)
+         typesetter.frame:advanceWritingDirection(pad)
+      end,
+   })
 end
 
 --- Process only element children, discarding whitespace laid out for humans.
@@ -1479,10 +1584,18 @@ function class:registerXmlCommands ()
       -- reaches `newPage`.
       local s = scratch()
       if s.books > 0 then
-         SILE.typesetter:leaveHmode()
-         SILE.call("supereject")
+         -- A book opens where its chapters open, when they ask for a side;
+         -- otherwise on the next page.
+         local where = style("chapter").new_page or "continue"
+         if where == "left" or where == "right" then
+            open_page(where)
+         else
+            SILE.typesetter:leaveHmode()
+            SILE.call("supereject")
+         end
       end
       s.books = s.books + 1
+      s.chapters_in_book = 0
       restart_notes("per_book")
       -- Nothing is carried across a book. A title page holding no verse should
       -- not be headed with the last verse of the book before it.
@@ -1692,20 +1805,77 @@ function class:registerXmlCommands ()
       SILE.call("bc:chapter", { n = tostring(options.n or "") }, { tostring(options.n or "") })
    end)
 
+   -- The chapter number, four ways: in the text with the first line running
+   -- into it (the default), on a line of its own, dropped into the lines
+   -- that follow, or any of those inside a rule. The `chapter` style
+   -- decides; see `docs/GUIDE.md` for what each key does.
    self:registerCommand("bc:chapter-number", function (_, content)
-      SILE.call("noindent")
-      styled("chapter", function ()
-         SILE.process(content)
-      end)
-      if self._bcopts.dropcaps then
-         -- On a line of its own. The number used to be the large thing at the
-         -- chapter's corner, with the text running into it; when the initial
-         -- takes that role, two large things at one corner would fight, so
-         -- the number becomes a line above and the initial opens the text.
-         SILE.call("par")
-      else
-         SILE.call("kern", { width = "4pt" })
+      local s = style("chapter")
+      local boxed = SU.boolean(s.border, false)
+      local function number ()
+         if boxed then
+            bordered(s.border_width or "0.5pt", function ()
+               styled("chapter", function ()
+                  SILE.process(content)
+               end)
+            end)
+         else
+            styled("chapter", function ()
+               SILE.process(content)
+            end)
+         end
       end
+
+      if SU.boolean(s.own_line, false) or self._bcopts.dropcaps then
+         -- On a line of its own, with the style's space around it and its
+         -- alignment along it. Also when the initial drops: the number used
+         -- to be the large thing at the chapter's corner, and two large
+         -- things at one corner would fight. Through `dropped`, because the
+         -- chapter's anchor has already opened the paragraph — with the
+         -- paragraph indent — and the number's line must not carry that.
+         dropped(function ()
+            skip(s.space_above)
+            SILE.call("noindent")
+            SILE.call(alignment(s) or ALIGNMENT.start, {}, function ()
+               number()
+               SILE.call("par")
+            end)
+            skip(s.space_below)
+            -- The text that follows opens a chapter, not a paragraph in the
+            -- middle of one: flush, as the first paragraph under a heading.
+            SILE.call("noindent")
+         end)
+         return
+      end
+
+      if SU.boolean(s.drop_cap, false) then
+         -- Dropped into the text as an initial is, and for the same reason
+         -- reopening the paragraph. The style's face goes to the package as
+         -- font options and its size does not: the package sets the size
+         -- that spans the lines, and a `\font` inside with the style's own
+         -- size would undo that.
+         dropped(function ()
+            local opts = { lines = tonumber(self._bcopts.dropcaplines) or 3, join = false }
+            for key, value in pairs(face(s) or {}) do
+               if key ~= "size" then
+                  opts[key] = value
+               end
+            end
+            if s.color then
+               opts.color = s.color
+            end
+            SILE.call("dropcap", opts, content)
+         end)
+         return
+      end
+
+      SILE.call("noindent")
+
+      if s.gap_before then
+         SILE.call("kern", { width = s.gap_before })
+      end
+      number()
+      SILE.call("kern", { width = s.gap_after or "4pt" })
    end)
 
    -- The chapter's opening initial: its first syllable, marked by the
@@ -1713,7 +1883,10 @@ function class:registerXmlCommands ()
    -- both cases followed by the rest of the word with nothing between, since
    -- the document put nothing between.
    self:registerCommand("initial", function (_, content)
-      if not self._bcopts.dropcaps then
+      -- Not when the chapter number is the dropped thing: two initials at
+      -- one corner would be the fight the number moved off the line to
+      -- avoid.
+      if not self._bcopts.dropcaps or SU.boolean(style("chapter").drop_cap, false) then
          SILE.process(content)
          return
       end
@@ -1732,24 +1905,15 @@ function class:registerXmlCommands ()
       -- anchors go back in after the initial, a few points to the right of
       -- where they were. The first two nodes are `newPar`'s own, the zero
       -- box and the indent glue, and are not kept.
-      local nodes = SILE.typesetter.state.nodes
-      local anchors = {}
-      for i = #nodes, 3, -1 do
-         anchors[#anchors + 1] = table.remove(nodes, i)
-      end
-      for i = #nodes, 1, -1 do
-         nodes[i] = nil
-      end
       -- `join` sets the first line hard against the initial, which is right
       -- for a letter that is the start of its word; the standoff applies to
       -- the lines below it.
       local lines = tonumber(self._bcopts.dropcaplines) or 3
-      SILE.call("dropcap", { lines = lines, join = true }, content)
+      dropped(function ()
+         SILE.call("dropcap", { lines = lines, join = true }, content)
+      end)
       -- For the padding above: this paragraph has to run to that many lines.
       scratch().initial_lines = lines
-      for i = #anchors, 1, -1 do
-         SILE.typesetter:pushHorizontal(anchors[i])
-      end
    end)
 
    self:registerCommand("verse", function (options, _)

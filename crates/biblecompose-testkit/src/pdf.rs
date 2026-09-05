@@ -522,6 +522,73 @@ impl Pdf {
         out
     }
 
+    /// Every rule drawn on a page — a border, a footnote separator, an
+    /// underline — in page order.
+    ///
+    /// SILE's PDF writer draws a rule as a stroked line: `w` for its
+    /// thickness, `m` and `l` for its ends, `S` to stroke it. The ends are in
+    /// the same frame as the marks — the page's own transform puts the origin
+    /// at the top, so `y` runs downward and negative — which is what lets a
+    /// test compare a rule with the text beside it directly.
+    pub fn rules(raw: &[u8]) -> Vec<Rule> {
+        let objects = objects(raw);
+        let mut out = Vec::new();
+        for (index, page) in page_order(&objects).into_iter().enumerate() {
+            let Some(body) = objects.get(&page) else {
+                continue;
+            };
+            let Some(content) = reference(body, b"/Contents").and_then(|n| stream(&objects, n))
+            else {
+                continue;
+            };
+            let text = String::from_utf8_lossy(&content);
+            let mut stack: Vec<&str> = Vec::new();
+            let mut thickness = 1.0f64;
+            let mut from: Option<(f64, f64)> = None;
+            let mut to: Option<(f64, f64)> = None;
+            for token in (Tokens { rest: &text }) {
+                match token {
+                    "w" => {
+                        if let [width] = tail(&stack, 1) {
+                            thickness = width.parse().unwrap_or(thickness);
+                        }
+                    }
+                    "m" | "l" => {
+                        if let [x, y] = tail(&stack, 2) {
+                            if let (Ok(x), Ok(y)) = (x.parse(), y.parse()) {
+                                if token == "m" {
+                                    from = Some((x, y));
+                                } else {
+                                    to = Some((x, y));
+                                }
+                            }
+                        }
+                    }
+                    "S" => {
+                        if let (Some((x1, y1)), Some((x2, y2))) = (from, to) {
+                            out.push(Rule {
+                                page: index + 1,
+                                x1,
+                                y1,
+                                x2,
+                                y2,
+                                thickness,
+                            });
+                        }
+                        from = None;
+                        to = None;
+                    }
+                    _ => {}
+                }
+                stack.push(token);
+                if stack.len() > 8 {
+                    stack.remove(0);
+                }
+            }
+        }
+        out
+    }
+
     /// The same, gathered into baselines.
     ///
     /// Two marks are on the same line when they share a `y` exactly, which is
@@ -550,6 +617,32 @@ impl Pdf {
                 .then(b.y.partial_cmp(&a.y).unwrap_or(std::cmp::Ordering::Equal))
         });
         out
+    }
+}
+
+/// One drawn rule: a stroked line from one end to the other, in the marks'
+/// frame.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Rule {
+    pub page: usize,
+    pub x1: f64,
+    pub y1: f64,
+    pub x2: f64,
+    pub y2: f64,
+    pub thickness: f64,
+}
+
+impl Rule {
+    pub fn is_horizontal(&self) -> bool {
+        (self.y1 - self.y2).abs() < 0.01
+    }
+
+    pub fn is_vertical(&self) -> bool {
+        (self.x1 - self.x2).abs() < 0.01
+    }
+
+    pub fn length(&self) -> f64 {
+        ((self.x2 - self.x1).powi(2) + (self.y2 - self.y1).powi(2)).sqrt()
     }
 }
 

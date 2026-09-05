@@ -255,6 +255,14 @@ fn take(into: &mut ResolvedStyle, from: &Style, origin: impl Fn(&'static str) ->
         raise = "raise",
         align = "align",
         color = "color",
+        border = "border",
+        border_width = "border_width",
+        own_line = "own_line",
+        gap_before = "gap_before",
+        gap_after = "gap_after",
+        drop_cap = "drop_cap",
+        new_column = "new_column",
+        new_page = "new_page",
     }
 }
 

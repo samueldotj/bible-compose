@@ -30,6 +30,8 @@
  */
 
 /** Words that belong to no settings key: the chrome of the window itself. */
+import { EN_HELP } from "./help";
+
 export interface Chrome {
   readonly appName: string;
 
@@ -92,6 +94,8 @@ export interface Chrome {
   readonly nothingMatches: string;
   /** A control for a setting this build of the backend does not have. */
   readonly notInThisBuild: string;
+  /** The status bar with nothing under the pointer. */
+  readonly statusIdle: string;
   /** The search box at the end of the tab strip. */
   readonly searchHint: string;
   /** The theme and zoom controls beside it. */
@@ -166,6 +170,8 @@ export interface Phrases {
   /** A head or foot slot's accessible name: which side, which line, which slot. */
   readonly headerSlot: (side: string, slot: string) => string;
   readonly startFromTemplate: (title: string) => string;
+  /** The status bar over a style's row. */
+  readonly styleRow: (name: string) => string;
   readonly searchHits: (count: number) => string;
   readonly footerSlot: (side: string, slot: string) => string;
   readonly colourSwatch: (property: string) => string;
@@ -196,6 +202,8 @@ export interface Catalogue {
   readonly placeholders: Readonly<Record<string, string>>;
   /** The spellings a `choice` setting takes, as words. */
   readonly choices: Readonly<Record<string, string>>;
+  /** What each control does, by its search key, for the status bar. */
+  readonly help: Readonly<Record<string, string>>;
   /**
    * Everything else a person reads, by a stable id.
    *
@@ -383,6 +391,7 @@ export const EN: Catalogue = {
     noElementSelected: "No element selected.",
     nothingMatches: "Nothing matches.",
     notInThisBuild: "not in this build",
+    statusIdle: "Point at a control to see what it does.",
     searchHint: "Search tabs and settings…",
     theme: "Theme",
     themeSystem: "System",
@@ -448,6 +457,7 @@ export const EN: Catalogue = {
     forgetProject: (name) => `Forget ${name}`,
     headerSlot: (side, slot) => `${side} page, header ${slot}`,
     startFromTemplate: (title) => `Start from “${title}”?`,
+    styleRow: (name) => `${name}: how it is set — the properties below.`,
     searchHits: (count) => (count === 1 ? "1 match" : `${count} matches`),
     footerSlot: (side, slot) => `${side} page, footer ${slot}`,
     colourSwatch: (property) => `${property} swatch`,
@@ -468,6 +478,7 @@ export const EN: Catalogue = {
   labels: EN_LABELS,
   placeholders: EN_PLACEHOLDERS,
   choices: EN_CHOICES,
+  help: EN_HELP,
   words: {},
 };
 

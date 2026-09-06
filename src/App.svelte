@@ -8,6 +8,7 @@
   import PageDiagram from "./components/PageDiagram.svelte";
   import PresetPicker from "./components/PresetPicker.svelte";
   import SearchBox from "./components/SearchBox.svelte";
+  import StatusBar from "./components/StatusBar.svelte";
   import ViewControls from "./components/ViewControls.svelte";
   import SettingsForm from "./components/SettingsForm.svelte";
   import StartScreen from "./components/StartScreen.svelte";
@@ -16,6 +17,7 @@
   import { STYLE_TABS, TABS } from "./lib/labels";
   import { session } from "./lib/session.svelte";
   import { applyPreferences, installViewShortcuts } from "./lib/preferences.svelte";
+  import { installHoverHelp } from "./lib/hover.svelte";
   import { t } from "./lib/i18n";
 
   // The theme and zoom this person keeps, and the keys that change them.
@@ -23,6 +25,8 @@
     applyPreferences();
     return installViewShortcuts();
   });
+  // What the pointer is on, for the status bar.
+  $effect(() => installHoverHelp());
 
   $effect(() => {
     void session.start();
@@ -118,6 +122,7 @@
           <button
             type="button"
             class:active={session.pane === t.id}
+            data-search-key={`tab:${t.id}`}
             aria-current={session.pane === t.id ? "true" : undefined}
             onclick={() => (session.pane = t.id)}
           >
@@ -155,6 +160,7 @@
               <button
                 type="button"
                 class:active={session.stylePane === s.id}
+                data-search-key={`subtab:${s.id}`}
                 aria-current={session.stylePane === s.id ? "true" : undefined}
                 onclick={() => (session.stylePane = s.id)}
               >
@@ -210,6 +216,7 @@
   {/if}
 
   {#if session.project}
+    <StatusBar />
     <BuildBar />
   {/if}
 

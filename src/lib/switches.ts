@@ -177,11 +177,6 @@ export const SWITCH_GROUPS: readonly SwitchGroup[] = [
         },
       },
       {
-        key: "numbering.margin_gap",
-        label: "Gap to the margin numbers",
-        note: "between a number in the margin and the text",
-      },
-      {
         key: "numbering.hide_first_verse_number",
         label: "Hide first verse number",
         // Nothing to hide when no verse number is shown at all.

@@ -40,6 +40,9 @@ export const GROUPS: readonly Group[] = [
   },
   // What a figure with no file does to the build.
   { id: "figures", title: "Figures", keys: ["assets.missing_figure"] },
+  // A setting, but one about how the numbers *look*, so it sits with their
+  // styles rather than with the switches that say whether they show.
+  { id: "margin_numbers", title: "Numbers in the margin", keys: ["numbering.margin_gap"] },
   // What the PDF says about itself, and what it is called. None of it
   // changes a page, which is why it has a tab of its own rather than a
   // corner of Contents.
@@ -80,7 +83,6 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   "numbering.show_chapter_labels",
   "numbering.chapter_number_placement",
   "numbering.verse_number_placement",
-  "numbering.margin_gap",
   "quotes.start",
   "quotes.line_indent",
   "quotes.hang",
@@ -278,7 +280,9 @@ export const STYLE_TABS: readonly SubTab[] = [
   ...STYLE_GROUPS.map((g) => ({
     id: g.id,
     title: g.title,
-    settingGroups: [] as readonly string[],
+    // The chapter-and-verse section carries the one setting about how the
+    // numbers look; the others carry none.
+    settingGroups: (g.id === "numbers" ? ["margin_numbers"] : []) as readonly string[],
     styleGroups: [g.id],
   })),
   // Last, because it is where you go when the form above has not answered the

@@ -2,7 +2,9 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
-## Unreleased
+## 0.1.3
+
+Where things start, and how the window looks.
 
 * **Where things start.** A Start group on the Contents tab: a book on the
   run, the next column, the next page, a chosen side, or after a blank page;

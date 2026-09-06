@@ -76,7 +76,7 @@ window claims you are "in" large print.
 
 A search box at the end of the tab strip finds any tab, setting, style or
 template by name; choosing a match opens its tab and lights the control up.
-A status line above the build bar says what the control under the pointer
+A status line along the bottom of the window says what the control under the pointer
 does. Beside the search, a theme control chooses light, dark or the system's choice, and
 the window zooms with Ctrl and `+`, `−` or `0`, or Ctrl and the mouse wheel.
 Both are remembered on this machine.

@@ -216,8 +216,8 @@
   {/if}
 
   {#if session.project}
-    <StatusBar />
     <BuildBar />
+    <StatusBar />
   {/if}
 
   {#if session.showProblems}

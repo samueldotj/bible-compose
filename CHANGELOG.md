@@ -4,7 +4,7 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## Unreleased
 
-* **A status line** above the build bar says what the control under the
+* **A status line** along the bottom of the window says what the control under the
   pointer does — every setting, tab, section, style property and template.
 * **Three tabs where Contents was.** Contents keeps the front matter and
   where things start; Paragraph has justification, poetry, quotations and

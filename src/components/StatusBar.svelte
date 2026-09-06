@@ -1,6 +1,7 @@
 <script lang="ts">
   /**
-   * One line above the build bar: what the control under the pointer does.
+   * One line along the bottom of the window, under the build bar: what the
+   * control under the pointer does.
    *
    * The words come from the help catalogue by the control's search key —
    * a setting, a tab, a section of Styles, a style property — with the

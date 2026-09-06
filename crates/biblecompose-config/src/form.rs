@@ -14,7 +14,8 @@ use crate::edit::SettingValue;
 use crate::provenance::Origin;
 use crate::settings::Settings;
 use crate::value::{
-    Anchors, CallerStyle, DropCap, MissingAsset, ReferencePlacement, RestartNumbering,
+    Anchors, BookStart, CallerStyle, ChapterStart, DropCap, MissingAsset, ReferencePlacement,
+    RestartNumbering, VerseStart,
 };
 
 /// What kind of control a key needs, and how its text is to be read back.
@@ -283,6 +284,21 @@ impl Settings {
             "contents.drop_cap_lines",
             Integer,
             self.contents.drop_cap_lines.to_string(),
+        );
+        push(
+            "contents.book_starts",
+            Choice(BookStart::SPELLINGS),
+            self.contents.book_starts.to_string(),
+        );
+        push(
+            "contents.chapter_starts",
+            Choice(ChapterStart::SPELLINGS),
+            self.contents.chapter_starts.to_string(),
+        );
+        push(
+            "contents.verse_starts",
+            Choice(VerseStart::SPELLINGS),
+            self.contents.verse_starts.to_string(),
         );
 
         push(

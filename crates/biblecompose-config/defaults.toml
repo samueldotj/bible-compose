@@ -84,6 +84,15 @@ drop_caps = false
 drop_cap_of = "first_letter"
 # Lines the drop cap spans. Two to six.
 drop_cap_lines = 3
+# Where each thing begins. A book on the next page, as bound books do; a
+# chapter and a verse on the run, as prose. A book may start on a chosen
+# side — "left_page", "right_page" — or after a blank page —
+# "blank_left_page", "blank_right_page", "blank_next_page"; or in the next
+# column, "next_column", or with no break at all, "continuous". A chapter
+# takes any of the first five; a verse is "continuous" or "next_line".
+book_starts = "next_page"
+chapter_starts = "continuous"
+verse_starts = "continuous"
 
 [numbering]
 show_chapter_numbers = true

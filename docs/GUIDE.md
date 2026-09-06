@@ -128,6 +128,17 @@ among fields with something is simply left out. In the file these are
 `header_center`, `header_right`, `footer_left`, `footer_center` and
 `footer_right`; an empty slot is `""`.
 
+### Where things start
+
+The **Start** group on the Contents tab decides where a book, a chapter and
+a verse begin. A book: on the run (`continuous`), the next column, the next
+page, a left- or right-hand page, or a blank page and then a left, right or
+next page — the blank carries no head and no folio. A chapter (every one but
+a book's first, whose place the book decides): on the run, the next column,
+the next page, or a chosen side. A verse: on the run, or on a line of its own.
+In the file these are `contents.book_starts`, `contents.chapter_starts` and
+`contents.verse_starts`; in one column, "next column" is the next page.
+
 ### The chapter number
 
 **Styles → Chapter and verse → Chapter number** decides more than a face and
@@ -141,8 +152,6 @@ style, in the file or on the tab:
 | `own_line` | The number takes a line of its own, with `space_above` and `space_below` around it |
 | `gap_before`, `gap_after` | Horizontal space either side of the number when it sits in the text (after: 4pt unless set) |
 | `border`, `border_width` | A rule around the number, and how thick |
-| `new_column` | Every chapter after a book's first begins a new column — a new page, in one column |
-| `new_page` | Every chapter after a book's first begins a new page: `continue`, `next`, `left` or `right`. A side that is not next leaves a blank page. A book opens on that side too |
 
 ### Styles
 

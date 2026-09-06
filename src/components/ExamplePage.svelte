@@ -77,6 +77,10 @@
       session.settings.find((s) => s.key === "contents.drop_cap_of")?.value === "chapter_number",
   );
   const initialDrops = $derived(dropcaps && !numberDrops);
+  /** Each verse on a line of its own, when the Start group says so. */
+  const verseLines = $derived(
+    session.settings.find((s) => s.key === "contents.verse_starts")?.value === "next_line",
+  );
 
   type Section = (typeof SAMPLE)[number]["sections"][number];
   type Verse = Section["verses"][number];
@@ -296,6 +300,22 @@
       ],
     },
     {
+      title: "Start",
+      switches: [
+        {
+          key: "contents.book_starts",
+          label: "Book",
+          note: "Where the next book begins. One book here, so nothing to show.",
+        },
+        {
+          key: "contents.chapter_starts",
+          label: "Chapter",
+          note: "Where every chapter but a book's first begins. Chapter 2 stays put here: the page is a page.",
+        },
+        { key: "contents.verse_starts", label: "Verse" },
+      ],
+    },
+    {
       title: "Numbering",
       switches: [
         { key: "numbering.show_chapter_numbers", label: "Chapter numbers" },
@@ -507,8 +527,8 @@
                 class="initial"
                 class:lit={shows("contents.drop_caps") || shows("contents.drop_cap_of")}
                 >{opening(section)}</span
-              >{/if}{#each versesFor(section, i) as verse (verse.number)}
-              {#if verses && !verse.opened}<span
+              >{/if}{#each versesFor(section, i) as verse, j (verse.number)}
+              {#if verseLines && j > 0}<br />{/if}{#if verses && !verse.opened}<span
                   class="verse"
                   class:lit={shows("numbering.show_verse_numbers")}
                   >{verse.number}</span

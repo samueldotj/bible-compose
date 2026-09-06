@@ -83,9 +83,7 @@ fn every_property() -> String {
      border_width = \"0.75pt\"\n\
      own_line = true\n\
      gap_before = \"2pt\"\n\
-     gap_after = \"6pt\"\n\
-     new_column = false\n\
-     new_page = \"next\"\n"
+     gap_after = \"6pt\"\n"
         .to_owned()
 }
 

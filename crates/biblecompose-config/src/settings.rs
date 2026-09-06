@@ -25,8 +25,8 @@ use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, Severity, SourceLo
 use crate::document::{ConfigDocument, Located, Node};
 use crate::provenance::{Provenance, Sourced};
 use crate::value::{
-    self, Anchors, CallerStyle, DropCap, HeadTemplate, Length, MissingAsset, PageSize,
-    ReferencePlacement, RestartNumbering,
+    self, Anchors, BookStart, CallerStyle, ChapterStart, DropCap, HeadTemplate, Length,
+    MissingAsset, PageSize, ReferencePlacement, RestartNumbering, VerseStart,
 };
 
 /// The settings vocabulary this release speaks.
@@ -174,6 +174,11 @@ pub struct Contents {
     /// How many lines the drop cap spans. Three is the convention; two is
     /// modest and five is a display face's job.
     pub drop_cap_lines: Sourced<u8>,
+    /// Where each book, chapter and verse begins: on the run, a column, a
+    /// page of a chosen side, a line of its own.
+    pub book_starts: Sourced<BookStart>,
+    pub chapter_starts: Sourced<ChapterStart>,
+    pub verse_starts: Sourced<VerseStart>,
 }
 
 /// Footnotes and cross-references: whether, how marked, and — for references —
@@ -610,6 +615,15 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             drop_cap_of: r.value("contents.drop_cap_of", |n| value::choice(n, DropCap::NAMES)),
             drop_cap_lines: r.value("contents.drop_cap_lines", |n| {
                 value::integer_in(n, 2, 6).map(|l| l.map(|v| v as u8))
+            }),
+            book_starts: r.value("contents.book_starts", |n| {
+                value::choice(n, BookStart::NAMES)
+            }),
+            chapter_starts: r.value("contents.chapter_starts", |n| {
+                value::choice(n, ChapterStart::NAMES)
+            }),
+            verse_starts: r.value("contents.verse_starts", |n| {
+                value::choice(n, VerseStart::NAMES)
             }),
         },
         notes: Notes {

@@ -105,6 +105,9 @@ pub fn class_options_with(
     put("dropcaps", flag(*s.contents.drop_caps));
     put("dropcapof", s.contents.drop_cap_of.to_string());
     put("dropcaplines", s.contents.drop_cap_lines.to_string());
+    put("bookstarts", s.contents.book_starts.to_string());
+    put("chapterstarts", s.contents.chapter_starts.to_string());
+    put("versestarts", s.contents.verse_starts.to_string());
     put("justify", flag(*s.typography.justify));
     put("poetryindent", flag(*s.typography.keep_poetry_indentation));
     put("footnotes", flag(*s.notes.show_footnotes));
@@ -266,8 +269,6 @@ fn properties_of(
     put("own_line", s.own_line.map(flag));
     put("gap_before", s.gap_before.map(|l| l.to_sile()));
     put("gap_after", s.gap_after.map(|l| l.to_sile()));
-    put("new_column", s.new_column.map(flag));
-    put("new_page", s.new_page.map(|p| p.as_str().to_owned()));
 
     debug_assert!(
         out.len() <= PROPERTIES.len(),

@@ -95,6 +95,11 @@ local OPTIONS = {
    { key = "dropcaps", kind = "boolean", default = false },
    -- What drops: "first_letter" or "chapter_number".
    { key = "dropcapof", kind = "string", default = "first_letter" },
+   -- Where a book, a chapter and a verse begin. The spellings are the
+   -- settings' own; `start_at` reads the first two.
+   { key = "bookstarts", kind = "string", default = "next_page" },
+   { key = "chapterstarts", kind = "string", default = "continuous" },
+   { key = "versestarts", kind = "string", default = "continuous" },
    { key = "dropcaplines", kind = "string", default = "3" },
    -- How a paragraph and a line of verse are set.
    { key = "justify", kind = "boolean", default = true },
@@ -494,19 +499,27 @@ local slot_content, set_line, restart_notes, carry_reference
 -- `scratch` and the two anchor helpers, for the same reason: the chapter
 -- and verse commands name a place in Scripture, and both are registered
 -- above the state they read it from.
-local scratch, anchor, destination, o_anchors, open_page
+local scratch, anchor, destination, o_anchors, start_at
 
 function class:endPage ()
    local o = self._bcopts
-   -- Which side of the spread this page is. `twoside` answers by the folio's
-   -- parity; page 1 is a recto, as in every bound book.
-   local side = (self.oddPage and self:oddPage()) and "recto" or "verso"
-   set_line(SILE.getFrame("runningHead"), {
-      o[side .. "headerleft"], o[side .. "headercenter"], o[side .. "headerright"],
-   })
-   set_line(SILE.getFrame("folio"), {
-      o[side .. "footerleft"], o[side .. "footercenter"], o[side .. "footerright"],
-   })
+   -- A page left blank to open the next on the right side carries neither
+   -- head nor folio: `open-spread` marks it, and the mark is for one page.
+   local headers = SILE.scratch.headers
+   local blank = headers and headers.skipthispage
+   if blank then
+      headers.skipthispage = false
+   else
+      -- Which side of the spread this page is. `twoside` answers by the
+      -- folio's parity; page 1 is a recto, as in every bound book.
+      local side = (self.oddPage and self:oddPage()) and "recto" or "verso"
+      set_line(SILE.getFrame("runningHead"), {
+         o[side .. "headerleft"], o[side .. "headercenter"], o[side .. "headerright"],
+      })
+      set_line(SILE.getFrame("folio"), {
+         o[side .. "footerleft"], o[side .. "footercenter"], o[side .. "footerright"],
+      })
+   end
    -- **After the head, not before.** The head for this page is built from the
    -- references collected on it; this records the last of them so that the
    -- *next* page knows which verse it opens in the middle of. Doing it first
@@ -537,6 +550,14 @@ function class:registerCommands ()
       -- the chapter is: the anchor is where the verse *is*, and that does not
       -- depend on whether a reader can see its number.
       local s = scratch()
+      -- A verse on a line of its own: the line before it is ended, ragged,
+      -- and the paragraph goes on — no paragraph space, no indent. Not
+      -- before a paragraph's first verse, which is at a line's start already.
+      if self._bcopts.versestarts == "next_line" and (s.verses_in_paragraph or 0) > 0 then
+         SILE.call("hfill")
+         SILE.call("penalty", { penalty = -10000 })
+      end
+      s.verses_in_paragraph = (s.verses_in_paragraph or 0) + 1
       destination(anchor(s.code, s.chapter, options.start or options.n), "verse")
       -- With a dropped initial the opening is already marked — a superscript
       -- "1" wedged between the chapter's own line and a three-line letter is
@@ -551,31 +572,11 @@ function class:registerCommands ()
 
    self:registerCommand("bc:chapter", function (options, content)
       -- Where the chapter begins, for every chapter but a book's first: the
-      -- book's own opening decides that one (see `book`). A page wins over a
-      -- column, since a new page is a new column too.
-      -- Through `scratch` and not `style`: this closure is written before
-      -- `style` is declared, and would read a nil global.
+      -- book's own opening decides that one (see `book`).
       local s0 = scratch()
-      local cs = (s0.styles or {}).chapter or {}
       s0.chapters_in_book = (s0.chapters_in_book or 0) + 1
       if s0.chapters_in_book > 1 then
-         local where = cs.new_page or "continue"
-         if where ~= "continue" then
-            open_page(where)
-         elseif SU.boolean(cs.new_column, false) then
-            SILE.typesetter:leaveHmode()
-            -- A forced break moves to the next frame, which in two columns
-            -- is the next column. Not `\eject`: it is built on `reak`,
-            -- and `reak` here is USFM's ``, a blank line. In one column
-            -- there is no next frame, and only a `supereject` reaches the
-            -- next page.
-            SILE.call("vfill")
-            if tonumber(self._bcopts.columns) == 1 then
-               SILE.call("penalty", { penalty = -20000 })
-            else
-               SILE.call("penalty", { penalty = -10000 })
-            end
-         end
+         start_at(self._bcopts.chapterstarts)
       end
       SILE.call("save-chapter-number", options, flat(content))
       -- Outside the `chapternumbers` guard below, and that is the point:
@@ -1029,16 +1030,47 @@ local function alignment (s)
    return nil
 end
 
---- Begin a page: the next one, or one on the side asked for, with a blank
--- page (no head, no folio) in between when the side needs it. `twoside`'s
--- `open-spread` does the measuring — it cannot know which page comes next
--- without ejecting and looking.
-function open_page (where)
+--- Begin where a `book_starts` or `chapter_starts` setting says.
+--
+-- A page of a side, with a blank page (no head, no folio) in between when
+-- the side needs it: `twoside`'s `open-spread` does the measuring, since it
+-- cannot know which page comes next without ejecting and looking; `double`
+-- asks it for at least one blank page. A column: a forced break, which in
+-- two columns moves to the next frame — not `\eject`, which is built on
+-- `\break`, and `\break` here is USFM's `\b`, a blank line — and in one
+-- column, where there is no next frame, a `supereject`. Nothing at all for
+-- "continuous".
+function start_at (where)
+   if where == nil or where == "continuous" then
+      return
+   end
    SILE.typesetter:leaveHmode()
-   if where == "left" then
+   if where == "next_column" then
+      SILE.call("vfill")
+      if tonumber(SILE.documentState.documentClass._bcopts.columns) == 1 then
+         SILE.call("penalty", { penalty = -20000 })
+      else
+         SILE.call("penalty", { penalty = -10000 })
+      end
+   elseif where == "left_page" then
       SILE.call("open-spread", { double = false, odd = false, blank = true })
-   elseif where == "right" then
+   elseif where == "right_page" then
       SILE.call("open-spread", { double = false, odd = true, blank = true })
+   elseif where == "blank_left_page" then
+      SILE.call("open-spread", { double = true, odd = false, blank = true })
+   elseif where == "blank_right_page" then
+      SILE.call("open-spread", { double = true, odd = true, blank = true })
+   elseif where == "blank_next_page" then
+      -- The next page, left blank, and the one after it. The page needs a
+      -- box on it to exist at all, which is what `open-spread` does too.
+      SILE.call("supereject")
+      SILE.typesetter:leaveHmode()
+      SILE.call("hbox")
+      SILE.typesetter:leaveHmode()
+      SILE.scratch.headers = SILE.scratch.headers or {}
+      SILE.scratch.headers.skipthispage = true
+      SILE.call("supereject")
+      SILE.typesetter:leaveHmode()
    else
       SILE.call("supereject")
    end
@@ -1577,7 +1609,7 @@ function class:registerXmlCommands ()
       -- `balanced-frames` was loaded, could never be balanced away; SILE spun
       -- rather than failing.
       --
-      -- **`\supereject` and not `\eject`.** `eject` is a `reak`, which the
+      -- **`\supereject` and not `\eject`.** `eject` is a `\break`, which the
       -- typesetter reads as "move on to the next frame" — and in two columns
       -- the next frame is the next *column*. A second book therefore began in
       -- column B of the page the first one ended on: measured on a two-book
@@ -1586,15 +1618,7 @@ function class:registerXmlCommands ()
       -- reaches `newPage`.
       local s = scratch()
       if s.books > 0 then
-         -- A book opens where its chapters open, when they ask for a side;
-         -- otherwise on the next page.
-         local where = style("chapter").new_page or "continue"
-         if where == "left" or where == "right" then
-            open_page(where)
-         else
-            SILE.typesetter:leaveHmode()
-            SILE.call("supereject")
-         end
+         start_at(self._bcopts.bookstarts)
       end
       s.books = s.books + 1
       s.chapters_in_book = 0
@@ -1669,6 +1693,7 @@ function class:registerXmlCommands ()
    self:registerCommand("para", function (options, content)
       local selector = "paragraph." .. (options.style or "p")
       local s = style(selector)
+      scratch().verses_in_paragraph = 0
       skip(s.space_above)
       SILE.settings:temporarily(function ()
          if s.indent then
@@ -1695,6 +1720,7 @@ function class:registerXmlCommands ()
    self:registerCommand("poetry", function (options, content)
       local selector = "poetry." .. (options.style or "q") .. (options.level or "1")
       local s = style(selector)
+      scratch().verses_in_paragraph = 0
       skip(s.space_above or "1pt")
       local align = alignment(s)
       -- An indent on a poetry line is a first-line indent of the whole line,

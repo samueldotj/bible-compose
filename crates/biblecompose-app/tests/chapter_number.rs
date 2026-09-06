@@ -413,8 +413,9 @@ fn the_number_can_drop_into_the_text() {
     }
 }
 
-/// **A chapter can open a new column.** In two columns that is the top of
-/// column B of the same page; in one column the next frame is the next page.
+/// **A chapter can open a new column** (`contents.chapter_starts`). In two
+/// columns that is the top of column B of the same page; in one column the
+/// next frame is the next page.
 #[test]
 fn a_chapter_can_open_a_new_column() {
     if !have_backend() {
@@ -422,7 +423,7 @@ fn a_chapter_can_open_a_new_column() {
     }
     for columns in COLUMNS {
         let plain = built(columns, "");
-        let b = built(columns, "[chapter]\nnew_column = true\n");
+        let b = built_with(columns, "", "chapter_starts = \"next_column\"");
         let one = b.number("1");
         let two = b.number("2");
         assert_eq!(one.page, 1);
@@ -480,8 +481,12 @@ fn a_chapter_can_open_a_new_page_on_a_side() {
         return;
     }
     for columns in COLUMNS {
-        for (where_, page, blank) in [("next", 2, None), ("left", 2, None), ("right", 3, Some(2))] {
-            let b = built(columns, &format!("[chapter]\nnew_page = \"{where_}\"\n"));
+        for (where_, page, blank) in [
+            ("next_page", 2, None),
+            ("left_page", 2, None),
+            ("right_page", 3, Some(2)),
+        ] {
+            let b = built_with(columns, "", &format!("chapter_starts = \"{where_}\""));
             let two = b.number("2");
             assert_eq!(
                 two.page, page,
@@ -501,5 +506,149 @@ fn a_chapter_can_open_a_new_page_on_a_side() {
                 );
             }
         }
+    }
+}
+
+/// Two books, each of one short chapter, for where a book begins.
+const TWO_BOOKS: &str = concat!(
+    "\\id GEN\n\\h Genesis\n\\c 1\n\\p\n",
+    "\\v 1 In the beginning God created the heavens and the earth.\n",
+    "\\v 2 Now the earth was formless and void.\n",
+);
+const SECOND_BOOK: &str = concat!(
+    "\\id EXO\n\\h Exodus\n\\c 1\n\\p\n",
+    "\\v 1 These are the names of the sons of Israel who went to Egypt.\n",
+    "\\v 2 Reuben, Simeon, Levi and Judah.\n",
+);
+
+/// Two books built with the `[contents]` line given, and the page each
+/// book's chapter 1 lands on, plus which pages carry any mark at all.
+fn two_books(columns: usize, contents: &str) -> (usize, usize, Vec<usize>) {
+    let guard = tempfile::tempdir().expect("temp dir");
+    let root = Utf8PathBuf::from_path_buf(guard.path().to_path_buf()).expect("UTF-8 temp path");
+    std::fs::write(root.join("GEN.usfm").as_std_path(), TWO_BOOKS).expect("Genesis");
+    std::fs::write(root.join("EXO.usfm").as_std_path(), SECOND_BOOK).expect("Exodus");
+    std::fs::write(
+        root.join("biblecompose.toml").as_std_path(),
+        format!("schema_version = 1\n[page]\ncolumns = {columns}\n[contents]\n{contents}\n"),
+    )
+    .expect("the settings");
+    let opened = project::open(&root);
+    let mut request = BuildRequest::new(root.clone(), root.join("out.pdf"));
+    request.sile_path = vec![biblecompose_testkit::repo_root().join("sile")];
+    request.settings = opened.settings.clone();
+    request.styles = opened.styles.clone();
+    let (mut reporter, _events) = BuildReporter::new();
+    let report = build(
+        &opened.document,
+        &request,
+        &CancelToken::new(),
+        &mut reporter,
+    );
+    assert_eq!(
+        report.state,
+        BuildState::Succeeded,
+        "{:?}",
+        report.diagnostics
+    );
+    let raw = std::fs::read(report.output.expect("a PDF").as_std_path()).expect("read");
+    let lines = Pdf::lines(&raw);
+    // The chapter figure of each book: the first 21pt "1" on the page order.
+    // In the order they were set — Genesis then Exodus — and not deduped,
+    // since "continuous" puts both on one page.
+    let figures: Vec<usize> = lines
+        .iter()
+        .flat_map(|l| &l.marks)
+        .filter(|m| m.text == "1" && (m.size - NUMBER).abs() < 0.01)
+        .map(|m| m.page)
+        .collect();
+    let mut inked: Vec<usize> = lines.iter().map(|l| l.page).collect();
+    inked.sort_unstable();
+    inked.dedup();
+    assert_eq!(figures.len(), 2, "two chapter figures: {figures:?}");
+    (figures[0], figures[1], inked)
+}
+
+/// **A book begins where `contents.book_starts` says**: on the run, the next
+/// page, a chosen side, or after a blank page — which carries no head and
+/// no folio, so it has no mark on it at all.
+#[test]
+fn a_book_begins_where_it_is_told() {
+    if !have_backend() {
+        return;
+    }
+    for columns in COLUMNS {
+        let cases: [(&str, usize, usize, &[usize]); 6] = [
+            ("continuous", 1, 1, &[]),
+            ("next_page", 1, 2, &[]),
+            ("left_page", 1, 2, &[]),
+            ("right_page", 1, 3, &[2]),
+            ("blank_right_page", 1, 3, &[2]),
+            ("blank_next_page", 1, 3, &[2]),
+        ];
+        for (where_, first, second, blank) in cases {
+            let (a, b, inked) = two_books(columns, &format!("book_starts = \"{where_}\""));
+            assert_eq!(a, first, "{columns} columns, {where_}: Genesis");
+            assert_eq!(
+                b, second,
+                "{columns} columns, {where_}: Exodus opens page {second}"
+            );
+            for page in blank {
+                assert!(
+                    !inked.contains(page),
+                    "{columns} columns, {where_}: page {page} is blank, with no head or folio: inked {inked:?}"
+                );
+            }
+        }
+        // A blank page and then a left page: Genesis on 1, blank 2, and 3 is
+        // a right, so 4.
+        let (_, b, inked) = two_books(columns, "book_starts = \"blank_left_page\"");
+        assert_eq!(
+            b, 4,
+            "{columns} columns, blank_left_page: Exodus opens page 4"
+        );
+        assert!(!inked.contains(&2) && !inked.contains(&3), "{inked:?}");
+    }
+}
+
+/// **A verse can begin on a line of its own** (`contents.verse_starts`):
+/// every verse number then sits at the column's left edge.
+#[test]
+fn a_verse_can_begin_on_its_own_line() {
+    if !have_backend() {
+        return;
+    }
+    for columns in COLUMNS {
+        let b = built_with(
+            columns,
+            "",
+            "verse_starts = \"next_line\"\n[numbering]\nhide_first_verse_number = false",
+        );
+        let (l, _) = b.column(0);
+        let numbers: Vec<&Mark> = b
+            .lines
+            .iter()
+            .flat_map(|m| &m.marks)
+            .filter(|m| (m.size - 6.4).abs() < 0.01)
+            .collect();
+        assert!(numbers.len() >= 6, "eight verse numbers: {}", numbers.len());
+        let at_margin = numbers.iter().filter(|m| (m.x - l).abs() < 1.0).count();
+        assert!(
+            at_margin >= numbers.len() - 2,
+            "{columns} columns: every verse but the two after a chapter figure begins a line: {at_margin} of {} at {l}",
+            numbers.len()
+        );
+        // Whereas on the run, most do not.
+        let plain = built_with(columns, "", "verse_starts = \"continuous\"");
+        let plain_at_margin = plain
+            .lines
+            .iter()
+            .flat_map(|m| &m.marks)
+            .filter(|m| (m.size - 6.4).abs() < 0.01 && (m.x - l).abs() < 1.0)
+            .count();
+        assert!(
+            plain_at_margin < at_margin,
+            "{columns} columns: {plain_at_margin} vs {at_margin}"
+        );
     }
 }

@@ -84,6 +84,9 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   "contents.drop_cap_of",
   // Beside the Drop caps switch, since it is meaningless without it.
   "contents.drop_cap_lines",
+  "contents.book_starts",
+  "contents.chapter_starts",
+  "contents.verse_starts",
   "typography.justify",
   "typography.keep_poetry_indentation",
   "notes.show_footnotes",

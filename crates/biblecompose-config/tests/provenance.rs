@@ -55,6 +55,9 @@ show_section_headings = false
 drop_caps = true
 drop_cap_of = \"chapter_number\"
 drop_cap_lines = 4
+book_starts = \"blank_right_page\"
+chapter_starts = \"next_column\"
+verse_starts = \"next_line\"
 
 [numbering]
 show_chapter_numbers = false

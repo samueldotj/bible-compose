@@ -56,25 +56,13 @@ const RAISE: PropertyRow = { name: "raise", label: "Raise", kind: "length" };
 const ALIGN: PropertyRow = { name: "align", label: "Alignment", kind: "align" };
 const COLOR: PropertyRow = { name: "color", label: "Colour", kind: "color" };
 
-// The chapter number's own decisions. Where it sits, whether it takes a line
-// or drops into the text, whether a chapter opens a column or a page.
+// The chapter number's own decisions: where it sits, whether it takes a
+// line, what surrounds it. Where a chapter *opens* is a Contents setting.
 const BORDER: PropertyRow = { name: "border", label: "Border", kind: "boolean" };
 const BORDER_WIDTH: PropertyRow = { name: "border_width", label: "Border thickness", kind: "length" };
 const OWN_LINE: PropertyRow = { name: "own_line", label: "On its own line", kind: "boolean" };
 const GAP_BEFORE: PropertyRow = { name: "gap_before", label: "Gap before", kind: "length" };
 const GAP_AFTER: PropertyRow = { name: "gap_after", label: "Gap after", kind: "length" };
-const NEW_COLUMN: PropertyRow = { name: "new_column", label: "Starts a new column", kind: "boolean" };
-const NEW_PAGE: PropertyRow = {
-  name: "new_page",
-  label: "Starts a new page",
-  kind: "choice",
-  choices: [
-    { value: "continue", label: "No — continue" },
-    { value: "next", label: "Next page" },
-    { value: "left", label: "Left page" },
-    { value: "right", label: "Right page" },
-  ],
-};
 
 // Alignment was missing here while the schema, the cascade and the class all
 // supported it, so a centred section heading — one of the most ordinary
@@ -111,8 +99,6 @@ export const ALL_PROPERTIES: readonly PropertyRow[] = [
   OWN_LINE,
   GAP_BEFORE,
   GAP_AFTER,
-  NEW_COLUMN,
-  NEW_PAGE,
 ];
 
 export const STYLE_GROUPS: readonly StyleGroup[] = [
@@ -169,8 +155,6 @@ export const STYLE_GROUPS: readonly StyleGroup[] = [
           GAP_AFTER,
           BORDER,
           BORDER_WIDTH,
-          NEW_COLUMN,
-          NEW_PAGE,
         ],
       },
       { selector: "verse", label: "Verse number", properties: [SIZE, WEIGHT, RAISE, COLOR] },

@@ -492,6 +492,50 @@ spelled! {
 }
 
 spelled! {
+    /// Where a book begins, relative to the one before it.
+    BookStart {
+        /// Where the previous book ended, with no break at all.
+        Continuous => "continuous",
+        /// The next column — the next page, in one column.
+        NextColumn => "next_column",
+        /// A left-hand page, with a blank page first if the next is a right.
+        LeftPage => "left_page",
+        /// A right-hand page, likewise.
+        RightPage => "right_page",
+        /// The next page, whichever side it is.
+        NextPage => "next_page",
+        /// A blank page, then a left-hand page.
+        BlankLeftPage => "blank_left_page",
+        /// A blank page, then a right-hand page.
+        BlankRightPage => "blank_right_page",
+        /// A blank page, then the page after it.
+        BlankNextPage => "blank_next_page",
+    }
+}
+
+spelled! {
+    /// Where a chapter begins — every chapter but a book's first, whose
+    /// place the book's own start decides.
+    ChapterStart {
+        Continuous => "continuous",
+        NextColumn => "next_column",
+        LeftPage => "left_page",
+        RightPage => "right_page",
+        NextPage => "next_page",
+    }
+}
+
+spelled! {
+    /// Where a verse begins.
+    VerseStart {
+        /// In the run of the paragraph, as prose.
+        Continuous => "continuous",
+        /// On a line of its own, the paragraph broken before it.
+        NextLine => "next_line",
+    }
+}
+
+spelled! {
     /// What drops into the text when a chapter opens with a drop cap.
     DropCap {
         /// The chapter's first letter — its first syllable, in a script

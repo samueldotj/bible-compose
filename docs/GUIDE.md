@@ -128,6 +128,17 @@ among fields with something is simply left out. In the file these are
 `header_center`, `header_right`, `footer_left`, `footer_center` and
 `footer_right`; an empty slot is `""`.
 
+### Quotations that wrap
+
+Under **Quotations** on the Contents tab, **Lines after a quotation begins**
+can line up with the opening quotation mark, or with the word after it, so a
+quotation that begins mid-line and runs on stands as a block in its
+paragraph; a quotation inside one stands further in, and the text returns
+to the margin when the quotation closes. **Extra indent per quotation** adds
+to that alignment once per level. Off unless asked for. In the file:
+`quotes.hang` (`off`, `at_quote`, `after_quote`) and `quotes.indent_gap`.
+Set in the PDF, not on the example page.
+
 ### Numbers in the margin
 
 Under **Numbering** on the Contents tab, **Chapter numbers go** and **Verse

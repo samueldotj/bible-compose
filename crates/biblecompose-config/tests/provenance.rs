@@ -69,6 +69,10 @@ chapter_number_placement = \"left_margin\"
 verse_number_placement = \"right_margin\"
 margin_gap = \"6pt\"
 
+[quotes]
+hang = \"at_quote\"
+indent_gap = \"3pt\"
+
 [notes]
 show_footnotes = false
 show_cross_references = false

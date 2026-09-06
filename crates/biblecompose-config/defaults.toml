@@ -121,6 +121,15 @@ verse_number_placement = "in_text"
 # Between a number in the margin and the column's edge.
 margin_gap = "4pt"
 
+# A quotation that begins mid-line and runs on: the lines after it can line
+# up with its opening mark ("at_quote") or with the letter after the mark
+# ("after_quote"), so the speech stands as a block; "off" runs them to the
+# margin as prose. A quotation inside one stands further in by `indent_gap`
+# per level. Set in the PDF, not on the example page.
+[quotes]
+hang = "off"
+indent_gap = "0pt"
+
 [notes]
 show_footnotes = true
 show_cross_references = true

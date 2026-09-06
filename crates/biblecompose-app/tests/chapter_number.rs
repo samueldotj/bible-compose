@@ -819,3 +819,160 @@ fn numbers_can_sit_in_the_margin() {
         }
     }
 }
+
+/// A long quotation beginning mid-line, with a quotation inside it.
+const QUOTED: &str = concat!(
+    "\\id GEN\n\\h Genesis\n\\c 1\n\\p\n",
+    "\\v 1 And God said, \u{201c}Let there be light in the expanse of the ",
+    "heavens to separate the day from the night, and let them serve as signs ",
+    "to mark the seasons and days and years, and let them be lights in the ",
+    "expanse of the heavens to shine upon the earth; and the servant answered, ",
+    "\u{2018}Lord, the seed you sowed in the field has grown, and the birds of ",
+    "the air have come to rest in its branches, and the whole field is green ",
+    "with it,\u{2019} and the master was glad.\u{201d} And there was light.\n",
+);
+
+/// The lines of page 1 that carry body text, top down, as (left edge, text).
+fn body_rows(b: &Built) -> Vec<(f64, String)> {
+    let mut rows: Vec<&Line> = b
+        .lines
+        .iter()
+        .filter(|l| l.page == 1 && l.sizes().iter().any(|s| (s - BODY).abs() < 0.01))
+        .collect();
+    rows.sort_by(|a, c| c.y.partial_cmp(&a.y).unwrap());
+    rows.iter()
+        .map(|l| {
+            let left = l
+                .marks
+                .iter()
+                .filter(|m| (m.size - BODY).abs() < 0.01)
+                .map(|m| m.x)
+                .fold(f64::INFINITY, f64::min);
+            (left, l.text())
+        })
+        .collect()
+}
+
+/// **The lines after a quotation begins line up with its mark**, a quotation
+/// inside it stands further in, and both go back where they were when the
+/// quotation closes. Measured against the mark's own position on the line
+/// it opens on, in one column and in two.
+#[test]
+fn a_quotation_that_wraps_hangs_from_its_mark() {
+    if !have_backend() {
+        return;
+    }
+    for columns in COLUMNS {
+        let plain = built_from(
+            QUOTED,
+            columns,
+            "",
+            "",
+            "drop_caps = false\n[quotes]\nhang = \"off\"",
+        );
+        let (l, _) = plain.column(0);
+        let rows = body_rows(&plain);
+        assert!(
+            rows.len() >= 5,
+            "{columns} columns: the quotation runs to several lines"
+        );
+        // Every line but the first, whose text follows the chapter figure.
+        assert!(
+            rows.iter().skip(1).all(|(left, _)| (left - l).abs() < 1.0),
+            "{columns} columns: off, every line starts at the margin: {rows:?}"
+        );
+
+        let hung = built_from(
+            QUOTED,
+            columns,
+            "",
+            "",
+            "drop_caps = false\n[quotes]\nhang = \"at_quote\"",
+        );
+        let rows = body_rows(&hung);
+        // The mark's own x, on the line it opens on.
+        let mark = |b: &Built, ch: char| -> (usize, f64) {
+            let mut sorted: Vec<&Line> = b
+                .lines
+                .iter()
+                .filter(|l| l.page == 1 && l.sizes().iter().any(|s| (s - BODY).abs() < 0.01))
+                .collect();
+            sorted.sort_by(|a, c| c.y.partial_cmp(&a.y).unwrap());
+            for (i, line) in sorted.iter().enumerate() {
+                if let Some(m) = line.marks.iter().find(|m| m.text.starts_with(ch)) {
+                    return (i, m.x);
+                }
+            }
+            panic!("{ch} opens on some line");
+        };
+        let (open_row, open_x) = mark(&hung, '\u{201c}');
+        let (inner_row, inner_x) = mark(&hung, '\u{2018}');
+        assert!(
+            open_x > l + 5.0,
+            "{columns} columns: the quotation opens mid-line: {open_x} vs {l}"
+        );
+        assert!(
+            inner_row > open_row,
+            "the inner quotation opens on a later line"
+        );
+        // Every line between the outer mark's and the inner mark's lines up
+        // with the outer mark.
+        for (i, (left, text)) in rows.iter().enumerate() {
+            if i > open_row && i <= inner_row {
+                assert!(
+                    (left - open_x).abs() < 0.6,
+                    "{columns} columns: line {i} ({text:?}) lines up with the mark at {open_x}: {left}"
+                );
+            }
+        }
+        // The lines after the inner mark stand at the inner mark.
+        let inner_lines: Vec<&(f64, String)> = rows
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| *i > inner_row)
+            .map(|(_, r)| r)
+            .collect();
+        assert!(!inner_lines.is_empty(), "the inner quotation runs on");
+        assert!(
+            (inner_lines[0].0 - inner_x).abs() < 0.6 && inner_x > open_x + 2.0,
+            "{columns} columns: the inner quotation stands further in, at its own mark {inner_x} (row {inner_row}, outer row {open_row} at {open_x}): {} — rows {rows:?}",
+            inner_lines[0].0
+        );
+        // And the last line, after both close, is back at the margin.
+        let last = rows.last().unwrap();
+        assert!(
+            (last.0 - l).abs() < 1.0,
+            "{columns} columns: after the quotation closes the text returns to the margin: {last:?}"
+        );
+
+        // After the mark: a little further in than the mark itself.
+        let after = built_from(
+            QUOTED,
+            columns,
+            "",
+            "",
+            "drop_caps = false\n[quotes]\nhang = \"after_quote\"",
+        );
+        let (row, x) = mark(&after, '\u{201c}');
+        let next = body_rows(&after)[row + 1].0;
+        assert!(
+            next > x + 1.0 && next < x + 9.0,
+            "{columns} columns: after the mark: {next} vs mark {x}"
+        );
+
+        // And a gap adds to the alignment, once per level.
+        let gapped = built_from(
+            QUOTED,
+            columns,
+            "",
+            "",
+            "drop_caps = false\n[quotes]\nhang = \"at_quote\"\nindent_gap = \"6pt\"",
+        );
+        let (row, x) = mark(&gapped, '\u{201c}');
+        let next = body_rows(&gapped)[row + 1].0;
+        assert!(
+            (next - (x + 6.0)).abs() < 0.6,
+            "{columns} columns: mark {x} plus 6pt: {next}"
+        );
+    }
+}

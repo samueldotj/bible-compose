@@ -284,6 +284,20 @@
       ],
     },
     {
+      title: "Quotations",
+      switches: [
+        {
+          key: "quotes.hang",
+          label: "Lines after a quotation begins",
+          note: "Set in the PDF, not on this page: the lines after a quotation mark line up with it, and a quotation inside one stands further in.",
+        },
+        {
+          key: "quotes.indent_gap",
+          label: "Extra indent per quotation",
+        },
+      ],
+    },
+    {
       title: "Drop caps",
       switches: [
         {

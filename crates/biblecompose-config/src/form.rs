@@ -15,7 +15,7 @@ use crate::provenance::Origin;
 use crate::settings::Settings;
 use crate::value::{
     Anchors, BookStart, CallerStyle, ChapterStart, DropCap, MissingAsset, NumberPlacement,
-    ReferencePlacement, RestartNumbering, VerseStart,
+    QuoteHang, ReferencePlacement, RestartNumbering, VerseStart,
 };
 
 /// What kind of control a key needs, and how its text is to be read back.
@@ -319,6 +319,17 @@ impl Settings {
             "contents.start_verses",
             Integer,
             self.contents.start_verses.to_string(),
+        );
+
+        push(
+            "quotes.hang",
+            Choice(QuoteHang::SPELLINGS),
+            self.quotes.hang.to_string(),
+        );
+        push(
+            "quotes.indent_gap",
+            Length,
+            self.quotes.indent_gap.to_string(),
         );
 
         push(

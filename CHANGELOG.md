@@ -4,6 +4,8 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## Unreleased
 
+* **Quotations that wrap** can hang from their opening mark, or from the
+  word after it, with a quotation inside one standing further in.
 * **Numbers in the margin.** Chapter and verse numbers can sit in the left
   or right margin of the column, level with their line, with the text
   running clear of them; several verses on one line share the margin in

@@ -26,7 +26,8 @@ use crate::document::{ConfigDocument, Located, Node};
 use crate::provenance::{Provenance, Sourced};
 use crate::value::{
     self, Anchors, BookStart, CallerStyle, ChapterStart, DropCap, HeadTemplate, Length,
-    MissingAsset, NumberPlacement, PageSize, ReferencePlacement, RestartNumbering, VerseStart,
+    MissingAsset, NumberPlacement, PageSize, QuoteHang, ReferencePlacement, RestartNumbering,
+    VerseStart,
 };
 
 /// The settings vocabulary this release speaks.
@@ -71,6 +72,7 @@ pub struct Settings {
     pub typography: Typography,
     pub numbering: Numbering,
     pub contents: Contents,
+    pub quotes: Quotes,
     pub notes: Notes,
     pub headers: Headers,
     pub assets: Assets,
@@ -244,6 +246,22 @@ pub struct HeadSide {
     pub footer_left: Sourced<HeadTemplate>,
     pub footer_center: Sourced<HeadTemplate>,
     pub footer_right: Sourced<HeadTemplate>,
+}
+
+/// How a quotation that wraps is set.
+///
+/// A quotation beginning mid-line and running on for lines can have those
+/// lines indented to its opening mark, so the speech stands as a block in
+/// the paragraph; a quotation inside it indents further. A convention some
+/// Bibles keep and most do not, so off unless asked for.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Quotes {
+    /// What the lines after the mark line up with: nothing, the mark, or
+    /// the letter after it.
+    pub hang: Sourced<QuoteHang>,
+    /// Added to that alignment, once per level of quotation, so a nested
+    /// quotation stands further in.
+    pub indent_gap: Sourced<Length>,
 }
 
 /// The files a project points at that are not Scripture (SCR-006).
@@ -648,6 +666,10 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             start_verses: r.value("contents.start_verses", |n| {
                 value::integer_in(n, 0, 30).map(|l| l.map(|v| v as u8))
             }),
+        },
+        quotes: Quotes {
+            hang: r.value("quotes.hang", |n| value::choice(n, QuoteHang::NAMES)),
+            indent_gap: r.value("quotes.indent_gap", value::length_or_zero),
         },
         notes: Notes {
             show_footnotes: r.value("notes.show_footnotes", |n| n.boolean()),

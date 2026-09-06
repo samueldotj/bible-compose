@@ -108,6 +108,8 @@ pub fn class_options_with(
         s.numbering.verse_number_placement.to_string(),
     );
     put("margingap", s.numbering.margin_gap.to_sile());
+    put("quotehang", s.quotes.hang.to_string());
+    put("quotegap", s.quotes.indent_gap.to_sile());
     // The initial itself is marked in the document (`<initial>`), since what
     // a chapter's first syllable *is* takes Unicode segmentation the class
     // has not got; whether it drops, and how far, is the class's to decide.

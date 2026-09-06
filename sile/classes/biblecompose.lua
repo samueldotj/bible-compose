@@ -93,6 +93,10 @@ local OPTIONS = {
    { key = "chapterplacement", kind = "string", default = "in_text" },
    { key = "verseplacement", kind = "string", default = "in_text" },
    { key = "margingap", kind = "string", default = "4pt" },
+   -- What the lines after a quotation begins line up with: "off",
+   -- "at_quote" or "after_quote", with `quotegap` more per level.
+   { key = "quotehang", kind = "string", default = "off" },
+   { key = "quotegap", kind = "string", default = "0pt" },
    -- Whether a chapter's opening initial drops into the text, and how far.
    -- Which run *is* the initial arrives in the document as `<initial>`: a
    -- syllable in an Indic script is several characters, and telling them
@@ -278,6 +282,11 @@ function class:_frameset (inner, outer)
    return frames
 end
 
+-- Declared before `_init`, whose post-init closure calls it; defined far
+-- below with the rest of the quotation hang. A Lua upvalue is bound where
+-- the closure is written, so a later `local` would leave that a nil global.
+local quote_hang_lines
+
 function class:_init (options)
    -- Parse options and install the frameset BEFORE plain._init, because that
    -- is what lays out page 1. Defining masters afterwards (as upstream does)
@@ -323,6 +332,17 @@ function class:_init (options)
    -- number is known. When the paragraph carrying the initial comes through
    -- short, the missing lines are added as glue behind it.
    self:registerPostinit(function (_)
+      -- Quotation hang: a paragraph is broken twice or more (see
+      -- `quote_hang_lines`), so the lines after a quotation begins can be
+      -- indented to its mark. Installed only when asked for, so a book set
+      -- as prose breaks its lines exactly once, as it always did.
+      if self._bcopts.quotehang ~= "off" then
+         local break_into_lines = SILE.typesetter.breakIntoLines
+         SILE.typesetter.breakIntoLines = function (typesetter, nodelist, breakWidth)
+            return quote_hang_lines(typesetter, nodelist, breakWidth, break_into_lines)
+         end
+      end
+
       local box_up = SILE.typesetter.boxUpNodes
       SILE.typesetter.boxUpNodes = function (typesetter)
          local vboxes = box_up(typesetter)
@@ -1207,6 +1227,233 @@ function margin_number (placement, selector, content)
          frame.state.cursorX = saved
       end,
    })
+end
+
+-- ---------------------------------------------------------------------------
+-- Quotation hang (`quotehang`, `quotegap`).
+--
+-- A quotation that begins mid-line and runs on can have the lines after it
+-- indented to its opening mark, so the speech stands as a block in the
+-- paragraph, and a quotation inside it indents further. Where the mark
+-- falls depends on how the line before was broken, and how a line is broken
+-- depends on its width — so the paragraph is broken once as prose to find
+-- the marks, the shape that puts is fed back through SILE's `parShape`, and
+-- it is broken again, until the shape stops changing (four passes at most;
+-- two is the rule).
+
+local function utf8_chars (text)
+   local out = {}
+   for ch in text:gmatch("[%z\1-\127\194-\244][\128-\191]*") do
+      out[#out + 1] = ch
+   end
+   return out
+end
+
+-- Each opener and the mark that closes it. Straight quotes close what
+-- they opened; an apostrophe inside a word is neither.
+local QUOTE_PAIRS = {
+   ["“"] = "”",
+   ["‘"] = "’",
+   ["«"] = "»",
+   ["‹"] = "›",
+   ["„"] = "“",
+   ['"'] = '"',
+   ["'"] = "'",
+}
+local QUOTE_CLOSERS = { ["”"] = true, ["’"] = true, ["»"] = true, ["›"] = true, ['"'] = true, ["'"] = true }
+
+local function wordish (ch)
+   return ch ~= nil and ch ~= "" and not ch:match("^[%s%p]$")
+end
+
+--- Whether `ch`, between `prev` and `nxt`, opens or closes a quotation,
+-- given the quotations open so far: "open", "close" or nil.
+local function quote_role (ch, prev, nxt, stack)
+   local inside_word = wordish(prev) and wordish(nxt)
+   if inside_word then
+      return nil
+   end
+   local top = stack[#stack]
+   if QUOTE_CLOSERS[ch] and top and top.closer == ch then
+      return "close"
+   end
+   if QUOTE_PAIRS[ch] and not wordish(prev) then
+      return "open"
+   end
+   return nil
+end
+
+--- A node's width on a line set at `ratio`.
+local function set_width (node, ratio)
+   if node.is_glue then
+      -- Worked out here rather than through `SU.rationWidth`, which adds
+      -- the stretch into the length it is handed — the glue's own — and
+      -- so would widen the space a little more each time it was measured.
+      local width = node.width
+      local set = width.length:tonumber()
+      if ratio and ratio > 0 then
+         set = set + width.stretch:tonumber() * ratio
+      elseif ratio and ratio < 0 then
+         set = set + width.shrink:tonumber() * ratio
+      end
+      return set
+   elseif node.is_discretionary or node.is_penalty then
+      -- A penalty's `width` is its penalty, not a width.
+      return 0
+   elseif node.width then
+      return SILE.types.length(node.width):tonumber()
+   end
+   return 0
+end
+
+--- The indent each line of a broken paragraph should carry, read off the
+-- lines as they are: `shape[n]` for line `n`, and `shape.tail` for any
+-- line after the last. `shape` is the shape the lines were broken with,
+-- which is where their own indents came from.
+local function quote_shape (lines, shape, mode, gap)
+   local out = {}
+   local stack = {}
+   local current = 0
+   for n, line in ipairs(lines) do
+      out[n] = current
+      local x = shape[n] or shape.tail or 0
+      local skipped_lskip = false
+      for _, node in ipairs(line.nodes or {}) do
+         local w = set_width(node, line.ratio)
+         if node.is_glue and not skipped_lskip then
+            -- The line's left skip — the first glue, after the paragraph's
+            -- own zero box — carries the indent already counted.
+            w = 0
+            skipped_lskip = true
+         end
+         if node.is_nnode and node.text then
+            local chars = utf8_chars(node.text)
+            local per = #chars > 0 and w / #chars or 0
+            for i, ch in ipairs(chars) do
+               local role = quote_role(ch, chars[i - 1], chars[i + 1], stack)
+               if role == "open" then
+                  local mark_x = x + per * (i - 1)
+                  local align = mode == "after_quote" and mark_x + per or mark_x
+                  stack[#stack + 1] = { closer = QUOTE_PAIRS[ch], indent = align + gap * (#stack + 1) }
+                  current = stack[#stack].indent
+               elseif role == "close" then
+                  stack[#stack] = nil
+                  current = stack[#stack] and stack[#stack].indent or 0
+               end
+            end
+         end
+         x = x + w
+      end
+   end
+   out.tail = current
+   return out
+end
+
+local function same_shape (a, b, count)
+   for n = 1, count do
+      if math.abs((a[n] or a.tail or 0) - (b[n] or b.tail or 0)) > 0.05 then
+         return false
+      end
+   end
+   return math.abs((a.tail or 0) - (b.tail or 0)) <= 0.05
+end
+
+--- Move a line to a new indent: its left skip is replaced — replaced, not
+-- widened, since a line with no hang shares one skip with every other —
+-- and the line is justified again to the same measure, so the change of
+-- indent comes out of the line's own glue.
+local function move_line (typesetter, line, breakWidth, delta)
+   for i, node in ipairs(line.nodes) do
+      if node.is_glue and node.value == "margin" then
+         local was = node.width
+         local glue = SILE.types.node.glue({
+            width = SILE.types.length(was.length:tonumber() + delta, was.stretch, was.shrink),
+         })
+         glue.value = "margin"
+         line.nodes[i] = glue
+         break
+      end
+   end
+   line.ratio = typesetter:computeLineRatio(breakWidth, line.nodes)
+end
+
+--- Break a paragraph with its quotations hung. Replaces the typesetter's
+-- `breakIntoLines` while `quotehang` is on.
+--
+-- Twice through the line-breaker, then settled by hand. The first break is
+-- as prose, to find where the marks fall; the second breaks to the shape
+-- that gives. But a line's own justification moves with what follows it —
+-- the breaker weighs the whole paragraph — so the marks move too, by a few
+-- points, and a third break would move them again. So the lines the second
+-- break made are kept, and each is moved to where its mark now is and
+-- justified again to the same measure: a change of a few points in the
+-- indent comes out of the line's glue, and the marks it moves settle in a
+-- few rounds.
+function quote_hang_lines (typesetter, nodelist, breakWidth, plain)
+   local o = SILE.documentState.documentClass._bcopts
+   local mode = o.quotehang
+   local gap = SILE.types.measurement(o.quotegap or "0pt"):tonumber()
+   typesetter:shapeAllNodes(nodelist)
+
+   local function unmark ()
+      -- A discretionary marked as a line's end on one break must not stay
+      -- marked on the next, where it may fall mid-line.
+      for _, node in ipairs(nodelist) do
+         if node.is_discretionary then
+            node.used = false
+         end
+      end
+   end
+
+   -- As prose, to find the marks.
+   unmark()
+   local lines = typesetter:breakpointsToLines(SILE.linebreak:doBreak(nodelist, breakWidth))
+   local shape = quote_shape(lines, { tail = 0 }, mode, gap)
+   local hangs = false
+   for n = 1, #lines do
+      if (shape[n] or 0) > 0.05 then
+         hangs = true
+      end
+   end
+   if not hangs then
+      return lines
+   end
+
+   -- To that shape.
+   unmark()
+   local breakpoints
+   SILE.settings:temporarily(function ()
+      SILE.settings:set("linebreak.parShape", true)
+      local saved = SILE.linebreak.parShape
+      SILE.linebreak.parShape = function (_, n)
+         return shape[n] or shape.tail or 0, nil, 0
+      end
+      breakpoints = SILE.linebreak:doBreak(nodelist, breakWidth)
+      SILE.linebreak.parShape = saved
+   end)
+   lines = typesetter:breakpointsToLines(breakpoints)
+   local indents = { tail = 0 }
+   for n = 1, #lines do
+      indents[n] = shape[n] or shape.tail or 0
+   end
+
+   -- Settled on the marks as they now fall.
+   for _ = 1, 8 do
+      local want = quote_shape(lines, indents, mode, gap)
+      local moved = false
+      for n, line in ipairs(lines) do
+         local delta = (want[n] or want.tail or 0) - indents[n]
+         if math.abs(delta) > 0.05 then
+            move_line(typesetter, line, breakWidth, delta)
+            indents[n] = indents[n] + delta
+            moved = true
+         end
+      end
+      if not moved then
+         break
+      end
+   end
+   return lines or plain(typesetter, nodelist, breakWidth)
 end
 
 --- Begin where a `book_starts` or `chapter_starts` setting says.

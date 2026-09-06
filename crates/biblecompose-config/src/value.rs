@@ -492,6 +492,18 @@ spelled! {
 }
 
 spelled! {
+    /// What the lines after a quotation begins mid-line line up with.
+    QuoteHang {
+        /// Nothing: they run to the margin, as prose does.
+        Off => "off",
+        /// The opening quotation mark, so the quotation stands as a block.
+        AtQuote => "at_quote",
+        /// The first letter after the mark, so the mark hangs outside it.
+        AfterQuote => "after_quote",
+    }
+}
+
+spelled! {
     /// Where a chapter or verse number is set: in the text, or in the margin
     /// beside the line it belongs to, clear of the text.
     NumberPlacement {

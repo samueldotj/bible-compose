@@ -205,13 +205,25 @@ export const SWITCH_GROUPS: readonly SwitchGroup[] = [
     title: "Notes",
     tab: "notes",
     switches: [
-      { key: "notes.show_footnotes", label: "Footnotes" },
-      { key: "notes.footnote_callers", label: "Footnote marks", under: "notes.show_footnotes" },
-      { key: "notes.show_cross_references", label: "Cross-references" },
       {
-        key: "notes.cross_reference_callers",
-        label: "Reference marks",
-        under: "notes.show_cross_references",
+        key: "notes.show_footnotes",
+        label: "Footnotes",
+        // Whether, and what their marks are, as one decision: "Don't show",
+        // or a sequence of marks. The spellings are the caller styles'.
+        combined: {
+          where: "notes.footnote_callers",
+          off: "Don't show",
+          labels: {},
+        },
+      },
+      {
+        key: "notes.show_cross_references",
+        label: "Cross-references",
+        combined: {
+          where: "notes.cross_reference_callers",
+          off: "Don't show",
+          labels: {},
+        },
       },
       {
         key: "notes.cross_reference_placement",

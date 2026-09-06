@@ -510,11 +510,6 @@ spelled! {
         BlankRightPage => "blank_right_page",
         /// A blank page, then the page after it.
         BlankNextPage => "blank_next_page",
-        /// The next column only when the opening verses would not fit in
-        /// what is left of this one (`contents.start_verses` says how many).
-        AutoNextColumn => "auto_next_column",
-        /// The next page, likewise.
-        AutoNextPage => "auto_next_page",
     }
 }
 
@@ -527,10 +522,6 @@ spelled! {
         LeftPage => "left_page",
         RightPage => "right_page",
         NextPage => "next_page",
-        /// The next column only when the opening verses would not fit.
-        AutoNextColumn => "auto_next_column",
-        /// The next page, likewise.
-        AutoNextPage => "auto_next_page",
     }
 }
 

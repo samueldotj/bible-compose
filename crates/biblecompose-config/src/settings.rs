@@ -179,8 +179,10 @@ pub struct Contents {
     pub book_starts: Sourced<BookStart>,
     pub chapter_starts: Sourced<ChapterStart>,
     pub verse_starts: Sourced<VerseStart>,
-    /// For the "auto" starts: how many of the opening verses must fit in
-    /// what is left of the column or page, or the start moves on.
+    /// A rule over every start: a book or chapter whose opening verses —
+    /// this many of them — would not fit in what is left of the column
+    /// moves to the next column (the next page, in one column), whatever
+    /// its start says. Zero turns the rule off.
     pub start_verses: Sourced<u8>,
 }
 
@@ -629,7 +631,7 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
                 value::choice(n, VerseStart::NAMES)
             }),
             start_verses: r.value("contents.start_verses", |n| {
-                value::integer_in(n, 1, 30).map(|l| l.map(|v| v as u8))
+                value::integer_in(n, 0, 30).map(|l| l.map(|v| v as u8))
             }),
         },
         notes: Notes {

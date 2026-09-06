@@ -579,20 +579,30 @@ function class:registerCommands ()
       -- book's own opening decides that one (see `book`).
       local s0 = scratch()
       s0.chapters_in_book = (s0.chapters_in_book or 0) + 1
-      -- A book's first chapter is where the book starts, so an "auto" book
-      -- start is judged here, where the verses it has to fit are known.
-      local rule = s0.chapters_in_book > 1 and self._bcopts.chapterstarts
-         or self._bcopts.bookstarts
-      if rule == "auto_next_column" or rule == "auto_next_page" then
-         local verses = tonumber(self._bcopts.startverses) or 3
+      if s0.chapters_in_book > 1 then
+         start_at(self._bcopts.chapterstarts)
+      end
+      -- Then, whatever the start said: the opening's verses have to fit in
+      -- what is left of the column, or the chapter moves to the next one.
+      -- A rule over every start, so a chapter set to continue never opens
+      -- at the foot of a column with nothing under it. A book's first
+      -- chapter is judged here too, where the verses it has to fit are
+      -- known; after a start that moved to a fresh column the room is the
+      -- whole column, and the rule finds nothing to do.
+      local verses = tonumber(self._bcopts.startverses) or 0
+      if verses > 0 then
          local chars = opening_text(s0.book_items or {}, s0.book_index or 1, options.n, verses)
          -- The verses' lines, and one more for the number's own line or
          -- the first line the number sits in.
-         if lines_left() < lines_needed(chars) + 1 then
-            start_at(rule == "auto_next_page" and "next_page" or "next_column")
+         local need = lines_needed(chars) + 1
+         -- Not when the opening would not fit a whole column either — a
+         -- verse that runs to a page by itself — since moving would gain
+         -- nothing and leave a column empty.
+         local whole = SILE.typesetter.frame:height():tonumber()
+            / SILE.settings:get("document.baselineskip").height:tonumber()
+         if need <= whole and lines_left() < need then
+            start_at("next_column")
          end
-      elseif s0.chapters_in_book > 1 then
-         start_at(rule)
       end
       SILE.call("save-chapter-number", options, flat(content))
       -- Outside the `chapternumbers` guard below, and that is the point:
@@ -1715,9 +1725,7 @@ function class:registerXmlCommands ()
       -- single running head. Only a penalty at or past `supereject_penalty`
       -- reaches `newPage`.
       local s = scratch()
-      -- An "auto" start waits for the book's first chapter, where the verses
-      -- it has to fit are known (see `bc:chapter`).
-      if s.books > 0 and not self._bcopts.bookstarts:match("^auto_") then
+      if s.books > 0 then
          start_at(self._bcopts.bookstarts)
       end
       s.books = s.books + 1

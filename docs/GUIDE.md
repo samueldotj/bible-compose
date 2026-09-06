@@ -136,12 +136,14 @@ page, a left- or right-hand page, or a blank page and then a left, right or
 next page — the blank carries no head and no folio. A chapter (every one but
 a book's first, whose place the book decides): on the run, the next column,
 the next page, or a chosen side. A verse: on the run, or on a line of its own.
-Both offer **Auto next column** and **Auto next page** as well: the book or
-chapter starts on the run unless fewer than "Verses that must fit" of its
-opening verses would fit in what is left of the column or page, in which case
-it moves on. That is an estimate from the verses' length at the body size,
-not a trial setting, so it errs by a line now and then. In the file these are
-`contents.book_starts`, `contents.chapter_starts`, `contents.verse_starts` and
+Over all of that stands **Verses that must fit**: a book or chapter with
+fewer than that many of its opening verses fitting in what is left of the
+column moves to the next column — the next page, in one column — whatever its
+start says, so a chapter never opens at the foot of a column with nothing
+under it. Three unless set; 0 turns it off. It is an estimate from the
+verses' length at the body size, not a trial setting, so it errs by a line
+now and then. In the file these are `contents.book_starts`,
+`contents.chapter_starts`, `contents.verse_starts` and
 `contents.start_verses`; in one column, "next column" is the next page.
 
 ### The chapter number

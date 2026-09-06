@@ -93,10 +93,10 @@ drop_cap_lines = 3
 book_starts = "next_page"
 chapter_starts = "continuous"
 verse_starts = "continuous"
-# For "auto_next_column" and "auto_next_page": a book or chapter starts on
-# the run unless fewer than this many of its opening verses would fit in
-# what is left of the column or page, in which case it moves on. One to
-# thirty. An estimate from the verses' length at the body size, not a
+# Over every start: a book or chapter opening with fewer than this many of
+# its verses fitting in what is left of the column moves to the next column
+# — the next page, in one column — whatever its start says. Zero turns the
+# rule off. An estimate from the verses' length at the body size, not a
 # trial setting.
 start_verses = 3
 

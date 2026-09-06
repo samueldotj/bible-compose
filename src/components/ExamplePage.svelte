@@ -318,10 +318,8 @@
         {
           key: "contents.start_verses",
           label: "Verses that must fit",
-          // Always live, so it can be set before or after choosing an Auto
-          // start; the note says which choices read it.
-          note: "Read by the Auto choices above: a book or chapter moves on when fewer than this of its verses would fit.",
-          range: [1, 30],
+          note: "Whatever the start above: a book or chapter with fewer than this of its verses fitting in the column moves to the next column. 0 turns it off.",
+          range: [0, 30],
         },
       ],
     },

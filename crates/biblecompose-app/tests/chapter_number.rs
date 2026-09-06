@@ -665,12 +665,13 @@ fn a_verse_can_begin_on_its_own_line() {
     }
 }
 
-/// **An "auto" start moves on only when the opening verses would not fit.**
-/// On a page short enough that chapter 1 leaves a line or two, chapter 2
-/// stays put on the run and moves to the next page under
-/// `auto_next_page` — and stays on page 1 when the page has room.
+/// **A chapter whose opening verses would not fit moves on, whatever its
+/// start says.** On a page short enough that chapter 1 leaves a line or
+/// two, chapter 2 — set to continue — stays put with the rule off and
+/// moves to the next page with three verses to fit; on a page with room it
+/// stays.
 #[test]
-fn an_auto_start_moves_on_only_when_the_verses_would_not_fit() {
+fn a_chapter_moves_on_when_its_verses_would_not_fit() {
     if !have_backend() {
         return;
     }
@@ -680,13 +681,18 @@ fn an_auto_start_moves_on_only_when_the_verses_would_not_fit() {
         1,
         SHORT,
         "",
-        "chapter_starts = \"auto_next_page\"\nstart_verses = 3",
+        "chapter_starts = \"continuous\"\nstart_verses = 3",
     );
-    let plain = built_on(1, SHORT, "", "chapter_starts = \"continuous\"");
+    let plain = built_on(
+        1,
+        SHORT,
+        "",
+        "chapter_starts = \"continuous\"\nstart_verses = 0",
+    );
     assert_eq!(
         plain.number("2").page,
         1,
-        "on the run, chapter 2 opens at the foot of page 1"
+        "with the rule off, chapter 2 opens at the foot of page 1"
     );
     assert_eq!(
         cramped.number("2").page,
@@ -695,11 +701,7 @@ fn an_auto_start_moves_on_only_when_the_verses_would_not_fit() {
     );
 
     // And on the usual page, where the room is there, it does not move.
-    let roomy = built_with(
-        1,
-        "",
-        "chapter_starts = \"auto_next_page\"\nstart_verses = 3",
-    );
+    let roomy = built_with(1, "", "chapter_starts = \"continuous\"\nstart_verses = 3");
     assert_eq!(roomy.number("2").page, 1);
 
     // The case that was reported: a heading after `\\c`, which carries the
@@ -707,19 +709,13 @@ fn an_auto_start_moves_on_only_when_the_verses_would_not_fit() {
     // has no verses after it, and a chapter opened at the foot of a page
     // with nothing under it. What follows is read across the book.
     let headed = TWO_CHAPTERS.replace("\\c 2\n\\p\n", "\\c 2\n\\s The Seventh Day\n\\p\n");
-    let plain = built_from(&headed, 1, SHORT, "", "chapter_starts = \"continuous\"");
+    let plain = built_from(&headed, 1, SHORT, "", "start_verses = 0");
     assert_eq!(
         plain.number("2").page,
         1,
         "the heading and its chapter fit at the foot of page 1"
     );
-    let cramped = built_from(
-        &headed,
-        1,
-        SHORT,
-        "",
-        "chapter_starts = \"auto_next_page\"\nstart_verses = 3",
-    );
+    let cramped = built_from(&headed, 1, SHORT, "", "start_verses = 3");
     assert_eq!(
         cramped.number("2").page,
         2,
@@ -727,13 +723,8 @@ fn an_auto_start_moves_on_only_when_the_verses_would_not_fit() {
     );
 
     // Two columns: the same, a column at a time.
-    let cramped = built_on(
-        2,
-        SHORT,
-        "",
-        "chapter_starts = \"auto_next_column\"\nstart_verses = 3",
-    );
-    let plain = built_on(2, SHORT, "", "chapter_starts = \"continuous\"");
+    let cramped = built_on(2, SHORT, "", "start_verses = 3");
+    let plain = built_on(2, SHORT, "", "start_verses = 0");
     let (bl, _) = cramped.column(1);
     assert!(
         cramped.number("2").x >= bl - 1.0 || cramped.number("2").page > plain.number("2").page,

@@ -9,7 +9,7 @@
  */
 
 /** Which example tabs there are, besides Headers & Footers. */
-export type ExampleTab = "contents" | "paragraph" | "numbering";
+export type ExampleTab = "contents" | "paragraph" | "numbering" | "notes";
 
 export interface SwitchRow {
   readonly key: string;
@@ -165,7 +165,7 @@ export const SWITCH_GROUPS: readonly SwitchGroup[] = [
   },
   {
     title: "Notes",
-    tab: "numbering",
+    tab: "notes",
     switches: [
       { key: "notes.show_footnotes", label: "Footnotes" },
       { key: "notes.footnote_callers", label: "Footnote marks", under: "notes.show_footnotes" },

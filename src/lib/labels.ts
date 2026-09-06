@@ -239,6 +239,7 @@ export const TABS: readonly Tab[] = [
   // all seven groups and was a column to scroll.
   { id: "paragraph", title: "Paragraph", settingGroups: [], example: "paragraph" },
   { id: "numbering", title: "Numbering", settingGroups: [], example: "numbering" },
+  { id: "notes", title: "Cross-references", settingGroups: [], example: "notes" },
   {
     id: "headers",
     title: "Headers & Footers",

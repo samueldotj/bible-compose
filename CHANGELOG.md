@@ -6,7 +6,8 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 * **Three tabs where Contents was.** Contents keeps the front matter and
   where things start; Paragraph has justification, poetry, quotations and
-  drop caps; Numbering has the numbers and the notes.
+  drop caps; Numbering has the numbers; Cross-references has the footnotes
+  and cross-references.
 * **Quotations** can begin on a line of their own, indented by a chosen
   gap (twice it for a quotation inside one), and the lines after a
   quotation begins can hang from its opening mark, or from the word after

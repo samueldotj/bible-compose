@@ -181,7 +181,7 @@
              at the top of it: its example is a page, and a page is the size of
              the room it is given. The other tabs are forms, which are as tall
              as their rows. -->
-        <div class="scroller" class:fill={tab.example === "headers"}>
+        <div class="scroller" class:fill={tab.example !== undefined}>
           {#if tab.styles}
             {#if styleTab.inspector}
               <StyleInspector />

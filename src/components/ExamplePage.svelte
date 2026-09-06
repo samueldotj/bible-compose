@@ -669,7 +669,22 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    container-type: inline-size;
+    /* All the height the tab hands down, and a size container, so the page
+       below can be sized to both dimensions and never asks for a scrollbar:
+       what does not fit is cut off at the paper's foot, this being an
+       example and not the book. */
+    flex: 1;
+    min-block-size: 0;
+    container-type: size;
+  }
+  .example .paper {
+    flex: 1;
+    min-block-size: 0;
+    overflow: hidden;
+  }
+  .example .paper .body {
+    min-block-size: 0;
+    overflow: hidden;
   }
   /* Head above, page between, foot below — the controls in the order the
      page reads.
@@ -809,7 +824,7 @@
      em for this reason. The padding stays in rem: the dropdowns above and
      below line up with the slots by sharing it. */
   .example .paper {
-    font-size: clamp(0.82rem, 1.05cqi, 1.9rem);
+    font-size: clamp(0.7rem, min(1.05cqi, 1.5cqb), 1.9rem);
   }
   .example.stacked .paper {
     font-size: clamp(0.82rem, min(1.05cqi, 1.6cqb), 1.9rem);

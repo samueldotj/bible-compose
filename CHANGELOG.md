@@ -4,6 +4,8 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## Unreleased
 
+- The Contents, Paragraph and Cross-references tabs no longer show a scrollbar: the example page takes the height the window leaves and is cut off at its foot rather than scrolled.
+
 * **A status line** along the bottom of the window says what the control under the
   pointer does — every setting, tab, section, style property and template.
 * **Three tabs where Contents was.** Contents keeps the front matter and

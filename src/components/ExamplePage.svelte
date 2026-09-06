@@ -249,6 +249,8 @@
       under?: string;
       /** Decided, and shown on, while this setting is on. */
       implied?: string;
+      /** Idle unless one of these settings holds a value that passes. */
+      unless?: { readonly keys: readonly string[]; readonly test: (value: string) => boolean };
       note?: string;
       /** For a number: the range the resolver accepts. */
       range?: readonly [number, number];
@@ -318,6 +320,11 @@
           label: "Verses that must fit",
           note: "For the Auto choices: fewer than this after a start, and it moves on.",
           range: [1, 30],
+          // Nothing to fit until a start is one of the Auto choices.
+          unless: {
+            keys: ["contents.book_starts", "contents.chapter_starts"],
+            test: (value) => value.startsWith("auto_"),
+          },
         },
       ],
     },
@@ -639,8 +646,13 @@
           <ul class="switches">
             {#each group.switches as s (s.key)}
               {@const implied = s.implied !== undefined && on(s.implied)}
-              {@const idle = (s.under !== undefined && !on(s.under)) || implied}
               {@const setting = session.settings.find((x) => x.key === s.key)}
+              {@const gated =
+                s.unless !== undefined &&
+                !s.unless.keys.some((k) =>
+                  s.unless!.test(session.settings.find((x) => x.key === k)?.value ?? ""),
+                )}
+              {@const idle = (s.under !== undefined && !on(s.under)) || implied || gated}
               <li class:nested={s.under !== undefined} class:idle data-search-key={s.key}>
                 <label
                   onpointerenter={() => (lit = s.key)}
@@ -653,7 +665,10 @@
                     field in the list above, so a setting that becomes a choice
                     gets a dropdown here without anyone remembering to say so.
                   -->
-                  {#if setting?.kind === "integer"}
+                  {#if setting === undefined}
+                    {s.label}
+                    <span class="note">{t("notInThisBuild")}</span>
+                  {:else if setting.kind === "integer"}
                     {s.label}
                     <input
                       type="number"
@@ -664,7 +679,7 @@
                       disabled={!session.editable || idle}
                       onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}
                     />
-                  {:else if setting?.kind === "choice"}
+                  {:else if setting.kind === "choice"}
                     {s.label}
                     <select
                       value={setting.value}

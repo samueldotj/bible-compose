@@ -90,6 +90,8 @@ export interface Chrome {
   readonly readingFonts: string;
   readonly noElementSelected: string;
   readonly nothingMatches: string;
+  /** A control for a setting this build of the backend does not have. */
+  readonly notInThisBuild: string;
   /** The search box at the end of the tab strip. */
   readonly searchHint: string;
   /** The theme and zoom controls beside it. */
@@ -366,6 +368,7 @@ export const EN: Catalogue = {
     readingFonts: "Reading the fonts on this machine…",
     noElementSelected: "No element selected.",
     nothingMatches: "Nothing matches.",
+    notInThisBuild: "not in this build",
     searchHint: "Search tabs and settings…",
     theme: "Theme",
     themeSystem: "System",

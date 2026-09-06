@@ -2,6 +2,13 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+* **Theme and zoom.** A control at the end of the tab strip chooses a light,
+  dark or system theme; Ctrl with `+`, `−`, `0` or the mouse wheel zooms the
+  window. Both are remembered on the machine. The tab strip has a colour of
+  its own, with the open tab joining the page.
+
 ## 0.1.2
 
 The page is more yours to arrange: what a chapter opens with, what a head

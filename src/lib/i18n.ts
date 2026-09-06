@@ -92,6 +92,15 @@ export interface Chrome {
   readonly nothingMatches: string;
   /** The search box at the end of the tab strip. */
   readonly searchHint: string;
+  /** The theme and zoom controls beside it. */
+  readonly theme: string;
+  readonly themeSystem: string;
+  readonly themeLight: string;
+  readonly themeDark: string;
+  readonly zoom: string;
+  readonly zoomIn: string;
+  readonly zoomOut: string;
+  readonly zoomReset: string;
   readonly loading: string;
   readonly from: string;
   readonly header: string;
@@ -351,6 +360,14 @@ export const EN: Catalogue = {
     noElementSelected: "No element selected.",
     nothingMatches: "Nothing matches.",
     searchHint: "Search tabs and settings…",
+    theme: "Theme",
+    themeSystem: "System",
+    themeLight: "Light",
+    themeDark: "Dark",
+    zoom: "Zoom",
+    zoomIn: "Zoom in (Ctrl +)",
+    zoomOut: "Zoom out (Ctrl −)",
+    zoomReset: "Reset zoom (Ctrl 0)",
     loading: "Loading…",
     from: "From",
     header: "Header",

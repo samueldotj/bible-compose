@@ -3,7 +3,15 @@
    later is the expensive version of doing it now. */
 :root {
   font-family: system-ui, sans-serif;
+  /* The system's choice unless the window's own theme control says
+     otherwise — `lib/preferences` writes `data-theme` and the scheme. */
   color-scheme: light dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 /* Padding counts inside a declared size, not on top of it.
    Without this, `.app` at `block-size: 100%` plus its own top padding is

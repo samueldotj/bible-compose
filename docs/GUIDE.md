@@ -76,6 +76,9 @@ window claims you are "in" large print.
 
 A search box at the end of the tab strip finds any tab, setting, style or
 template by name; choosing a match opens its tab and lights the control up.
+Beside it, a theme control chooses light, dark or the system's choice, and
+the window zooms with Ctrl and `+`, `−` or `0`, or Ctrl and the mouse wheel.
+Both are remembered on this machine.
 
 Every tab is settings, and every setting writes to `biblecompose.toml` in your
 folder as you change it. There is no Save. Anything you set shows a marker

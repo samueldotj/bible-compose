@@ -8,13 +8,21 @@
   import PageDiagram from "./components/PageDiagram.svelte";
   import PresetPicker from "./components/PresetPicker.svelte";
   import SearchBox from "./components/SearchBox.svelte";
+  import ViewControls from "./components/ViewControls.svelte";
   import SettingsForm from "./components/SettingsForm.svelte";
   import StartScreen from "./components/StartScreen.svelte";
   import StyleEditor from "./components/StyleEditor.svelte";
   import StyleInspector from "./components/StyleInspector.svelte";
   import { STYLE_TABS, TABS } from "./lib/labels";
   import { session } from "./lib/session.svelte";
+  import { applyPreferences, installViewShortcuts } from "./lib/preferences.svelte";
   import { t } from "./lib/i18n";
+
+  // The theme and zoom this person keeps, and the keys that change them.
+  $effect(() => {
+    applyPreferences();
+    return installViewShortcuts();
+  });
 
   $effect(() => {
     void session.start();
@@ -120,6 +128,7 @@
              template by name, for the publisher who knows what they want
              to change and not which of seven tabs it is on. -->
         <SearchBox />
+        <ViewControls />
       </nav>
 
       {#if !session.editable}
@@ -288,10 +297,15 @@
   .next-step code {
     overflow-wrap: anywhere;
   }
+  /* A strip of its own colour, a shade off the page's, so the row of tabs
+     reads as the top of a folder and the open tab as the page it belongs
+     to: the active tab takes the page's colour and joins it. */
   .tabs {
     display: flex;
     gap: 0.25rem;
-    border-block-end: 1px solid color-mix(in oklab, currentColor 15%, transparent);
+    padding: 0.35rem 0.5rem 0;
+    border-block-end: 1px solid color-mix(in oklab, currentColor 18%, transparent);
+    background: color-mix(in oklab, CanvasText 7%, Canvas);
   }
   /* What the search landed on, for a moment: the same mark the example
      page uses for the thing a switch governs, so the two read as one idea. */
@@ -303,16 +317,23 @@
     transition: background 0.6s ease-out;
   }
   .tabs button {
-    padding-block: 0.3rem;
+    padding-block: 0.35rem;
     padding-inline: 0.8rem;
-    border: 0;
-    border-block-end: 2px solid transparent;
+    margin-block-end: -1px;
+    border: 1px solid transparent;
+    border-block-end: 0;
+    border-start-start-radius: 6px;
+    border-start-end-radius: 6px;
     background: none;
     color: inherit;
     font: inherit;
     font-size: 0.85rem;
     opacity: 0.6;
     cursor: pointer;
+  }
+  .tabs button:hover {
+    background: color-mix(in oklab, CanvasText 5%, Canvas);
+    opacity: 0.85;
   }
   /* Quieter than the tabs above them, so the two rows read as a hierarchy
      rather than as eleven equal choices. */
@@ -382,7 +403,8 @@
     opacity: 0.7;
   }
   .tabs button.active {
-    border-block-end-color: currentColor;
+    background: Canvas;
+    border-color: color-mix(in oklab, currentColor 18%, transparent);
     opacity: 1;
     font-weight: 600;
   }

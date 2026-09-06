@@ -128,6 +128,18 @@ among fields with something is simply left out. In the file these are
 `header_center`, `header_right`, `footer_left`, `footer_center` and
 `footer_right`; an empty slot is `""`.
 
+### Numbers in the margin
+
+Under **Numbering** on the Contents tab, **Chapter numbers go** and **Verse
+numbers go** put either in the text, as most Bibles do, or in the left or
+right margin of the column, level with the line the chapter or verse begins
+on, so the text runs clear of them. Several verses beginning on one line
+share the margin, in order. **Gap to the margin numbers** is the space
+between a number and the column. In the file: `numbering.chapter_number_placement`,
+`numbering.verse_number_placement` (`in_text`, `left_margin`, `right_margin`)
+and `numbering.margin_gap`. In the margin a chapter number is set plainly in
+its style — no line of its own, no drop cap, no border.
+
 ### Where things start
 
 The **Start** group on the Contents tab decides where a book, a chapter and

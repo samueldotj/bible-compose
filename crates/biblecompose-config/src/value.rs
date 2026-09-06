@@ -492,6 +492,19 @@ spelled! {
 }
 
 spelled! {
+    /// Where a chapter or verse number is set: in the text, or in the margin
+    /// beside the line it belongs to, clear of the text.
+    NumberPlacement {
+        /// In the run of the text, as it is set by default.
+        InText => "in_text",
+        /// In the margin to the left of the column, level with its line.
+        LeftMargin => "left_margin",
+        /// In the margin to the right of the column, likewise.
+        RightMargin => "right_margin",
+    }
+}
+
+spelled! {
     /// Where a book begins, relative to the one before it.
     BookStart {
         /// Where the previous book ended, with no break at all.

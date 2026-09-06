@@ -112,6 +112,15 @@ hide_first_verse_number = false
 # wrote them deliberately; off for an edition that wants the figure alone.
 show_chapter_labels = true
 
+# Where the numbers are set: "in_text", as most Bibles do, or in the margin
+# beside the line the chapter or verse begins on — "left_margin" or
+# "right_margin", of the column — so the text runs clear of them. Several
+# verses beginning on one line share the margin, in order.
+chapter_number_placement = "in_text"
+verse_number_placement = "in_text"
+# Between a number in the margin and the column's edge.
+margin_gap = "4pt"
+
 [notes]
 show_footnotes = true
 show_cross_references = true

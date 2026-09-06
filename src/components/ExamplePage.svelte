@@ -77,6 +77,12 @@
       session.settings.find((s) => s.key === "contents.drop_cap_of")?.value === "chapter_number",
   );
   const initialDrops = $derived(dropcaps && !numberDrops);
+  /** Where the numbers go: in the text, or in a margin of the column. */
+  const placement = (key: string) => session.settings.find((s) => s.key === key)?.value ?? "in_text";
+  const chapterMargin = $derived(placement("numbering.chapter_number_placement"));
+  const verseMargin = $derived(placement("numbering.verse_number_placement"));
+  const marginLeft = $derived(chapterMargin === "left_margin" || verseMargin === "left_margin");
+  const marginRight = $derived(chapterMargin === "right_margin" || verseMargin === "right_margin");
   /** Each verse on a line of its own, when the Start group says so. */
   const verseLines = $derived(
     session.settings.find((s) => s.key === "contents.verse_starts")?.value === "next_line",
@@ -336,6 +342,21 @@
         },
         { key: "numbering.show_verse_numbers", label: "Verse numbers" },
         {
+          key: "numbering.chapter_number_placement",
+          label: "Chapter numbers go",
+          under: "numbering.show_chapter_numbers",
+        },
+        {
+          key: "numbering.verse_number_placement",
+          label: "Verse numbers go",
+          under: "numbering.show_verse_numbers",
+        },
+        {
+          key: "numbering.margin_gap",
+          label: "Gap to the margin numbers",
+          note: "between a number in the margin and the text",
+        },
+        {
           key: "numbering.hide_first_verse_number",
           label: "Hide first verse number",
           // Nothing to hide when no verse number is shown at all.
@@ -468,7 +489,7 @@
       {/each}
     </div>
 
-    <div class="body" class:ragged={!justified}>
+    <div class="body" class:ragged={!justified} class:margin-left={marginLeft} class:margin-right={marginRight}>
       {#if intros}
         <div class="front" class:lit={shows("contents.show_book_introductions")}>
           <h3>{SAMPLE_INTRO.heading}</h3>
@@ -517,7 +538,9 @@
                 {#if chapters}
                   <span
                     class="chapter"
-                    class:dropped={numberDrops}
+                    class:in-margin={chapterMargin !== "in_text"}
+                    class:at-right={chapterMargin === "right_margin"}
+                    class:dropped={numberDrops && chapterMargin === "in_text"}
                     class:lit={shows("numbering.show_chapter_numbers") ||
                       (numberDrops && shows("contents.drop_cap_of"))}
                   >
@@ -538,7 +561,10 @@
               >{/if}{#each versesFor(section, i) as verse, j (verse.number)}
               {#if verseLines && j > 0}<br />{/if}{#if verses && !verse.opened}<span
                   class="verse"
-                  class:lit={shows("numbering.show_verse_numbers")}
+                  class:in-margin={verseMargin !== "in_text"}
+                  class:at-right={verseMargin === "right_margin"}
+                  class:lit={shows("numbering.show_verse_numbers") ||
+                    shows("numbering.verse_number_placement")}
                   >{verse.number}</span
                 >{/if}{#if verse.reference}{@const parts = around(verse.text, verse.reference.after)}
                 {parts[0]}{#if refs}<sup class="ref" class:lit={shows("notes.show_cross_references")}
@@ -663,6 +689,16 @@
                   {#if setting === undefined}
                     {s.label}
                     <span class="note">{t("notInThisBuild")}</span>
+                  {:else if setting.kind === "length"}
+                    {s.label}
+                    <input
+                      type="text"
+                      class="count"
+                      value={setting.value}
+                      spellcheck="false"
+                      disabled={!session.editable || idle}
+                      onchange={(e) => void session.setSetting(s.key, e.currentTarget.value)}
+                    />
                   {:else if setting.kind === "integer"}
                     {s.label}
                     <input
@@ -974,6 +1010,41 @@
     font-size: 0.76em;
     font-weight: 700;
     vertical-align: super;
+  }
+  /* Numbers in the margin: the body makes room at the side, and each number
+     is taken out of the line and set at that side, level with the line it
+     would have started — `top: auto` keeps an absolutely placed span on the
+     line it came from. */
+  .body.margin-left {
+    padding-inline-start: 2.2em;
+  }
+  .body.margin-right {
+    padding-inline-end: 2.2em;
+  }
+  .prose {
+    position: relative;
+  }
+  .in-margin {
+    position: absolute;
+    inset-inline-start: -2em;
+    inline-size: 1.6em;
+    margin: 0;
+    text-align: end;
+    vertical-align: baseline;
+    float: none;
+  }
+  .in-margin.at-right {
+    inset-inline-start: auto;
+    inset-inline-end: -2em;
+    text-align: start;
+  }
+  /* Narrower than the verse numbers' box, so a chapter figure and its
+     verse 1 on the same line stand side by side rather than overlapping —
+     as the class sets them, in order along the margin. */
+  .chapter.in-margin {
+    font-size: 1.6em;
+    line-height: 1;
+    inline-size: 1.15em;
   }
   sup.note,
   sup.ref {

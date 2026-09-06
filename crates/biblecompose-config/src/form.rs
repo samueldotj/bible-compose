@@ -14,8 +14,8 @@ use crate::edit::SettingValue;
 use crate::provenance::Origin;
 use crate::settings::Settings;
 use crate::value::{
-    Anchors, BookStart, CallerStyle, ChapterStart, DropCap, MissingAsset, ReferencePlacement,
-    RestartNumbering, VerseStart,
+    Anchors, BookStart, CallerStyle, ChapterStart, DropCap, MissingAsset, NumberPlacement,
+    ReferencePlacement, RestartNumbering, VerseStart,
 };
 
 /// What kind of control a key needs, and how its text is to be read back.
@@ -253,6 +253,21 @@ impl Settings {
             "numbering.show_chapter_labels",
             Boolean,
             self.numbering.show_chapter_labels.to_string(),
+        );
+        push(
+            "numbering.chapter_number_placement",
+            Choice(NumberPlacement::SPELLINGS),
+            self.numbering.chapter_number_placement.to_string(),
+        );
+        push(
+            "numbering.verse_number_placement",
+            Choice(NumberPlacement::SPELLINGS),
+            self.numbering.verse_number_placement.to_string(),
+        );
+        push(
+            "numbering.margin_gap",
+            Length,
+            self.numbering.margin_gap.to_string(),
         );
 
         push(

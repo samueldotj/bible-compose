@@ -26,7 +26,7 @@ use crate::document::{ConfigDocument, Located, Node};
 use crate::provenance::{Provenance, Sourced};
 use crate::value::{
     self, Anchors, BookStart, CallerStyle, ChapterStart, DropCap, HeadTemplate, Length,
-    MissingAsset, PageSize, ReferencePlacement, RestartNumbering, VerseStart,
+    MissingAsset, NumberPlacement, PageSize, ReferencePlacement, RestartNumbering, VerseStart,
 };
 
 /// The settings vocabulary this release speaks.
@@ -150,6 +150,14 @@ pub struct Numbering {
     /// half of that decision. A translation that carries labels and an edition
     /// that wants only figures are both ordinary, and the file says which.
     pub show_chapter_labels: Sourced<bool>,
+    /// Where the chapter number is set: in the text, or in a margin beside
+    /// the line the chapter begins on.
+    pub chapter_number_placement: Sourced<NumberPlacement>,
+    /// And the verse numbers: in the text before each verse, or in a margin
+    /// beside the line each verse begins on, so the text runs clear of them.
+    pub verse_number_placement: Sourced<NumberPlacement>,
+    /// The space between a number in the margin and the column's edge.
+    pub margin_gap: Sourced<Length>,
 }
 
 /// Which parts of a book are printed at all.
@@ -610,6 +618,13 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             show_verse_numbers: r.value("numbering.show_verse_numbers", |n| n.boolean()),
             hide_first_verse_number: r.value("numbering.hide_first_verse_number", |n| n.boolean()),
             show_chapter_labels: r.value("numbering.show_chapter_labels", |n| n.boolean()),
+            chapter_number_placement: r.value("numbering.chapter_number_placement", |n| {
+                value::choice(n, NumberPlacement::NAMES)
+            }),
+            verse_number_placement: r.value("numbering.verse_number_placement", |n| {
+                value::choice(n, NumberPlacement::NAMES)
+            }),
+            margin_gap: r.value("numbering.margin_gap", value::length_or_zero),
         },
         contents: Contents {
             show_book_introductions: r.value("contents.show_book_introductions", |n| n.boolean()),

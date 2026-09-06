@@ -65,6 +65,9 @@ show_chapter_numbers = false
 show_verse_numbers = false
 hide_first_verse_number = true
 show_chapter_labels = false
+chapter_number_placement = \"left_margin\"
+verse_number_placement = \"right_margin\"
+margin_gap = \"6pt\"
 
 [notes]
 show_footnotes = false

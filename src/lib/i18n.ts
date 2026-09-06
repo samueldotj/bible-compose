@@ -243,6 +243,9 @@ export const EN_LABELS: Readonly<Record<string, string>> = {
   "numbering.show_verse_numbers": "Verse numbers",
   "numbering.hide_first_verse_number": "Hide first verse number",
   "numbering.show_chapter_labels": "Chapter labels",
+  "numbering.chapter_number_placement": "Chapter numbers go",
+  "numbering.verse_number_placement": "Verse numbers go",
+  "numbering.margin_gap": "Gap to the margin numbers",
   "contents.show_book_introductions": "Book introductions",
   "contents.show_introductory_outlines": "Introductory outlines",
   "contents.show_section_headings": "Section headings",
@@ -317,6 +320,9 @@ export const EN_CHOICES: Readonly<Record<string, string>> = {
   blank_left_page: "Blank page, then a left page",
   blank_right_page: "Blank page, then a right page",
   blank_next_page: "Blank page, then the next page",
+  in_text: "In the text",
+  left_margin: "In the left margin",
+  right_margin: "In the right margin",
 };
 
 /** The English catalogue. */

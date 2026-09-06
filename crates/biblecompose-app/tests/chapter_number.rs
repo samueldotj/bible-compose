@@ -735,3 +735,87 @@ fn a_chapter_moves_on_when_its_verses_would_not_fit() {
         plain.number("2").page
     );
 }
+
+/// **Numbers in the margin sit outside the column, level with their line,
+/// and the text runs clear of them.** Every verse number is left of the
+/// column's left edge or right of its right, the chapter figure likewise,
+/// and the text's own left edge is the column's — in one column and in two,
+/// where the right margin of column A is the gap and the left of column B
+/// is too.
+#[test]
+fn numbers_can_sit_in_the_margin() {
+    if !have_backend() {
+        return;
+    }
+    for columns in COLUMNS {
+        for side in ["left_margin", "right_margin"] {
+            let b = built_with(
+                columns,
+                "",
+                &format!(
+                    "drop_caps = false\n[numbering]\nchapter_number_placement = \"{side}\"\nverse_number_placement = \"{side}\"\nhide_first_verse_number = false"
+                ),
+            );
+            let number = b.number("1");
+            let (l, r) = b.column(0);
+            let verse_numbers: Vec<&Mark> = b
+                .lines
+                .iter()
+                .flat_map(|x| &x.marks)
+                .filter(|m| m.page == 1 && (m.size - 6.4).abs() < 0.01)
+                .collect();
+            assert!(
+                verse_numbers.len() >= 6,
+                "{columns} columns: {}",
+                verse_numbers.len()
+            );
+            // Which column each number belongs to is the column whose edge
+            // it hangs off: left of A's left, or of B's; right of A's right.
+            let edges: Vec<(f64, f64)> = (0..columns).map(|i| b.column(i)).collect();
+            for m in &verse_numbers {
+                let outside = edges.iter().any(|(cl, cr)| {
+                    if side == "left_margin" {
+                        m.x < cl - 2.0 && m.x > cl - 40.0
+                    } else {
+                        m.x > cr + 2.0 && m.x < cr + 40.0
+                    }
+                });
+                assert!(
+                    outside,
+                    "{columns} columns, {side}: verse number at x={} is outside a column (edges {edges:?})",
+                    m.x
+                );
+            }
+            if side == "left_margin" {
+                assert!(
+                    number.x < l - 2.0,
+                    "{columns} columns: the chapter figure hangs left of {l}: {}",
+                    number.x
+                );
+            } else {
+                assert!(
+                    number.x > r + 2.0,
+                    "{columns} columns: the chapter figure hangs right of {r}: {}",
+                    number.x
+                );
+            }
+            // And the text itself starts at the column's edge, not after a number.
+            let text_left = b
+                .lines
+                .iter()
+                .filter(|x| x.page == 1 && x.marks.iter().any(|m| (m.size - BODY).abs() < 0.01))
+                .map(|x| {
+                    x.marks
+                        .iter()
+                        .filter(|m| (m.size - BODY).abs() < 0.01)
+                        .map(|m| m.x)
+                        .fold(f64::INFINITY, f64::min)
+                })
+                .fold(f64::INFINITY, f64::min);
+            assert!(
+                (text_left - l).abs() < 1.0,
+                "{columns} columns, {side}: the text starts at the column's edge {l}: {text_left}"
+            );
+        }
+    }
+}

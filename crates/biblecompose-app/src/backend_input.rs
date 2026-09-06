@@ -99,6 +99,15 @@ pub fn class_options_with(
     put("chapternumbers", flag(*s.numbering.show_chapter_numbers));
     put("versenumbers", flag(*s.numbering.show_verse_numbers));
     put("hidefirstverse", flag(*s.numbering.hide_first_verse_number));
+    put(
+        "chapterplacement",
+        s.numbering.chapter_number_placement.to_string(),
+    );
+    put(
+        "verseplacement",
+        s.numbering.verse_number_placement.to_string(),
+    );
+    put("margingap", s.numbering.margin_gap.to_sile());
     // The initial itself is marked in the document (`<initial>`), since what
     // a chapter's first syllable *is* takes Unicode segmentation the class
     // has not got; whether it drops, and how far, is the class's to decide.

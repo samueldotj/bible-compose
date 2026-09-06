@@ -88,6 +88,11 @@ local OPTIONS = {
    { key = "versenumbers", kind = "boolean", default = true },
    -- Verse 1 goes unnumbered where the chapter number already marks it.
    { key = "hidefirstverse", kind = "boolean", default = false },
+   -- Where the numbers are set: "in_text", "left_margin" or "right_margin"
+   -- of the column, with `margingap` between a number and the column.
+   { key = "chapterplacement", kind = "string", default = "in_text" },
+   { key = "verseplacement", kind = "string", default = "in_text" },
+   { key = "margingap", kind = "string", default = "4pt" },
    -- Whether a chapter's opening initial drops into the text, and how far.
    -- Which run *is* the initial arrives in the document as `<initial>`: a
    -- syllable in an Indic script is several characters, and telling them
@@ -501,7 +506,7 @@ local slot_content, set_line, restart_notes, carry_reference
 -- `scratch` and the two anchor helpers, for the same reason: the chapter
 -- and verse commands name a place in Scripture, and both are registered
 -- above the state they read it from.
-local scratch, anchor, destination, o_anchors, start_at
+local scratch, anchor, destination, o_anchors, start_at, margin_number
 -- The three an "auto" start measures with, for the same reason.
 local opening_text, lines_left, lines_needed
 
@@ -1136,6 +1141,72 @@ function lines_needed (chars)
    local measure = SILE.typesetter.frame:width():tonumber()
    local per_line = math.max(1, measure / (0.5 * size))
    return math.ceil(chars / per_line)
+end
+
+--- Set a number in the margin, level with the line it is pushed on.
+--
+-- A box of no width on the line, whose output draws the number outside
+-- the column: to the left of the column's left edge, or to the right of
+-- its right, `margingap` away, on the line's own baseline. The number is
+-- shaped now, in its style, and only drawn later — so the line's layout
+-- is not disturbed, and the number lands wherever the line does.
+--
+-- **Several numbers on one line share the margin, in order.** When a line
+-- holds more than one — three short verses, a chapter number and its
+-- verse 1 — the first to be drawn draws them all, side by side and in the
+-- order they were set, and the others draw nothing: a margin that showed
+-- only one would lose a verse, and one that drew each where it stood would
+-- pile them on one spot.
+function margin_number (placement, selector, content)
+   local hbox = SILE.typesetter:makeHbox(function ()
+      styled(selector, function ()
+         SILE.process(content)
+      end)
+   end)
+   local o = SILE.documentState.documentClass._bcopts
+   local gap = SILE.types.measurement(o.margingap or "4pt"):tonumber()
+   local between = SILE.settings:get("font.size") * 0.3
+   SILE.typesetter:pushHbox({
+      width = SILE.types.length(0),
+      height = SILE.types.length(0),
+      depth = SILE.types.length(0),
+      value = { margin = placement, glyphs = hbox },
+      outputYourself = function (node, typesetter, line)
+         -- Every number bound for this margin on this line, in order.
+         local group = {}
+         for _, other in ipairs(line.nodes or {}) do
+            if other.value and other.value.margin == placement then
+               group[#group + 1] = other
+            end
+         end
+         if group[1] ~= node then
+            return
+         end
+         local total = 0
+         for i, member in ipairs(group) do
+            total = total + member.value.glyphs.width:tonumber()
+            if i > 1 then
+               total = total + between
+            end
+         end
+         local frame = typesetter.frame
+         local x
+         if placement == "left_margin" then
+            x = frame:left():tonumber() - gap - total
+         else
+            x = frame:right():tonumber() + gap
+         end
+         local saved = frame.state.cursorX
+         frame.state.cursorX = x
+         for i, member in ipairs(group) do
+            if i > 1 then
+               frame:advanceWritingDirection(between)
+            end
+            member.value.glyphs:outputYourself(typesetter, line)
+         end
+         frame.state.cursorX = saved
+      end,
+   })
 end
 
 --- Begin where a `book_starts` or `chapter_starts` setting says.
@@ -1957,6 +2028,15 @@ function class:registerXmlCommands ()
    -- decides; see `docs/GUIDE.md` for what each key does.
    self:registerCommand("bc:chapter-number", function (_, content)
       local s = style("chapter")
+      local placement = self._bcopts.chapterplacement
+      if placement == "left_margin" or placement == "right_margin" then
+         -- In the margin beside the line the chapter begins on, set plainly
+         -- in its style: no line of its own, no drop, no border. The text
+         -- opens the chapter itself.
+         SILE.call("noindent")
+         margin_number(placement, "chapter", content)
+         return
+      end
       local boxed = SU.boolean(s.border, false)
       local function number ()
          if boxed then
@@ -2070,6 +2150,14 @@ function class:registerXmlCommands ()
 
    self:registerCommand("bc:verse-number", function (_, content)
       local s = style("verse")
+      local placement = self._bcopts.verseplacement
+      if placement == "left_margin" or placement == "right_margin" then
+         -- In the margin beside the line the verse begins on, so the text
+         -- runs clear of it — the number is not raised there, since it is
+         -- not sitting among words.
+         margin_number(placement, "verse", content)
+         return
+      end
       SILE.call("raise", { height = s.raise or "0pt" }, function ()
          styled("verse", function ()
             SILE.process(content)

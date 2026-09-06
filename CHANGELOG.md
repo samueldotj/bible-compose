@@ -2,6 +2,13 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+* **Numbers in the margin.** Chapter and verse numbers can sit in the left
+  or right margin of the column, level with their line, with the text
+  running clear of them; several verses on one line share the margin in
+  order.
+
 ## 0.1.3
 
 Where things start, and how the window looks.

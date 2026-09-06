@@ -603,11 +603,16 @@
 {/if}
 
 <style>
+  /* The switches above, the page below and the whole width: a row of
+     groups reads as a control panel, and the page under it has the room to
+     be a page. The groups come first in the eye and last in the markup, so
+     they are ordered to the top. A size container, so the page's type can
+     follow the width as it does on the spread. */
   .example {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 1.2rem;
-    align-items: start;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    container-type: inline-size;
   }
   /* Head above, page between, foot below — the controls in the order the
      page reads.
@@ -746,6 +751,9 @@
      still a page and not a poster. Everything inside the paper is sized in
      em for this reason. The padding stays in rem: the dropdowns above and
      below line up with the slots by sharing it. */
+  .example .paper {
+    font-size: clamp(0.82rem, 1.05cqi, 1.9rem);
+  }
   .example.stacked .paper {
     font-size: clamp(0.82rem, min(1.05cqi, 1.6cqb), 1.9rem);
   }
@@ -929,9 +937,15 @@
   }
 
   .groups {
+    order: -1;
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
+    align-items: start;
     gap: 0.6rem;
+  }
+  .groups fieldset {
+    flex: 1 1 16rem;
+    min-inline-size: 16rem;
   }
   .groups fieldset {
     margin: 0;

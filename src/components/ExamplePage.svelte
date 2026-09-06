@@ -1041,6 +1041,11 @@
   .switches li.beside {
     margin-inline-start: 1.2rem;
   }
+  /* Beside is beside: a nested switch set alongside keeps no indent of its
+     own, since the line it shares says what it belongs to. */
+  .switches li.beside.nested {
+    padding-inline-start: 0;
+  }
   .switches li.idle {
     opacity: 0.45;
   }

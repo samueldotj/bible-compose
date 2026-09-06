@@ -167,6 +167,7 @@ export const SWITCH_GROUPS: readonly SwitchGroup[] = [
       {
         key: "numbering.hide_first_verse_number",
         label: "Hide first verse number",
+        beside: true,
         // Nothing to hide when no verse number is shown at all.
         under: "numbering.show_verse_numbers",
         // And nothing to decide under a dropped initial, which is the

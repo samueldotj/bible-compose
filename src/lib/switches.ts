@@ -23,6 +23,21 @@ export interface SwitchRow {
   readonly note?: string;
   /** For a number: the range the resolver accepts. */
   readonly range?: readonly [number, number];
+  /**
+   * One dropdown over two settings: a switch that says whether, and a
+   * choice that says where. "Don't show" turns the switch off; any other
+   * entry turns it on and writes the choice. Two settings that cannot
+   * disagree — a place is dormant while the switch is off — shown as the
+   * one decision they are.
+   */
+  readonly combined?: {
+    /** The choice setting, whose spellings the entries are. */
+    readonly where: string;
+    /** The entry for the switch being off. */
+    readonly off: string;
+    /** What to call each spelling of the choice. */
+    readonly labels: Readonly<Record<string, string>>;
+  };
 }
 
 export interface SwitchGroup {
@@ -128,7 +143,19 @@ export const SWITCH_GROUPS: readonly SwitchGroup[] = [
     title: "Numbering",
     tab: "numbering",
     switches: [
-      { key: "numbering.show_chapter_numbers", label: "Chapter numbers" },
+      {
+        key: "numbering.show_chapter_numbers",
+        label: "Chapter numbers",
+        combined: {
+          where: "numbering.chapter_number_placement",
+          off: "Don't show",
+          labels: {
+            in_text: "Show in the text",
+            left_margin: "In the left margin",
+            right_margin: "In the right margin",
+          },
+        },
+      },
       {
         key: "numbering.show_chapter_labels",
         label: "Chapter labels",
@@ -136,16 +163,18 @@ export const SWITCH_GROUPS: readonly SwitchGroup[] = [
         // not — so say that this switch may have nothing to act on.
         note: "USFM's \\cl, where a translation has it",
       },
-      { key: "numbering.show_verse_numbers", label: "Verse numbers" },
       {
-        key: "numbering.chapter_number_placement",
-        label: "Chapter numbers go",
-        under: "numbering.show_chapter_numbers",
-      },
-      {
-        key: "numbering.verse_number_placement",
-        label: "Verse numbers go",
-        under: "numbering.show_verse_numbers",
+        key: "numbering.show_verse_numbers",
+        label: "Verse numbers",
+        combined: {
+          where: "numbering.verse_number_placement",
+          off: "Don't show",
+          labels: {
+            in_text: "Show in the text",
+            left_margin: "In the left margin",
+            right_margin: "In the right margin",
+          },
+        },
       },
       {
         key: "numbering.margin_gap",

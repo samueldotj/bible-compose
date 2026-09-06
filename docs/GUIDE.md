@@ -151,8 +151,8 @@ Set in the PDF, not on the example page.
 
 ### Numbers in the margin
 
-Under **Numbering** on the Numbering tab, **Chapter numbers go** and **Verse
-numbers go** put either in the text, as most Bibles do, or in the left or
+On the Numbering tab, **Chapter numbers** and **Verse numbers** are each one
+dropdown: don't show, show in the text as most Bibles do, or in the left or
 right margin of the column, level with the line the chapter or verse begins
 on, so the text runs clear of them. Several verses beginning on one line
 share the margin, in order. **Gap to the margin numbers** is the space

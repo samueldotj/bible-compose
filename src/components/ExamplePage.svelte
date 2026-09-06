@@ -63,7 +63,7 @@
     }
   }
 
-  const chapters = on("numbering.show_chapter_numbers");
+  const chapters = $derived(on("numbering.show_chapter_numbers"));
   const labels = $derived(on("numbering.show_chapter_labels"));
   const verses = $derived(on("numbering.show_verse_numbers"));
   const footnotes = $derived(on("notes.show_footnotes"));
@@ -195,6 +195,24 @@
 
   /** Whether the dialog listing the fields is open. */
   let help = $state(false);
+
+  /** A combined row's current entry: the choice's value, or its off entry. */
+  function combinedValue(row: { key: string; combined?: { where: string } }): string {
+    if (!row.combined) return "";
+    if (!on(row.key)) return "__off";
+    return session.settings.find((s) => s.key === row.combined!.where)?.value ?? "";
+  }
+
+  /** Choose a combined row's entry: off, or on and at that place. */
+  async function chooseCombined(row: { key: string; combined?: { where: string } }, entry: string) {
+    if (!row.combined) return;
+    if (entry === "__off") {
+      await session.setSetting(row.key, "false");
+      return;
+    }
+    if (!on(row.key)) await session.setSetting(row.key, "true");
+    await session.setSetting(row.combined.where, entry);
+  }
 
   function pick(key: string, entry: string): void {
     if (entry === "custom") {
@@ -544,6 +562,19 @@
                   {#if setting === undefined}
                     {s.label}
                     <span class="note">{t("notInThisBuild")}</span>
+                  {:else if s.combined}
+                    {@const where = session.settings.find((x) => x.key === s.combined!.where)}
+                    {s.label}
+                    <select
+                      value={combinedValue(s)}
+                      disabled={!session.editable || idle}
+                      onchange={(e) => void chooseCombined(s, e.currentTarget.value)}
+                    >
+                      <option value="__off">{s.combined.off}</option>
+                      {#each where?.choices ?? [] as choice (choice)}
+                        <option value={choice}>{s.combined.labels[choice] ?? wordsFor(choice)}</option>
+                      {/each}
+                    </select>
                   {:else if setting.kind === "length"}
                     {s.label}
                     <input

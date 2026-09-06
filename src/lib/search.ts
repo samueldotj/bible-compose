@@ -70,9 +70,10 @@ export function homeOf(key: string): Home | null {
   if (key === "output.keep_intermediates" || key === "strict") return {};
   // Set when the folder is opened, not on a tab.
   if (key === "project.name" || key === "project.language") return null;
-  // A switch on one of the example pages: the group it is in says which.
+  // A switch on one of the example pages: the group it is in says which —
+  // and a setting folded into another's dropdown is on that row.
   for (const group of SWITCH_GROUPS) {
-    if (group.switches.some((s) => s.key === key)) {
+    if (group.switches.some((s) => s.key === key || s.combined?.where === key)) {
       return { tab: group.tab, section: group.title };
     }
   }
@@ -111,13 +112,17 @@ export function index(settings: readonly Setting[], presets: readonly Preset[] |
     ]
       .filter((p): p is string => Boolean(p))
       .join(" › ");
+    // A setting folded into another's dropdown lights that row.
+    const folded = SWITCH_GROUPS.flatMap((g) => g.switches).find(
+      (s) => s.combined?.where === setting.key,
+    );
     out.push({
       id: `setting:${setting.key}`,
       title: labelFor(setting.key),
       path: where,
       tab: home.tab,
       subtab: home.subtab,
-      key: setting.key,
+      key: folded?.key ?? setting.key,
     });
   }
 

@@ -26,8 +26,8 @@ use crate::document::{ConfigDocument, Located, Node};
 use crate::provenance::{Provenance, Sourced};
 use crate::value::{
     self, Anchors, BookStart, CallerStyle, ChapterStart, DropCap, HeadTemplate, Length,
-    MissingAsset, NumberPlacement, PageSize, QuoteHang, ReferencePlacement, RestartNumbering,
-    VerseStart,
+    MissingAsset, NumberPlacement, PageSize, QuoteHang, QuoteStart, ReferencePlacement,
+    RestartNumbering, VerseStart,
 };
 
 /// The settings vocabulary this release speaks.
@@ -256,6 +256,10 @@ pub struct HeadSide {
 /// Bibles keep and most do not, so off unless asked for.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Quotes {
+    /// Where a quotation begins: in the line, or on a line of its own.
+    pub start: Sourced<QuoteStart>,
+    /// How far in a quotation on its own line begins, once per level.
+    pub line_indent: Sourced<Length>,
     /// What the lines after the mark line up with: nothing, the mark, or
     /// the letter after it.
     pub hang: Sourced<QuoteHang>,
@@ -668,6 +672,8 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             }),
         },
         quotes: Quotes {
+            start: r.value("quotes.start", |n| value::choice(n, QuoteStart::NAMES)),
+            line_indent: r.value("quotes.line_indent", value::length_or_zero),
             hang: r.value("quotes.hang", |n| value::choice(n, QuoteHang::NAMES)),
             indent_gap: r.value("quotes.indent_gap", value::length_or_zero),
         },

@@ -70,6 +70,8 @@ verse_number_placement = \"right_margin\"
 margin_gap = \"6pt\"
 
 [quotes]
+start = \"new_line\"
+line_indent = \"9pt\"
 hang = \"at_quote\"
 indent_gap = \"3pt\"
 

@@ -95,6 +95,8 @@ local OPTIONS = {
    { key = "margingap", kind = "string", default = "4pt" },
    -- What the lines after a quotation begins line up with: "off",
    -- "at_quote" or "after_quote", with `quotegap` more per level.
+   { key = "quotestart", kind = "string", default = "in_line" },
+   { key = "quoteindent", kind = "string", default = "12pt" },
    { key = "quotehang", kind = "string", default = "off" },
    { key = "quotegap", kind = "string", default = "0pt" },
    -- Whether a chapter's opening initial drops into the text, and how far.
@@ -336,7 +338,7 @@ function class:_init (options)
       -- `quote_hang_lines`), so the lines after a quotation begins can be
       -- indented to its mark. Installed only when asked for, so a book set
       -- as prose breaks its lines exactly once, as it always did.
-      if self._bcopts.quotehang ~= "off" then
+      if self._bcopts.quotehang ~= "off" or self._bcopts.quotestart == "new_line" then
          local break_into_lines = SILE.typesetter.breakIntoLines
          SILE.typesetter.breakIntoLines = function (typesetter, nodelist, breakWidth)
             return quote_hang_lines(typesetter, nodelist, breakWidth, break_into_lines)
@@ -1377,8 +1379,56 @@ local function move_line (typesetter, line, breakWidth, delta)
    line.ratio = typesetter:computeLineRatio(breakWidth, line.nodes)
 end
 
+--- End the line before each quotation that begins a word, and indent the
+-- quotation's own line `indent` per level. In place, since the list is the
+-- typesetter's own and the lines are cut from it.
+--
+-- Only before a quotation with words before it in the paragraph: a verse
+-- that opens with a quotation would otherwise leave its number alone on a
+-- line, and a number is not a word.
+local function break_before_quotes (nodelist, indent)
+   local out = {}
+   local stack = {}
+   local prev = nil
+   local words = 0
+   for _, node in ipairs(nodelist) do
+      if node.is_nnode and node.text then
+         local chars = utf8_chars(node.text)
+         if quote_role(chars[1], prev, chars[2], stack) == "open" and words > 0 then
+            out[#out + 1] = SILE.types.node.hfillglue()
+            out[#out + 1] = SILE.types.node.penalty({ penalty = -10000 })
+            local depth = #stack + 1
+            if indent * depth > 0 then
+               out[#out + 1] = SILE.types.node.kern(indent * depth)
+            end
+         end
+         for i, ch in ipairs(chars) do
+            local role = quote_role(ch, chars[i - 1] or prev, chars[i + 1], stack)
+            if role == "open" then
+               stack[#stack + 1] = { closer = QUOTE_PAIRS[ch] }
+            elseif role == "close" then
+               stack[#stack] = nil
+            end
+         end
+         if node.text:match("%a") or node.text:match("[\194-\244]") then
+            words = words + 1
+         end
+         prev = chars[#chars]
+      elseif node.is_glue then
+         prev = " "
+      end
+      out[#out + 1] = node
+   end
+   for i = #nodelist, 1, -1 do
+      nodelist[i] = nil
+   end
+   for i, node in ipairs(out) do
+      nodelist[i] = node
+   end
+end
+
 --- Break a paragraph with its quotations hung. Replaces the typesetter's
--- `breakIntoLines` while `quotehang` is on.
+-- `breakIntoLines` while `quotehang` or `quotestart` asks for it.
 --
 -- Twice through the line-breaker, then settled by hand. The first break is
 -- as prose, to find where the marks fall; the second breaks to the shape
@@ -1394,6 +1444,12 @@ function quote_hang_lines (typesetter, nodelist, breakWidth, plain)
    local mode = o.quotehang
    local gap = SILE.types.measurement(o.quotegap or "0pt"):tonumber()
    typesetter:shapeAllNodes(nodelist)
+   if o.quotestart == "new_line" then
+      break_before_quotes(nodelist, SILE.types.measurement(o.quoteindent or "12pt"):tonumber())
+   end
+   if mode == "off" then
+      return plain(typesetter, nodelist, breakWidth)
+   end
 
    local function unmark ()
       -- A discretionary marked as a line's end on one break must not stay

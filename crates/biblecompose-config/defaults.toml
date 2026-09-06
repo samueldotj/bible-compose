@@ -127,6 +127,12 @@ margin_gap = "4pt"
 # margin as prose. A quotation inside one stands further in by `indent_gap`
 # per level. Set in the PDF, not on the example page.
 [quotes]
+# Where a quotation begins: "in_line", where the text reaches it, or
+# "new_line" — the line before it ended, and the quotation on a line of its
+# own, `line_indent` in, once per level of quotation. Only a quotation that
+# begins a word; one opening inside a word stays put.
+start = "in_line"
+line_indent = "12pt"
 hang = "off"
 indent_gap = "0pt"
 

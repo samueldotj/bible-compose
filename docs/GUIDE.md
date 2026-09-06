@@ -130,7 +130,14 @@ among fields with something is simply left out. In the file these are
 
 ### Quotations that wrap
 
-Under **Quotations** on the Contents tab, **Lines after a quotation begins**
+Under **Quotations** on the Contents tab, **A quotation begins** either in
+the line, where the text reaches it, or on a line of its own: the line before
+it ends there, and the quotation starts the next line indented by **Its
+line's indent**, twice that for a quotation inside one. Only a quotation
+that begins a word moves; one opening inside a word stays put. In the file,
+`quotes.start` (`in_line`, `new_line`) and `quotes.line_indent`.
+
+**Lines after a quotation begins**
 can line up with the opening quotation mark, or with the word after it, so a
 quotation that begins mid-line and runs on stands as a block in its
 paragraph; a quotation inside one stands further in, and the text returns

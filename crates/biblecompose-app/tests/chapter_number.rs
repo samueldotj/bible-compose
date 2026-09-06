@@ -976,3 +976,65 @@ fn a_quotation_that_wraps_hangs_from_its_mark() {
         );
     }
 }
+
+/// **A quotation can begin on a line of its own**, indented by the gap —
+/// twice the gap for a quotation inside one — with the line before it
+/// ended where the text was.
+#[test]
+fn a_quotation_can_begin_on_its_own_line() {
+    if !have_backend() {
+        return;
+    }
+    for columns in COLUMNS {
+        let b = built_from(
+            QUOTED,
+            columns,
+            "",
+            "",
+            "drop_caps = false\n[quotes]\nstart = \"new_line\"\nline_indent = \"12pt\"",
+        );
+        let (l, _) = b.column(0);
+        let rows = body_rows(&b);
+        let starts = |ch: char| -> Vec<(usize, f64)> {
+            rows.iter()
+                .enumerate()
+                .filter(|(_, (_, text))| text.starts_with(ch))
+                .map(|(i, (left, _))| (i, *left))
+                .collect()
+        };
+        let outer = starts('\u{201c}');
+        let inner = starts('\u{2018}');
+        assert_eq!(
+            outer.len(),
+            1,
+            "{columns} columns: the quotation begins a line: {rows:?}"
+        );
+        assert_eq!(
+            inner.len(),
+            1,
+            "{columns} columns: and the one inside it: {rows:?}"
+        );
+        assert!(
+            (outer[0].1 - (l + 12.0)).abs() < 0.6,
+            "{columns} columns: the quotation's line is indented by the gap: {} vs {}",
+            outer[0].1,
+            l + 12.0
+        );
+        assert!(
+            (inner[0].1 - (l + 24.0)).abs() < 0.6,
+            "{columns} columns: the inner quotation's line, by twice the gap: {} vs {}",
+            inner[0].1,
+            l + 24.0
+        );
+        assert!(
+            outer[0].0 >= 1 && inner[0].0 > outer[0].0,
+            "in order: {rows:?}"
+        );
+        // The line before the quotation ends with what came before it.
+        assert!(
+            rows[outer[0].0 - 1].1.ends_with("said,"),
+            "{columns} columns: the line before ends where the text was: {:?}",
+            rows[outer[0].0 - 1].1
+        );
+    }
+}

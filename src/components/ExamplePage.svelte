@@ -287,6 +287,12 @@
       title: "Quotations",
       switches: [
         {
+          key: "quotes.start",
+          label: "A quotation begins",
+          note: "Set in the PDF, not on this page. On a line of its own: the line before it ends, and the quotation starts the next, indented — once per level.",
+        },
+        { key: "quotes.line_indent", label: "Its line's indent" },
+        {
           key: "quotes.hang",
           label: "Lines after a quotation begins",
           note: "Set in the PDF, not on this page: the lines after a quotation mark line up with it, and a quotation inside one stands further in.",

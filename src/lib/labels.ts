@@ -80,6 +80,8 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   "numbering.chapter_number_placement",
   "numbering.verse_number_placement",
   "numbering.margin_gap",
+  "quotes.start",
+  "quotes.line_indent",
   "quotes.hang",
   "quotes.indent_gap",
   "contents.show_book_introductions",

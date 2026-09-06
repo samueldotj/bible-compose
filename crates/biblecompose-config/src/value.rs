@@ -492,6 +492,17 @@ spelled! {
 }
 
 spelled! {
+    /// Where a quotation begins.
+    QuoteStart {
+        /// In the line, where the text reaches it.
+        InLine => "in_line",
+        /// On a line of its own, the line before it ended, indented by
+        /// `quotes.line_indent` — once per level of quotation.
+        NewLine => "new_line",
+    }
+}
+
+spelled! {
     /// What the lines after a quotation begins mid-line line up with.
     QuoteHang {
         /// Nothing: they run to the margin, as prose does.

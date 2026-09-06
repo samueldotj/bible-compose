@@ -17,6 +17,7 @@
 
 import { EDITED_ELSEWHERE, GROUPS, STYLE_TABS, TABS, labelFor } from "./labels";
 import { STYLE_GROUPS } from "./styles";
+import { SWITCH_GROUPS } from "./switches";
 import type { Preset, Setting } from "./services/backend";
 
 /** One thing the search can find. */
@@ -69,6 +70,12 @@ export function homeOf(key: string): Home | null {
   if (key === "output.keep_intermediates" || key === "strict") return {};
   // Set when the folder is opened, not on a tab.
   if (key === "project.name" || key === "project.language") return null;
+  // A switch on one of the example pages: the group it is in says which.
+  for (const group of SWITCH_GROUPS) {
+    if (group.switches.some((s) => s.key === key)) {
+      return { tab: group.tab, section: group.title };
+    }
+  }
   if (EDITED_ELSEWHERE.has(key)) {
     const tab = TABS.find((t) => t.example === "contents");
     return tab ? { tab: tab.id } : null;

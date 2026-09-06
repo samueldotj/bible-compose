@@ -17,6 +17,7 @@
 
 import { locale } from "./i18n";
 import { STYLE_GROUPS } from "./styles";
+import type { ExampleTab } from "./switches";
 
 export interface Group {
   readonly id: string;
@@ -198,7 +199,7 @@ export interface Tab {
    * the page is the control, and the two tabs that use it take a switch set
    * each: what is in the text, and what surrounds it.
    */
-  readonly example?: "contents" | "headers";
+  readonly example?: ExampleTab | "headers";
   /**
    * Where a setting belonging to no group ends up. Exactly one tab claims
    * them, so a key added to the schema is visible somewhere rather than
@@ -233,6 +234,11 @@ export const TABS: readonly Tab[] = [
   // Claims the strays now that the Project tab is gone. Exactly one tab does,
   // so a key added to the schema is visible somewhere rather than nowhere.
   { id: "contents", title: "Contents", settingGroups: [], example: "contents", orphans: true },
+  // The same page as Contents, with the switches about how a paragraph is
+  // set — and again with the switches about numbers and notes. One tab held
+  // all seven groups and was a column to scroll.
+  { id: "paragraph", title: "Paragraph", settingGroups: [], example: "paragraph" },
+  { id: "numbering", title: "Numbering", settingGroups: [], example: "numbering" },
   {
     id: "headers",
     title: "Headers & Footers",

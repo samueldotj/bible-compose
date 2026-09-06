@@ -89,7 +89,9 @@ beside it puts the built-in value back.
 |---|---|
 | **Scripture** | Which books, and in what order |
 | **Template** | Three kinds of book to start from |
-| **Contents** | What appears — introductions, headings, chapter labels, drop caps (the first letter or the chapter number) |
+| **Contents** | What appears — introductions, headings — and where books, chapters and verses start |
+| **Paragraph** | How a paragraph is set: justification, poetry indents, quotations, drop caps |
+| **Numbering** | Chapter and verse numbers, and the notes |
 | **Headers & Footers** | What goes in each of the six slots, on each side of the spread — see below |
 | **Page** | Trim size, columns, margins |
 | **Styles** | Typography, and every marker's appearance |
@@ -130,7 +132,7 @@ among fields with something is simply left out. In the file these are
 
 ### Quotations that wrap
 
-Under **Quotations** on the Contents tab, **A quotation begins** either in
+Under **Quotations** on the Paragraph tab, **A quotation begins** either in
 the line, where the text reaches it, or on a line of its own: the line before
 it ends there, and the quotation starts the next line indented by **Its
 line's indent**, twice that for a quotation inside one. Only a quotation
@@ -148,7 +150,7 @@ Set in the PDF, not on the example page.
 
 ### Numbers in the margin
 
-Under **Numbering** on the Contents tab, **Chapter numbers go** and **Verse
+Under **Numbering** on the Numbering tab, **Chapter numbers go** and **Verse
 numbers go** put either in the text, as most Bibles do, or in the left or
 right margin of the column, level with the line the chapter or verse begins
 on, so the text runs clear of them. Several verses beginning on one line

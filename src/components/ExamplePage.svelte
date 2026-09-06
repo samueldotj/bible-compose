@@ -32,7 +32,7 @@
     SAMPLE_OUTLINE,
   } from "../lib/sample";
   import { wordsFor } from "../lib/labels";
-  import { SWITCH_GROUPS, type ExampleTab } from "../lib/switches";
+  import { SWITCH_GROUPS, type ExampleTab, type SwitchGroup } from "../lib/switches";
   import { session } from "../lib/session.svelte";
   import { phrases, t } from "../lib/i18n";
   import HeadFieldsHelp from "./HeadFieldsHelp.svelte";
@@ -266,6 +266,23 @@
 
   /** The switches this tab carries, beside the page. */
   const CONTENTS = $derived(SWITCH_GROUPS.filter((g) => g.tab === which));
+
+  /**
+   * The groups arranged in columns: consecutive groups that share a stack
+   * go one under the other, and every other group is a column of its own.
+   */
+  const COLUMNS = $derived.by(() => {
+    const out: { stack: string; groups: SwitchGroup[] }[] = [];
+    for (const group of CONTENTS) {
+      const last = out[out.length - 1];
+      if (group.stack !== undefined && last && last.stack === group.stack) {
+        last.groups.push(group);
+      } else {
+        out.push({ stack: group.stack ?? group.title, groups: [group] });
+      }
+    }
+    return out;
+  });
 
   /** The three places at the top of the page, and the three at the foot. */
   const HEADER = $derived([
@@ -534,7 +551,9 @@
   {:else}
     <!-- The switches, beside what they switch, in the groups they belong to. -->
     <div class="groups">
-      {#each CONTENTS as group (group.title)}
+      {#each COLUMNS as column (column.stack)}
+      <div class="stack">
+      {#each column.groups as group (group.title)}
         <fieldset>
           <legend>{group.title}</legend>
           <ul class="switches">
@@ -624,6 +643,8 @@
             {/each}
           </ul>
         </fieldset>
+      {/each}
+      </div>
       {/each}
     </div>
   {/if}
@@ -974,7 +995,12 @@
     align-items: start;
     gap: 0.6rem;
   }
-  .groups fieldset {
+  /* A column of groups, beside the next: the groups in one stack sit one
+     under the other, each as wide as the column. */
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
     flex: 1 1 16rem;
     min-inline-size: 16rem;
   }

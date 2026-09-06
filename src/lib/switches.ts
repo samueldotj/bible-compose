@@ -43,6 +43,12 @@ export interface SwitchRow {
 export interface SwitchGroup {
   readonly title: string;
   readonly tab: ExampleTab;
+  /**
+   * Groups that share a stack sit one under the other in a column, and the
+   * next group without it sits beside that column. Front matter and
+   * Numbering are both about what appears; Start is about where.
+   */
+  readonly stack?: string;
   readonly switches: readonly SwitchRow[];
 }
 
@@ -50,6 +56,7 @@ export const SWITCH_GROUPS: readonly SwitchGroup[] = [
   {
     title: "Front matter",
     tab: "contents",
+    stack: "appears",
     switches: [
       { key: "contents.show_book_introductions", label: "Book introductions" },
       { key: "contents.show_introductory_outlines", label: "Introductory outlines" },
@@ -119,6 +126,7 @@ export const SWITCH_GROUPS: readonly SwitchGroup[] = [
   {
     title: "Numbering",
     tab: "contents",
+    stack: "appears",
     switches: [
       {
         key: "numbering.show_chapter_numbers",

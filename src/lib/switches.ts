@@ -68,6 +68,7 @@ export const SWITCH_GROUPS: readonly SwitchGroup[] = [
   {
     title: "Paragraph",
     tab: "paragraph",
+    stack: "setting",
     switches: [
       { key: "typography.justify", label: "Justify paragraphs" },
       {
@@ -76,6 +77,32 @@ export const SWITCH_GROUPS: readonly SwitchGroup[] = [
         // 1 John is prose throughout. Saying so beats a switch that looks
         // broken because the passage gives it nothing to do.
         note: "no poetry in this passage",
+      },
+    ],
+  },
+  {
+    title: "Drop caps",
+    tab: "paragraph",
+    stack: "setting",
+    switches: [
+      {
+        key: "contents.drop_caps",
+        label: "Drop caps",
+        note: "The first verse goes unnumbered; with the first letter dropped, the chapter number takes a line of its own.",
+      },
+      {
+        key: "contents.drop_cap_of",
+        label: "What drops",
+        under: "contents.drop_caps",
+      },
+      {
+        key: "contents.drop_cap_lines",
+        label: "Lines a drop cap spans",
+        // Meaningless without an initial to span them.
+        under: "contents.drop_caps",
+        // The resolver's own bounds, so the field cannot offer a number
+        // the file would refuse.
+        range: [2, 6],
       },
     ],
   },
@@ -97,31 +124,6 @@ export const SWITCH_GROUPS: readonly SwitchGroup[] = [
       {
         key: "quotes.indent_gap",
         label: "Extra indent per quotation",
-      },
-    ],
-  },
-  {
-    title: "Drop caps",
-    tab: "paragraph",
-    switches: [
-      {
-        key: "contents.drop_caps",
-        label: "Drop caps",
-        note: "The first verse goes unnumbered; with the first letter dropped, the chapter number takes a line of its own.",
-      },
-      {
-        key: "contents.drop_cap_of",
-        label: "What drops",
-        under: "contents.drop_caps",
-      },
-      {
-        key: "contents.drop_cap_lines",
-        label: "Lines a drop cap spans",
-        // Meaningless without an initial to span them.
-        under: "contents.drop_caps",
-        // The resolver's own bounds, so the field cannot offer a number
-        // the file would refuse.
-        range: [2, 6],
       },
     ],
   },

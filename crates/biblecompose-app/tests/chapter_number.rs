@@ -133,9 +133,14 @@ fn built_with(columns: usize, styles: &str, contents: &str) -> Built {
 
 /// And with a line of the `[page]` settings as well.
 fn built_on(columns: usize, page: &str, styles: &str, contents: &str) -> Built {
+    built_from(TWO_CHAPTERS, columns, page, styles, contents)
+}
+
+/// And from any USFM at all.
+fn built_from(usfm: &str, columns: usize, page: &str, styles: &str, contents: &str) -> Built {
     let guard = tempfile::tempdir().expect("temp dir");
     let root = Utf8PathBuf::from_path_buf(guard.path().to_path_buf()).expect("UTF-8 temp path");
-    std::fs::write(root.join("GEN.usfm").as_std_path(), TWO_CHAPTERS).expect("the book");
+    std::fs::write(root.join("GEN.usfm").as_std_path(), usfm).expect("the book");
     std::fs::write(
         root.join("biblecompose.toml").as_std_path(),
         format!(
@@ -696,6 +701,30 @@ fn an_auto_start_moves_on_only_when_the_verses_would_not_fit() {
         "chapter_starts = \"auto_next_page\"\nstart_verses = 3",
     );
     assert_eq!(roomy.number("2").page, 1);
+
+    // The case that was reported: a heading after `\\c`, which carries the
+    // chapter's anchor. Measured only within its own paragraph, the heading
+    // has no verses after it, and a chapter opened at the foot of a page
+    // with nothing under it. What follows is read across the book.
+    let headed = TWO_CHAPTERS.replace("\\c 2\n\\p\n", "\\c 2\n\\s The Seventh Day\n\\p\n");
+    let plain = built_from(&headed, 1, SHORT, "", "chapter_starts = \"continuous\"");
+    assert_eq!(
+        plain.number("2").page,
+        1,
+        "the heading and its chapter fit at the foot of page 1"
+    );
+    let cramped = built_from(
+        &headed,
+        1,
+        SHORT,
+        "",
+        "chapter_starts = \"auto_next_page\"\nstart_verses = 3",
+    );
+    assert_eq!(
+        cramped.number("2").page,
+        2,
+        "with the anchor in a heading, the verses after it still have to fit"
+    );
 
     // Two columns: the same, a column at a time.
     let cramped = built_on(

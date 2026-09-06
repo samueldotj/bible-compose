@@ -585,7 +585,7 @@ function class:registerCommands ()
          or self._bcopts.bookstarts
       if rule == "auto_next_column" or rule == "auto_next_page" then
          local verses = tonumber(self._bcopts.startverses) or 3
-         local chars = opening_text(s0.para_content or {}, options.n, verses)
+         local chars = opening_text(s0.book_items or {}, s0.book_index or 1, options.n, verses)
          -- The verses' lines, and one more for the number's own line or
          -- the first line the number sits in.
          if lines_left() < lines_needed(chars) + 1 then
@@ -1046,14 +1046,23 @@ local function alignment (s)
    return nil
 end
 
---- Characters of the first `verses` verses after chapter `n`'s anchor in a
--- paragraph's content, which is what an "auto" start has to find room for.
--- Only this paragraph: a chapter whose first verses run past it has more
--- than a paragraph of text to fit, and needs the room anyway.
-function opening_text (content, n, verses)
-   local chars, seen, started = 0, 0, false
-   local function walk (items)
-      for _, item in ipairs(items) do
+--- Characters of everything from chapter `n`'s anchor to its first
+-- `verses` verses, which is what an "auto" start has to find room for.
+--
+-- Read from the book's children, starting at the one the anchor is in
+-- (`from`) and going on through the ones after it: the anchor sits in a
+-- heading when a heading follows `\c`, and in a label paragraph when the
+-- translation writes `\cl`, and in both the verses are in the paragraphs
+-- after — which is exactly the case that left a chapter's heading alone at
+-- the foot of a page, with no verse under it, when only its own paragraph
+-- was read. The heading's and the label's own words count: they take lines.
+function opening_text (items, from, n, verses)
+   local chars, seen, started, done = 0, 0, false, false
+   local function walk (list)
+      for _, item in ipairs(list) do
+         if done then
+            return
+         end
          if type(item) == "string" then
             if started then
                -- Characters, not bytes: a Tamil syllable is several bytes
@@ -1062,6 +1071,11 @@ function opening_text (content, n, verses)
             end
          elseif type(item) == "table" then
             if item.command == "chapter" then
+               if started then
+                  -- The next chapter: this one had fewer verses than asked.
+                  done = true
+                  return
+               end
                started = tostring(item.options and item.options.n) == tostring(n)
             elseif item.command == "note" or item.command == "xref" then
                -- Set at the foot, not on the line.
@@ -1069,22 +1083,28 @@ function opening_text (content, n, verses)
                if item.command == "verse" and started then
                   seen = seen + 1
                   if seen > verses then
-                     return true
+                     done = true
+                     return
                   end
                end
-               if walk(item) then
-                  return true
-               end
+               walk(item)
             end
          end
       end
-      return false
    end
-   walk(content)
+   for i = from, #items do
+      if done then
+         break
+      end
+      if type(items[i]) == "table" then
+         walk({ items[i] })
+      end
+   end
    return chars
 end
 
---- Lines left in the current frame, before what is queued for it.
+--- Lines left in the current frame: its target length — the frame less
+-- what the notes on this page have taken — less what is queued for it.
 function lines_left ()
    local used = 0
    for _, node in ipairs(SILE.typesetter.state.outputQueue) do
@@ -1093,7 +1113,9 @@ function lines_left ()
       end
    end
    local leading = SILE.settings:get("document.baselineskip").height:tonumber()
-   return (SILE.typesetter.frame:height():tonumber() - used) / leading
+   local target = SILE.typesetter:getTargetLength()
+   target = type(target) == "number" and target or target:tonumber()
+   return (target - used) / leading
 end
 
 --- Lines a run of `chars` characters takes at the body size in this frame:
@@ -1728,7 +1750,17 @@ function class:registerXmlCommands ()
          SILE.call("par")
          skip("5pt")
       end
-      elements(content)
+      -- One child at a time, noting which, so a chapter opening in any of
+      -- them can measure what follows it — the rest of its heading or
+      -- label paragraph, and the paragraphs after — for an "auto" start.
+      for i, item in ipairs(content) do
+         if type(item) == "table" then
+            s.book_items = content
+            s.book_index = i
+            SILE.process({ item })
+         end
+      end
+      s.book_items = nil
    end)
 
    self:registerCommand("heading", function (options, content)
@@ -1772,8 +1804,6 @@ function class:registerXmlCommands ()
       local selector = "paragraph." .. (options.style or "p")
       local s = style(selector)
       scratch().verses_in_paragraph = 0
-      -- For a chapter that opens in this paragraph: what follows its anchor.
-      scratch().para_content = content
       skip(s.space_above)
       SILE.settings:temporarily(function ()
          if s.indent then

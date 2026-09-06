@@ -117,29 +117,6 @@ export const SWITCH_GROUPS: readonly SwitchGroup[] = [
     ],
   },
   {
-    title: "Start",
-    tab: "contents",
-    switches: [
-      {
-        key: "contents.book_starts",
-        label: "Book",
-        note: "Where the next book begins. One book here, so nothing to show.",
-      },
-      {
-        key: "contents.chapter_starts",
-        label: "Chapter",
-        note: "Where every chapter but a book's first begins. Chapter 2 stays put here: the page is a page.",
-      },
-      { key: "contents.verse_starts", label: "Verse" },
-      {
-        key: "contents.start_verses",
-        label: "Verses that must fit",
-        note: "Whatever the start above: a book or chapter with fewer than this of its verses fitting in the column moves to the next column. 0 turns it off.",
-        range: [0, 30],
-      },
-    ],
-  },
-  {
     title: "Numbering",
     tab: "contents",
     switches: [
@@ -184,6 +161,29 @@ export const SWITCH_GROUPS: readonly SwitchGroup[] = [
         // And nothing to decide under a dropped initial, which is the
         // first verse's marker.
         implied: "contents.drop_caps",
+      },
+    ],
+  },
+  {
+    title: "Start",
+    tab: "contents",
+    switches: [
+      {
+        key: "contents.book_starts",
+        label: "Book",
+        note: "Where the next book begins. One book here, so nothing to show.",
+      },
+      {
+        key: "contents.chapter_starts",
+        label: "Chapter",
+        note: "Where every chapter but a book's first begins. Chapter 2 stays put here: the page is a page.",
+      },
+      { key: "contents.verse_starts", label: "Verse" },
+      {
+        key: "contents.start_verses",
+        label: "Verses that must fit",
+        note: "Whatever the start above: a book or chapter with fewer than this of its verses fitting in the column moves to the next column. 0 turns it off.",
+        range: [0, 30],
       },
     ],
   },

@@ -318,13 +318,10 @@
         {
           key: "contents.start_verses",
           label: "Verses that must fit",
-          note: "For the Auto choices: fewer than this after a start, and it moves on.",
+          // Always live, so it can be set before or after choosing an Auto
+          // start; the note says which choices read it.
+          note: "Read by the Auto choices above: a book or chapter moves on when fewer than this of its verses would fit.",
           range: [1, 30],
-          // Nothing to fit until a start is one of the Auto choices.
-          unless: {
-            keys: ["contents.book_starts", "contents.chapter_starts"],
-            test: (value) => value.startsWith("auto_"),
-          },
         },
       ],
     },

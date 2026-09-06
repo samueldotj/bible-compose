@@ -237,10 +237,9 @@ export const TABS: readonly Tab[] = [
   // so a key added to the schema is visible somewhere rather than nowhere.
   { id: "contents", title: "Contents", settingGroups: [], example: "contents", orphans: true },
   // The same page as Contents, with the switches about how a paragraph is
-  // set — and again with the switches about numbers and notes. One tab held
-  // all seven groups and was a column to scroll.
+  // set — and again with the ones about the notes. One tab held every
+  // group and was a column to scroll.
   { id: "paragraph", title: "Paragraph", settingGroups: [], example: "paragraph" },
-  { id: "numbering", title: "Numbering", settingGroups: [], example: "numbering" },
   { id: "notes", title: "Cross-references", settingGroups: [], example: "notes" },
   {
     id: "headers",

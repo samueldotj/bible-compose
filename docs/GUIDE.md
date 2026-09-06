@@ -89,9 +89,8 @@ beside it puts the built-in value back.
 |---|---|
 | **Scripture** | Which books, and in what order |
 | **Template** | Three kinds of book to start from |
-| **Contents** | What appears — introductions, headings — and where books, chapters and verses start |
+| **Contents** | What appears — introductions, headings, chapter and verse numbers — and where books, chapters and verses start |
 | **Paragraph** | How a paragraph is set: justification, poetry indents, quotations, drop caps |
-| **Numbering** | Chapter and verse numbers |
 | **Cross-references** | Footnotes and cross-references: whether, their marks, where they go |
 | **Headers & Footers** | What goes in each of the six slots, on each side of the spread — see below |
 | **Page** | Trim size, columns, margins |
@@ -151,7 +150,7 @@ Set in the PDF, not on the example page.
 
 ### Numbers in the margin
 
-On the Numbering tab, **Chapter numbers** and **Verse numbers** are each one
+On the Contents tab, **Chapter numbers** and **Verse numbers** are each one
 dropdown: don't show, show in the text as most Bibles do, or in the left or
 right margin of the column, level with the line the chapter or verse begins
 on, so the text runs clear of them. Several verses beginning on one line

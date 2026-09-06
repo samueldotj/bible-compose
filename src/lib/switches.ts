@@ -9,7 +9,7 @@
  */
 
 /** Which example tabs there are, besides Headers & Footers. */
-export type ExampleTab = "contents" | "paragraph" | "numbering" | "notes";
+export type ExampleTab = "contents" | "paragraph" | "notes";
 
 export interface SwitchRow {
   readonly key: string;
@@ -141,7 +141,7 @@ export const SWITCH_GROUPS: readonly SwitchGroup[] = [
   },
   {
     title: "Numbering",
-    tab: "numbering",
+    tab: "contents",
     switches: [
       {
         key: "numbering.show_chapter_numbers",

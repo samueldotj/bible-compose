@@ -128,12 +128,19 @@ fn built(columns: usize, styles: &str) -> Built {
 
 /// The same, with a line of the `[contents]` settings chosen.
 fn built_with(columns: usize, styles: &str, contents: &str) -> Built {
+    built_on(columns, "", styles, contents)
+}
+
+/// And with a line of the `[page]` settings as well.
+fn built_on(columns: usize, page: &str, styles: &str, contents: &str) -> Built {
     let guard = tempfile::tempdir().expect("temp dir");
     let root = Utf8PathBuf::from_path_buf(guard.path().to_path_buf()).expect("UTF-8 temp path");
     std::fs::write(root.join("GEN.usfm").as_std_path(), TWO_CHAPTERS).expect("the book");
     std::fs::write(
         root.join("biblecompose.toml").as_std_path(),
-        format!("schema_version = 1\n[page]\ncolumns = {columns}\n[contents]\n{contents}\n"),
+        format!(
+            "schema_version = 1\n[page]\ncolumns = {columns}\n{page}\n[contents]\n{contents}\n"
+        ),
     )
     .expect("the settings");
     std::fs::write(root.join("styles.toml").as_std_path(), styles).expect("the styles");
@@ -651,4 +658,60 @@ fn a_verse_can_begin_on_its_own_line() {
             "{columns} columns: {plain_at_margin} vs {at_margin}"
         );
     }
+}
+
+/// **An "auto" start moves on only when the opening verses would not fit.**
+/// On a page short enough that chapter 1 leaves a line or two, chapter 2
+/// stays put on the run and moves to the next page under
+/// `auto_next_page` — and stays on page 1 when the page has room.
+#[test]
+fn an_auto_start_moves_on_only_when_the_verses_would_not_fit() {
+    if !have_backend() {
+        return;
+    }
+    // A page whose text block holds chapter 1 and a line or two more.
+    const SHORT: &str = "size = \"6x4.3in\"";
+    let cramped = built_on(
+        1,
+        SHORT,
+        "",
+        "chapter_starts = \"auto_next_page\"\nstart_verses = 3",
+    );
+    let plain = built_on(1, SHORT, "", "chapter_starts = \"continuous\"");
+    assert_eq!(
+        plain.number("2").page,
+        1,
+        "on the run, chapter 2 opens at the foot of page 1"
+    );
+    assert_eq!(
+        cramped.number("2").page,
+        2,
+        "with three verses to fit, chapter 2 moves to page 2"
+    );
+
+    // And on the usual page, where the room is there, it does not move.
+    let roomy = built_with(
+        1,
+        "",
+        "chapter_starts = \"auto_next_page\"\nstart_verses = 3",
+    );
+    assert_eq!(roomy.number("2").page, 1);
+
+    // Two columns: the same, a column at a time.
+    let cramped = built_on(
+        2,
+        SHORT,
+        "",
+        "chapter_starts = \"auto_next_column\"\nstart_verses = 3",
+    );
+    let plain = built_on(2, SHORT, "", "chapter_starts = \"continuous\"");
+    let (bl, _) = cramped.column(1);
+    assert!(
+        cramped.number("2").x >= bl - 1.0 || cramped.number("2").page > plain.number("2").page,
+        "chapter 2 moves to the next column or page: x={} page={} (plain x={} page={})",
+        cramped.number("2").x,
+        cramped.number("2").page,
+        plain.number("2").x,
+        plain.number("2").page
+    );
 }

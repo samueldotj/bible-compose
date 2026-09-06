@@ -100,6 +100,8 @@ local OPTIONS = {
    { key = "bookstarts", kind = "string", default = "next_page" },
    { key = "chapterstarts", kind = "string", default = "continuous" },
    { key = "versestarts", kind = "string", default = "continuous" },
+   -- For the auto starts: opening verses that must fit, or the start moves.
+   { key = "startverses", kind = "string", default = "3" },
    { key = "dropcaplines", kind = "string", default = "3" },
    -- How a paragraph and a line of verse are set.
    { key = "justify", kind = "boolean", default = true },
@@ -500,6 +502,8 @@ local slot_content, set_line, restart_notes, carry_reference
 -- and verse commands name a place in Scripture, and both are registered
 -- above the state they read it from.
 local scratch, anchor, destination, o_anchors, start_at
+-- The three an "auto" start measures with, for the same reason.
+local opening_text, lines_left, lines_needed
 
 function class:endPage ()
    local o = self._bcopts
@@ -575,8 +579,20 @@ function class:registerCommands ()
       -- book's own opening decides that one (see `book`).
       local s0 = scratch()
       s0.chapters_in_book = (s0.chapters_in_book or 0) + 1
-      if s0.chapters_in_book > 1 then
-         start_at(self._bcopts.chapterstarts)
+      -- A book's first chapter is where the book starts, so an "auto" book
+      -- start is judged here, where the verses it has to fit are known.
+      local rule = s0.chapters_in_book > 1 and self._bcopts.chapterstarts
+         or self._bcopts.bookstarts
+      if rule == "auto_next_column" or rule == "auto_next_page" then
+         local verses = tonumber(self._bcopts.startverses) or 3
+         local chars = opening_text(s0.para_content or {}, options.n, verses)
+         -- The verses' lines, and one more for the number's own line or
+         -- the first line the number sits in.
+         if lines_left() < lines_needed(chars) + 1 then
+            start_at(rule == "auto_next_page" and "next_page" or "next_column")
+         end
+      elseif s0.chapters_in_book > 1 then
+         start_at(rule)
       end
       SILE.call("save-chapter-number", options, flat(content))
       -- Outside the `chapternumbers` guard below, and that is the point:
@@ -1028,6 +1044,66 @@ local function alignment (s)
       return ALIGNMENT.start
    end
    return nil
+end
+
+--- Characters of the first `verses` verses after chapter `n`'s anchor in a
+-- paragraph's content, which is what an "auto" start has to find room for.
+-- Only this paragraph: a chapter whose first verses run past it has more
+-- than a paragraph of text to fit, and needs the room anyway.
+function opening_text (content, n, verses)
+   local chars, seen, started = 0, 0, false
+   local function walk (items)
+      for _, item in ipairs(items) do
+         if type(item) == "string" then
+            if started then
+               -- Characters, not bytes: a Tamil syllable is several bytes
+               -- and one or two glyphs wide.
+               chars = chars + #(item:gsub("[\128-\191]", ""))
+            end
+         elseif type(item) == "table" then
+            if item.command == "chapter" then
+               started = tostring(item.options and item.options.n) == tostring(n)
+            elseif item.command == "note" or item.command == "xref" then
+               -- Set at the foot, not on the line.
+            else
+               if item.command == "verse" and started then
+                  seen = seen + 1
+                  if seen > verses then
+                     return true
+                  end
+               end
+               if walk(item) then
+                  return true
+               end
+            end
+         end
+      end
+      return false
+   end
+   walk(content)
+   return chars
+end
+
+--- Lines left in the current frame, before what is queued for it.
+function lines_left ()
+   local used = 0
+   for _, node in ipairs(SILE.typesetter.state.outputQueue) do
+      if node.height then
+         used = used + node.height:tonumber() + (node.depth and node.depth:tonumber() or 0)
+      end
+   end
+   local leading = SILE.settings:get("document.baselineskip").height:tonumber()
+   return (SILE.typesetter.frame:height():tonumber() - used) / leading
+end
+
+--- Lines a run of `chars` characters takes at the body size in this frame:
+-- an estimate, a character taken as half an em, which is what a Latin text
+-- averages and what a syllabic script does not fall far from.
+function lines_needed (chars)
+   local size = SILE.settings:get("font.size")
+   local measure = SILE.typesetter.frame:width():tonumber()
+   local per_line = math.max(1, measure / (0.5 * size))
+   return math.ceil(chars / per_line)
 end
 
 --- Begin where a `book_starts` or `chapter_starts` setting says.
@@ -1617,7 +1693,9 @@ function class:registerXmlCommands ()
       -- single running head. Only a penalty at or past `supereject_penalty`
       -- reaches `newPage`.
       local s = scratch()
-      if s.books > 0 then
+      -- An "auto" start waits for the book's first chapter, where the verses
+      -- it has to fit are known (see `bc:chapter`).
+      if s.books > 0 and not self._bcopts.bookstarts:match("^auto_") then
          start_at(self._bcopts.bookstarts)
       end
       s.books = s.books + 1
@@ -1694,6 +1772,8 @@ function class:registerXmlCommands ()
       local selector = "paragraph." .. (options.style or "p")
       local s = style(selector)
       scratch().verses_in_paragraph = 0
+      -- For a chapter that opens in this paragraph: what follows its anchor.
+      scratch().para_content = content
       skip(s.space_above)
       SILE.settings:temporarily(function ()
          if s.indent then

@@ -179,6 +179,9 @@ pub struct Contents {
     pub book_starts: Sourced<BookStart>,
     pub chapter_starts: Sourced<ChapterStart>,
     pub verse_starts: Sourced<VerseStart>,
+    /// For the "auto" starts: how many of the opening verses must fit in
+    /// what is left of the column or page, or the start moves on.
+    pub start_verses: Sourced<u8>,
 }
 
 /// Footnotes and cross-references: whether, how marked, and — for references —
@@ -624,6 +627,9 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             }),
             verse_starts: r.value("contents.verse_starts", |n| {
                 value::choice(n, VerseStart::NAMES)
+            }),
+            start_verses: r.value("contents.start_verses", |n| {
+                value::integer_in(n, 1, 30).map(|l| l.map(|v| v as u8))
             }),
         },
         notes: Notes {

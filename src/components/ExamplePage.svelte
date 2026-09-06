@@ -313,6 +313,12 @@
           note: "Where every chapter but a book's first begins. Chapter 2 stays put here: the page is a page.",
         },
         { key: "contents.verse_starts", label: "Verse" },
+        {
+          key: "contents.start_verses",
+          label: "Verses that must fit",
+          note: "For the Auto choices: fewer than this after a start, and it moves on.",
+          range: [1, 30],
+        },
       ],
     },
     {

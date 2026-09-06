@@ -58,6 +58,7 @@ drop_cap_lines = 4
 book_starts = \"blank_right_page\"
 chapter_starts = \"next_column\"
 verse_starts = \"next_line\"
+start_verses = 5
 
 [numbering]
 show_chapter_numbers = false

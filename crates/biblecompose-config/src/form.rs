@@ -300,6 +300,11 @@ impl Settings {
             Choice(VerseStart::SPELLINGS),
             self.contents.verse_starts.to_string(),
         );
+        push(
+            "contents.start_verses",
+            Integer,
+            self.contents.start_verses.to_string(),
+        );
 
         push(
             "notes.show_footnotes",

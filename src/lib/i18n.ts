@@ -250,6 +250,7 @@ export const EN_LABELS: Readonly<Record<string, string>> = {
   "contents.book_starts": "Book",
   "contents.chapter_starts": "Chapter",
   "contents.verse_starts": "Verse",
+  "contents.start_verses": "Verses that must fit",
   "typography.justify": "Justify paragraphs",
   "typography.keep_poetry_indentation": "Keep poetry indentation",
   "notes.show_footnotes": "Footnotes",

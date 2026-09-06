@@ -7,7 +7,8 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 * **Where things start.** A Start group on the Contents tab: a book on the
   run, the next column, the next page, a chosen side, or after a blank page;
   a chapter likewise, short of the blank; a verse on the run or on a line of
-  its own. The chapter's column and page decisions move here from the
+  its own. Both a book and a chapter can also start "auto": on the run
+  unless fewer than a chosen number of their opening verses would fit. The chapter's column and page decisions move here from the
   chapter style.
 * **Theme and zoom.** A control at the end of the tab strip chooses a light,
   dark or system theme; Ctrl with `+`, `−`, `0` or the mouse wheel zooms the

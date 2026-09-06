@@ -108,6 +108,7 @@ pub fn class_options_with(
     put("bookstarts", s.contents.book_starts.to_string());
     put("chapterstarts", s.contents.chapter_starts.to_string());
     put("versestarts", s.contents.verse_starts.to_string());
+    put("startverses", s.contents.start_verses.to_string());
     put("justify", flag(*s.typography.justify));
     put("poetryindent", flag(*s.typography.keep_poetry_indentation));
     put("footnotes", flag(*s.notes.show_footnotes));

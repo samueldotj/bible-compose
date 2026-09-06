@@ -566,7 +566,12 @@
                   s.unless!.test(session.settings.find((x) => x.key === k)?.value ?? ""),
                 )}
               {@const idle = (s.under !== undefined && !on(s.under)) || implied || gated}
-              <li class:nested={s.under !== undefined} class:idle data-search-key={s.key}>
+              <li
+                class:nested={s.under !== undefined}
+                class:idle
+                class:beside={s.beside}
+                data-search-key={s.key}
+              >
                 <label
                   onpointerenter={() => (lit = s.key)}
                   onpointerleave={() => (lit = null)}
@@ -1025,6 +1030,16 @@
   }
   .switches li.nested {
     padding-inline-start: 1.2rem;
+  }
+  /* A switch set beside the one before it: both on one line, the second a
+     little way along. */
+  .switches li.beside,
+  .switches li:has(+ li.beside) {
+    display: inline-block;
+    vertical-align: top;
+  }
+  .switches li.beside {
+    margin-inline-start: 1.2rem;
   }
   .switches li.idle {
     opacity: 0.45;

@@ -23,6 +23,8 @@ export interface SwitchRow {
   readonly note?: string;
   /** For a number: the range the resolver accepts. */
   readonly range?: readonly [number, number];
+  /** Set to the right of the switch before it, on the same line. */
+  readonly beside?: boolean;
   /**
    * One dropdown over two settings: a switch that says whether, and a
    * choice that says where. "Don't show" turns the switch off; any other
@@ -144,6 +146,7 @@ export const SWITCH_GROUPS: readonly SwitchGroup[] = [
       {
         key: "numbering.show_chapter_labels",
         label: "Chapter labels",
+        beside: true,
         // A translation either carries `\cl` or it does not, and most do
         // not — so say that this switch may have nothing to act on.
         note: "USFM's \\cl, where a translation has it",

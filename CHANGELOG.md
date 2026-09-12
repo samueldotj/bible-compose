@@ -2,6 +2,11 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+* **Close project** is back at the top of the window for as long as a
+  project is open. It had been shown only while files had changed on disk.
+
 ## 0.1.4
 
 The settings, rearranged, and a status line.

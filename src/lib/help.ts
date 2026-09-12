@@ -35,6 +35,10 @@ export const EN_HELP: Readonly<Record<string, string>> = {
   "subtab:furniture": "The running head, the page number and figure captions.",
   "subtab:inspect": "Every property of every element, and where each value came from — the built-in set, this project, or inheritance.",
 
+  // ------------------------------------------------------------- actions
+  "action:close":
+    "Put this project down and go back to the start screen. Nothing on disk changes; the folder is there to open again.",
+
   // ------------------------------------------------------------ settings
   "project.name": "The publication's name: the PDF's title, and its file name unless one is set.",
   "project.language": "The language of the Scripture, as a BCP-47 tag such as ta or en. Sets hyphenation and the PDF's language.",

@@ -71,15 +71,26 @@
         {session.changedCount === 1 ? "file has" : "files have"} changed on disk — reload
       </button>
     </header>
+  {/if}
 
+  {#if session.project}
     <!-- What the publication is and what language it is in. They are answered
          once, when a folder is first opened, which is not a reason to keep them
-         behind a tab for the rest of the project's life. -->
+         behind a tab for the rest of the project's life. Shown for as long as
+         the project is, not only while files have changed on disk — that was
+         the notice's condition, and the strip had been folded under it. -->
     <div class="identity">
       <QuickSettings keys={["project.name", "project.language"]} width="12rem" />
       <!-- Beside what it closes: the strip is what this project *is*, and
            putting it down belongs with the two things that name it. -->
-      <button type="button" class="close" onclick={() => void session.close()}>{t("closeProject")}</button>
+      <button
+        type="button"
+        class="close"
+        data-search-key="action:close"
+        onclick={() => void session.close()}
+      >
+        {t("closeProject")}
+      </button>
     </div>
   {/if}
 

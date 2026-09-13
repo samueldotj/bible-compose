@@ -2,7 +2,9 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
-## Unreleased
+## 0.2.0
+
+The window, rebuilt around the page.
 
 * **A new window, built from the BibleCompose v2 design.** Three panes around a
   page: a rail of sections on the left, a proof spread in the centre set to

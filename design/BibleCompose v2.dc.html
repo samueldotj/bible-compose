@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=Source+Sans+3:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>body{margin:0;background:#e9e5de;font-family:'Source Sans 3',system-ui,sans-serif;color:#2b2823}a{color:#3f5a7d}a:hover{color:#2f4763}</style>
+</helmet>
+<section id="t2" style="padding:40px 44px 32px;scroll-margin-top:16px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin:0 0 6px"><a href="#t2" style="font:600 10px 'IBM Plex Mono',monospace;padding:3px 7px;background:#2b2823;color:#fff;text-decoration:none;border-radius:4px">2</a><span style="font:500 15px 'Newsreader',serif">Fresh start — calm editorial, layout rethought around the page</span></div>
+  <p style="font-size:13px;color:#6e6860;max-width:940px;margin:0 0 24px;line-height:1.55">Type: Newsreader for titles and the proof page, Source Sans 3 for the interface, IBM Plex Mono only for codes and file sources. Warm paper neutrals, one quiet ink-blue for the primary action and selection, 6–8px radii, hairlines instead of rules. Comfortable density (40px rows). The layout is rethought: the <b>page itself is the centre of the app</b> — a live proof spread — with the settings for one section in an inspector on the right and a table-of-contents rail on the left. Clicking any element on the page (a header, a verse number, a margin) opens its setting, and <i>Find a setting</i> (Ctrl K) jumps by name. Screens that have no page to show (Books, Template, Build) use the same three panes with the canvas swapped for a table or gallery.</p>
+
+  <div style="font:italic 500 13px 'Newsreader',serif;color:#6e6860;margin:0 0 12px">Two shells — Text › Contents</div>
+  <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+    <!-- 2a -->
+    <div id="2a" style="flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px">
+      <div style="display:flex;align-items:baseline;gap:8px;font-size:12px;color:#6e6860"><a href="#2a" style="font:600 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#2b2823;text-decoration:none;border-radius:4px">2a</a>Page-centred: rail · live proof spread · inspector — light</div>
+      <div data-screen-label="2a Contents page-centred" style="--bg:#efebe4;--panel:#f8f6f2;--ink:#2b2823;--mut:#6e6860;--line:#e2dcd2;--line2:#cbc3b6;--acc:#3f5a7d;--acctint:#e6ecf3;--acctext:#2f4763;--field:#fff;width:1440px;height:900px;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.45;overflow:hidden;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.12),0 12px 40px rgba(40,30,10,.12)">
+        <div style="height:52px;display:flex;align-items:center;gap:18px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--panel)">
+          <div style="display:flex;gap:7px;margin-right:4px"><span style="width:11px;height:11px;border-radius:6px;background:#e0574f"></span><span style="width:11px;height:11px;border-radius:6px;background:#e5b043"></span><span style="width:11px;height:11px;border-radius:6px;background:#5cb85c"></span></div>
+          <div style="font:500 20px 'Newsreader',serif;letter-spacing:-.01em">BibleCompose</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--mut)"><span style="color:var(--ink);font-weight:600">trest</span><span style="white-space:nowrap">· தமிழ் — Tamil (ta) · 2 of 66 books</span></div>
+          <div style="flex:1"></div>
+          <div style="width:340px;height:34px;border:1px solid var(--line2);border-radius:8px;background:var(--field);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--mut)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg><span style="white-space:nowrap">Find a setting…</span><span style="margin-left:auto;font:11px 'IBM Plex Mono',monospace;border:1px solid var(--line);border-radius:4px;padding:1px 5px">Ctrl K</span></div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--mut);white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>10 problems</div>
+          <span style="width:34px;height:34px;border:1px solid var(--line2);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--mut)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></span>
+          <span style="height:34px;padding:0 16px;border-radius:8px;background:var(--acc);color:#fff;font-weight:600;display:inline-flex;align-items:center;gap:8px;white-space:nowrap">Generate PDF</span>
+        </div>
+        <div style="flex:1;display:flex;min-height:0">
+          <div style="width:220px;background:var(--panel);border-right:1px solid var(--line);padding:14px 12px;display:flex;flex-direction:column;gap:1px;flex:none">
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:6px 10px 5px">Publication</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Books</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Template</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Text</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px;background:var(--acctint);color:var(--acctext);font-weight:600">Contents</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Paragraph</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Notes</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Page</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Trim &amp; margins</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Headers &amp; footers</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Figures</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Type</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Styles</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Output</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">PDF metadata</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px;display:flex;align-items:center;justify-content:space-between">Build<span style="font:500 11px 'IBM Plex Mono',monospace;background:var(--line);border-radius:10px;padding:1px 7px">10</span></div>
+            <div style="margin-top:auto;padding:10px;font-size:12px;color:var(--mut);line-height:1.5">Click anything on the page to open its setting.</div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 24px;color:var(--mut)">
+              <span style="display:inline-flex;gap:2px"><span style="width:28px;height:28px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></span><span style="width:28px;height:28px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg></span></span>
+              <span style="white-space:nowrap"><span style="color:var(--ink);font-weight:600">1 John 1–2</span> · pages 412–413</span>
+              <span style="flex:1"></span>
+              <span style="display:inline-flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden;font-size:12px"><span style="padding:4px 10px;background:var(--acctint);color:var(--acctext);font-weight:600">Spread</span><span style="padding:4px 10px;border-left:1px solid var(--line2)">Page</span></span>
+              <span style="display:inline-flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden;font-size:12px"><span style="padding:4px 10px;background:var(--acctint);color:var(--acctext);font-weight:600">Fit</span><span style="padding:4px 10px;border-left:1px solid var(--line2)">100%</span></span>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:0 24px 20px;min-height:0">
+              <div style="display:flex;gap:2px;box-shadow:0 24px 60px rgba(40,30,10,.18),0 2px 6px rgba(0,0,0,.08);position:relative">
+                <div style="width:352px;height:503px"><dc-import name="ProofPage" head-left="1 John" head-right="1:1–2:6" page-no="412" hint-size="352px,503px" style="height:100%;display:block"></dc-import></div>
+                <div style="width:352px;height:503px"><dc-import name="ProofPage" head-left="1 John" head-right="1:1–2:6" page-no="413" hint-size="352px,503px" style="height:100%;display:block"></dc-import></div>
+                <div style="position:absolute;left:8px;top:190px;width:22px;height:20px;border:1.5px solid var(--acc);border-radius:4px;background:rgba(63,90,125,.08)"></div>
+                <div style="position:absolute;left:8px;top:214px;background:var(--acc);color:#fff;font-size:11px;padding:3px 8px;border-radius:5px;white-space:nowrap;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.2)">Chapter numbers · In the left margin</div>
+              </div>
+            </div>
+          </div>
+          <div style="width:380px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;flex:none">
+            <div style="padding:18px 22px 14px;border-bottom:1px solid var(--line)"><div style="font:italic 12.5px 'Newsreader',serif;color:var(--mut)">Text</div><div style="font:500 24px/1.15 'Newsreader',serif;margin-top:2px">Contents</div><div style="color:var(--mut);margin-top:6px">Where numbering goes and where books, chapters and verses start.</div></div>
+            <div style="padding:0 22px 16px;overflow:hidden;flex:1">
+              <div style="font:italic 500 15px 'Newsreader',serif;padding:16px 0 2px">Front matter</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Book introductions</span><span style="width:32px;height:18px;border-radius:9px;background:var(--acc);position:relative;flex:none"><span style="position:absolute;top:2px;left:16px;width:14px;height:14px;border-radius:7px;background:#fff"></span></span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Introductory outlines</span><span style="width:32px;height:18px;border-radius:9px;background:var(--acc);position:relative;flex:none"><span style="position:absolute;top:2px;left:16px;width:14px;height:14px;border-radius:7px;background:#fff"></span></span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Section headings</span><span style="width:32px;height:18px;border-radius:9px;background:var(--acc);position:relative;flex:none"><span style="position:absolute;top:2px;left:16px;width:14px;height:14px;border-radius:7px;background:#fff"></span></span></div>
+              <div style="font:italic 500 15px 'Newsreader',serif;padding:18px 0 2px">Numbering</div>
+              <div style="padding:9px 0;border-bottom:1px solid var(--line);background:var(--acctint);margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:6px"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="font-weight:600;color:var(--acctext)">Chapter numbers</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap">In the left margin<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div><div style="display:flex;justify-content:space-between;margin-top:5px;font-size:12px;color:var(--mut)"><span style="font:11px 'IBM Plex Mono',monospace">biblecompose.toml:41</span><span style="color:var(--acc)">Reset</span></div></div>
+              <div style="padding:9px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Verse numbers</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap">In the left margin<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);color:var(--mut)"><span style="white-space:nowrap">Hide first verse number<div style="font-size:12px">Set by drop caps</div></span><span style="width:32px;height:18px;border-radius:9px;background:var(--line2);position:relative;flex:none;opacity:.6"><span style="position:absolute;top:2px;left:16px;width:14px;height:14px;border-radius:7px;background:#fff"></span></span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Chapter labels<div style="font-size:12px;color:var(--mut)">USFM's \cl, where a translation has it</div></span><span style="width:32px;height:18px;border-radius:9px;background:var(--line2);position:relative;flex:none"><span style="position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:7px;background:#fff"></span></span></div>
+              <div style="font:italic 500 15px 'Newsreader',serif;padding:18px 0 2px">Start</div>
+              <div style="padding:9px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Book</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap">Blank page, then a left page<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div></div>
+              <div style="padding:9px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Chapter</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap">Continuous<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div></div>
+              <div style="padding:9px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Verses that must fit</span><span style="display:inline-flex;align-items:center;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);width:64px">3</span></div><div style="font-size:12px;color:var(--mut);margin-top:4px">Fewer than this fitting in a column moves the start to the next column. 0 turns it off.</div></div>
+            </div>
+          </div>
+        </div>
+        <div style="height:32px;display:flex;align-items:center;gap:16px;padding:0 20px;border-top:1px solid var(--line);background:var(--panel);font-size:12px;color:var(--mut)">
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:4px;background:#5cb85c"></span>Idle</span>
+          <span style="font:11.5px 'IBM Plex Mono',monospace">→ C:\Users\samue\OneDrive\BibleProjects\IRV\usfm\output\trest.pdf</span><span style="color:var(--acc)">Open folder</span>
+          <span style="flex:1"></span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1.5px solid var(--line2);border-radius:3px"></span>Keep intermediates</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1.5px solid var(--line2);border-radius:3px"></span>Strict settings</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2b -->
+    <div id="2b" style="flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px">
+      <div style="display:flex;align-items:baseline;gap:8px;font-size:12px;color:#6e6860"><a href="#2b" style="font:600 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#2b2823;text-decoration:none;border-radius:4px">2b</a>Form-centred: rail · wide settings sheet · proof page docked right — dark, Find-a-setting open</div>
+      <div data-screen-label="2b Contents form-centred dark" style="--bg:#1b1a18;--panel:#232120;--ink:#ebe6dd;--mut:#a09a90;--line:#35322e;--line2:#4a463f;--acc:#8fa9c9;--acctint:#2b3646;--acctext:#c5d5ea;--field:#2c2a27;width:1440px;height:900px;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.45;overflow:hidden;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.3),0 12px 40px rgba(0,0,0,.3);position:relative">
+        <div style="height:52px;display:flex;align-items:center;gap:18px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--panel)">
+          <div style="display:flex;gap:7px;margin-right:4px"><span style="width:11px;height:11px;border-radius:6px;background:#e0574f"></span><span style="width:11px;height:11px;border-radius:6px;background:#e5b043"></span><span style="width:11px;height:11px;border-radius:6px;background:#5cb85c"></span></div>
+          <div style="font:500 20px 'Newsreader',serif;letter-spacing:-.01em">BibleCompose</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--mut)"><span style="color:var(--ink);font-weight:600">trest</span><span style="white-space:nowrap">· தமிழ் — Tamil (ta) · 2 of 66 books</span></div>
+          <div style="flex:1"></div>
+          <div style="width:340px;height:34px;border:1px solid var(--acc);border-radius:8px;background:var(--field);display:flex;align-items:center;gap:8px;padding:0 12px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>verse num<span style="width:1.5px;height:16px;background:var(--acc)"></span></div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--mut);white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>10 problems</div>
+          <span style="width:34px;height:34px;border:1px solid var(--line2);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--mut)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg></span>
+          <span style="height:34px;padding:0 16px;border-radius:8px;background:var(--acc);color:#141311;font-weight:600;display:inline-flex;align-items:center;gap:8px;white-space:nowrap">Generate PDF</span>
+        </div>
+        <div style="flex:1;display:flex;min-height:0">
+          <div style="width:220px;background:var(--panel);border-right:1px solid var(--line);padding:14px 12px;display:flex;flex-direction:column;gap:1px;flex:none">
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:6px 10px 5px">Publication</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Books</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Template</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Text</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px;background:var(--acctint);color:var(--acctext);font-weight:600">Contents</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Paragraph</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Notes</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Page</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Trim &amp; margins</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Headers &amp; footers</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Figures</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Type</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Styles</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Output</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">PDF metadata</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px;display:flex;align-items:center;justify-content:space-between">Build<span style="font:500 11px 'IBM Plex Mono',monospace;background:var(--line);border-radius:10px;padding:1px 7px">10</span></div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0;padding:26px 40px;overflow:hidden">
+            <div style="font:italic 12.5px 'Newsreader',serif;color:var(--mut)">Text</div>
+            <div style="font:500 30px/1.1 'Newsreader',serif;margin-top:2px">Contents</div>
+            <div style="color:var(--mut);margin-top:6px;max-width:560px">Where numbering goes and where books, chapters and verses start. Each value shows where it comes from.</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 48px;margin-top:10px">
+              <div>
+                <div style="font:italic 500 16px 'Newsreader',serif;padding:18px 0 4px;border-bottom:1px solid var(--line2)">Front matter</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Book introductions</span><span style="width:32px;height:18px;border-radius:9px;background:var(--acc);position:relative;flex:none"><span style="position:absolute;top:2px;left:16px;width:14px;height:14px;border-radius:7px;background:#fff"></span></span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Introductory outlines</span><span style="width:32px;height:18px;border-radius:9px;background:var(--acc);position:relative;flex:none"><span style="position:absolute;top:2px;left:16px;width:14px;height:14px;border-radius:7px;background:#fff"></span></span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Section headings</span><span style="width:32px;height:18px;border-radius:9px;background:var(--acc);position:relative;flex:none"><span style="position:absolute;top:2px;left:16px;width:14px;height:14px;border-radius:7px;background:#fff"></span></span></div>
+                <div style="font:italic 500 16px 'Newsreader',serif;padding:26px 0 4px;border-bottom:1px solid var(--line2)">Numbering</div>
+                <div style="padding:10px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Chapter numbers</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap">In the left margin<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div><div style="display:flex;justify-content:space-between;margin-top:5px;font-size:12px;color:var(--mut)"><span style="font:11px 'IBM Plex Mono',monospace">biblecompose.toml:41</span><span style="color:var(--acc)">Reset</span></div></div>
+                <div style="padding:10px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Verse numbers</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap">In the left margin<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div><div style="margin-top:5px;font-size:12px;color:var(--mut)">built-in default</div></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Chapter labels<div style="font-size:12px;color:var(--mut)">USFM's \cl, where a translation has it</div></span><span style="width:32px;height:18px;border-radius:9px;background:var(--line2);position:relative;flex:none"><span style="position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:7px;background:#fff"></span></span></div>
+              </div>
+              <div>
+                <div style="font:italic 500 16px 'Newsreader',serif;padding:18px 0 4px;border-bottom:1px solid var(--line2)">Start</div>
+                <div style="padding:10px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Book</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap">Blank page, then a left page<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div><div style="margin-top:5px;font-size:12px;color:var(--mut)">Where the next book begins. One book here, so nothing to show.</div></div>
+                <div style="padding:10px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Chapter</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap">Continuous<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div><div style="margin-top:5px;font-size:12px;color:var(--mut)">Where every chapter but a book's first begins.</div></div>
+                <div style="padding:10px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Verse</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap">Continuous<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div></div>
+                <div style="padding:10px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Verses that must fit</span><span style="display:inline-flex;align-items:center;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);width:64px">3</span></div><div style="font-size:12px;color:var(--mut);margin-top:5px">Fewer than this fitting in a column moves the start to the next column. 0 turns it off.</div></div>
+              </div>
+            </div>
+          </div>
+          <div style="width:420px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;flex:none">
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line);color:var(--mut);font-size:12px"><span style="color:var(--ink);font-weight:600">Proof</span>1 John · p. 412<span style="flex:1"></span><span style="display:inline-flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden"><span style="padding:3px 8px;background:var(--acctint);color:var(--acctext);font-weight:600">Fit</span><span style="padding:3px 8px;border-left:1px solid var(--line2)">100%</span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M15 3v18"></path><path d="m8 9 3 3-3 3"></path></svg></div>
+            <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:24px"><div style="width:352px;height:503px;box-shadow:0 18px 44px rgba(0,0,0,.5)"><dc-import name="ProofPage" head-left="1 John" head-right="1:1–2:6" page-no="412" hint-size="352px,503px" style="height:100%;display:block"></dc-import></div></div>
+          </div>
+        </div>
+        <div style="height:32px;display:flex;align-items:center;gap:16px;padding:0 20px;border-top:1px solid var(--line);background:var(--panel);font-size:12px;color:var(--mut)">
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:4px;background:#5cb85c"></span>Idle</span>
+          <span style="font:11.5px 'IBM Plex Mono',monospace">→ C:\Users\samue\OneDrive\BibleProjects\IRV\usfm\output\trest.pdf</span><span style="color:var(--acc)">Open folder</span>
+          <span style="flex:1"></span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1.5px solid var(--line2);border-radius:3px"></span>Keep intermediates</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1.5px solid var(--line2);border-radius:3px"></span>Strict settings</span>
+        </div>
+        <!-- palette -->
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,.45)"></div>
+        <div style="position:absolute;top:96px;left:50%;transform:translateX(-50%);width:620px;background:var(--panel);border:1px solid var(--line2);border-radius:12px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);font-size:16px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg><span>verse num</span><span style="width:1.5px;height:18px;background:var(--acc)"></span><span style="margin-left:auto;font-size:12px;color:var(--mut)">6 settings</span></div>
+          <sc-for list="{{ palette }}" as="r" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:1fr auto;gap:1px 16px;padding:10px 18px;border-bottom:1px solid var(--line);background:{{ r.bg }}">
+              <div style="font-weight:600">{{ r.name }}</div>
+              <div style="font:italic 12.5px 'Newsreader',serif;color:var(--mut);align-self:center">{{ r.path }}</div>
+              <div style="font-size:12px;color:var(--mut);grid-column:1 / -1">{{ r.hint }}</div>
+            </div>
+          </sc-for>
+          <div style="display:flex;gap:16px;padding:9px 18px;font-size:11.5px;color:var(--mut)"><span>↑↓ move</span><span>↵ open setting</span><span>Esc close</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="font:italic 500 13px 'Newsreader',serif;color:#6e6860;margin:36px 0 12px">Screen set in <a href="#2a" style="font:600 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#2b2823;text-decoration:none;border-radius:4px">2a</a></div>
+  <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+    <!-- 2c Welcome -->
+    <div id="2c" style="flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px">
+      <div style="display:flex;align-items:baseline;gap:8px;font-size:12px;color:#6e6860"><a href="#2c" style="font:600 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#2b2823;text-decoration:none;border-radius:4px">2c</a>Welcome — open or create a project</div>
+      <div data-screen-label="2c Welcome" style="--bg:#efebe4;--panel:#f8f6f2;--ink:#2b2823;--mut:#6e6860;--line:#e2dcd2;--line2:#cbc3b6;--acc:#3f5a7d;--acctint:#e6ecf3;--acctext:#2f4763;--field:#fff;width:1440px;height:900px;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.45;overflow:hidden;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.12),0 12px 40px rgba(40,30,10,.12)">
+        <div style="height:52px;display:flex;align-items:center;gap:18px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--panel)"><div style="display:flex;gap:7px"><span style="width:11px;height:11px;border-radius:6px;background:#e0574f"></span><span style="width:11px;height:11px;border-radius:6px;background:#e5b043"></span><span style="width:11px;height:11px;border-radius:6px;background:#5cb85c"></span></div><div style="font:500 20px 'Newsreader',serif">BibleCompose</div></div>
+        <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:0">
+          <div style="padding:96px 80px 40px 96px;display:flex;flex-direction:column">
+            <div style="font:italic 15px 'Newsreader',serif;color:var(--mut)">Print Bibles from USFM</div>
+            <div style="font:500 64px/1 'Newsreader',serif;letter-spacing:-.02em;margin:10px 0 20px">BibleCompose</div>
+            <p style="font-size:16px;max-width:440px;margin:0 0 28px;color:var(--mut);line-height:1.5">A Bible project is a folder containing Scripture text in USFM format. Open one, or create an empty folder to start a new translation.</p>
+            <div style="display:flex;gap:10px"><span style="height:40px;padding:0 20px;border-radius:8px;background:var(--acc);color:#fff;font-weight:600;font-size:14px;display:inline-flex;align-items:center;white-space:nowrap">Open a project…</span><span style="height:40px;padding:0 20px;border-radius:8px;border:1px solid var(--line2);background:var(--field);font-weight:600;font-size:14px;display:inline-flex;align-items:center;white-space:nowrap">New project…</span></div>
+            <div style="height:1px;background:var(--line2);margin:44px 0 22px;max-width:480px"></div>
+            <div style="font:italic 500 16px 'Newsreader',serif;margin-bottom:12px">Starting with an existing Bible</div>
+            <div style="display:grid;grid-template-columns:24px 1fr;gap:10px 10px;max-width:480px;font-size:14px;line-height:1.5">
+              <span style="font:500 16px 'Newsreader',serif;color:var(--acc)">1</span><span>Download an open-licensed Bible in USFM or Paratext format from <a href="#2c">Open.Bible</a>.</span>
+              <span style="font:500 16px 'Newsreader',serif;color:var(--acc)">2</span><span>Extract the downloaded files to a folder.</span>
+              <span style="font:500 16px 'Newsreader',serif;color:var(--acc)">3</span><span>Select that folder as your Bible project directory.</span>
+            </div>
+            <div style="margin-top:auto;font:11.5px 'IBM Plex Mono',monospace;color:var(--mut)">biblecompose 0.2 · contract 1</div>
+          </div>
+          <div style="padding:96px 96px 40px 40px;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid var(--line2)"><span style="font:italic 500 16px 'Newsreader',serif">Recent projects</span><span style="font-size:12px;color:var(--mut)">1</span></div>
+            <div style="display:grid;grid-template-columns:44px 1fr auto;gap:0 16px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line)">
+              <div style="width:44px;height:58px;background:#fffdf9;border:1px solid var(--line2);border-radius:2px;padding:8px 6px;display:grid;grid-template-columns:1fr 1fr;gap:3px"><span style="background:var(--line)"></span><span style="background:var(--line)"></span></div>
+              <div><div style="font:500 19px 'Newsreader',serif">trest</div><div style="font:11.5px 'IBM Plex Mono',monospace;color:var(--mut);margin-top:2px">C:/Users/samue/OneDrive/BibleProjects/IRV/usfm</div><div style="font-size:12px;color:var(--mut);margin-top:2px">தமிழ் — Tamil (ta) · 2 of 66 books · Standard two-column · opened today</div></div>
+              <div style="display:flex;gap:8px;align-items:center"><span style="height:32px;padding:0 14px;border-radius:6px;border:1px solid var(--line2);background:var(--field);font-weight:600;display:inline-flex;align-items:center">Open</span><span style="color:var(--mut);display:inline-flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span></div>
+            </div>
+            <div style="padding:14px 0;font-size:12px;color:var(--mut)">Projects you open appear here. Removing one leaves the folder untouched.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2d Books -->
+    <div id="2d" style="flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px">
+      <div style="display:flex;align-items:baseline;gap:8px;font-size:12px;color:#6e6860"><a href="#2d" style="font:600 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#2b2823;text-decoration:none;border-radius:4px">2d</a>Publication › Books — switches instead of strike-through; the inspector holds selection tools</div>
+      <div data-screen-label="2d Books" style="--bg:#efebe4;--panel:#f8f6f2;--ink:#2b2823;--mut:#6e6860;--line:#e2dcd2;--line2:#cbc3b6;--acc:#3f5a7d;--acctint:#e6ecf3;--acctext:#2f4763;--field:#fff;width:1440px;height:900px;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.45;overflow:hidden;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.12),0 12px 40px rgba(40,30,10,.12)">
+        <div style="height:52px;display:flex;align-items:center;gap:18px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--panel)">
+          <div style="display:flex;gap:7px;margin-right:4px"><span style="width:11px;height:11px;border-radius:6px;background:#e0574f"></span><span style="width:11px;height:11px;border-radius:6px;background:#e5b043"></span><span style="width:11px;height:11px;border-radius:6px;background:#5cb85c"></span></div>
+          <div style="font:500 20px 'Newsreader',serif;letter-spacing:-.01em">BibleCompose</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--mut)"><span style="color:var(--ink);font-weight:600">trest</span><span style="white-space:nowrap">· தமிழ் — Tamil (ta) · 2 of 66 books</span></div>
+          <div style="flex:1"></div>
+          <div style="width:340px;flex:none;height:34px;border:1px solid var(--line2);border-radius:8px;background:var(--field);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--mut)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg><span style="white-space:nowrap">Find a setting…</span><span style="margin-left:auto;font:11px 'IBM Plex Mono',monospace;border:1px solid var(--line);border-radius:4px;padding:1px 5px">Ctrl K</span></div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--mut);white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>10 problems</div>
+          <span style="width:34px;height:34px;border:1px solid var(--line2);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--mut);flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></span>
+          <span style="height:34px;padding:0 16px;border-radius:8px;background:var(--acc);color:#fff;font-weight:600;display:inline-flex;align-items:center;white-space:nowrap">Generate PDF</span>
+        </div>
+        <div style="flex:1;display:flex;min-height:0">
+          <div style="width:220px;background:var(--panel);border-right:1px solid var(--line);padding:14px 12px;display:flex;flex-direction:column;gap:1px;flex:none">
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:6px 10px 5px">Publication</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px;background:var(--acctint);color:var(--acctext);font-weight:600">Books</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Template</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Text</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Contents</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Paragraph</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Notes</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Page</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Trim &amp; margins</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Headers &amp; footers</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Figures</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Type</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Styles</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Output</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">PDF metadata</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px;display:flex;align-items:center;justify-content:space-between">Build<span style="font:500 11px 'IBM Plex Mono',monospace;background:var(--line);border-radius:10px;padding:1px 7px">10</span></div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0;padding:22px 28px;gap:14px;overflow:hidden">
+            <div style="display:flex;align-items:baseline;gap:14px"><div style="font:500 26px/1.1 'Newsreader',serif">Books</div><span style="color:var(--mut)">2 of 66 in the publication · canonical order</span><span style="flex:1"></span><div style="height:32px;width:240px;border:1px solid var(--line2);border-radius:6px;background:var(--field);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--mut)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg><span style="white-space:nowrap">Filter books</span></div></div>
+            <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:0 28px;min-height:0">
+              <div style="display:flex;flex-direction:column;min-height:0">
+                <div style="display:flex;align-items:baseline;gap:10px;padding-bottom:8px;border-bottom:1px solid var(--line2)"><span style="font:italic 500 16px 'Newsreader',serif">Old Testament</span><span style="font-size:12px;color:var(--mut)">0 of 39</span><span style="margin-left:auto;font-size:12px;color:var(--acc)">Include all</span></div>
+                <div style="overflow:hidden;flex:1">
+                  <sc-for list="{{ ot }}" as="b" hint-placeholder-count="14">
+                    <div style="display:grid;grid-template-columns:14px 32px 1fr 44px 100px;gap:12px;align-items:center;height:40px;border-bottom:1px solid var(--line);color:{{ b.col }}">
+                      <span style="color:var(--line2);display:flex"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.8"></circle><circle cx="9" cy="12" r="1.8"></circle><circle cx="9" cy="19" r="1.8"></circle><circle cx="15" cy="5" r="1.8"></circle><circle cx="15" cy="12" r="1.8"></circle><circle cx="15" cy="19" r="1.8"></circle></svg></span>
+                      <span style="width:32px;height:18px;border-radius:9px;background:{{ b.bg }};position:relative;display:inline-block"><span style="position:absolute;top:2px;left:{{ b.knob }};width:14px;height:14px;border-radius:7px;background:#fff"></span></span>
+                      <span style="font-weight:{{ b.w }};white-space:nowrap">{{ b.name }}</span>
+                      <span style="font:11.5px 'IBM Plex Mono',monospace">{{ b.code }}</span>
+                      <span style="font-size:12px;text-align:right;white-space:nowrap">{{ b.ch }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;min-height:0">
+                <div style="display:flex;align-items:baseline;gap:10px;padding-bottom:8px;border-bottom:1px solid var(--line2)"><span style="font:italic 500 16px 'Newsreader',serif">New Testament</span><span style="font-size:12px;color:var(--mut)">2 of 27</span><span style="margin-left:auto;font-size:12px;color:var(--acc)">Include all</span><span style="font-size:12px;color:var(--acc)">Clear</span></div>
+                <div style="overflow:hidden;flex:1">
+                  <sc-for list="{{ nt }}" as="b" hint-placeholder-count="14">
+                    <div style="display:grid;grid-template-columns:14px 32px 1fr 44px 100px;gap:12px;align-items:center;height:40px;border-bottom:1px solid var(--line);color:{{ b.col }}">
+                      <span style="color:var(--line2);display:flex"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.8"></circle><circle cx="9" cy="12" r="1.8"></circle><circle cx="9" cy="19" r="1.8"></circle><circle cx="15" cy="5" r="1.8"></circle><circle cx="15" cy="12" r="1.8"></circle><circle cx="15" cy="19" r="1.8"></circle></svg></span>
+                      <span style="width:32px;height:18px;border-radius:9px;background:{{ b.bg }};position:relative;display:inline-block"><span style="position:absolute;top:2px;left:{{ b.knob }};width:14px;height:14px;border-radius:7px;background:#fff"></span></span>
+                      <span style="font-weight:{{ b.w }};white-space:nowrap">{{ b.name }}</span>
+                      <span style="font:11.5px 'IBM Plex Mono',monospace">{{ b.code }}</span>
+                      <span style="font-size:12px;text-align:right;white-space:nowrap">{{ b.ch }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="width:340px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;flex:none">
+            <div style="padding:18px 22px 14px;border-bottom:1px solid var(--line)"><div style="font:italic 12.5px 'Newsreader',serif;color:var(--mut)">Publication</div><div style="font:500 24px/1.15 'Newsreader',serif;margin-top:2px">Selection</div><div style="color:var(--mut);margin-top:6px">Turn a book on to include it. Drag to change the order.</div></div>
+            <div style="padding:0 22px 16px;flex:1">
+              <div style="font:italic 500 15px 'Newsreader',serif;padding:16px 0 2px">In the publication</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">மத்தேயு</span><span style="font:11.5px 'IBM Plex Mono',monospace;color:var(--mut)">MAT · 41MAT.usfm</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">மாற்கு</span><span style="font:11.5px 'IBM Plex Mono',monospace;color:var(--mut)">MRK · 42MRK.usfm</span></div>
+              <div style="font-size:12px;color:var(--mut);padding:8px 0">44 chapters · about 88 pages at the current settings</div>
+              <div style="font:italic 500 15px 'Newsreader',serif;padding:16px 0 2px">Order</div>
+              <div style="padding:9px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Books follow</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap">Canonical order<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div><div style="font-size:12px;color:var(--mut);margin-top:4px">Drag a book to switch to a custom order.</div></div>
+              <div style="font:italic 500 15px 'Newsreader',serif;padding:16px 0 2px">Files</div>
+              <div style="padding:9px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Missing books</span><span style="font-size:12px;color:var(--mut)">64 have no USFM file yet</span></div><div style="font-size:12px;color:var(--mut);margin-top:4px">Add a file to the project folder and it appears here.</div></div>
+              <div style="display:flex;gap:8px;margin-top:18px"><span style="height:32px;padding:0 14px;border-radius:6px;border:1px solid var(--line2);background:var(--field);font-weight:600;display:inline-flex;align-items:center;white-space:nowrap">Open project folder</span></div>
+            </div>
+          </div>
+        </div>
+        <div style="height:32px;display:flex;align-items:center;gap:16px;padding:0 20px;border-top:1px solid var(--line);background:var(--panel);font-size:12px;color:var(--mut)">
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:4px;background:#5cb85c"></span>Idle</span>
+          <span style="font:11.5px 'IBM Plex Mono',monospace">→ C:\Users\samue\OneDrive\BibleProjects\IRV\usfm\output\trest.pdf</span><span style="color:var(--acc)">Open folder</span>
+          <span style="flex:1"></span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1.5px solid var(--line2);border-radius:3px"></span>Keep intermediates</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1.5px solid var(--line2);border-radius:3px"></span>Strict settings</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2e Template -->
+    <div id="2e" style="flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px">
+      <div style="display:flex;align-items:baseline;gap:8px;font-size:12px;color:#6e6860"><a href="#2e" style="font:600 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#2b2823;text-decoration:none;border-radius:4px">2e</a>Publication › Template — gallery with page schematics; the inspector explains what Apply changes</div>
+      <div data-screen-label="2e Template" style="--bg:#efebe4;--panel:#f8f6f2;--ink:#2b2823;--mut:#6e6860;--line:#e2dcd2;--line2:#cbc3b6;--acc:#3f5a7d;--acctint:#e6ecf3;--acctext:#2f4763;--field:#fff;width:1440px;height:900px;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.45;overflow:hidden;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.12),0 12px 40px rgba(40,30,10,.12)">
+        <div style="height:52px;display:flex;align-items:center;gap:18px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--panel)">
+          <div style="display:flex;gap:7px;margin-right:4px"><span style="width:11px;height:11px;border-radius:6px;background:#e0574f"></span><span style="width:11px;height:11px;border-radius:6px;background:#e5b043"></span><span style="width:11px;height:11px;border-radius:6px;background:#5cb85c"></span></div>
+          <div style="font:500 20px 'Newsreader',serif;letter-spacing:-.01em">BibleCompose</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--mut)"><span style="color:var(--ink);font-weight:600">trest</span><span style="white-space:nowrap">· தமிழ் — Tamil (ta) · 2 of 66 books</span></div>
+          <div style="flex:1"></div>
+          <div style="width:340px;flex:none;height:34px;border:1px solid var(--line2);border-radius:8px;background:var(--field);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--mut)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg><span style="white-space:nowrap">Find a setting…</span><span style="margin-left:auto;font:11px 'IBM Plex Mono',monospace;border:1px solid var(--line);border-radius:4px;padding:1px 5px">Ctrl K</span></div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--mut);white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>10 problems</div>
+          <span style="width:34px;height:34px;border:1px solid var(--line2);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--mut);flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></span>
+          <span style="height:34px;padding:0 16px;border-radius:8px;background:var(--acc);color:#fff;font-weight:600;display:inline-flex;align-items:center;white-space:nowrap">Generate PDF</span>
+        </div>
+        <div style="flex:1;display:flex;min-height:0">
+          <div style="width:220px;background:var(--panel);border-right:1px solid var(--line);padding:14px 12px;display:flex;flex-direction:column;gap:1px;flex:none">
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:6px 10px 5px">Publication</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Books</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px;background:var(--acctint);color:var(--acctext);font-weight:600">Template</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Text</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Contents</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Paragraph</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Notes</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Page</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Trim &amp; margins</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Headers &amp; footers</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Figures</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Type</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Styles</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Output</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">PDF metadata</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px;display:flex;align-items:center;justify-content:space-between">Build<span style="font:500 11px 'IBM Plex Mono',monospace;background:var(--line);border-radius:10px;padding:1px 7px">10</span></div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0;padding:22px 28px;gap:16px;overflow:hidden">
+            <div style="display:flex;align-items:baseline;gap:14px"><div style="font:500 26px/1.1 'Newsreader',serif">Start from a template</div><span style="color:var(--mut)">Each one writes its settings into the project, where you can change them one at a time.</span></div>
+            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px">
+              <sc-for list="{{ templates }}" as="t" hint-placeholder-count="8">
+                <div style="background:{{ t.bg }};border:{{ t.border }};border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;min-height:250px">
+                  <div style="display:flex;align-items:flex-start;justify-content:space-between"><div style="width:62px;height:84px;background:#fffdf9;border:1px solid var(--line2);border-radius:2px;padding:10px 8px 14px;display:grid;grid-template-columns:{{ t.colw }};gap:4px;box-shadow:0 2px 6px rgba(40,30,10,.1)"><span style="background:var(--line)"></span><span style="background:var(--line);display:{{ t.second }}"></span></div><span style="display:{{ t.tag }};font-size:11px;font-weight:600;color:var(--acctext);background:#fff;border:1px solid var(--acc);border-radius:10px;padding:1px 8px">Applied</span></div>
+                  <div style="font:500 17px/1.2 'Newsreader',serif">{{ t.name }}</div>
+                  <div style="font-size:12.5px;color:var(--mut);line-height:1.45;flex:1">{{ t.desc }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="width:340px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;flex:none">
+            <div style="padding:18px 22px 14px;border-bottom:1px solid var(--line)"><div style="font:italic 12.5px 'Newsreader',serif;color:var(--mut)">Applied template</div><div style="font:500 24px/1.15 'Newsreader',serif;margin-top:2px">Standard two-column</div><div style="color:var(--mut);margin-top:6px">Applied 12 Sep 2026. Three settings changed since.</div></div>
+            <div style="padding:0 22px 16px;flex:1">
+              <div style="font:italic 500 15px 'Newsreader',serif;padding:16px 0 2px">What it sets</div>
+              <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)"><span>Trim</span><span style="color:var(--mut)">7 × 10 in · 2 columns</span></div>
+              <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)"><span>Body</span><span style="color:var(--mut)">9.5 / 12 pt, justified</span></div>
+              <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)"><span>Numbers</span><span style="color:var(--mut)">Chapters &amp; verses in the margin</span></div>
+              <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)"><span>Apparatus</span><span style="color:var(--mut)">Footnotes and cross-references</span></div>
+              <div style="font:italic 500 15px 'Newsreader',serif;padding:16px 0 2px">Changed since</div>
+              <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)"><span>Columns</span><span style="font:11.5px 'IBM Plex Mono',monospace;color:var(--mut)">2 → 1</span></div>
+              <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)"><span>Section heading italic</span><span style="font:11.5px 'IBM Plex Mono',monospace;color:var(--mut)">off → on</span></div>
+              <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)"><span>Bookmarks reach</span><span style="font:11.5px 'IBM Plex Mono',monospace;color:var(--mut)">chapter → verse</span></div>
+              <div style="font-size:12px;color:var(--mut);padding:10px 0">Re-applying resets these three. Your book selection is kept.</div>
+              <div style="display:flex;gap:8px;margin-top:8px"><span style="height:34px;padding:0 16px;border-radius:8px;background:var(--acc);color:#fff;font-weight:600;display:inline-flex;align-items:center;white-space:nowrap">Re-apply</span><span style="height:34px;padding:0 14px;border-radius:8px;border:1px solid var(--line2);background:var(--field);font-weight:600;display:inline-flex;align-items:center;white-space:nowrap">Save as my template…</span></div>
+            </div>
+          </div>
+        </div>
+        <div style="height:32px;display:flex;align-items:center;gap:16px;padding:0 20px;border-top:1px solid var(--line);background:var(--panel);font-size:12px;color:var(--mut)">
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:4px;background:#5cb85c"></span>Idle</span>
+          <span style="font:11.5px 'IBM Plex Mono',monospace">→ C:\Users\samue\OneDrive\BibleProjects\IRV\usfm\output\trest.pdf</span><span style="color:var(--acc)">Open folder</span>
+          <span style="flex:1"></span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1.5px solid var(--line2);border-radius:3px"></span>Keep intermediates</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1.5px solid var(--line2);border-radius:3px"></span>Strict settings</span>
+        </div>
+      </div>
+    </div>
+    <!-- 2f Trim & margins -->
+    <div id="2f" style="flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px">
+      <div style="display:flex;align-items:baseline;gap:8px;font-size:12px;color:#6e6860"><a href="#2f" style="font:600 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#2b2823;text-decoration:none;border-radius:4px">2f</a>Page › Trim &amp; margins — guides drawn on the live spread; drag a guide or type a value</div>
+      <div data-screen-label="2f Trim and margins" style="--bg:#efebe4;--panel:#f8f6f2;--ink:#2b2823;--mut:#6e6860;--line:#e2dcd2;--line2:#cbc3b6;--acc:#3f5a7d;--acctint:#e6ecf3;--acctext:#2f4763;--field:#fff;width:1440px;height:900px;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.45;overflow:hidden;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.12),0 12px 40px rgba(40,30,10,.12)">
+        <div style="height:52px;display:flex;align-items:center;gap:18px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--panel)">
+          <div style="display:flex;gap:7px;margin-right:4px"><span style="width:11px;height:11px;border-radius:6px;background:#e0574f"></span><span style="width:11px;height:11px;border-radius:6px;background:#e5b043"></span><span style="width:11px;height:11px;border-radius:6px;background:#5cb85c"></span></div>
+          <div style="font:500 20px 'Newsreader',serif;letter-spacing:-.01em">BibleCompose</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--mut)"><span style="color:var(--ink);font-weight:600">trest</span><span style="white-space:nowrap">· தமிழ் — Tamil (ta) · 2 of 66 books</span></div>
+          <div style="flex:1"></div>
+          <div style="width:340px;flex:none;height:34px;border:1px solid var(--line2);border-radius:8px;background:var(--field);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--mut)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg><span style="white-space:nowrap">Find a setting…</span><span style="margin-left:auto;font:11px 'IBM Plex Mono',monospace;border:1px solid var(--line);border-radius:4px;padding:1px 5px">Ctrl K</span></div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--mut);white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>10 problems</div>
+          <span style="width:34px;height:34px;border:1px solid var(--line2);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--mut);flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></span>
+          <span style="height:34px;padding:0 16px;border-radius:8px;background:var(--acc);color:#fff;font-weight:600;display:inline-flex;align-items:center;white-space:nowrap">Generate PDF</span>
+        </div>
+        <div style="flex:1;display:flex;min-height:0">
+          <div style="width:220px;background:var(--panel);border-right:1px solid var(--line);padding:14px 12px;display:flex;flex-direction:column;gap:1px;flex:none">
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:6px 10px 5px">Publication</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Books</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Template</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Text</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Contents</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Paragraph</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Notes</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Page</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px;background:var(--acctint);color:var(--acctext);font-weight:600">Trim &amp; margins</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Headers &amp; footers</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Figures</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Type</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Styles</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Output</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">PDF metadata</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px;display:flex;align-items:center;justify-content:space-between">Build<span style="font:500 11px 'IBM Plex Mono',monospace;background:var(--line);border-radius:10px;padding:1px 7px">10</span></div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 24px;color:var(--mut)">
+              <span style="white-space:nowrap"><span style="color:var(--ink);font-weight:600">1 John 1–2</span> · pages 412–413</span>
+              <span style="flex:1"></span>
+              <span style="display:inline-flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden;font-size:12px"><span style="padding:4px 10px;background:var(--acctint);color:var(--acctext);font-weight:600">Guides</span><span style="padding:4px 10px;border-left:1px solid var(--line2)">Text</span></span>
+              <span style="display:inline-flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden;font-size:12px"><span style="padding:4px 10px;background:var(--acctint);color:var(--acctext);font-weight:600">in</span><span style="padding:4px 10px;border-left:1px solid var(--line2)">mm</span><span style="padding:4px 10px;border-left:1px solid var(--line2)">pt</span></span>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:0 24px 20px;min-height:0">
+              <div style="display:flex;gap:2px;box-shadow:0 24px 60px rgba(40,30,10,.18),0 2px 6px rgba(0,0,0,.08);position:relative">
+                <div style="width:352px;height:503px;position:relative;background:#fffdf9"><dc-import name="ProofPage" head-left="1 John" head-right="1:1–2:6" page-no="412" hint-size="352px,503px" style="height:100%;display:block;opacity:.45"></dc-import>
+                  <div style="position:absolute;left:35px;right:43px;top:43px;bottom:55px;border:1px dashed var(--acc)"></div>
+                  <div style="position:absolute;left:35px;right:43px;top:25px;height:0;border-top:1px dashed var(--acc);opacity:.6"></div>
+                  <div style="position:absolute;left:35px;right:43px;bottom:41px;height:0;border-top:1px dashed var(--acc);opacity:.6"></div>
+                </div>
+                <div style="width:352px;height:503px;position:relative;background:#fffdf9"><dc-import name="ProofPage" head-left="1 John" head-right="1:1–2:6" page-no="413" hint-size="352px,503px" style="height:100%;display:block;opacity:.45"></dc-import>
+                  <div style="position:absolute;left:43px;right:35px;top:43px;bottom:55px;border:1px dashed var(--acc)"></div>
+                  <div style="position:absolute;left:43px;right:35px;top:25px;height:0;border-top:1px dashed var(--acc);opacity:.6"></div>
+                  <div style="position:absolute;left:43px;right:35px;bottom:41px;height:0;border-top:1px dashed var(--acc);opacity:.6"></div>
+                </div>
+                <span style="position:absolute;top:32px;left:50%;transform:translateX(-50%);background:var(--acc);color:#fff;font:600 11px 'Source Sans 3',sans-serif;padding:3px 8px;border-radius:5px;white-space:nowrap">Top 0.85</span>
+                <span style="position:absolute;bottom:44px;left:50%;transform:translateX(-50%);background:var(--acc);color:#fff;font:600 11px 'Source Sans 3',sans-serif;padding:3px 8px;border-radius:5px;white-space:nowrap">Bottom 1.1</span>
+                <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--acc);color:#fff;font:600 11px 'Source Sans 3',sans-serif;padding:3px 8px;border-radius:5px;white-space:nowrap">Inner 0.85</span>
+                <span style="position:absolute;top:50%;left:6px;transform:translateY(-50%);background:var(--acc);color:#fff;font:600 11px 'Source Sans 3',sans-serif;padding:3px 8px;border-radius:5px;white-space:nowrap">Outer 0.7</span>
+                <span style="position:absolute;top:50%;right:6px;transform:translateY(-50%);background:var(--acc);color:#fff;font:600 11px 'Source Sans 3',sans-serif;padding:3px 8px;border-radius:5px;white-space:nowrap">Outer 0.7</span>
+                <span style="position:absolute;top:-26px;left:0;font-size:12px;color:var(--mut);white-space:nowrap">7 × 10 in · text block 5.45 × 8.05 in · 46 lines</span>
+              </div>
+            </div>
+          </div>
+          <div style="width:380px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;flex:none">
+            <div style="padding:18px 22px 14px;border-bottom:1px solid var(--line)"><div style="font:italic 12.5px 'Newsreader',serif;color:var(--mut)">Page</div><div style="font:500 24px/1.15 'Newsreader',serif;margin-top:2px">Trim &amp; margins</div><div style="color:var(--mut);margin-top:6px">The sheet, the text block and the space around it.</div></div>
+            <div style="padding:0 22px 16px;flex:1;overflow:hidden">
+              <div style="font:italic 500 15px 'Newsreader',serif;padding:16px 0 2px">Trim</div>
+              <div style="padding:9px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Size</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap">7 × 10 in — Crown quarto<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Columns</span><span style="display:inline-flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden;font-size:12px"><span style="padding:5px 14px;background:var(--acctint);color:var(--acctext);font-weight:600">1</span><span style="padding:5px 14px;border-left:1px solid var(--line2)">2</span><span style="padding:5px 14px;border-left:1px solid var(--line2)">3</span></span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);color:var(--mut)"><span style="white-space:nowrap">Gutter<div style="font-size:12px">Between columns — unused with one</div></span><span style="display:inline-flex;align-items:center;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);width:80px;color:var(--mut)">0.25</span></div>
+              <div style="font:italic 500 15px 'Newsreader',serif;padding:18px 0 2px">Margins</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;padding:10px 0;border-bottom:1px solid var(--line)">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>Top</span><span style="display:inline-flex;align-items:center;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);width:80px">0.85</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>Bottom</span><span style="display:inline-flex;align-items:center;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);width:80px">1.1</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>Inner</span><span style="display:inline-flex;align-items:center;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);width:80px">0.85</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>Outer</span><span style="display:inline-flex;align-items:center;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);width:80px">0.7</span></div>
+              </div>
+              <div style="font-size:12px;color:var(--mut);padding:6px 0">Inner is the binding side. A wider bottom than top keeps the block from looking low on the page.</div>
+              <div style="font:italic 500 15px 'Newsreader',serif;padding:16px 0 2px">Furniture</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Head<div style="font-size:12px;color:var(--mut)">Running head to text block</div></span><span style="display:inline-flex;align-items:center;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);width:80px">0.36</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Foot<div style="font-size:12px;color:var(--mut)">Text block to page number</div></span><span style="display:inline-flex;align-items:center;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);width:80px">0.27</span></div>
+            </div>
+          </div>
+        </div>
+        <div style="height:32px;display:flex;align-items:center;gap:16px;padding:0 20px;border-top:1px solid var(--line);background:var(--panel);font-size:12px;color:var(--mut)">
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:4px;background:#5cb85c"></span>Idle</span>
+          <span style="font:11.5px 'IBM Plex Mono',monospace">→ C:\Users\samue\OneDrive\BibleProjects\IRV\usfm\output\trest.pdf</span><span style="color:var(--acc)">Open folder</span>
+          <span style="flex:1"></span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1.5px solid var(--line2);border-radius:3px"></span>Keep intermediates</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1.5px solid var(--line2);border-radius:3px"></span>Strict settings</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2g Headers & footers -->
+    <div id="2g" style="flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px">
+      <div style="display:flex;align-items:baseline;gap:8px;font-size:12px;color:#6e6860"><a href="#2g" style="font:600 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#2b2823;text-decoration:none;border-radius:4px">2g</a>Page › Headers &amp; footers — the slots are dropdowns sitting on the page itself</div>
+      <div data-screen-label="2g Headers and footers" style="--bg:#efebe4;--panel:#f8f6f2;--ink:#2b2823;--mut:#6e6860;--line:#e2dcd2;--line2:#cbc3b6;--acc:#3f5a7d;--acctint:#e6ecf3;--acctext:#2f4763;--field:#fff;width:1440px;height:900px;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.45;overflow:hidden;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.12),0 12px 40px rgba(40,30,10,.12)">
+        <div style="height:52px;display:flex;align-items:center;gap:18px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--panel)">
+          <div style="display:flex;gap:7px;margin-right:4px"><span style="width:11px;height:11px;border-radius:6px;background:#e0574f"></span><span style="width:11px;height:11px;border-radius:6px;background:#e5b043"></span><span style="width:11px;height:11px;border-radius:6px;background:#5cb85c"></span></div>
+          <div style="font:500 20px 'Newsreader',serif;letter-spacing:-.01em">BibleCompose</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--mut)"><span style="color:var(--ink);font-weight:600">trest</span><span style="white-space:nowrap">· தமிழ் — Tamil (ta) · 2 of 66 books</span></div>
+          <div style="flex:1"></div>
+          <div style="width:340px;flex:none;height:34px;border:1px solid var(--line2);border-radius:8px;background:var(--field);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--mut)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg><span style="white-space:nowrap">Find a setting…</span><span style="margin-left:auto;font:11px 'IBM Plex Mono',monospace;border:1px solid var(--line);border-radius:4px;padding:1px 5px">Ctrl K</span></div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--mut);white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>10 problems</div>
+          <span style="width:34px;height:34px;border:1px solid var(--line2);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--mut);flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></span>
+          <span style="height:34px;padding:0 16px;border-radius:8px;background:var(--acc);color:#fff;font-weight:600;display:inline-flex;align-items:center;white-space:nowrap">Generate PDF</span>
+        </div>
+        <div style="flex:1;display:flex;min-height:0">
+          <div style="width:220px;background:var(--panel);border-right:1px solid var(--line);padding:14px 12px;display:flex;flex-direction:column;gap:1px;flex:none">
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:6px 10px 5px">Publication</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Books</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Template</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Text</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Contents</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Paragraph</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Notes</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Page</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Trim &amp; margins</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px;background:var(--acctint);color:var(--acctext);font-weight:600">Headers &amp; footers</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Figures</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Type</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Styles</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Output</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">PDF metadata</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px;display:flex;align-items:center;justify-content:space-between">Build<span style="font:500 11px 'IBM Plex Mono',monospace;background:var(--line);border-radius:10px;padding:1px 7px">10</span></div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 24px;color:var(--mut)">
+              <span style="white-space:nowrap"><span style="color:var(--ink);font-weight:600">1 John 1–2</span> · pages 412–413</span>
+              <span style="flex:1"></span>
+              <span style="white-space:nowrap;font-size:12px">Left page ↔ Right page</span>
+              <span style="height:28px;padding:0 10px;border-radius:6px;border:1px solid var(--line2);background:var(--field);font-size:12px;font-weight:600;display:inline-flex;align-items:center;white-space:nowrap;color:var(--ink)">Mirror left → right</span>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:0 24px 20px;min-height:0">
+              <div style="display:flex;gap:2px;box-shadow:0 24px 60px rgba(40,30,10,.18),0 2px 6px rgba(0,0,0,.08);position:relative">
+                <div style="width:352px;height:503px;position:relative"><dc-import name="ProofPage" head-left="1 John" head-right="1:1–2:6" page-no="412" hint-size="352px,503px" style="height:100%;display:block"></dc-import>
+                  <div style="position:absolute;left:30px;right:22px;top:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px"><span style="height:24px;display:inline-flex;align-items:center;justify-content:space-between;padding:0 7px;border:1px solid var(--acc);border-radius:5px;background:rgba(255,255,255,.92);font-size:11px;font-weight:600;color:var(--acctext);white-space:nowrap">Book name<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span><span style="height:24px;display:inline-flex;align-items:center;justify-content:space-between;padding:0 7px;border:1px dashed var(--line2);border-radius:5px;background:rgba(255,255,255,.7);font-size:11px;color:var(--mut);white-space:nowrap">Empty<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span><span style="height:24px;display:inline-flex;align-items:center;justify-content:space-between;padding:0 7px;border:1px solid var(--acc);border-radius:5px;background:rgba(255,255,255,.92);font-size:11px;font-weight:600;color:var(--acctext);white-space:nowrap">Reference<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div>
+                  <div style="position:absolute;left:30px;right:22px;bottom:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px"><span style="height:24px;display:inline-flex;align-items:center;justify-content:space-between;padding:0 7px;border:1px dashed var(--line2);border-radius:5px;background:rgba(255,255,255,.7);font-size:11px;color:var(--mut);white-space:nowrap">Empty<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span><span style="height:24px;display:inline-flex;align-items:center;justify-content:space-between;padding:0 7px;border:1px solid var(--acc);border-radius:5px;background:rgba(255,255,255,.92);font-size:11px;font-weight:600;color:var(--acctext);white-space:nowrap">Page number<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span><span style="height:24px;display:inline-flex;align-items:center;justify-content:space-between;padding:0 7px;border:1px dashed var(--line2);border-radius:5px;background:rgba(255,255,255,.7);font-size:11px;color:var(--mut);white-space:nowrap">Empty<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div>
+                </div>
+                <div style="width:352px;height:503px;position:relative"><dc-import name="ProofPage" head-left="1 John" head-right="1:1–2:6" page-no="413" hint-size="352px,503px" style="height:100%;display:block"></dc-import>
+                  <div style="position:absolute;left:30px;right:22px;top:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px"><span style="height:24px;display:inline-flex;align-items:center;justify-content:space-between;padding:0 7px;border:1px solid var(--acc);border-radius:5px;background:rgba(255,255,255,.92);font-size:11px;font-weight:600;color:var(--acctext);white-space:nowrap">Book name<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span><span style="height:24px;display:inline-flex;align-items:center;justify-content:space-between;padding:0 7px;border:1px dashed var(--line2);border-radius:5px;background:rgba(255,255,255,.7);font-size:11px;color:var(--mut);white-space:nowrap">Empty<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span><span style="height:24px;display:inline-flex;align-items:center;justify-content:space-between;padding:0 7px;border:1px solid var(--acc);border-radius:5px;background:rgba(255,255,255,.92);font-size:11px;font-weight:600;color:var(--acctext);white-space:nowrap">Reference<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div>
+                  <div style="position:absolute;left:30px;right:22px;bottom:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px"><span style="height:24px;display:inline-flex;align-items:center;justify-content:space-between;padding:0 7px;border:1px dashed var(--line2);border-radius:5px;background:rgba(255,255,255,.7);font-size:11px;color:var(--mut);white-space:nowrap">Empty<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span><span style="height:24px;display:inline-flex;align-items:center;justify-content:space-between;padding:0 7px;border:1px solid var(--acc);border-radius:5px;background:rgba(255,255,255,.92);font-size:11px;font-weight:600;color:var(--acctext);white-space:nowrap">Page number<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span><span style="height:24px;display:inline-flex;align-items:center;justify-content:space-between;padding:0 7px;border:1px dashed var(--line2);border-radius:5px;background:rgba(255,255,255,.7);font-size:11px;color:var(--mut);white-space:nowrap">Empty<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="width:380px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;flex:none">
+            <div style="padding:18px 22px 14px;border-bottom:1px solid var(--line)"><div style="font:italic 12.5px 'Newsreader',serif;color:var(--mut)">Page</div><div style="font:500 24px/1.15 'Newsreader',serif;margin-top:2px">Headers &amp; footers</div><div style="color:var(--mut);margin-top:6px">Three slots on each edge — outer, centre, inner. Pick a slot on the page or here.</div></div>
+            <div style="padding:0 22px 16px;flex:1;overflow:hidden">
+              <div style="font:italic 500 15px 'Newsreader',serif;padding:16px 0 2px">Left page header</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);background:var(--acctint);margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:6px"><span style="white-space:nowrap;font-weight:600;color:var(--acctext)">Outer</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap">Book name<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Centre</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap;color:var(--mut)">Empty<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Inner</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap">Reference range<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div>
+              <div style="font:italic 500 15px 'Newsreader',serif;padding:18px 0 2px">Left page footer</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Outer</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap;color:var(--mut)">Empty<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Centre</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap">Page number<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Inner</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap;color:var(--mut)">Empty<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div>
+              <div style="font:italic 500 15px 'Newsreader',serif;padding:18px 0 2px">Right page</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Follows the left page, mirrored</span><span style="width:32px;height:18px;border-radius:9px;background:var(--acc);position:relative;flex:none"><span style="position:absolute;top:2px;left:16px;width:14px;height:14px;border-radius:7px;background:#fff"></span></span></div>
+              <div style="font-size:12px;color:var(--mut);padding:8px 0">Turn off to set the right page's six slots separately.</div>
+              <div style="font:italic 500 15px 'Newsreader',serif;padding:16px 0 2px">Reference range</div>
+              <div style="padding:9px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Shows</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap">First to last verse on the page<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div></div>
+            </div>
+          </div>
+        </div>
+        <div style="height:32px;display:flex;align-items:center;gap:16px;padding:0 20px;border-top:1px solid var(--line);background:var(--panel);font-size:12px;color:var(--mut)">
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:4px;background:#5cb85c"></span>Idle</span>
+          <span style="font:11.5px 'IBM Plex Mono',monospace">→ C:\Users\samue\OneDrive\BibleProjects\IRV\usfm\output\trest.pdf</span><span style="color:var(--acc)">Open folder</span>
+          <span style="flex:1"></span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1.5px solid var(--line2);border-radius:3px"></span>Keep intermediates</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1.5px solid var(--line2);border-radius:3px"></span>Strict settings</span>
+        </div>
+      </div>
+    </div>
+    <!-- 2h Styles -->
+    <div id="2h" style="flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px">
+      <div style="display:flex;align-items:baseline;gap:8px;font-size:12px;color:#6e6860"><a href="#2h" style="font:600 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#2b2823;text-decoration:none;border-radius:4px">2h</a>Type › Styles — style groups as a second rail; the chosen style is outlined on the page</div>
+      <div data-screen-label="2h Styles" style="--bg:#efebe4;--panel:#f8f6f2;--ink:#2b2823;--mut:#6e6860;--line:#e2dcd2;--line2:#cbc3b6;--acc:#3f5a7d;--acctint:#e6ecf3;--acctext:#2f4763;--field:#fff;width:1440px;height:900px;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.45;overflow:hidden;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.12),0 12px 40px rgba(40,30,10,.12)">
+        <div style="height:52px;display:flex;align-items:center;gap:18px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--panel)">
+          <div style="display:flex;gap:7px;margin-right:4px"><span style="width:11px;height:11px;border-radius:6px;background:#e0574f"></span><span style="width:11px;height:11px;border-radius:6px;background:#e5b043"></span><span style="width:11px;height:11px;border-radius:6px;background:#5cb85c"></span></div>
+          <div style="font:500 20px 'Newsreader',serif;letter-spacing:-.01em">BibleCompose</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--mut)"><span style="color:var(--ink);font-weight:600">trest</span><span style="white-space:nowrap">· தமிழ் — Tamil (ta) · 2 of 66 books</span></div>
+          <div style="flex:1"></div>
+          <div style="width:340px;flex:none;height:34px;border:1px solid var(--line2);border-radius:8px;background:var(--field);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--mut)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg><span style="white-space:nowrap">Find a setting…</span><span style="margin-left:auto;font:11px 'IBM Plex Mono',monospace;border:1px solid var(--line);border-radius:4px;padding:1px 5px">Ctrl K</span></div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--mut);white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>10 problems</div>
+          <span style="width:34px;height:34px;border:1px solid var(--line2);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--mut);flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></span>
+          <span style="height:34px;padding:0 16px;border-radius:8px;background:var(--acc);color:#fff;font-weight:600;display:inline-flex;align-items:center;white-space:nowrap">Generate PDF</span>
+        </div>
+        <div style="flex:1;display:flex;min-height:0">
+          <div style="width:220px;background:var(--panel);border-right:1px solid var(--line);padding:14px 12px;display:flex;flex-direction:column;gap:1px;flex:none">
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:6px 10px 5px">Publication</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Books</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Template</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Text</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Contents</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Paragraph</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Notes</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Page</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Trim &amp; margins</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Headers &amp; footers</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Figures</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Type</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px;background:var(--acctint);color:var(--acctext);font-weight:600">Styles</div>
+            <div style="padding:2px 0 0 14px;display:flex;flex-direction:column;gap:1px">
+              <sc-for list="{{ styleNav }}" as="s" hint-placeholder-count="8"><div style="white-space:nowrap;padding:5px 10px;border-radius:6px;font-size:12.5px;background:{{ s.bg }};color:{{ s.col }};font-weight:{{ s.w }}">{{ s.name }}</div></sc-for>
+            </div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Output</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">PDF metadata</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px;display:flex;align-items:center;justify-content:space-between">Build<span style="font:500 11px 'IBM Plex Mono',monospace;background:var(--line);border-radius:10px;padding:1px 7px">10</span></div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 24px;color:var(--mut)">
+              <span style="white-space:nowrap"><span style="color:var(--ink);font-weight:600">1 John 1–2</span> · pages 412–413</span>
+              <span style="flex:1"></span>
+              <span style="white-space:nowrap;font-size:12px">Showing <span style="color:var(--ink);font-weight:600">heading.s1</span> on the page</span>
+              <span style="display:inline-flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden;font-size:12px"><span style="padding:4px 10px;background:var(--acctint);color:var(--acctext);font-weight:600">Fit</span><span style="padding:4px 10px;border-left:1px solid var(--line2)">100%</span></span>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:0 24px 20px;min-height:0">
+              <div style="display:flex;gap:2px;box-shadow:0 24px 60px rgba(40,30,10,.18),0 2px 6px rgba(0,0,0,.08);position:relative">
+                <div style="width:352px;height:503px;position:relative"><dc-import name="ProofPage" head-left="1 John" head-right="1:1–2:6" page-no="412" hint-size="352px,503px" style="height:100%;display:block"></dc-import>
+                  <div style="position:absolute;left:30px;top:164px;width:98px;height:17px;border:1.5px solid var(--acc);border-radius:3px;background:rgba(63,90,125,.08)"></div>
+                  <div style="position:absolute;left:30px;top:333px;width:110px;height:17px;border:1.5px solid var(--acc);border-radius:3px;background:rgba(63,90,125,.08)"></div>
+                  
+                </div>
+                <div style="width:352px;height:503px;position:relative"><dc-import name="ProofPage" head-left="1 John" head-right="1:1–2:6" page-no="413" hint-size="352px,503px" style="height:100%;display:block"></dc-import></div>
+              </div>
+            </div>
+          </div>
+          <div style="width:380px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;flex:none">
+            <div style="padding:18px 22px 14px;border-bottom:1px solid var(--line)"><div style="font:italic 12.5px 'Newsreader',serif;color:var(--mut)">Type › Headings</div><div style="display:flex;align-items:baseline;gap:10px;margin-top:2px"><div style="font:500 24px/1.15 'Newsreader',serif">Section</div><span style="font:11.5px 'IBM Plex Mono',monospace;color:var(--mut);background:var(--line);border-radius:4px;padding:1px 6px">heading.s1</span></div><div style="color:var(--mut);margin-top:6px">Unset values fall back to the body font. Subsection inherits from this style.</div></div>
+            <div style="padding:0 22px 16px;flex:1;overflow:hidden">
+              <div style="padding:9px 0;border-bottom:1px solid var(--line);margin-top:8px"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Font</span><span style="display:inline-flex;gap:6px"><span style="display:inline-flex;align-items:center;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);color:var(--mut);white-space:nowrap;width:150px">the body font</span><span style="height:30px;padding:0 10px;border-radius:6px;border:1px solid var(--line2);background:var(--field);font-weight:600;display:inline-flex;align-items:center;white-space:nowrap">Choose…</span></span></div><div style="display:flex;justify-content:space-between;margin-top:5px;font-size:12px;color:var(--mut)"><span>not set — Mukta Malar</span></div></div>
+              <div style="padding:9px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Size</span><span style="display:inline-flex;align-items:center;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);width:96px">10.2 pt</span></div><div style="display:flex;justify-content:space-between;margin-top:5px;font-size:12px;color:var(--mut)"><span>built-in default</span></div></div>
+              <div style="padding:9px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Weight</span><span style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);white-space:nowrap;width:96px;justify-content:space-between">600<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div><div style="margin-top:5px;font-size:12px;color:var(--mut)">built-in default</div></div>
+              <div style="padding:9px 0;border-bottom:1px solid var(--line);background:var(--acctint);margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:6px"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap;font-weight:600;color:var(--acctext)">Italic</span><span style="width:32px;height:18px;border-radius:9px;background:var(--acc);position:relative;flex:none"><span style="position:absolute;top:2px;left:16px;width:14px;height:14px;border-radius:7px;background:#fff"></span></span></div><div style="display:flex;justify-content:space-between;margin-top:5px;font-size:12px;color:var(--mut)"><span style="font:11px 'IBM Plex Mono',monospace">styles.toml:7 · set in this project</span><span style="color:var(--acc)">Reset</span></div></div>
+              <div style="padding:9px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Alignment</span><span style="display:inline-flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden;font-size:12px"><span style="padding:5px 12px;background:var(--acctint);color:var(--acctext);font-weight:600">Start</span><span style="padding:5px 12px;border-left:1px solid var(--line2)">Centre</span><span style="padding:5px 12px;border-left:1px solid var(--line2)">End</span></span></div><div style="margin-top:5px;font-size:12px;color:var(--mut)">not set</div></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;padding:9px 0;border-bottom:1px solid var(--line)">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="white-space:nowrap">Space above</span><span style="display:inline-flex;align-items:center;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);width:70px">7 pt</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="white-space:nowrap">Below</span><span style="display:inline-flex;align-items:center;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);width:70px">1 pt</span></div>
+                <div style="grid-column:1 / -1;margin-top:5px;font-size:12px;color:var(--mut)">built-in default</div>
+              </div>
+              <div style="padding:9px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Colour</span><span style="display:inline-flex;gap:6px;align-items:center"><span style="width:30px;height:30px;border-radius:6px;background:#1f1d1a;border:1px solid var(--line2)"></span><span style="display:inline-flex;align-items:center;height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:var(--field);color:var(--mut);width:96px">unset</span></span></div><div style="margin-top:5px;font-size:12px;color:var(--mut)">not set — prints in the text colour</div></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0 0"><span style="font:italic 500 15px 'Newsreader',serif">Subsection</span><span style="font:11.5px 'IBM Plex Mono',monospace;color:var(--mut)">heading.s2 · inherits italic</span></div>
+            </div>
+          </div>
+        </div>
+        <div style="height:32px;display:flex;align-items:center;gap:16px;padding:0 20px;border-top:1px solid var(--line);background:var(--panel);font-size:12px;color:var(--mut)">
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:4px;background:#5cb85c"></span>Idle</span>
+          <span style="font:11.5px 'IBM Plex Mono',monospace">→ C:\Users\samue\OneDrive\BibleProjects\IRV\usfm\output\trest.pdf</span><span style="color:var(--acc)">Open folder</span>
+          <span style="flex:1"></span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1.5px solid var(--line2);border-radius:3px"></span>Keep intermediates</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1.5px solid var(--line2);border-radius:3px"></span>Strict settings</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2i Build -->
+    <div id="2i" style="flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px">
+      <div style="display:flex;align-items:baseline;gap:8px;font-size:12px;color:#6e6860"><a href="#2i" style="font:600 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#2b2823;text-decoration:none;border-radius:4px">2i</a>Output › Build — running; each problem names the section that fixes it</div>
+      <div data-screen-label="2i Build" style="--bg:#efebe4;--panel:#f8f6f2;--ink:#2b2823;--mut:#6e6860;--line:#e2dcd2;--line2:#cbc3b6;--acc:#3f5a7d;--acctint:#e6ecf3;--acctext:#2f4763;--field:#fff;width:1440px;height:900px;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.45;overflow:hidden;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.12),0 12px 40px rgba(40,30,10,.12)">
+        <div style="height:52px;display:flex;align-items:center;gap:18px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--panel)">
+          <div style="display:flex;gap:7px;margin-right:4px"><span style="width:11px;height:11px;border-radius:6px;background:#e0574f"></span><span style="width:11px;height:11px;border-radius:6px;background:#e5b043"></span><span style="width:11px;height:11px;border-radius:6px;background:#5cb85c"></span></div>
+          <div style="font:500 20px 'Newsreader',serif;letter-spacing:-.01em">BibleCompose</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--mut)"><span style="color:var(--ink);font-weight:600">trest</span><span style="white-space:nowrap">· தமிழ் — Tamil (ta) · 2 of 66 books</span></div>
+          <div style="flex:1"></div>
+          <div style="width:340px;flex:none;height:34px;border:1px solid var(--line2);border-radius:8px;background:var(--field);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--mut)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg><span style="white-space:nowrap">Find a setting…</span><span style="margin-left:auto;font:11px 'IBM Plex Mono',monospace;border:1px solid var(--line);border-radius:4px;padding:1px 5px">Ctrl K</span></div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--mut);white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>10 problems</div>
+          <span style="width:34px;height:34px;border:1px solid var(--line2);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--mut);flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></span>
+          <span style="height:34px;padding:0 16px;border-radius:8px;border:1px solid var(--line2);background:var(--field);color:var(--ink);font-weight:600;display:inline-flex;align-items:center;white-space:nowrap">Cancel build</span>
+        </div>
+        <div style="flex:1;display:flex;min-height:0">
+          <div style="width:220px;background:var(--panel);border-right:1px solid var(--line);padding:14px 12px;display:flex;flex-direction:column;gap:1px;flex:none">
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:6px 10px 5px">Publication</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Books</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Template</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Text</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Contents</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Paragraph</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Notes</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Page</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Trim &amp; margins</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Headers &amp; footers</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Figures</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Type</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">Styles</div>
+            <div style="font:italic 500 12.5px 'Newsreader',serif;color:var(--mut);padding:14px 10px 5px">Output</div>
+            <div style="white-space:nowrap;padding:7px 10px;border-radius:6px">PDF metadata</div><div style="white-space:nowrap;padding:7px 10px;border-radius:6px;background:var(--acctint);color:var(--acctext);font-weight:600;display:flex;align-items:center;justify-content:space-between">Build<span style="font:500 11px 'IBM Plex Mono',monospace;background:#fff;border-radius:10px;padding:1px 7px">10</span></div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0;padding:22px 28px;gap:14px;overflow:hidden">
+            <div style="display:flex;align-items:baseline;gap:14px"><div style="font:500 26px/1.1 'Newsreader',serif;white-space:nowrap">10 problems</div><span style="display:inline-flex;gap:6px"><span style="font-size:11.5px;font-weight:600;color:#b3402f;background:#f7e4e0;border-radius:10px;padding:2px 9px">1 error</span><span style="font-size:11.5px;font-weight:600;color:#8a6a1f;background:#f6ecd6;border-radius:10px;padding:2px 9px">6 warnings</span><span style="font-size:11.5px;font-weight:600;color:#6e6860;background:#ece8e1;border-radius:10px;padding:2px 9px">3 notes</span></span><span style="flex:1"></span><span style="color:var(--mut);font-size:12px">An error stops the build. Warnings print anyway unless Strict settings is on.</span></div>
+            <div style="border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden">
+              <div style="display:grid;grid-template-columns:96px 120px 1fr 200px;gap:16px;padding:10px 16px;border-bottom:1px solid var(--line2);font:italic 12.5px 'Newsreader',serif;color:var(--mut)"><span>Severity</span><span>Where</span><span>Message</span><span>Fix in</span></div>
+              <sc-for list="{{ problems }}" as="p" hint-placeholder-count="7">
+                <div style="display:grid;grid-template-columns:96px 120px 1fr 200px;gap:16px;padding:0 16px;height:44px;align-items:center;border-bottom:1px solid var(--line)"><span><span style="font-size:11.5px;font-weight:600;color:{{ p.col }};background:{{ p.bg }};border-radius:10px;padding:2px 9px;white-space:nowrap">{{ p.sev }}</span></span><span style="font:12px 'IBM Plex Mono',monospace;white-space:nowrap">{{ p.where }}</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.msg }}</span><span style="color:var(--acc);font-weight:600;white-space:nowrap">{{ p.go }} →</span></div>
+              </sc-for>
+              <div style="padding:10px 16px;font-size:12px;color:var(--mut)">3 more notes · <span style="color:var(--acc)">Show all</span></div>
+            </div>
+          </div>
+          <div style="width:380px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;flex:none">
+            <div style="padding:18px 22px 14px;border-bottom:1px solid var(--line)"><div style="font:italic 12.5px 'Newsreader',serif;color:var(--mut)">Output</div><div style="font:500 24px/1.15 'Newsreader',serif;margin-top:2px">Building…</div><div style="color:var(--mut);margin-top:6px">Laying out மத்தேயு · page 41 of about 88</div></div>
+            <div style="padding:0 22px 16px;flex:1">
+              <div style="height:6px;border-radius:3px;background:var(--line);margin:18px 0 12px;overflow:hidden"><div style="width:47%;height:100%;background:var(--acc)"></div></div>
+              <div style="font-size:12.5px;line-height:2;color:var(--mut)">
+                <div style="display:flex;gap:8px;align-items:center"><span style="color:var(--acc)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span><span style="color:var(--ink)">Read USFM</span><span style="margin-left:auto;font:11.5px 'IBM Plex Mono',monospace">2 books · 44 ch</span></div>
+                <div style="display:flex;gap:8px;align-items:center"><span style="color:var(--acc)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span><span style="color:var(--ink)">Resolve fonts</span><span style="margin-left:auto;font:11.5px 'IBM Plex Mono',monospace">Mukta Malar</span></div>
+                <div style="display:flex;gap:8px;align-items:center"><span style="color:var(--acc)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span><span style="color:var(--ink)">Notes and cross-references</span></div>
+                <div style="display:flex;gap:8px;align-items:center"><span style="width:13px;height:13px;border-radius:7px;border:2px solid var(--acc);border-right-color:transparent;display:inline-block"></span><span style="color:var(--ink);font-weight:600">Page layout</span><span style="margin-left:auto;font:11.5px 'IBM Plex Mono',monospace">47%</span></div>
+                <div style="display:flex;gap:8px;align-items:center;opacity:.6"><span style="width:13px;height:13px;border-radius:7px;border:1.5px solid var(--line2);display:inline-block"></span>Bookmarks and metadata</div>
+                <div style="display:flex;gap:8px;align-items:center;opacity:.6"><span style="width:13px;height:13px;border-radius:7px;border:1.5px solid var(--line2);display:inline-block"></span>Write PDF</div>
+              </div>
+              <div style="font:italic 500 15px 'Newsreader',serif;padding:20px 0 2px">Options</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Keep intermediates<div style="font-size:12px;color:var(--mut)">Leave typesetting files in output\build</div></span><span style="width:32px;height:18px;border-radius:9px;background:var(--line2);position:relative;flex:none"><span style="position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:7px;background:#fff"></span></span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)"><span style="white-space:nowrap">Strict settings<div style="font-size:12px;color:var(--mut)">Treat warnings as errors and stop</div></span><span style="width:32px;height:18px;border-radius:9px;background:var(--line2);position:relative;flex:none"><span style="position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:7px;background:#fff"></span></span></div>
+              <div style="padding:9px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="white-space:nowrap">Output folder</span><span style="color:var(--acc);font-size:12px">Change</span></div><div style="font:11.5px 'IBM Plex Mono',monospace;color:var(--mut);margin-top:3px">…\IRV\usfm\output\trest.pdf</div></div>
+              <div style="font-size:12px;color:var(--mut);padding:12px 0">Last successful build: today 14:02 · 86 pages · 4.1 MB</div>
+            </div>
+          </div>
+        </div>
+        <div style="height:32px;display:flex;align-items:center;gap:16px;padding:0 20px;border-top:1px solid var(--line);background:var(--panel);font-size:12px;color:var(--mut)">
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:4px;background:var(--acc)"></span>Building · 47%</span>
+          <span style="font:11.5px 'IBM Plex Mono',monospace">→ C:\Users\samue\OneDrive\BibleProjects\IRV\usfm\output\trest.pdf</span>
+          <span style="flex:1"></span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1.5px solid var(--line2);border-radius:3px"></span>Keep intermediates</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1.5px solid var(--line2);border-radius:3px"></span>Strict settings</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p style="margin:22px 0 0;font-size:12.5px;line-height:1.5;color:#6e6860">Try next: "go with <a href="#2a" style="font:600 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#2b2823;text-decoration:none;border-radius:4px">2a</a> and draw Paragraph, Notes, Figures and PDF metadata" · "dark versions of <a href="#2f" style="font:600 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#2b2823;text-decoration:none;border-radius:4px">2f</a> and <a href="#2h" style="font:600 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#2b2823;text-decoration:none;border-radius:4px">2h</a>" · "warmer accent — oxblood instead of ink-blue"</p>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const ot = [["Genesis","GEN",50],["Exodus","EXO",40],["Leviticus","LEV",27],["Numbers","NUM",36],["Deuteronomy","DEU",34],["Joshua","JOS",24],["Judges","JDG",21],["Ruth","RUT",4],["1 Samuel","1SA",31],["2 Samuel","2SA",24],["1 Kings","1KI",22],["2 Kings","2KI",25],["1 Chronicles","1CH",29],["2 Chronicles","2CH",36],["Ezra","EZR",10],["Nehemiah","NEH",13]];
+    const nt = [["மத்தேயு","MAT",28,1],["மாற்கு","MRK",16,1],["Luke","LUK",24],["John","JHN",21],["Acts","ACT",28],["Romans","ROM",16],["1 Corinthians","1CO",16],["2 Corinthians","2CO",13],["Galatians","GAL",6],["Ephesians","EPH",6],["Philippians","PHP",4],["Colossians","COL",4],["1 Thessalonians","1TH",5],["2 Thessalonians","2TH",3],["1 Timothy","1TI",6],["2 Timothy","2TI",4]];
+    const book = b => ({ name: b[0], code: b[1], ch: b[3] ? b[2] + " chapters" : "—", on: !!b[3], bg: b[3] ? "var(--acc)" : "var(--line2)", knob: b[3] ? "16px" : "2px", col: b[3] ? "var(--ink)" : "var(--mut)", w: b[3] ? 600 : 400, status: b[3] ? "In the publication" : "Not included", file: b[3] ? "41" + b[1] + ".usfm" : "" });
+    const palette = [
+      ["Verse numbers","Text › Contents › Numbering","In the left margin · built-in default", true],
+      ["Hide first verse number","Text › Contents › Numbering","Set by drop caps"],
+      ["Verses that must fit","Text › Contents › Start","3 · built-in default"],
+      ["Chapter and verse","Type › Styles","Size, weight and colour of the numbers"],
+      ["References go","Text › Notes","In the note area"],
+      ["PDF bookmarks reach","Output › PDF metadata","Verse · biblecompose.toml:78"],
+    ].map(p => ({ name: p[0], path: p[1], hint: p[2], bg: p[3] ? "var(--acctint)" : "transparent" }));
+    const templates = [
+      ["Standard two-column","Two columns, verse numbers, footnotes and cross-references at the foot.",2,true],
+      ["Single column","One column: slightly larger type on a longer line, numbers and apparatus kept.",1],
+      ["Reader's edition","Set like a novel: no verse numbers and no apparatus.",1],
+      ["Large print","14pt in one column on a larger page, ragged right.",1],
+      ["Reference","Two dense columns on a hand-sized page; every verse numbered.",2],
+      ["Study Bible","A larger page with introductions, outlines, headings, notes and references.",2],
+      ["Pocket Bible","Small type in one column, tight margins, footnotes kept.",1],
+      ["Journaling Bible","One column beside a two-inch outer margin left empty for notes.",1],
+    ].map(t => ({ name: t[0], desc: t[1], colw: t[2] === 2 ? "1fr 1fr" : "1fr", second: t[2] === 2 ? "block" : "none", border: t[3] ? "2px solid var(--acc)" : "1px solid var(--line)", tag: t[3] ? "inline-flex" : "none", bg: t[3] ? "var(--acctint)" : "var(--panel)" }));
+    const styleNav = ["Typography","Headings","Paragraphs","Poetry","Chapter and verse","Notes","Character styles","Page furniture"].map((n, i) => ({ name: n, bg: i === 1 ? "var(--acctint)" : "transparent", col: i === 1 ? "var(--acctext)" : "var(--ink)", w: i === 1 ? 600 : 400 }));
+    const problems = [
+      ["Error","MAT 5:3","Figure file missing: fig/beatitudes.jpg","Page › Figures","#b3402f","#f7e4e0"],
+      ["Warning","MRK 1:1","Introduction has no \\ip paragraph; the outline prints alone","Text › Contents","#8a6a1f","#f6ecd6"],
+      ["Warning","MAT 1:1–17","Genealogy: 14 consecutive lines end in a hyphen","Type › Styles","#8a6a1f","#f6ecd6"],
+      ["Warning","MRK 16:9–20","Cross-reference mark 'z' reused within one chapter","Text › Notes","#8a6a1f","#f6ecd6"],
+      ["Note","MAT","Book introduction is longer than one page","Text › Contents","#6e6860","#ece8e1"],
+      ["Note","Page 3","Widow: last line of a paragraph starts a column","Page › Trim & margins","#6e6860","#ece8e1"],
+      ["Note","MRK 4","Section heading falls at the foot of a column","Type › Styles › Headings","#6e6860","#ece8e1"],
+    ].map(p => ({ sev: p[0], where: p[1], msg: p[2], go: p[3], col: p[4], bg: p[5] }));
+    return { ot: ot.map(book), nt: nt.map(book), palette, templates, styleNav, problems };
+  }
+}
+</script>
+</body>
+</html>

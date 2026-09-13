@@ -29,128 +29,236 @@
  * schema identifier rather than a word.
  */
 
-/** Words that belong to no settings key: the chrome of the window itself. */
 import { EN_HELP } from "./help";
 
+/** Words that belong to no settings key: the chrome of the window itself. */
 export interface Chrome {
   readonly appName: string;
 
-  // The start screen.
+  // The welcome screen.
+  readonly welcomeKicker: string;
   readonly openProjectEllipsis: string;
-  /**
-   * How to arrive at a folder of Scripture, for somebody who has not got one.
-   *
-   * Split into a sentence, three steps and a closing paragraph rather than
-   * held as one block, because the structure is markup and this window refuses
-   * to render markup out of a string — project files come from third parties.
-   * So an ordered list has to be an ordered list, and each step its own entry.
-   *
-   * `openBibleBefore` and `openBibleAfter` bracket the link. Splitting a
-   * sentence is not something to do lightly, and the thing between them is a
-   * proper noun that no locale translates.
-   */
   readonly startIntro: string;
-  readonly startExisting: string;
+  readonly startExistingTitle: string;
   readonly startStepDownloadBefore: string;
   readonly startStepDownloadAfter: string;
   readonly startStepExtract: string;
   readonly startStepSelect: string;
-  readonly startNew: string;
   readonly openBible: string;
   readonly newProject: string;
   readonly newProjectEllipsis: string;
   readonly browse: string;
   readonly choose: string;
-  readonly recent: string;
+  readonly recentProjects: string;
+  readonly recentNote: string;
+  readonly noLongerThere: string;
+  readonly open: string;
+  readonly contract: string;
   readonly publicationName: string;
   readonly where: string;
   readonly creates: string;
+  readonly create: string;
+  readonly creating: string;
+  readonly languageTagHint: string;
+  readonly language: string;
   readonly noUsfmHere: string;
   readonly noProjectOpen: string;
+  readonly loading: string;
+  readonly copyUsfmBefore: string;
+  readonly copyUsfmAfter: string;
 
-  // The build bar.
+  // The top bar.
+  readonly findSetting: string;
+  readonly findShortcut: string;
   readonly generatePdf: string;
+  readonly cancelBuild: string;
   readonly cancel: string;
-  readonly problems: string;
-  readonly openFolder: string;
-  readonly closeProject: string;
-  readonly starting: string;
-  readonly typesettingProgress: string;
-
-  // Books.
-  readonly selectAll: string;
-  readonly clearAll: string;
-  readonly canonicalOrder: string;
-  readonly oldTestament: string;
-  readonly newTestament: string;
-
-  // Styles and fonts.
-  readonly property: string;
-  readonly value: string;
-  readonly chooseFont: string;
-  readonly useThisFont: string;
-  readonly readingFonts: string;
-  readonly noElementSelected: string;
-  readonly nothingMatches: string;
-  /** A control for a setting this build of the backend does not have. */
-  readonly notInThisBuild: string;
-  /** The status bar with nothing under the pointer. */
-  readonly statusIdle: string;
-  /** The search box at the end of the tab strip. */
-  readonly searchHint: string;
-  /** The theme and zoom controls beside it. */
   readonly theme: string;
   readonly themeSystem: string;
   readonly themeLight: string;
   readonly themeDark: string;
-  readonly zoom: string;
-  readonly zoomIn: string;
-  readonly zoomOut: string;
-  readonly zoomReset: string;
-  readonly loading: string;
-  readonly from: string;
-  readonly header: string;
-  readonly footer: string;
+  readonly reload: string;
+
+  // The rail.
+  readonly navPublication: string;
+  readonly navText: string;
+  readonly navPage: string;
+  readonly navType: string;
+  readonly navOutput: string;
+  readonly railHint: string;
+  readonly closeProject: string;
+
+  // The proof spread and its toolbar.
+  readonly spreadView: string;
+  readonly pageView: string;
+  readonly fit: string;
+  readonly actualSize: string;
+  readonly guides: string;
+  readonly showing: string;
+  readonly onThePage: string;
   readonly leftPage: string;
   readonly rightPage: string;
-  /** The slot dropdown's first and last entries. */
+
+  // The inspector's shared words.
+  readonly reset: string;
+  readonly builtInDefault: string;
+  readonly setInProject: string;
+  readonly notSet: string;
+  readonly dontShow: string;
+  readonly notInThisBuild: string;
+  readonly settingsRegion: string;
+
+  // Books.
+  readonly booksRegion: string;
+  readonly filterBooks: string;
+  readonly includeAll: string;
+  readonly clear: string;
+  readonly oldTestament: string;
+  readonly newTestament: string;
+  readonly deuterocanon: string;
+  readonly selectionTitle: string;
+  readonly selectionDesc: string;
+  readonly inPublication: string;
+  readonly nothingIncluded: string;
+  readonly orderTitle: string;
+  readonly booksFollow: string;
+  readonly canonicalOrder: string;
+  readonly customOrder: string;
+  readonly orderHint: string;
+  readonly restoreCanonical: string;
+  readonly filesTitle: string;
+  readonly openProjectFolder: string;
+  readonly notIncluded: string;
+
+  // Template.
+  readonly startFrom: string;
+  readonly presetNote: string;
+  readonly editionsRegion: string;
+  readonly templateKicker: string;
+  readonly chooseTemplate: string;
+  readonly chooseTemplateDesc: string;
+  readonly whatItDoes: string;
+  readonly applyTemplate: string;
+  readonly overwriteSettings: string;
+  readonly overwriteWarning: string;
+
+  // Trim & margins.
+  readonly trimTitle: string;
+  readonly sizeRow: string;
+  readonly customSize: string;
+  readonly columnsRow: string;
+  readonly gutterRow: string;
+  readonly gutterHint: string;
+  readonly marginsTitle: string;
+  readonly top: string;
+  readonly bottom: string;
+  readonly inner: string;
+  readonly outer: string;
+  readonly marginsHint: string;
+  readonly furnitureTitle: string;
+  readonly headRow: string;
+  readonly headHint: string;
+  readonly footRow: string;
+  readonly footHint: string;
+  readonly unitIn: string;
+  readonly unitMm: string;
+  readonly unitPt: string;
+
+  // Headers & footers.
+  readonly header: string;
+  readonly footer: string;
+  readonly leftHeader: string;
+  readonly leftFooter: string;
+  readonly rightHeader: string;
+  readonly rightFooter: string;
+  readonly rightPageTitle: string;
+  readonly mirrorRow: string;
+  readonly mirrorHint: string;
+  readonly mirrorButton: string;
+  readonly outerSlot: string;
+  readonly centreSlot: string;
+  readonly innerSlot: string;
   readonly emptySlot: string;
   readonly customSlot: string;
-  /** The template box's hint. */
   readonly templateHint: string;
-  /** The field documentation under the spread. */
   readonly headFieldsTitle: string;
   readonly headFieldsNote: string;
-  readonly close: string;
-  /** The `?` beside the template box. */
   readonly fieldsHelp: string;
   readonly fieldColumn: string;
   readonly meaningColumn: string;
   readonly exampleColumn: string;
-  readonly booksRegion: string;
-  readonly chooseFolder: string;
-  readonly exampleName: string;
-  readonly language: string;
-  readonly canonicalOrderHint: string;
-  readonly forgetHint: string;
-  readonly restoreHint: string;
+  readonly close: string;
+
+  // Styles and fonts.
+  readonly stylesRegion: string;
+  readonly stylesDesc: string;
+  readonly inspectDesc: string;
+  readonly theBodyFont: string;
+  readonly unset: string;
+  readonly property: string;
+  readonly value: string;
+  readonly from: string;
   readonly styleInspector: string;
   readonly filterSelectors: string;
+  readonly noElementSelected: string;
+  readonly nothingMatches: string;
+  readonly chooseFont: string;
+  readonly useThisFont: string;
+  readonly readingFonts: string;
   readonly searchFonts: string;
-  readonly configurationRegion: string;
-  readonly stylesSectionsRegion: string;
-  readonly settingsRegion: string;
-  readonly stylesRegion: string;
-  readonly pageToScale: string;
-  readonly commonTrimSizes: string;
-  readonly editionsRegion: string;
-  readonly startFrom: string;
-  readonly presetNote: string;
-  readonly overwriteSettings: string;
-  /** Under the question, what applying a template does to the file. */
-  readonly overwriteWarning: string;
   readonly coveringOnly: string;
   readonly noProjectToCheckAgainst: string;
+  readonly fontsInProject: string;
+  readonly fontsInProjectNote: string;
+  readonly fontsBundled: string;
+  readonly fontsBundledNote: string;
+  readonly fontsInstalled: string;
+  readonly fontsInstalledNote: string;
+  readonly setsThisScripture: string;
+  readonly nothingMatchesCovering: string;
+
+  // Build.
+  readonly buildNote: string;
+  readonly severity: string;
+  readonly whereColumn: string;
+  readonly message: string;
+  readonly fixIn: string;
+  readonly nothingToReport: string;
+  readonly nothingMatchesFilter: string;
+  readonly allSeverities: string;
+  readonly options: string;
+  readonly keepHint: string;
+  readonly strictHint: string;
+  readonly outputFolder: string;
+  readonly lastBuild: string;
+  readonly openFolder: string;
+  readonly openPdf: string;
+  readonly stageRead: string;
+  readonly stageCheck: string;
+  readonly stageEmit: string;
+  readonly stageLayout: string;
+  readonly stageWrite: string;
+  readonly buildIdleTitle: string;
+  readonly buildIdleDesc: string;
+  readonly building: string;
+  readonly completed: string;
+  readonly failed: string;
+  readonly blocked: string;
+  readonly cancelled: string;
+  readonly starting: string;
+  readonly typesettingProgress: string;
+  readonly backendLog: string;
+
+  // The palette.
+  readonly paletteTitle: string;
+  readonly moveHint: string;
+  readonly openHint: string;
+  readonly closeHint: string;
+  readonly tabWord: string;
+  readonly sectionWord: string;
+
+  // The status bar.
+  readonly statusIdle: string;
 }
 
 /**
@@ -169,12 +277,44 @@ export interface Phrases {
   readonly forgetProject: (name: string) => string;
   /** A head or foot slot's accessible name: which side, which line, which slot. */
   readonly headerSlot: (side: string, slot: string) => string;
+  readonly footerSlot: (side: string, slot: string) => string;
   readonly startFromTemplate: (title: string) => string;
   /** The status bar over a style's row. */
   readonly styleRow: (name: string) => string;
   readonly searchHits: (count: number) => string;
-  readonly footerSlot: (side: string, slot: string) => string;
   readonly colourSwatch: (property: string) => string;
+  /** `2 of 66 books`, in the top bar. */
+  readonly booksOf: (included: number, all: number) => string;
+  /** `2 of 66 in the publication`. */
+  readonly inPublicationOf: (included: number, all: number) => string;
+  readonly chapters: (count: number) => string;
+  /** `44 chapters in 2 books`. */
+  readonly chaptersInBooks: (chapters: number, books: number) => string;
+  /** `10 problems`. */
+  readonly problems: (count: number) => string;
+  readonly errors: (count: number) => string;
+  readonly warnings: (count: number) => string;
+  readonly notes: (count: number) => string;
+  /** `pages 412–413`, over the spread, after the book's name. */
+  readonly pages: (first: string, last: string) => string;
+  /** `7 × 10 in · text block 5.45 × 8.05 in`. */
+  readonly textBlock: (page: string, block: string) => string;
+  /** `page 41 of about 88`. */
+  readonly pagesSoFar: (done: number, expected: number | null) => string;
+  readonly errorsMustBeFixed: (count: number) => string;
+  readonly inheritedFrom: (name: string) => string;
+  /** `3 files have changed on disk`. */
+  readonly changedOnDisk: (count: number) => string;
+  readonly settingsFound: (count: number) => string;
+  /** `Theme: dark`, on the toggle. */
+  readonly themeIs: (name: string) => string;
+  /** `Fix in Contents`, the link on a problem row. */
+  readonly booksInFolder: (count: number) => string;
+  readonly wrote: (path: string) => string;
+  readonly languageWithTag: (name: string, tag: string) => string;
+  readonly setInThisProject: (tag: string) => string;
+  /** `cannot draw 12 characters`, beside a font. */
+  readonly cannotDraw: (count: number) => string;
 }
 
 /** What the build is doing, in words (GUI-006). */
@@ -240,9 +380,9 @@ export const EN_LABELS: Readonly<Record<string, string>> = {
   "page.margin_bottom": "Bottom margin",
   "page.margin_inner": "Inner margin",
   "page.margin_outer": "Outer margin",
-  "page.column_gap": "Column gap",
-  "page.header_gap": "Header gap",
-  "page.footer_gap": "Footer gap",
+  "page.column_gap": "Gutter",
+  "page.header_gap": "Head",
+  "page.footer_gap": "Foot",
   "typography.font_family": "Font",
   "typography.font_size": "Body size",
   "typography.leading": "Leading",
@@ -276,18 +416,18 @@ export const EN_LABELS: Readonly<Record<string, string>> = {
   "notes.cross_reference_callers": "Reference marks",
   "notes.restart_numbering": "Marks start again",
   "notes.cross_reference_placement": "References go",
-  "headers.left_page.header_left": "Left",
+  "headers.left_page.header_left": "Outer",
   "headers.left_page.header_center": "Centre",
-  "headers.left_page.header_right": "Right",
-  "headers.left_page.footer_left": "Left",
+  "headers.left_page.header_right": "Inner",
+  "headers.left_page.footer_left": "Outer",
   "headers.left_page.footer_center": "Centre",
-  "headers.left_page.footer_right": "Right",
-  "headers.right_page.header_left": "Left",
+  "headers.left_page.footer_right": "Inner",
+  "headers.right_page.header_left": "Inner",
   "headers.right_page.header_center": "Centre",
-  "headers.right_page.header_right": "Right",
-  "headers.right_page.footer_left": "Left",
+  "headers.right_page.header_right": "Outer",
+  "headers.right_page.footer_left": "Inner",
   "headers.right_page.footer_center": "Centre",
-  "headers.right_page.footer_right": "Right",
+  "headers.right_page.footer_right": "Outer",
   "assets.missing_figure": "A figure with no file",
   "output.name": "PDF file name",
   "output.anchors": "PDF bookmarks reach",
@@ -339,6 +479,10 @@ export const EN_CHOICES: Readonly<Record<string, string>> = {
   in_text: "In the text",
   left_margin: "In the left margin",
   right_margin: "In the right margin",
+  next_column: "Next column",
+  next_page: "Next page",
+  left_page: "Left page",
+  right_page: "Right page",
 };
 
 /** The English catalogue. */
@@ -347,66 +491,147 @@ export const EN: Catalogue = {
   chrome: {
     appName: "BibleCompose",
 
+    welcomeKicker: "Print Bibles from USFM",
     openProjectEllipsis: "Open a project…",
-    startIntro: "A Bible project is a folder containing Scripture text in USFM format.",
-    startExisting: "To get started with an existing Bible:",
+    startIntro:
+      "A Bible project is a folder containing Scripture text in USFM format. Open one, or create " +
+      "an empty folder to start a new translation.",
+    startExistingTitle: "Starting with an existing Bible",
     startStepDownloadBefore: "Download an open-licensed Bible in USFM or Paratext format from",
     startStepDownloadAfter: ".",
     startStepExtract: "Extract the downloaded files to a folder.",
-    startStepSelect: "In the application, select that folder as your Bible project directory.",
-    startNew:
-      "To start a new Bible translation, create or select an empty folder. You can then add " +
-      "USFM files to the project as each book is translated.",
+    startStepSelect: "Select that folder as your Bible project directory.",
     openBible: "Open.Bible",
     newProject: "New project",
     newProjectEllipsis: "New project…",
     browse: "Browse…",
     choose: "Choose…",
-    recent: "Recent",
+    recentProjects: "Recent projects",
+    recentNote: "Projects you open appear here. Removing one leaves the folder untouched.",
+    noLongerThere: "no longer there",
+    open: "Open",
+    contract: "contract",
     publicationName: "Publication name",
     where: "Where it goes",
     creates: "Creates ",
+    create: "Create",
+    creating: "Creating…",
+    languageTagHint: "a BCP-47 tag, such as ta",
+    language: "Language",
     noUsfmHere: "This folder has no USFM in it.",
     noProjectOpen: "No project open.",
-
-    generatePdf: "Generate PDF",
-    cancel: "Cancel",
-    problems: "Problems",
-    openFolder: "Open folder",
-    closeProject: "Close project",
-    starting: "starting…",
-    typesettingProgress: "Typesetting progress",
-
-    selectAll: "Select all",
-    clearAll: "Clear all",
-    canonicalOrder: "Canonical order",
-    oldTestament: "Old Testament",
-    newTestament: "New Testament",
-
-    property: "Property",
-    value: "Value",
-    chooseFont: "Choose a font",
-    useThisFont: "Use this font",
-    readingFonts: "Reading the fonts on this machine…",
-    noElementSelected: "No element selected.",
-    nothingMatches: "Nothing matches.",
-    notInThisBuild: "not in this build",
-    statusIdle: "Point at a control to see what it does.",
-    searchHint: "Search tabs and settings…",
-    theme: "Theme",
-    themeSystem: "System",
-    themeLight: "Light",
-    themeDark: "Dark",
-    zoom: "Zoom",
-    zoomIn: "Zoom in (Ctrl +)",
-    zoomOut: "Zoom out (Ctrl −)",
-    zoomReset: "Reset zoom (Ctrl 0)",
     loading: "Loading…",
-    from: "From",
-    header: "Header",
-    footer: "Footer",
+    copyUsfmBefore: "Copy your USFM files into ",
+    copyUsfmAfter: ", then reload.",
+
+    findSetting: "Find a setting…",
+    findShortcut: "Ctrl K",
+    generatePdf: "Generate PDF",
+    cancelBuild: "Cancel build",
+    cancel: "Cancel",
+    theme: "Theme",
+    themeSystem: "system",
+    themeLight: "light",
+    themeDark: "dark",
+    reload: "reload",
+
+    navPublication: "Publication",
+    navText: "Text",
+    navPage: "Page",
+    navType: "Type",
+    navOutput: "Output",
+    railHint: "Click anything on the page to open its setting.",
+    closeProject: "Close project",
+
+    spreadView: "Spread",
+    pageView: "Page",
+    fit: "Fit",
+    actualSize: "100%",
+    guides: "Guides",
+    showing: "Showing",
+    onThePage: "on the page",
     leftPage: "Left page",
     rightPage: "Right page",
+
+    reset: "Reset",
+    builtInDefault: "built-in default",
+    setInProject: "set in this project",
+    notSet: "not set",
+    dontShow: "Don't show",
+    notInThisBuild: "not in this build",
+    settingsRegion: "Settings",
+
+    booksRegion: "Books",
+    filterBooks: "Filter books",
+    includeAll: "Include all",
+    clear: "Clear",
+    oldTestament: "Old Testament",
+    newTestament: "New Testament",
+    deuterocanon: "Deuterocanonical",
+    selectionTitle: "Selection",
+    selectionDesc: "Turn a book on to include it. Drag to change the order.",
+    inPublication: "In the publication",
+    nothingIncluded: "No book is in the publication yet.",
+    orderTitle: "Order",
+    booksFollow: "Books follow",
+    canonicalOrder: "Canonical order",
+    customOrder: "A custom order",
+    orderHint: "Drag a book, or use its arrows, to switch to a custom order.",
+    restoreCanonical: "Restore canonical order",
+    filesTitle: "Files",
+    openProjectFolder: "Open project folder",
+    notIncluded: "not included",
+
+    startFrom: "Start from a template",
+    presetNote: "Each one writes its settings into the project, where you can change them one at a time.",
+    editionsRegion: "Templates",
+    templateKicker: "Template",
+    chooseTemplate: "Choose a template",
+    chooseTemplateDesc:
+      "Click one to read what it sets. Applying it writes those settings into this project, " +
+      "where each can be changed afterwards.",
+    whatItDoes: "What it does",
+    applyTemplate: "Apply template",
+    overwriteSettings: "Overwrite settings",
+    overwriteWarning:
+      "This writes the template's settings into your project, replacing any of them you have " +
+      "already set. There is no undo.",
+
+    trimTitle: "Trim",
+    sizeRow: "Size",
+    customSize: "Custom…",
+    columnsRow: "Columns",
+    gutterRow: "Gutter",
+    gutterHint: "Between columns — unused with one",
+    marginsTitle: "Margins",
+    top: "Top",
+    bottom: "Bottom",
+    inner: "Inner",
+    outer: "Outer",
+    marginsHint:
+      "Inner is the binding side. A wider bottom than top keeps the block from looking low on the page.",
+    furnitureTitle: "Furniture",
+    headRow: "Head",
+    headHint: "Running head to text block",
+    footRow: "Foot",
+    footHint: "Text block to page number",
+    unitIn: "in",
+    unitMm: "mm",
+    unitPt: "pt",
+
+    header: "Header",
+    footer: "Footer",
+    leftHeader: "Left page header",
+    leftFooter: "Left page footer",
+    rightHeader: "Right page header",
+    rightFooter: "Right page footer",
+    rightPageTitle: "Right page",
+    mirrorRow: "Follows the left page, mirrored",
+    mirrorHint: "Turn off to set the right page's six slots separately.",
+    mirrorButton: "Mirror left → right",
+    outerSlot: "Outer",
+    centreSlot: "Centre",
+    innerSlot: "Inner",
     emptySlot: "Empty",
     customSlot: "Custom…",
     templateHint: "{Book} {Range}",
@@ -417,37 +642,80 @@ export const EN: Catalogue = {
       "or underscores. A slot whose fields all have nothing on a page prints nothing there; a " +
       "field with nothing among fields with something is left out. Write {{ or }} for a brace " +
       "of your own.",
-    close: "Close",
     fieldsHelp: "?",
     fieldColumn: "Field",
     meaningColumn: "What it reads",
     exampleColumn: "For example",
-    booksRegion: "Books",
-    chooseFolder: "Choose a folder…",
-    exampleName: "My Bible",
-    language: "Language",
-    canonicalOrderHint: "Put the books back in the order the canon gives them",
-    forgetHint: "Remove from this list — the folder is not touched",
-    restoreHint: "Restore the built-in value",
-    styleInspector: "Style inspector",
-    filterSelectors: "Filter selectors",
-    searchFonts: "Search fonts",
-    configurationRegion: "Configuration",
-    stylesSectionsRegion: "Styles sections",
-    settingsRegion: "Settings",
+    close: "Close",
+
     stylesRegion: "Styles",
-    pageToScale: "The page, to scale",
-    commonTrimSizes: "Common trim sizes",
-    editionsRegion: "Templates",
-    startFrom: "Start from a template",
-    presetNote:
-      "Each one writes its settings into this project, where you can change them one at a time.",
-    overwriteSettings: "Overwrite settings",
-    overwriteWarning:
-      "This writes the template's settings into your project, replacing any of them you have already set. There is no undo.",
+    stylesDesc: "Unset values fall back to the body font and the style this one inherits from.",
+    inspectDesc:
+      "Every element the typesetter knows, and where each of its values came from — the " +
+      "built-in set, this project, or inheritance.",
+    theBodyFont: "the body font",
+    unset: "unset",
+    property: "Property",
+    value: "Value",
+    from: "From",
+    styleInspector: "Style inspector",
+    filterSelectors: "Filter elements",
+    noElementSelected: "No element selected.",
+    nothingMatches: "Nothing matches.",
+    chooseFont: "Choose a font",
+    useThisFont: "Use this font",
+    readingFonts: "Reading the fonts on this machine…",
+    searchFonts: "Search fonts",
     coveringOnly: "Only fonts that can set this Scripture",
-    noProjectToCheckAgainst:
-      "No project is open, so nothing has been checked against Scripture.",
+    noProjectToCheckAgainst: "No project is open, so nothing has been checked against Scripture.",
+    fontsInProject: "In this project",
+    fontsInProjectNote: "ships with the book",
+    fontsBundled: "Bundled",
+    fontsBundledNote: "ships with BibleCompose",
+    fontsInstalled: "Installed here",
+    fontsInstalledNote: "on this machine only",
+    setsThisScripture: "sets this Scripture",
+    nothingMatchesCovering: "Nothing matches that can set this Scripture.",
+
+    buildNote: "An error stops the build. Warnings print anyway unless Strict settings is on.",
+    severity: "Severity",
+    whereColumn: "Where",
+    message: "Message",
+    fixIn: "Fix in",
+    nothingToReport: "Nothing to report.",
+    nothingMatchesFilter: "Nothing matches the filter.",
+    allSeverities: "All",
+    options: "Options",
+    keepHint: "Leave the typesetter's files in the output folder",
+    strictHint: "Treat a warning in the settings as an error and stop",
+    outputFolder: "Output",
+    lastBuild: "Last build",
+    openFolder: "Open folder",
+    openPdf: "Open PDF",
+    stageRead: "Read USFM",
+    stageCheck: "Check the settings",
+    stageEmit: "Prepare the typesetting",
+    stageLayout: "Page layout",
+    stageWrite: "Write the PDF",
+    buildIdleTitle: "Ready",
+    buildIdleDesc: "Generate PDF sets the whole publication afresh and writes it to the output folder.",
+    building: "Building…",
+    completed: "Completed",
+    failed: "Failed",
+    blocked: "Blocked",
+    cancelled: "Cancelled",
+    starting: "starting…",
+    typesettingProgress: "Typesetting progress",
+    backendLog: "Typesetter log",
+
+    paletteTitle: "Find a setting",
+    moveHint: "↑↓ move",
+    openHint: "↵ open setting",
+    closeHint: "Esc close",
+    tabWord: "Section",
+    sectionWord: "Styles › section",
+
+    statusIdle: "Point at a control to see what it does.",
   },
   phrases: {
     includeBook: (code) => `Include ${code}`,
@@ -456,24 +724,50 @@ export const EN: Catalogue = {
     resetSetting: (label) => `Reset ${label}`,
     forgetProject: (name) => `Forget ${name}`,
     headerSlot: (side, slot) => `${side} page, header ${slot}`,
+    footerSlot: (side, slot) => `${side} page, footer ${slot}`,
     startFromTemplate: (title) => `Start from “${title}”?`,
     styleRow: (name) => `${name}: how it is set — the properties below.`,
     searchHits: (count) => (count === 1 ? "1 match" : `${count} matches`),
-    footerSlot: (side, slot) => `${side} page, footer ${slot}`,
     colourSwatch: (property) => `${property} swatch`,
+    booksOf: (included, all) => `${included} of ${all} books`,
+    inPublicationOf: (included, all) =>
+      included === all ? `All ${all} in the publication` : `${included} of ${all} in the publication`,
+    chapters: (count) => (count === 1 ? "1 chapter" : `${count} chapters`),
+    chaptersInBooks: (chapters, books) =>
+      `${chapters} chapter${chapters === 1 ? "" : "s"} in ${books} book${books === 1 ? "" : "s"}`,
+    problems: (count) => (count === 1 ? "1 problem" : `${count} problems`),
+    errors: (count) => (count === 1 ? "1 error" : `${count} errors`),
+    warnings: (count) => (count === 1 ? "1 warning" : `${count} warnings`),
+    notes: (count) => (count === 1 ? "1 note" : `${count} notes`),
+    pages: (first, last) => `pages ${first}–${last}`,
+    textBlock: (page, block) => `${page} · text block ${block}`,
+    pagesSoFar: (done, expected) =>
+      expected ? `page ${done} of about ${expected}` : `page ${done}`,
+    errorsMustBeFixed: (count) =>
+      `${count} error${count === 1 ? "" : "s"} must be fixed before a build can run.`,
+    inheritedFrom: (name) => `inherited from ${name}`,
+    changedOnDisk: (count) =>
+      count === 1 ? "1 file has changed on disk" : `${count} files have changed on disk`,
+    settingsFound: (count) => (count === 1 ? "1 setting" : `${count} settings`),
+    themeIs: (name) => `Theme: ${name}`,
+    booksInFolder: (count) => (count === 1 ? "1 book in the folder" : `${count} books in the folder`),
+    wrote: (path) => `wrote ${path}`,
+    languageWithTag: (name, tag) => `${name} (${tag})`,
+    setInThisProject: (tag) => `${tag} — set in this project`,
+    cannotDraw: (count) => `cannot draw ${count} character${count === 1 ? "" : "s"}`,
   },
   states: {
-    idle: "idle",
-    loading: "loading",
-    loaded: "loaded",
-    blocked: "blocked",
-    validating: "validating",
-    emitting: "generating",
-    typesetting: "running SILE",
-    publishing: "publishing",
-    succeeded: "completed",
-    failed: "failed",
-    cancelled: "canceled",
+    idle: "Idle",
+    loading: "Loading",
+    loaded: "Loaded",
+    blocked: "Blocked",
+    validating: "Checking settings",
+    emitting: "Preparing",
+    typesetting: "Typesetting",
+    publishing: "Publishing",
+    succeeded: "Completed",
+    failed: "Failed",
+    cancelled: "Cancelled",
   },
   labels: EN_LABELS,
   placeholders: EN_PLACEHOLDERS,

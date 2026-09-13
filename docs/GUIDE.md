@@ -54,7 +54,7 @@ Click the path on the bar to open it in your usual PDF reader.
 
 ### Start from a template
 
-The **Template** tab offers eight to start from:
+The **Template** section offers eight to start from:
 
 | | |
 |---|---|
@@ -74,34 +74,44 @@ window claims you are "in" large print.
 
 ### Change one thing at a time
 
-A search box at the end of the tab strip finds any tab, setting, style or
-template by name; choosing a match opens its tab and lights the control up.
-A status line along the bottom of the window says what the control under the pointer
-does. Beside the search, a theme control chooses light, dark or the system's choice, and
-the window zooms with Ctrl and `+`, `−` or `0`, or Ctrl and the mouse wheel.
-Both are remembered on this machine.
+The window is three panes around a page. A rail of sections runs down the
+left; the centre shows a spread of two pages set to your trim, margins and
+columns, with everything the settings switch on and off; the right-hand pane
+holds the settings of the open section. Click anything on the page — a
+heading, a verse number, a margin, a slot of the running head — and its
+setting opens. Point at a setting and the thing it governs lights up on the
+page. The spread is an illustration and not the typesetter's output: it is
+exact about what is on the page and its shape, and makes no claim about
+where a line breaks.
 
-Every tab is settings, and every setting writes to `biblecompose.toml` in your
-folder as you change it. There is no Save. Anything you set shows a marker
-saying it came from your file rather than from the defaults, and a **Reset**
-beside it puts the built-in value back.
+**Find a setting** in the top bar (or Ctrl K) goes to any section, setting,
+style or template by name. The status line along the bottom of the window
+says what the control under the pointer does. The theme button cycles light,
+dark and the system's choice, and the window zooms with Ctrl and `+`, `−` or
+`0`, or Ctrl and the mouse wheel. Both are remembered on this machine.
 
-| Tab | |
+Every section is settings, and every setting writes to `biblecompose.toml` in
+your folder as you change it. There is no Save. Anything you set shows where
+in your file it came from, and a **Reset** beside it puts the built-in value
+back.
+
+| Section | |
 |---|---|
-| **Scripture** | Which books, and in what order |
-| **Template** | Three kinds of book to start from |
+| **Books** | Which books, and in what order |
+| **Template** | Eight kinds of book to start from |
 | **Contents** | What appears — introductions, headings, chapter and verse numbers — and where books, chapters and verses start |
 | **Paragraph** | How a paragraph is set: justification, poetry indents, quotations, drop caps |
-| **Cross-references** | Footnotes and cross-references: whether, their marks, where they go |
-| **Headers & Footers** | What goes in each of the six slots, on each side of the spread — see below |
-| **Page** | Trim size, columns, margins |
-| **Styles** | Typography, and every marker's appearance |
+| **Notes** | Footnotes and cross-references: whether, their marks, where they go |
+| **Trim & margins** | Trim size, columns, margins and the head and foot gaps, drawn as guides on the spread, in inches, millimetres or points |
+| **Headers & footers** | The six slots on each side of the spread, on the page itself — see below |
 | **Figures** | What a figure with no file does to the build |
-| **PDF metadata** | Publisher, subject, the file's name, how far its bookmarks reach |
+| **Styles** | Typography, and every marker's appearance, with the chosen element outlined on the page |
+| **PDF metadata** | The publication's name and language, publisher, subject, the file's name, how far its bookmarks reach |
+| **Build** | Every problem and the section that fixes it; the build's progress and its two options |
 
 ### Heads and feet
 
-The **Headers & Footers** tab shows a spread: the left-hand page beside the
+The **Headers & footers** section shows the spread: the left-hand page beside the
 right-hand one, each with three slots across the head and three across the
 foot. Every slot is a small template — text with fields in braces — so
 `{Book} {Range}` reads “1 John 1:1–2:6”, and `{Book}:{FirstChapter}-{FirstVerse}`
@@ -133,7 +143,7 @@ among fields with something is simply left out. In the file these are
 
 ### Quotations that wrap
 
-Under **Quotations** on the Paragraph tab, **A quotation begins** either in
+Under **Quotations** in Paragraph, **A quotation begins** either in
 the line, where the text reaches it, or on a line of its own: the line before
 it ends there, and the quotation starts the next line indented by **Its
 line's indent**, twice that for a quotation inside one. Only a quotation
@@ -151,19 +161,19 @@ Set in the PDF, not on the example page.
 
 ### Numbers in the margin
 
-On the Contents tab, **Chapter numbers** and **Verse numbers** are each one
+In Contents, **Chapter numbers** and **Verse numbers** are each one
 dropdown: don't show, show in the text as most Bibles do, or in the left or
 right margin of the column, level with the line the chapter or verse begins
 on, so the text runs clear of them. Several verses beginning on one line
 share the margin, in order. **Gap to the margin numbers**, on the Styles
-tab under Chapter and verse, is the space between a number and the column. In the file: `numbering.chapter_number_placement`,
+section under Chapter and verse, is the space between a number and the column. In the file: `numbering.chapter_number_placement`,
 `numbering.verse_number_placement` (`in_text`, `left_margin`, `right_margin`)
 and `numbering.margin_gap`. In the margin a chapter number is set plainly in
 its style — no line of its own, no drop cap, no border.
 
 ### Where things start
 
-The **Start** group on the Contents tab decides where a book, a chapter and
+The **Start** group in Contents decides where a book, a chapter and
 a verse begin. A book: on the run (`continuous`), the next column, the next
 page, a left- or right-hand page, or a blank page and then a left, right or
 next page — the blank carries no head and no folio. A chapter (every one but
@@ -184,7 +194,7 @@ now and then. In the file these are `contents.book_starts`,
 **Styles → Chapter and verse → Chapter number** decides more than a face and
 a size. Left alone, the number sits at the start of the chapter's first
 paragraph with the text running into it. The other keys of the `[chapter]`
-style, in the file or on the tab:
+style, in the file or in the window:
 
 | Key | What it does |
 |---|---|
@@ -195,7 +205,7 @@ style, in the file or on the tab:
 
 ### Styles
 
-The **Styles** tab is where `\q1`'s indent and `\s1`'s size live. They are
+The **Styles** section is where `\q1`'s indent and `\s1`'s size live. They are
 keyed by USFM marker, so a change to `poetry.q1` moves every first-level poetry
 line and nothing else. Deeper levels inherit from shallower ones: setting
 `heading.s1` moves `s2` through `s4` unless they say otherwise.
@@ -234,7 +244,7 @@ A full Bible takes minutes, and almost all of it is the typesetter. Every
 build typesets the whole of what is ticked, afresh — there is no cached
 result to be stale, and nothing outside the project can be missed.
 
-* **Untick some books** on the Scripture tab while you are adjusting things.
+* **Turn some books off** in Books while you are adjusting things.
   One book is one book's work; tick the rest back when the page is right.
 
 ### The italics are not italic

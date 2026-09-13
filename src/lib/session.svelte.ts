@@ -131,7 +131,7 @@ export class Session {
    * in it, and because "which books, in what order" is the question every
    * other tab assumes an answer to.
    */
-  pane = $state("scripture");
+  pane = $state("books");
   /** And which section within the Styles tab. One of `STYLE_TABS`. */
   stylePane = $state("typography");
   /** The selector the inspector is showing, and what is filtering the list. */

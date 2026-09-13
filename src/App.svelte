@@ -1,24 +1,40 @@
 <script lang="ts">
-  import BuildBar from "./components/BuildBar.svelte";
-  import DiagnosticsPanel from "./components/DiagnosticsPanel.svelte";
-  import ProjectPane from "./components/ProjectPane.svelte";
-  import QuickSettings from "./components/QuickSettings.svelte";
-  import ExamplePage from "./components/ExamplePage.svelte";
-  import HeadersSpread from "./components/HeadersSpread.svelte";
-  import PageDiagram from "./components/PageDiagram.svelte";
-  import PresetPicker from "./components/PresetPicker.svelte";
-  import SearchBox from "./components/SearchBox.svelte";
+  /**
+   * The window: three panes around a page.
+   *
+   * A rail of sections on the left, the proof spread (or a table, or a
+   * gallery) in the centre, and on the right the inspector holding the
+   * settings of the open section. The top bar names the project and holds
+   * the way to any setting and the button that makes the book; the status
+   * bar along the bottom says what the build is doing and, under the
+   * pointer, what any control does. Before a project is open there is only
+   * the welcome screen: a rail of disabled sections over nothing would be
+   * furniture standing in for an application that has not been given
+   * anything to do yet.
+   */
+  import BooksInspector from "./components/BooksInspector.svelte";
+  import BooksScreen from "./components/BooksScreen.svelte";
+  import BuildInspector from "./components/BuildInspector.svelte";
+  import BuildScreen from "./components/BuildScreen.svelte";
+  import HeadersInspector from "./components/HeadersInspector.svelte";
+  import PageInspector from "./components/PageInspector.svelte";
+  import Palette from "./components/Palette.svelte";
+  import ProofSpread from "./components/ProofSpread.svelte";
+  import Rail from "./components/Rail.svelte";
+  import SettingsInspector from "./components/SettingsInspector.svelte";
   import StatusBar from "./components/StatusBar.svelte";
-  import ViewControls from "./components/ViewControls.svelte";
-  import SettingsForm from "./components/SettingsForm.svelte";
-  import StartScreen from "./components/StartScreen.svelte";
-  import StyleEditor from "./components/StyleEditor.svelte";
   import StyleInspector from "./components/StyleInspector.svelte";
-  import { STYLE_TABS, TABS } from "./lib/labels";
+  import StylesInspector from "./components/StylesInspector.svelte";
+  import TemplateInspector from "./components/TemplateInspector.svelte";
+  import TemplateScreen from "./components/TemplateScreen.svelte";
+  import TopBar from "./components/TopBar.svelte";
+  import Welcome from "./components/Welcome.svelte";
+  import { TABS } from "./lib/labels";
   import { session } from "./lib/session.svelte";
   import { applyPreferences, installViewShortcuts } from "./lib/preferences.svelte";
   import { installHoverHelp } from "./lib/hover.svelte";
-  import { t } from "./lib/i18n";
+  import { shownStyle, ui } from "./lib/ui.svelte";
+  import { phrases, t } from "./lib/i18n";
 
   // The theme and zoom this person keeps, and the keys that change them.
   $effect(() => {
@@ -34,62 +50,42 @@
   });
 
   // `TABS` is a non-empty constant, but its type does not say so — and a
-  // stored pane id from an older build could name a tab that no longer exists.
-  const tab = $derived(TABS.find((t) => t.id === session.pane) ?? TABS[0]!);
-  const styleTab = $derived(STYLE_TABS.find((t) => t.id === session.stylePane) ?? STYLE_TABS[0]!);
+  // stored pane id from an older build could name a section that no longer
+  // exists.
+  const tab = $derived(TABS.find((x) => x.id === session.pane) ?? TABS[0]!);
+  const inspecting = $derived(tab.styles && session.stylePane === "inspect");
 
+  /** Ctrl K opens the palette from anywhere, once there is something to search. */
+  function onkeydown(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "k") {
+      if (!session.project) return;
+      event.preventDefault();
+      ui.palette = !ui.palette;
+    }
+  }
 </script>
 
-<!--
-  The header and the build bar belong to a project. Before one is open there is
-  nothing to reload, nothing to build, and no publication to name — a strip of
-  disabled controls over a start screen would be furniture standing in for an
-  application that has not been given anything to do yet.
--->
-<div class="app">
-  <!--
-    A header only when there is something to put in it. What used to be here —
-    the folder name and the version — is in the title bar now, and an empty strip
-    above the workspace is a margin pretending to be a toolbar.
-  -->
+<svelte:window {onkeydown} />
+
+<div class="app" class:narrow={tab.narrow}>
+  <TopBar />
+
   {#if session.project && session.changedCount > 0}
-    <header class="top">
-      <!--
-        FUN-007 offers a reload rather than performing one: a reload throws away
-        nothing, but doing it under someone mid-edit would move the form they
-        were reading. The notice *is* the offer — a standing Reload button beside
-        it was a control that did nothing on almost every page view, and the
-        moment it is worth pressing is exactly the moment this appears.
-      -->
+    <!--
+      FUN-007 offers a reload rather than performing one: a reload throws
+      away nothing, but doing it under someone mid-edit would move the form
+      they were reading. The notice is the offer.
+    -->
+    <div class="notice">
+      <span>{phrases().changedOnDisk(session.changedCount)}</span>
       <button
         type="button"
-        class="changed"
-        title={`${session.changedNames.join(", ")} — click to read the project again`}
+        class="link"
+        data-search-key="action:reload"
+        title={session.changedNames.join(", ")}
         onclick={() => void session.reopen()}
       >
-        {session.changedCount}
-        {session.changedCount === 1 ? "file has" : "files have"} changed on disk — reload
-      </button>
-    </header>
-  {/if}
-
-  {#if session.project}
-    <!-- What the publication is and what language it is in. They are answered
-         once, when a folder is first opened, which is not a reason to keep them
-         behind a tab for the rest of the project's life. Shown for as long as
-         the project is, not only while files have changed on disk — that was
-         the notice's condition, and the strip had been folded under it. -->
-    <div class="identity">
-      <QuickSettings keys={["project.name", "project.language"]} width="12rem" />
-      <!-- Beside what it closes: the strip is what this project *is*, and
-           putting it down belongs with the two things that name it. -->
-      <button
-        type="button"
-        class="close"
-        data-search-key="action:close"
-        onclick={() => void session.close()}
-      >
-        {t("closeProject")}
+        {t("reload")}
       </button>
     </div>
   {/if}
@@ -99,196 +95,120 @@
   {/if}
 
   {#if session.openingWhat}
-    <!--
-      The start screen goes the moment a folder is chosen, not when it has
-      finished being read. Reading a whole Bible is seconds of parsing, and a
-      start screen still offering the folder you just clicked is the
-      application looking like it did not hear you.
-    -->
+    <!-- The welcome screen goes the moment a folder is chosen, not when it
+         has finished being read: a start screen still offering the folder
+         you just clicked is the application looking like it did not hear. -->
     <section class="loading">
       <p class="what">{t("loading")}</p>
-      <p class="where">{session.openingWhat}</p>
+      <p class="mono where">{session.openingWhat}</p>
     </section>
   {:else if !session.project}
-    <StartScreen />
+    <Welcome />
   {:else}
     {#if session.created}
       <!-- A project that has just been made has a settings file and no
            Scripture. Nothing else on screen would say what stands between it
            and a book. -->
-      <p class="next-step">
-        Copy your USFM files into <code>{session.created}</code>, then Reload.
+      <p class="notice">
+        <span>{t("copyUsfmBefore")}<span class="mono">{session.created}</span>{t("copyUsfmAfter")}</span>
       </p>
     {/if}
 
     <main>
-      <div class="right">
-      <!-- One tab at a time: each is long on its own, and the page geometry, what
-           appears on it, and how it is set are three decisions a publisher makes
-           at three separate times. Tabs rather than an accordion so the choice
-           survives an edit, which reopens the project and would otherwise
-           collapse it. -->
-      <nav class="tabs" aria-label={t("configurationRegion")}>
-        {#each TABS as t (t.id)}
-          <button
-            type="button"
-            class:active={session.pane === t.id}
-            data-search-key={`tab:${t.id}`}
-            aria-current={session.pane === t.id ? "true" : undefined}
-            onclick={() => (session.pane = t.id)}
-          >
-            {t.title}
-          </button>
-        {/each}
-        <!-- At the end of the strip: the way to any tab, setting, style or
-             template by name, for the publisher who knows what they want
-             to change and not which of seven tabs it is on. -->
-        <SearchBox />
-        <ViewControls />
-      </nav>
+      <Rail />
 
-      {#if !session.editable}
-        <p class="hint">
-          The built-in defaults, which is what a folder with no project files gets. Open a project to
-          change them.
-        </p>
-      {/if}
-
-      <!-- The tabs stay put and the form moves under them. Outside a scroller
-           the Page section alone pushes the build bar off the bottom of the
-           window, and the control you press after changing something should not
-           be the one you have to go looking for. -->
-      <div class="body" class:sectioned={tab.styles}>
-        {#if tab.styles}
-          <!-- Down the side rather than across the top: there are seven of
-               them, they are nouns rather than steps, and a row of seven wraps
-               to two lines at any width this window is likely to be — which
-               moves the section you are reading every time the window is
-               resized. A column also leaves the names left-aligned, so they
-               read as a list of what can be styled. -->
-          <nav class="subtabs" aria-label={t("stylesSectionsRegion")}>
-            {#each STYLE_TABS as s (s.id)}
-              <button
-                type="button"
-                class:active={session.stylePane === s.id}
-                data-search-key={`subtab:${s.id}`}
-                aria-current={session.stylePane === s.id ? "true" : undefined}
-                onclick={() => (session.stylePane = s.id)}
-              >
-                {s.title}
-              </button>
-            {/each}
-          </nav>
-        {/if}
-
-        {#if tab.books}
-          <!-- Outside the scroller, because this pane does its own: a whole
-               Bible is two columns of rows that each scroll, and a scroller
-               around a scroller gives you two bars and no way to know which
-               one you are dragging. -->
-          <ProjectPane />
+      <div class="centre">
+        {#if tab.canvas === "books"}
+          <BooksScreen />
+        {:else if tab.canvas === "templates"}
+          <TemplateScreen />
+        {:else if tab.canvas === "build"}
+          <BuildScreen />
+        {:else if inspecting}
+          <StyleInspector />
         {:else}
-        <!-- The Headers & Footers page fills the window rather than sitting
-             at the top of it: its example is a page, and a page is the size of
-             the room it is given. The other tabs are forms, which are as tall
-             as their rows. -->
-        <div class="scroller" class:fill={tab.example !== undefined}>
-          {#if tab.styles}
-            {#if styleTab.inspector}
-              <StyleInspector />
-            {/if}
-            {#if styleTab.settingGroups.length > 0}
-              <SettingsForm groups={styleTab.settingGroups} />
-            {/if}
-            {#if styleTab.styleGroups.length > 0}
-              <StyleEditor groups={styleTab.styleGroups} />
-            {/if}
-          {:else}
-            {#if tab.template}
-              <PresetPicker />
-            {/if}
-            {#if tab.diagram && session.geometry}
-              <PageDiagram geometry={session.geometry} />
-            {/if}
-            {#if tab.example === "headers"}
-              <HeadersSpread />
-            {:else if tab.example}
-              <ExamplePage which={tab.example} />
-            {/if}
-            {#if tab.settingGroups.length > 0 || tab.orphans}
-              <SettingsForm groups={tab.settingGroups} orphans={tab.orphans ?? false} />
-            {/if}
-          {/if}
-        </div>
+          <ProofSpread guides={tab.trim ?? false} slots={tab.headers ?? false} outline={shownStyle()} />
         {/if}
       </div>
-    </div>
-    </main>
-  {/if}
 
-  {#if session.project}
-    <BuildBar />
+      {#if tab.id === "books"}
+        <BooksInspector />
+      {:else if tab.id === "template"}
+        <TemplateInspector />
+      {:else if tab.trim}
+        <PageInspector />
+      {:else if tab.headers}
+        <HeadersInspector />
+      {:else if tab.styles}
+        <StylesInspector />
+      {:else if tab.canvas === "build"}
+        <BuildInspector />
+      {:else}
+        <SettingsInspector {tab} />
+      {/if}
+    </main>
+
     <StatusBar />
   {/if}
 
-  {#if session.showProblems}
-    <DiagnosticsPanel onclose={() => (session.showProblems = false)} />
+  {#if ui.palette}
+    <Palette />
   {/if}
 </div>
 
 <style>
-  .top {
+  /* The window, top to bottom: the bar, the notices, the three panes, the
+     status line. Only the panes grow. */
+  .app {
+    display: flex;
+    flex-direction: column;
+    block-size: 100%;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .app.narrow {
+    --inspector-w: 340px;
+  }
+  main {
+    display: flex;
+    flex: 1;
+    min-block-size: 0;
+  }
+  .centre {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-inline-size: 0;
+    min-block-size: 0;
+  }
+  .notice {
     flex: none;
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem 0.8rem;
     align-items: baseline;
-    padding-block-end: 0.6rem;
+    gap: 10px;
+    margin: 0;
+    padding: 6px 20px;
+    border-block-end: 1px solid var(--line);
+    background: var(--warn-bg);
+    color: var(--warn-ink);
+    font-size: 12.5px;
   }
-  .close {
-    padding-block: 0.25rem;
-    padding-inline: 0.7rem;
-    border: 1px solid color-mix(in oklab, currentColor 30%, transparent);
-    border-radius: 5px;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    font-size: 0.85rem;
-    cursor: pointer;
-  }
-  .changed {
-    padding-block: 0.2rem;
-    padding-inline: 0.5rem;
-    border: 1px solid #b8860b;
-    border-radius: 5px;
-    background: transparent;
-    font: inherit;
-    font-size: 0.78rem;
-    color: #8a6100;
-    cursor: pointer;
+  .notice .mono {
+    overflow-wrap: anywhere;
   }
   .fault {
     flex: none;
-    margin: 0 0 0.6rem;
-    padding: 0.5rem 0.7rem;
-    border-inline-start: 3px solid #c0392b;
-    background: color-mix(in oklab, #c0392b 8%, transparent);
-    font-size: 0.85rem;
-  }
-  .identity {
-    flex: none;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem 0.9rem;
-    align-items: center;
-    padding-block: 0.35rem 0.55rem;
-    padding-inline: 1rem;
-    border-block-end: 1px solid color-mix(in oklab, currentColor 12%, transparent);
+    margin: 0;
+    padding: 8px 20px;
+    border-inline-start: 3px solid var(--err);
+    background: var(--err-bg);
+    color: var(--err-ink);
+    font-size: 12.5px;
   }
   .loading {
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 6px;
     flex: 1;
     align-items: center;
     justify-content: center;
@@ -296,171 +216,11 @@
   }
   .what {
     margin: 0;
-    font-size: 1rem;
+    font: 500 20px var(--serif);
   }
   .where {
-    overflow-wrap: anywhere;
     margin: 0;
-    font-size: 0.8rem;
-    opacity: 0.55;
-  }
-  .next-step {
-    flex: none;
-    margin: 0;
-    padding-block: 0.5rem;
-    padding-inline: 1rem;
-    background: color-mix(in oklab, currentColor 8%, transparent);
-    font-size: 0.85rem;
-  }
-  .next-step code {
+    color: var(--mut);
     overflow-wrap: anywhere;
-  }
-  /* A strip of its own colour, a shade off the page's, so the row of tabs
-     reads as the top of a folder and the open tab as the page it belongs
-     to: the active tab takes the page's colour and joins it. */
-  .tabs {
-    display: flex;
-    gap: 0.25rem;
-    padding: 0.35rem 0.5rem 0;
-    border-block-end: 1px solid color-mix(in oklab, currentColor 18%, transparent);
-    background: color-mix(in oklab, CanvasText 7%, Canvas);
-  }
-  /* What the search landed on, for a moment: the same mark the example
-     page uses for the thing a switch governs, so the two read as one idea. */
-  :global(.spotlit) {
-    outline: 2px solid #b45309;
-    outline-offset: 3px;
-    border-radius: 4px;
-    background: color-mix(in oklab, #b45309 18%, transparent);
-    transition: background 0.6s ease-out;
-  }
-  .tabs button {
-    padding-block: 0.35rem;
-    padding-inline: 0.8rem;
-    margin-block-end: -1px;
-    border: 1px solid transparent;
-    border-block-end: 0;
-    border-start-start-radius: 6px;
-    border-start-end-radius: 6px;
-    background: none;
-    color: inherit;
-    font: inherit;
-    font-size: 0.85rem;
-    opacity: 0.6;
-    cursor: pointer;
-  }
-  .tabs button:hover {
-    background: color-mix(in oklab, CanvasText 5%, Canvas);
-    opacity: 0.85;
-  }
-  /* Quieter than the tabs above them, so the two rows read as a hierarchy
-     rather than as eleven equal choices. */
-  /* The pane, and — on the Styles tab — the list of sections beside it. */
-  .body {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-block-size: 0;
-  }
-  .body.sectioned {
-    flex-direction: row;
-    gap: 0.9rem;
-  }
-  .subtabs {
-    display: flex;
-    flex-direction: column;
-    flex: none;
-    gap: 0.1rem;
-    min-inline-size: 8rem;
-    padding-inline-end: 0.6rem;
-    border-inline-end: 1px solid color-mix(in oklab, currentColor 15%, transparent);
-    overflow-y: auto;
-  }
-  .subtabs button {
-    padding-block: 0.25rem;
-    padding-inline: 0.5rem;
-    border: 0;
-    border-radius: 4px;
-    background: none;
-    color: inherit;
-    font: inherit;
-    font-size: 0.82rem;
-    /* Left-aligned, because down the side they read as a list of what can be
-       styled rather than as a row of buttons. */
-    text-align: start;
-    cursor: pointer;
-    opacity: 0.75;
-  }
-  .subtabs button:hover {
-    background: color-mix(in oklab, currentColor 8%, transparent);
-    opacity: 1;
-  }
-  .subtabs button.active {
-    background: color-mix(in oklab, currentColor 14%, transparent);
-    font-weight: 600;
-    opacity: 1;
-  }
-  .scroller {
-    /* Bounded by the column now rather than by a share of the viewport, which
-       was a guess at how much room the rest of the window wanted. */
-    min-block-size: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    /* Room for the scrollbar, so a value in the rightmost column is never
-       under it. */
-    padding-inline-end: 0.4rem;
-  }
-  .scroller.fill {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
-  .hint {
-    margin-block: 0;
-    font-size: 0.82rem;
-    opacity: 0.7;
-  }
-  .tabs button.active {
-    background: Canvas;
-    border-color: color-mix(in oklab, currentColor 18%, transparent);
-    opacity: 1;
-    font-weight: 600;
-  }
-  /* The window, top to bottom: the strips that describe the project, the
-     workspace, and the build bar on the bottom edge. Only the middle grows. */
-  .app {
-    display: flex;
-    flex-direction: column;
-    block-size: 100%;
-    padding-inline: 1rem;
-    padding-block-start: 0.75rem;
-  }
-  /* The whole width now. The books used to hold a permanent column beside
-     this, which cost every other tab a third of the window for a question
-     already answered — and left the book list itself too narrow to put the
-     two testaments side by side. They are a tab of their own instead. */
-  main {
-    display: flex;
-    /* Takes the space the strips and the bar leave. `min-block-size: 0` is
-       what lets it *shrink* too — without it a flex child refuses to go below
-       its content, and a long book list would push the build bar off the
-       bottom of the window rather than scrolling. */
-    flex: 1;
-    min-block-size: 0;
-    padding-block-end: 0.75rem;
-  }
-  /* A column of rows that do not grow — the tabs, the hint — and one that
-     does. The pane scrolls inside itself rather than the whole side
-     scrolling, which is what keeps the section list beside the Styles pane
-     from scrolling away with the form it chooses. */
-  .right {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    gap: 1rem;
-    min-inline-size: 0;
-    min-block-size: 0;
-    max-block-size: 100%;
-    overflow: hidden;
   }
 </style>

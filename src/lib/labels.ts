@@ -10,12 +10,12 @@
  *
  * **The `EN_` maps are the English half of the catalogue in `i18n.ts`** and
  * are exported for it to assemble. Everything read at runtime goes through
- * `locale()`, so a second locale replaces the words without touching the tabs,
- * the groups, or the order of anything (NFR-012). The structures stay here
- * beside the form they describe; only the words travel.
+ * `locale()`, so a second locale replaces the words without touching the
+ * sections, the groups, or the order of anything (NFR-012). The structures
+ * stay here beside the window they describe; only the words travel.
  */
 
-import { locale } from "./i18n";
+import { locale, t, word } from "./i18n";
 import { STYLE_GROUPS } from "./styles";
 import type { ExampleTab } from "./switches";
 
@@ -24,8 +24,6 @@ export interface Group {
   readonly title: string;
   readonly keys: readonly string[];
 }
-
-
 
 export const GROUPS: readonly Group[] = [
   {
@@ -43,40 +41,42 @@ export const GROUPS: readonly Group[] = [
   // A setting, but one about how the numbers *look*, so it sits with their
   // styles rather than with the switches that say whether they show.
   { id: "margin_numbers", title: "Numbers in the margin", keys: ["numbering.margin_gap"] },
-  // What the PDF says about itself, and what it is called. None of it
-  // changes a page, which is why it has a tab of its own rather than a
-  // corner of Contents.
+  // What the PDF says about itself, and what it is called. The publication's
+  // name and language lead: they are the PDF's title and language, and this
+  // is the one section about the file rather than the page.
   {
     id: "metadata",
     title: "PDF metadata",
-    keys: ["project.author", "project.subject", "output.name", "output.anchors"],
+    keys: [
+      "project.name",
+      "project.language",
+      "project.author",
+      "project.subject",
+      "output.name",
+      "output.anchors",
+    ],
   },
 ];
 
 /**
- * Keys the settings form does not show, because another part of the window
- * owns them.
+ * Keys the generic settings section does not show, because another part of
+ * the window owns them.
  *
  * `books.order` and `books.include` are edited on the book list itself — the
- * ticks and the drag handles *are* the control — and a second set of fields
- * holding the same two values is a second place for them to be edited from
- * and to disagree.
+ * switches and the drag handles *are* the control — and a second set of
+ * fields holding the same two values is a second place for them to be edited
+ * from and to disagree.
  *
- * Listed rather than silently dropped: the form sweeps up every key no group
- * claims, precisely so a setting added to the schema is visible somewhere
- * rather than nowhere, and an exception to that has to be written down.
+ * Listed rather than silently dropped: the Contents inspector sweeps up every
+ * key no group claims, precisely so a setting added to the schema is visible
+ * somewhere rather than nowhere, and an exception to that has to be written
+ * down.
  */
 export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
-  // The ticks and the drag handles on the book list are the control.
+  // The switches and the drag handles on the book list are the control.
   "books.order",
   "books.include",
-  // What the publication is called and what language it is in: set once, when
-  // the folder is opened, so they sit under the button that opens it.
-  "project.name",
-  "project.language",
-  // And every one of these is a switch beside the thing it turns on, on the
-  // example page. Same reason as the measurements below: a name in a list and
-  // a picture are two places to look, and one of them is the control.
+  // Every one of these is a row in an inspector beside the page it governs.
   "numbering.show_chapter_numbers",
   "numbering.show_verse_numbers",
   "numbering.hide_first_verse_number",
@@ -92,7 +92,6 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   "contents.show_section_headings",
   "contents.drop_caps",
   "contents.drop_cap_of",
-  // Beside the Drop caps switch, since it is meaningless without it.
   "contents.drop_cap_lines",
   "contents.book_starts",
   "contents.chapter_starts",
@@ -106,6 +105,7 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   "notes.cross_reference_callers",
   "notes.restart_numbering",
   "notes.cross_reference_placement",
+  // The six slots a side, on the Headers & footers inspector and on the page.
   "headers.left_page.header_left",
   "headers.left_page.header_center",
   "headers.left_page.header_right",
@@ -118,9 +118,8 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   "headers.right_page.footer_left",
   "headers.right_page.footer_center",
   "headers.right_page.footer_right",
-  // Every page measurement is a field *on the page diagram*, sitting on the
-  // thing it measures. A second list of the same nine numbers underneath it
-  // would be the drawing and the form disagreeing about which is the control.
+  // Every page measurement is a row of the Trim & margins inspector, drawn
+  // as a guide on the spread beside it.
   "page.size",
   "page.columns",
   "page.margin_top",
@@ -130,8 +129,8 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   "page.column_gap",
   "page.header_gap",
   "page.footer_gap",
-  // Questions about the build you are about to run, which belong beside the
-  // button that runs it rather than three tabs away from it.
+  // Questions about the build you are about to run: on the Build inspector
+  // and along the status bar.
   "output.keep_intermediates",
   "strict",
 ]);
@@ -145,9 +144,6 @@ export function placeholderFor(key: string): string | undefined {
   return locale().placeholders[key];
 }
 
-
-
-
 export function wordsFor(choice: string): string {
   const known = locale().choices[choice];
   if (known !== undefined) return known;
@@ -156,114 +152,119 @@ export function wordsFor(choice: string): string {
 }
 
 /**
- * How the configuration is split across tabs.
+ * Which kind of centre pane a section has.
  *
- * Four rather than two, because one tab had become a scroll: the page
- * geometry, what appears on it, and how it is set are three separate decisions
- * a publisher makes at three separate times.
+ * Most sections show the proof spread, because most decisions are about the
+ * page. Books is a table, Template a gallery, Build a list of problems, and
+ * the Styles inspector's Inspect view a table over every element.
+ */
+export type Canvas = "spread" | "books" | "templates" | "build";
+
+/**
+ * One entry of the rail: a section of the window, with its inspector.
  *
- * Typography sits with the styles even though it is a *setting*. The split
- * between the two files is about scope — one body font for the publication,
- * many styles keyed by marker — and that is a distinction the schema has to
- * make and a person choosing a typeface does not.
+ * `example` names the switch set the inspector carries when the section is
+ * about what is on the page; `settingGroups` the groups of plain settings it
+ * shows; `orphans` whether it sweeps up the keys no group and no switch
+ * claims, so a setting added to the schema is visible somewhere.
  */
 export interface Tab {
   readonly id: string;
+  /** The English title, translatable through `word()` by `tab:<id>`. */
   readonly title: string;
-  /** Which of `GROUPS` this tab shows. */
+  /** The rail section it sits under. */
+  readonly nav: "publication" | "text" | "page" | "type" | "output";
+  readonly canvas: Canvas;
   readonly settingGroups: readonly string[];
-  /** Whether the style editor appears below them. */
-  readonly styles?: boolean;
-  /**
-   * Whether the page is drawn above them.
-   *
-   * Nine numbers in a column do not say which margin is against the spine,
-   * and that is the one thing about them a publisher has to get right.
-   */
-  readonly diagram?: boolean;
-  /**
-   * Whether this tab is the templates — the three editions a project can be
-   * started from.
-   *
-   * Its own tab rather than a section of Page, where it began: a template
-   * rewrites a dozen settings across every other tab at once, and a control
-   * that does that sitting above the margin fields read as one more margin
-   * field. Second in the strip because it is the second decision — which
-   * Scripture, then which kind of book — and everything after it is
-   * adjustment.
-   */
-  readonly template?: boolean;
-  /**
-   * Which set of switches the example page carries, if this tab has one.
-   *
-   * "Reference range in head" names a thing without showing it. A publisher
-   * who has not seen one cannot tell from the words whether they want it — so
-   * the page is the control, and the two tabs that use it take a switch set
-   * each: what is in the text, and what surrounds it.
-   */
-  readonly example?: ExampleTab | "headers";
-  /**
-   * Where a setting belonging to no group ends up. Exactly one tab claims
-   * them, so a key added to the schema is visible somewhere rather than
-   * nowhere.
-   */
+  readonly example?: ExampleTab;
   readonly orphans?: boolean;
-  /**
-   * The books, which are a tab of their own rather than a column beside every
-   * other one.
-   *
-   * They were in a permanent left-hand pane, and it cost the whole window a
-   * third of its width on every tab — including the ones where the answer to
-   * "which books" has already been given and the question is what the page
-   * looks like. A whole Bible is sixty-six rows and wants the width; a settings
-   * form beside it had none to spare.
-   */
-  readonly books?: boolean;
+  /** The Styles section, whose rail entry unfolds into the style groups. */
+  readonly styles?: boolean;
+  /** The Headers & footers section: slot controls on the page itself. */
+  readonly headers?: boolean;
+  /** Trim & margins: guides on the page, measurements in the inspector. */
+  readonly trim?: boolean;
+  /** The inspector's own width. The book and template inspectors are narrower. */
+  readonly narrow?: boolean;
 }
 
 /**
  * Outward from the words.
  *
- * Which books there are, then what is printed in the text, then what surrounds
- * it, then the shape of the sheet it all sits on, and last how it is set. Each
- * one is a smaller decision than the one before it and is easier to make once
- * the earlier ones are made — the page size is worth arguing about after you
- * know whether the edition carries footnotes, not before.
+ * Which books there are, then what is printed in the text, then the shape of
+ * the sheet, then how the type is set, and last what the file says about
+ * itself and how it is made. Each is a smaller decision than the one before
+ * and easier once the earlier ones are made.
  */
 export const TABS: readonly Tab[] = [
-  { id: "scripture", title: "Scripture", settingGroups: [], books: true },
-  { id: "template", title: "Template", settingGroups: [], template: true },
-  // Claims the strays now that the Project tab is gone. Exactly one tab does,
-  // so a key added to the schema is visible somewhere rather than nowhere.
-  { id: "contents", title: "Contents", settingGroups: [], example: "contents", orphans: true },
-  // The same page as Contents, with the switches about how a paragraph is
-  // set — and again with the ones about the notes. One tab held every
-  // group and was a column to scroll.
-  { id: "paragraph", title: "Paragraph", settingGroups: [], example: "paragraph" },
-  { id: "notes", title: "Cross-references", settingGroups: [], example: "notes" },
+  { id: "books", title: "Books", nav: "publication", canvas: "books", settingGroups: [], narrow: true },
   {
-    id: "headers",
-    title: "Headers & Footers",
+    id: "template",
+    title: "Template",
+    nav: "publication",
+    canvas: "templates",
     settingGroups: [],
-    example: "headers",
+    narrow: true,
   },
-  { id: "page", title: "Page", settingGroups: [], diagram: true },
-  { id: "styles", title: "Styles", settingGroups: ["typography"], styles: true },
-  { id: "figures", title: "Figures", settingGroups: ["figures"] },
-  // Last, because it is the one decision that changes nothing on a page.
-  { id: "metadata", title: "PDF metadata", settingGroups: ["metadata"] },
+  // Claims the strays. Exactly one section does, so a key added to the schema
+  // is visible somewhere rather than nowhere.
+  {
+    id: "contents",
+    title: "Contents",
+    nav: "text",
+    canvas: "spread",
+    settingGroups: [],
+    example: "contents",
+    orphans: true,
+  },
+  { id: "paragraph", title: "Paragraph", nav: "text", canvas: "spread", settingGroups: [], example: "paragraph" },
+  { id: "notes", title: "Notes", nav: "text", canvas: "spread", settingGroups: [], example: "notes" },
+  { id: "page", title: "Trim & margins", nav: "page", canvas: "spread", settingGroups: [], trim: true },
+  { id: "headers", title: "Headers & footers", nav: "page", canvas: "spread", settingGroups: [], headers: true },
+  { id: "figures", title: "Figures", nav: "page", canvas: "spread", settingGroups: ["figures"] },
+  { id: "styles", title: "Styles", nav: "type", canvas: "spread", settingGroups: [], styles: true },
+  { id: "metadata", title: "PDF metadata", nav: "output", canvas: "spread", settingGroups: ["metadata"] },
+  { id: "build", title: "Build", nav: "output", canvas: "build", settingGroups: [] },
 ];
 
+/** The rail's sections, in order, each with its English title. */
+export const NAV: readonly { id: Tab["nav"]; title: string }[] = [
+  { id: "publication", title: "Publication" },
+  { id: "text", title: "Text" },
+  { id: "page", title: "Page" },
+  { id: "type", title: "Type" },
+  { id: "output", title: "Output" },
+];
+
+/** A tab's title in the locale in force. */
+export function tabTitle(tab: Tab): string {
+  return word(`tab:${tab.id}`, tab.title);
+}
+
+/** A rail section's title. */
+export function navTitle(id: Tab["nav"]): string {
+  switch (id) {
+    case "publication":
+      return t("navPublication");
+    case "text":
+      return t("navText");
+    case "page":
+      return t("navPage");
+    case "type":
+      return t("navType");
+    default:
+      return t("navOutput");
+  }
+}
+
 /**
- * The Styles tab's own tabs.
+ * The Styles section's own entries, unfolded under it in the rail.
  *
- * One section at a time. Stacked, the seven of them are several screens of
- * form, and a publisher adjusting the poetry indents has no use for the
- * character styles while they do it.
- *
- * Typography leads because it is the one most people change, and because it is
- * the only one of these that is a *setting* — a body font is chosen once for
- * the publication, where every other section is keyed by marker.
+ * Typography leads because it is the one most people change, and because it
+ * is the only one of these that is a *setting* — a body font is chosen once
+ * for the publication, where every other section is keyed by marker. Inspect
+ * is last: it is where you go when the rows above have not answered the
+ * question, and it answers for every element rather than the curated ones.
  */
 export interface SubTab {
   readonly id: string;
@@ -284,7 +285,9 @@ export const STYLE_TABS: readonly SubTab[] = [
     settingGroups: (g.id === "numbers" ? ["margin_numbers"] : []) as readonly string[],
     styleGroups: [g.id],
   })),
-  // Last, because it is where you go when the form above has not answered the
-  // question — and it answers for every element rather than the curated ones.
   { id: "inspect", title: "Inspect", settingGroups: [], styleGroups: [], inspector: true },
 ];
+
+export function subTabTitle(sub: SubTab): string {
+  return word(`subtab:${sub.id}`, sub.title);
+}

@@ -4,6 +4,21 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## Unreleased
 
+* **A new window, built from the BibleCompose v2 design.** Three panes around a
+  page: a rail of sections on the left, a proof spread in the centre set to
+  your trim, margins and columns, and the open section's settings in an
+  inspector on the right. Click anything on the page to open its setting;
+  point at a setting to light what it governs. Trim & margins draws the
+  margins as guides and takes inches, millimetres or points; Headers &
+  footers puts the six slot controls on the page itself, with the right page
+  following the left, mirrored, until you say otherwise; Styles outlines the
+  chosen element on the page. Books is a table of switches; Template a
+  gallery; Build a table of problems, each naming the section that fixes it,
+  beside the build's stages and options. **Find a setting** (Ctrl K) replaces
+  the search box. Newsreader, Source Sans 3 and IBM Plex Mono ship with the
+  application. Scripture is now Books, Page is Trim & margins, and
+  Cross-references is Notes.
+
 * **Close project** is back at the top of the window for as long as a
   project is open. It had been shown only while files had changed on disk.
 

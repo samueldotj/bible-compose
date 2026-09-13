@@ -28,7 +28,6 @@
   let refused = $state<Diagnostic[]>([]);
   let working = $state(false);
 
-  /** What the folder will be called, which is the name. */
   const folder = $derived(name.trim());
   const ready = $derived(parent !== "" && folder !== "" && !working);
 
@@ -62,47 +61,27 @@
     if (e.target === e.currentTarget) onclose();
   }}
 >
-  <div
-    class="dialog"
-    role="dialog"
-    aria-modal="true"
-    aria-label={t("newProject")}
-    tabindex="-1"
-    use:modal
-  >
+  <div class="dialog" role="dialog" aria-modal="true" aria-label={t("newProject")} tabindex="-1" use:modal>
     <h2>{t("newProject")}</h2>
 
     <div class="body">
       <label class="field">
-        <span>{t("where")}</span>
+        <span class="kicker">{t("where")}</span>
         <span class="pair">
-          <input type="text" readonly value={parent} placeholder={t("chooseFolder")} />
-          <button type="button" onclick={() => void choose()}>{t("browse")}</button>
+          <input type="text" class="input" readonly value={parent} placeholder={t("browse")} />
+          <button type="button" class="btn small" onclick={() => void choose()}>{t("browse")}</button>
         </span>
       </label>
 
       <label class="field">
-        <span>{t("publicationName")}</span>
+        <span class="kicker">{t("publicationName")}</span>
         <!-- svelte-ignore a11y_autofocus -->
-        <input
-          type="text"
-          autofocus
-          dir="auto"
-          bind:value={name}
-          placeholder={t("exampleName")}
-          spellcheck="false"
-        />
+        <input type="text" class="input" autofocus dir="auto" bind:value={name} spellcheck="false" />
       </label>
 
       <label class="field">
-        <span>{t("language")}</span>
-        <input
-          type="text"
-          list="bc-languages"
-          bind:value={language}
-          placeholder="a BCP-47 tag, such as ta"
-          spellcheck="false"
-        />
+        <span class="kicker">{t("language")}</span>
+        <input type="text" class="input" list="bc-languages" bind:value={language} placeholder={t("languageTagHint")} spellcheck="false" />
         <datalist id="bc-languages">
           {#each LANGUAGES as l (l.tag)}
             <option value={l.tag}>{l.name}</option>
@@ -111,7 +90,7 @@
       </label>
 
       {#if folder !== "" && parent !== ""}
-        <p class="preview">{t("creates")}<code>{parent}/{folder}</code></p>
+        <p class="preview muted">{t("creates")}<span class="mono">{parent}/{folder}</span></p>
       {/if}
 
       {#each refused as problem (problem.code + problem.message)}
@@ -120,121 +99,48 @@
     </div>
 
     <footer>
-      <button type="button" onclick={onclose}>{t("cancel")}</button>
-      <button type="button" class="primary" disabled={!ready} onclick={() => void create()}>
-        {working ? "Creating…" : "Create"}
+      <button type="button" class="btn" onclick={onclose}>{t("cancel")}</button>
+      <button type="button" class="btn primary" disabled={!ready} onclick={() => void create()}>
+        {working ? t("creating") : t("create")}
       </button>
     </footer>
   </div>
 </div>
 
 <style>
-  .backdrop {
-    position: fixed;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    background: rgb(0 0 0 / 0.4);
-    z-index: 10;
-  }
   .dialog {
-    display: flex;
-    flex-direction: column;
-    /* Half the window each way. The minimums are what keep it usable on a
-       small screen, where half of not much is not enough for three fields
-       and a pair of buttons. */
-    inline-size: 50vw;
-    block-size: 50vh;
-    min-inline-size: min(24rem, 92vw);
-    min-block-size: min(20rem, 90vh);
-    padding: 1.1rem 1.3rem;
-    border-radius: 8px;
-    background: Canvas;
-    color: CanvasText;
-    box-shadow: 0 8px 30px rgb(0 0 0 / 0.35);
+    inline-size: min(30rem, 92vw);
   }
-  /* The fields do not grow with it. A text input the width of half a wide
-     screen is harder to read than one the width of what goes in it, so the
-     dialog gets bigger and its contents stay where the eye can hold them. */
   .body {
     display: flex;
     flex-direction: column;
-    gap: 0.7rem;
-    flex: 1;
-    inline-size: 100%;
-    max-inline-size: 26rem;
-    overflow-y: auto;
-  }
-  h2 {
-    margin: 0 0 0.8rem;
-    font-size: 1rem;
+    gap: 14px;
   }
   .field {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    font-size: 0.82rem;
+    gap: 5px;
   }
-  .field > span {
-    opacity: 0.8;
+  .field .input {
+    inline-size: 100%;
   }
   .pair {
     display: flex;
-    gap: 0.35rem;
+    gap: 6px;
   }
-  .pair input {
+  .pair .input {
     flex: 1;
-    min-inline-size: 0;
-  }
-  input {
-    padding-block: 0.3rem;
-    padding-inline: 0.4rem;
-    border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
-    border-radius: 4px;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    font-size: 0.9rem;
-  }
-  input[readonly] {
-    opacity: 0.75;
   }
   .preview {
     margin: 0;
-    font-size: 0.78rem;
-    opacity: 0.65;
+    font-size: 12px;
   }
-  .preview code {
+  .preview .mono {
     overflow-wrap: anywhere;
   }
   .error {
     margin: 0;
-    font-size: 0.82rem;
-    color: #c0392b;
-  }
-  footer {
-    display: flex;
-    gap: 0.5rem;
-    justify-content: flex-end;
-    padding-block-start: 0.3rem;
-  }
-  button {
-    padding: 0.3rem 0.7rem;
-    border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
-    border-radius: 4px;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    font-size: 0.85rem;
-    cursor: pointer;
-  }
-  button.primary {
-    border-color: transparent;
-    background: color-mix(in oklab, currentColor 20%, transparent);
-    font-weight: 600;
-  }
-  button:disabled {
-    opacity: 0.4;
-    cursor: default;
+    font-size: 12.5px;
+    color: var(--err-ink);
   }
 </style>

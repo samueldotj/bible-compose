@@ -5,9 +5,7 @@
    * Every field a template can name, from the table the backend checks
    * templates against — so this documents exactly what the file accepts,
    * and a field added there appears here without anyone remembering to say
-   * so. A dialog rather than a table under the spread: the reader who wants
-   * it is the one with the Custom box open, and everyone else had a screen
-   * of reference material under their page.
+   * so.
    */
   import { session } from "../lib/session.svelte";
   import { t } from "../lib/i18n";
@@ -22,6 +20,7 @@
   function onkeydown(event: KeyboardEvent): void {
     if (event.key === "Escape") {
       event.preventDefault();
+      event.stopPropagation();
       onclose();
     }
   }
@@ -36,16 +35,9 @@
     if (e.target === e.currentTarget) onclose();
   }}
 >
-  <div
-    class="dialog"
-    role="dialog"
-    aria-modal="true"
-    aria-label={t("headFieldsTitle")}
-    tabindex="-1"
-    use:modal
-  >
+  <div class="dialog" role="dialog" aria-modal="true" aria-label={t("headFieldsTitle")} tabindex="-1" use:modal>
     <h2>{t("headFieldsTitle")}</h2>
-    <p class="note">{t("headFieldsNote")}</p>
+    <p class="note muted">{t("headFieldsNote")}</p>
     {#if session.headFields}
       <table>
         <thead>
@@ -58,7 +50,7 @@
         <tbody>
           {#each session.headFields as field (field.name)}
             <tr>
-              <td><code>{`{${field.name}}`}</code></td>
+              <td><span class="mono">{`{${field.name}}`}</span></td>
               <td>{field.description}</td>
               <td>{field.example}</td>
             </tr>
@@ -66,70 +58,40 @@
         </tbody>
       </table>
     {:else}
-      <p class="note">{t("loading")}</p>
+      <p class="note muted">{t("loading")}</p>
     {/if}
     <footer>
-      <button type="button" class="primary" onclick={onclose}>{t("close")}</button>
+      <button type="button" class="btn primary" onclick={onclose}>{t("close")}</button>
     </footer>
   </div>
 </div>
 
 <style>
-  .backdrop {
-    position: fixed;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    background: rgb(0 0 0 / 0.4);
-    z-index: 10;
-  }
   .dialog {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
     inline-size: min(46rem, 92vw);
     max-block-size: 90vh;
-    padding: 1.1rem 1.3rem;
-    border-radius: 8px;
-    background: Canvas;
-    color: CanvasText;
-    box-shadow: 0 8px 30px rgb(0 0 0 / 0.35);
-    font-size: 0.85rem;
-  }
-  h2 {
-    margin: 0;
-    font-size: 1rem;
+    overflow-y: auto;
   }
   .note {
     margin: 0;
-    opacity: 0.8;
+    line-height: 1.5;
   }
   table {
-    border-collapse: collapse;
     inline-size: 100%;
-    overflow-y: auto;
+    border-collapse: collapse;
   }
   th,
   td {
-    padding: 0.25rem 0.6rem 0.25rem 0;
+    padding: 6px 12px 6px 0;
     text-align: start;
     vertical-align: top;
-    border-block-end: 1px solid color-mix(in oklab, currentColor 12%, transparent);
+    border-block-end: 1px solid var(--line);
   }
   th {
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    opacity: 0.6;
-    font-weight: 600;
+    font: italic 500 12.5px var(--serif);
+    color: var(--mut);
   }
-  code {
-    font-family: ui-monospace, Consolas, monospace;
+  .mono {
     white-space: nowrap;
-  }
-  footer {
-    display: flex;
-    justify-content: end;
-    margin-block-start: 0.3rem;
   }
 </style>

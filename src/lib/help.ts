@@ -1,30 +1,33 @@
 /**
- * What each control does, in a sentence or two, for the status bar.
+ * What each control does, in a sentence or two, for the status bar and the
+ * palette.
  *
  * Keyed the way the controls are tagged for the search (`data-search-key`):
- * a setting by its key, a tab as `tab:<id>`, a section of Styles as
- * `subtab:<id>`, a style property as `property:<name>`. The English half of
- * the catalogue, like the labels; a locale supplies its own.
+ * a setting by its key, a section as `tab:<id>`, a section of Styles as
+ * `subtab:<id>`, a style property as `property:<name>`, an action of the
+ * window as `action:<name>`. The English half of the catalogue, like the
+ * labels; a locale supplies its own.
  *
  * Written for the person hovering, not the file: what changes on the page,
  * and what to reach for instead when this is not the control they want.
  */
 export const EN_HELP: Readonly<Record<string, string>> = {
-  // ---------------------------------------------------------------- tabs
-  "tab:scripture":
-    "Which books go into the PDF, and in what order. Tick a book to include it; drag to reorder.",
+  // ------------------------------------------------------------ sections
+  "tab:books":
+    "Which books go into the PDF, and in what order. Turn a book on to include it; drag to reorder.",
   "tab:template":
-    "Eight kinds of book to start from. Choosing one writes its settings into your project, where you can then change them one at a time.",
+    "Eight kinds of book to start from. Applying one writes its settings into your project, where you can then change them one at a time.",
   "tab:contents":
     "What appears on the page — front matter, chapter and verse numbers — and where books, chapters and verses start.",
   "tab:paragraph": "How a paragraph is set: justification, poetry indents, drop caps and quotations.",
   "tab:notes": "Footnotes and cross-references: whether they appear, their marks, and where the references go.",
   "tab:headers":
-    "The running head and the page number on each side of the spread: six slots a side, each a template of fields.",
-  "tab:page": "The trim size, the columns and the margins, drawn to scale.",
+    "The running head and the page number on each side of the spread: three slots on each edge, each a template of fields.",
+  "tab:page": "The trim size, the columns and the margins, drawn as guides on the spread.",
   "tab:styles": "How each kind of element looks: the body font, headings, poetry, numbers, notes, character styles.",
   "tab:figures": "What the build does about a figure whose file is not there.",
-  "tab:metadata": "What the PDF says about itself: publisher, subject, its file name, how far its bookmarks reach.",
+  "tab:metadata": "What the PDF says about itself: its name and language, publisher, subject, its file name, how far its bookmarks reach.",
+  "tab:build": "Every problem with the project, which section fixes it, and the build's progress and options.",
   "subtab:typography": "The body font, its size and leading, and whether words are hyphenated.",
   "subtab:headings": "Section headings, parallel-passage lines, psalm superscriptions and speaker lines.",
   "subtab:paragraphs": "Body paragraphs, centred paragraphs and introductions: their spacing, indent and alignment.",
@@ -38,14 +41,32 @@ export const EN_HELP: Readonly<Record<string, string>> = {
   // ------------------------------------------------------------- actions
   "action:close":
     "Put this project down and go back to the start screen. Nothing on disk changes; the folder is there to open again.",
+  "action:find": "Find any section, setting, style or template by name and go to it. Ctrl K opens it from anywhere.",
+  "action:generate": "Typeset the whole publication afresh and write the PDF to the output folder.",
+  "action:cancel": "Stop the build that is running. The previous PDF, if there was one, is left as it was.",
+  "action:problems": "Open the Build section, which lists every problem and the section that fixes it.",
+  "action:theme": "Light, dark, or whatever the system says. Kept on this machine, not in the project.",
+  "action:reload": "Files in the project folder have changed since it was read. Read them again.",
+  "action:open-folder": "Show the output folder — or the project's folder, before anything has been built — in the file manager.",
+  "action:open-pdf": "Open the PDF the last build wrote, in the machine's own viewer.",
+  "action:spread": "Show the two pages a reader meets together, or one page alone.",
+  "action:fit": "Fit the page to the room it has, or show it at a fixed size.",
+  "action:mirror": "Copy the left page's six slots to the right page, swapped so outer stays outer.",
+  "action:units": "The unit the measurements are shown and typed in. The file keeps whatever unit you type.",
+  "action:apply-template": "Write this template's settings into the project. Asks first, because there is no undo for a settings file.",
+  "action:include-all": "Put every book of this testament in the publication.",
+  "action:clear": "Take every book of this testament out of the publication.",
+  "action:restore-canonical": "Put the books back in the order the canon gives them, leaving the selection alone.",
+  "action:new-project": "Make a folder with a settings file in it, for a translation that has no USFM yet.",
+  "action:open-project": "Choose a folder of USFM files.",
 
   // ------------------------------------------------------------ settings
   "project.name": "The publication's name: the PDF's title, and its file name unless one is set.",
   "project.language": "The language of the Scripture, as a BCP-47 tag such as ta or en. Sets hyphenation and the PDF's language.",
   "project.author": "The publisher, written into the PDF's properties. Empty leaves it out.",
   "project.subject": "The PDF's subject property. Empty leaves it out.",
-  "books.order": "The books in the order they are bound. Set on the Scripture tab by dragging.",
-  "books.include": "Which books go into the PDF. Set on the Scripture tab by ticking.",
+  "books.order": "The books in the order they are bound. Set in Books by dragging.",
+  "books.include": "Which books go into the PDF. Set in Books by turning each on or off.",
   "page.size": "The trim size of the page: a name such as a5 or trade, or two lengths such as 6x9in.",
   "page.columns": "One column or two. Most Bibles are two; a reader's edition is one.",
   "page.margin_top": "From the top edge of the page to the text.",
@@ -93,18 +114,18 @@ export const EN_HELP: Readonly<Record<string, string>> = {
   "output.anchors": "How far the PDF's bookmarks and destinations reach: every chapter, every verse, or none.",
   "output.keep_intermediates": "Keep the typesetter's working files after a build, for looking into a problem.",
   strict: "Treat a warning in the settings as an error, so a build with a doubtful setting stops rather than guesses.",
-  "headers.left_page.header_left": "The left slot of the running head on left-hand pages: text with fields in braces, such as {Book}.",
+  "headers.left_page.header_left": "The outer slot of the running head on left-hand pages: text with fields in braces, such as {Book}.",
   "headers.left_page.header_center": "The centre slot of the running head on left-hand pages.",
-  "headers.left_page.header_right": "The right slot of the running head on left-hand pages.",
-  "headers.left_page.footer_left": "The left slot of the foot on left-hand pages.",
+  "headers.left_page.header_right": "The inner slot of the running head on left-hand pages, beside the spine.",
+  "headers.left_page.footer_left": "The outer slot of the foot on left-hand pages.",
   "headers.left_page.footer_center": "The centre slot of the foot on left-hand pages, where the page number usually goes.",
-  "headers.left_page.footer_right": "The right slot of the foot on left-hand pages.",
-  "headers.right_page.header_left": "The left slot of the running head on right-hand pages.",
+  "headers.left_page.footer_right": "The inner slot of the foot on left-hand pages.",
+  "headers.right_page.header_left": "The inner slot of the running head on right-hand pages, beside the spine.",
   "headers.right_page.header_center": "The centre slot of the running head on right-hand pages.",
-  "headers.right_page.header_right": "The right slot of the running head on right-hand pages: text with fields in braces, such as {Range}.",
-  "headers.right_page.footer_left": "The left slot of the foot on right-hand pages.",
+  "headers.right_page.header_right": "The outer slot of the running head on right-hand pages: text with fields in braces, such as {Range}.",
+  "headers.right_page.footer_left": "The inner slot of the foot on right-hand pages.",
   "headers.right_page.footer_center": "The centre slot of the foot on right-hand pages, where the page number usually goes.",
-  "headers.right_page.footer_right": "The right slot of the foot on right-hand pages.",
+  "headers.right_page.footer_right": "The outer slot of the foot on right-hand pages.",
 
   // ----------------------------------------------------- style properties
   "property:font_family": "The face this element is set in, when it is not the body font.",

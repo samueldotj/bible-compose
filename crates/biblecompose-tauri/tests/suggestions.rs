@@ -83,12 +83,8 @@ fn every_testament_the_canon_has_gets_a_column() {
             .as_std_path(),
     )
     .expect("the wire types");
-    let pane = std::fs::read_to_string(
-        repo_root()
-            .join("src/components/ProjectPane.svelte")
-            .as_std_path(),
-    )
-    .expect("the book list");
+    let pane = std::fs::read_to_string(repo_root().join("src/lib/books.svelte.ts").as_std_path())
+        .expect("the book list");
 
     for spelling in spellings {
         assert!(
@@ -96,7 +92,7 @@ fn every_testament_the_canon_has_gets_a_column() {
             "`Testament` in backend.ts does not include {spelling:?}"
         );
         assert!(
-            pane.contains(&format!("id: \"{spelling}\"")),
+            pane.contains(&format!("\"{spelling}\"")),
             "the book list has no column for {spelling:?}"
         );
     }

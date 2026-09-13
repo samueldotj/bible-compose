@@ -9,6 +9,15 @@
 *.md text eol=lf
 *.toml text eol=lf
 *.yml text eol=lf
+# The corpus is checked against sha256 sums in its manifest (P1.2), and
+# the frontend's files are read by tests too.
+*.usfm text eol=lf
+*.sfm text eol=lf
+*.ts text eol=lf
+*.svelte text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+*.mjs text eol=lf
 
 *.pdf binary
 *.png binary

@@ -723,10 +723,10 @@ fn the_start_screens_link_is_openable() {
 
     let screen = std::fs::read_to_string(
         biblecompose_testkit::repo_root()
-            .join("src/components/StartScreen.svelte")
+            .join("src/components/Welcome.svelte")
             .as_std_path(),
     )
-    .expect("the start screen is readable");
+    .expect("the welcome screen is readable");
 
     let links: Vec<&str> = screen
         .match_indices("https://")

@@ -6,9 +6,14 @@
    * the path itself opens it. Under the pointer, the line instead
    * says what the control it is on does — a setting, a section, a style
    * property, a template — so the window explains itself without a manual.
-   * At the right, the two questions about the next build.
+   *
+   * **And nothing else.** Keep intermediates and Strict settings used to sit
+   * at the right of this line as well as on the Build section, which put two
+   * switches that change what a build *does* in the one place a person reads
+   * rather than operates — and put them a few pixels from the path, where the
+   * help text swapping in and out moves everything around them. They live on
+   * Build now, where the rest of the build's settings are.
    */
-  import Toggle from "./ui/Toggle.svelte";
   import { hover } from "../lib/hover.svelte";
   import { labelFor } from "../lib/labels";
   import { session } from "../lib/session.svelte";
@@ -53,8 +58,6 @@
     return word;
   });
 
-  const keep = $derived(session.settings.find((s) => s.key === "output.keep_intermediates"));
-  const strict = $derived(session.settings.find((s) => s.key === "strict"));
 </script>
 
 <footer class="status">
@@ -83,30 +86,6 @@
     {/if}
   {/if}
 
-  <span class="spacer"></span>
-
-  {#if keep}
-    <label class="option" data-search-key="output.keep_intermediates">
-      <Toggle
-        checked={keep.value === "true"}
-        disabled={!session.editable}
-        label={labelFor("output.keep_intermediates")}
-        onchange={(on) => void session.setSetting("output.keep_intermediates", on ? "true" : "false")}
-      />
-      {labelFor("output.keep_intermediates")}
-    </label>
-  {/if}
-  {#if strict}
-    <label class="option" data-search-key="strict">
-      <Toggle
-        checked={strict.value === "true"}
-        disabled={!session.editable}
-        label={labelFor("strict")}
-        onchange={(on) => void session.setSetting("strict", on ? "true" : "false")}
-      />
-      {labelFor("strict")}
-    </label>
-  {/if}
 </footer>
 
 <style>
@@ -166,15 +145,5 @@
   }
   .help {
     color: var(--ink);
-  }
-  .spacer {
-    flex: 1;
-  }
-  .option {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    flex: none;
-    cursor: default;
   }
 </style>

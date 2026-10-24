@@ -26,7 +26,23 @@
         aria-current={session.pane === tab.id ? "page" : undefined}
         onclick={() => (session.pane = tab.id)}
       >
-        <span>{tabTitle(tab)}</span>
+        <span class="title">
+          {tabTitle(tab)}
+          <!--
+            **A build is the one thing in this window that takes minutes**, and
+            the rail is where a publisher is while it runs — they press Generate
+            PDF, land on Build, and then go and look at something else. So the
+            section says it is still working.
+
+            `aria-hidden`, because it is the same fact the status line already
+            announces in a live region, and announcing it twice is worse than
+            once. Motion off where the machine asks for that: the ring stays,
+            as the state dot beside it does.
+          -->
+          {#if tab.id === "build" && session.building}
+            <span class="spinner" aria-hidden="true"></span>
+          {/if}
+        </span>
         {#if tab.id === "build" && session.diagnostics.length > 0}
           <span class="badge count" class:bad={session.errorCount > 0}>{session.diagnostics.length}</span>
         {/if}
@@ -111,6 +127,31 @@
   .entry.small {
     padding: 5px 10px;
     font-size: 12.5px;
+  }
+  .title {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-inline-size: 0;
+  }
+  .spinner {
+    flex: none;
+    inline-size: 11px;
+    block-size: 11px;
+    border: 2px solid color-mix(in oklab, currentColor 28%, transparent);
+    border-block-start-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner {
+      animation: none;
+    }
   }
   .badge.bad {
     background: var(--err-bg);

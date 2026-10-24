@@ -354,7 +354,7 @@ pub fn build_with(
     // the estimate rather than to this project's last number, because the
     // things the shape holds are the things that change the length — a miss
     // means the previous count is answering about a different document.
-    let shape = pages::Shape::of(&request.settings);
+    let shape = pages::Shape::of(doc, &request.settings);
     let expected = pages::remembered(&shape)
         .or_else(|| pages::estimate(doc, &request.settings))
         .or_else(|| remembered_pages(&request.project_root));

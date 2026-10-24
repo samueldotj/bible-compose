@@ -67,10 +67,16 @@ const PAGES_PER_CHAPTER: f64 = 3776.0 / 1189.0;
 
 /// The shape of a build, as far as its length is concerned.
 ///
-/// Six settings and not the whole of them: these are the ones a measured page
-/// count is only true for. A colour or a caller style changes the page without
-/// changing how many there are, so a build that differs only in those is still
-/// a build this one can learn from.
+/// The settings a measured page count is only true for, and **the books it was
+/// measured over**. A colour or a caller style changes the page without
+/// changing how many there are, so a build differing only in those is still
+/// one this can learn from; a build of six books is not a build of four.
+///
+/// That last part was missing and is the whole of this type's history: with
+/// the settings alone as the key, generating the four gospels and then adding
+/// Acts and Romans was the same shape, so the gospels' page count was handed
+/// back for a document half again as long. The estimate had the chapters right
+/// all along and never got asked.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Shape {
     language: String,
@@ -81,10 +87,18 @@ pub struct Shape {
     leading: u64,
     trim: String,
     columns: u8,
+    /// The books that will be set, in canon order, by code.
+    ///
+    /// The codes and not their number: dropping Acts and adding Romans leaves
+    /// two books either way, and the one thing a key must not do is match a
+    /// different document. Not their *contents* either — a book whose text was
+    /// edited keeps its shape, and the count stays close enough for a bar
+    /// while being wrong in the way the previous build's count always was.
+    books: String,
 }
 
 impl Shape {
-    pub fn of(settings: &Settings) -> Shape {
+    pub fn of(doc: &ScriptureDocument, settings: &Settings) -> Shape {
         Shape {
             language: settings.project.language.to_string(),
             font: settings.typography.font_family.to_string(),
@@ -92,6 +106,12 @@ impl Shape {
             leading: hundredths(settings.typography.leading.points()),
             trim: settings.page.size.to_sile(),
             columns: *settings.page.columns,
+            books: doc
+                .books
+                .iter()
+                .map(|b| b.code.as_str())
+                .collect::<Vec<_>>()
+                .join(","),
         }
     }
 
@@ -100,17 +120,29 @@ impl Shape {
     /// character neither can contain.
     fn line(&self, pages: u32) -> String {
         format!(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{pages}",
-            self.language, self.font, self.size, self.leading, self.trim, self.columns
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{pages}",
+            self.language,
+            self.font,
+            self.size,
+            self.leading,
+            self.trim,
+            self.columns,
+            self.books
         )
     }
 
+    /// One line back, or nothing.
+    ///
+    /// A line of the wrong width is simply not a shape, which is also how the
+    /// file written before the books were part of the key retires itself: it
+    /// stops being read rather than being read wrongly, and the first build
+    /// of each shape measures it again.
     fn parse(line: &str) -> Option<(Shape, u32)> {
         let f: Vec<&str> = line.split('\t').collect();
-        if f.len() != 7 {
+        if f.len() != 8 {
             return None;
         }
-        let pages: u32 = f[6].trim().parse().ok()?;
+        let pages: u32 = f[7].trim().parse().ok()?;
         if pages == 0 {
             return None;
         }
@@ -122,6 +154,7 @@ impl Shape {
                 leading: f[3].parse().ok()?,
                 trim: f[4].to_owned(),
                 columns: f[5].parse().ok()?,
+                books: f[6].to_owned(),
             },
             pages,
         ))
@@ -245,6 +278,26 @@ mod tests {
     use super::*;
     use biblecompose_config::{settings, ConfigDocument};
 
+    /// A document of these books and no content.
+    ///
+    /// The chapters do not matter to a *key* — only which books are in it —
+    /// so these are empty, which also keeps the fixtures out of a test about
+    /// identity.
+    fn books(codes: &[&str]) -> ScriptureDocument {
+        ScriptureDocument::new(
+            codes
+                .iter()
+                .map(|c| {
+                    biblecompose_scripture::Book::new(
+                        biblecompose_scripture::BookCode::parse(c).expect("a real code"),
+                        Default::default(),
+                        Vec::new(),
+                    )
+                })
+                .collect(),
+        )
+    }
+
     fn with(toml: &str) -> Settings {
         let doc = ConfigDocument::parse("t.toml", format!("schema_version = 1\n{toml}"))
             .expect("valid TOML");
@@ -339,10 +392,10 @@ mod tests {
         let path = camino::Utf8PathBuf::from_path_buf(dir.path().join("pages"))
             .expect("UTF-8 temp path");
 
-        let eleven = Shape::of(&with(
+        let eleven = Shape::of(&books(&["MAT"]), &with(
             "[project]\nlanguage = \"ta\"\n[typography]\nfont_size = \"11pt\"\n",
         ));
-        let fourteen = Shape::of(&with(
+        let fourteen = Shape::of(&books(&["MAT"]), &with(
             "[project]\nlanguage = \"ta\"\n[typography]\nfont_size = \"14pt\"\n",
         ));
         assert_ne!(eleven, fourteen);
@@ -362,13 +415,47 @@ mod tests {
         assert_eq!(remembered_in(path.as_path(), &fourteen), Some(4800));
     }
 
+    /// **Adding a book is a different document, and a different key.**
+    ///
+    /// The defect this field exists for, in the shape it was reported: build
+    /// the four gospels, then include Acts and Romans and build again. With
+    /// the settings alone as the key the second build was handed the first
+    /// one's page count — a document half again as long, measured against a
+    /// number that could not have been right.
+    #[test]
+    fn adding_a_book_does_not_reuse_the_count_of_the_books_before_it() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let path = camino::Utf8PathBuf::from_path_buf(dir.path().join("pages"))
+            .expect("UTF-8 temp path");
+        let settings = reference();
+
+        let gospels = Shape::of(&books(&["MAT", "MRK", "LUK", "JHN"]), &settings);
+        let plus_two =
+            Shape::of(&books(&["MAT", "MRK", "LUK", "JHN", "ACT", "ROM"]), &settings);
+        assert_ne!(gospels, plus_two, "six books are not four");
+
+        remember_in(path.as_path(), &gospels, 120);
+        assert_eq!(remembered_in(path.as_path(), &gospels), Some(120));
+        assert_eq!(
+            remembered_in(path.as_path(), &plus_two),
+            None,
+            "the gospels' count must not answer for the gospels plus two"
+        );
+
+        // And swapping one book for another is not the same either, which a
+        // count of books rather than their names would have missed.
+        let swapped = Shape::of(&books(&["MAT", "MRK", "LUK", "ACT"]), &settings);
+        assert_ne!(gospels, swapped);
+        assert_eq!(remembered_in(path.as_path(), &swapped), None);
+    }
+
     /// A missing or corrupt file is no estimate, never a panic.
     #[test]
     fn an_unreadable_store_is_simply_no_answer() {
         let dir = tempfile::tempdir().expect("temp dir");
         let path =
             camino::Utf8PathBuf::from_path_buf(dir.path().join("pages")).expect("UTF-8 temp path");
-        let shape = Shape::of(&with("[project]\nlanguage = \"ta\"\n"));
+        let shape = Shape::of(&books(&["MAT"]), &with("[project]\nlanguage = \"ta\"\n"));
 
         assert_eq!(remembered_in(path.as_path(), &shape), None);
         std::fs::write(path.as_std_path(), "nonsense\n\t\t\t\nta\t\t\t\t\t\t0\n").expect("write");
@@ -383,7 +470,7 @@ mod tests {
             camino::Utf8PathBuf::from_path_buf(dir.path().join("pages")).expect("UTF-8 temp path");
 
         for n in 0..(KEEP + 10) {
-            let shape = Shape::of(&with(&format!(
+            let shape = Shape::of(&books(&["MAT"]), &with(&format!(
                 "[typography]\nfont_size = \"{}pt\"\n",
                 9.0 + n as f64 / 10.0
             )));
@@ -393,11 +480,11 @@ mod tests {
         assert_eq!(lines.lines().filter(|l| !l.is_empty()).count(), KEEP);
 
         // The newest is still there and the oldest is not.
-        let newest = Shape::of(&with(&format!(
+        let newest = Shape::of(&books(&["MAT"]), &with(&format!(
             "[typography]\nfont_size = \"{}pt\"\n",
             9.0 + (KEEP + 9) as f64 / 10.0
         )));
-        let oldest = Shape::of(&with("[typography]\nfont_size = \"9pt\"\n"));
+        let oldest = Shape::of(&books(&["MAT"]), &with("[typography]\nfont_size = \"9pt\"\n"));
         assert!(remembered_in(path.as_path(), &newest).is_some());
         assert_eq!(remembered_in(path.as_path(), &oldest), None);
     }

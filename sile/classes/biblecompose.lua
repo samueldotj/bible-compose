@@ -453,6 +453,85 @@ function class:_init (options)
       interInsertionSkip = SILE.types.length("1ex"),
    })
 
+   -- **A note whose caller is already on the page has nothing to be carried
+   -- back with.** Upstream's `processInsertion` makes one of three decisions
+   -- about a note the page builder has just reached: it fits on this page, part
+   -- of it fits and the rest goes to the next, or none of it fits. The third
+   -- carries the note *and the line that called it* over together, so a mark is
+   -- never left on a page whose note has moved, and it finds that line by
+   -- walking back up the page's vertical list for the nearest vbox.
+   --
+   -- In two columns there need not be one. A note called in the last lines of
+   -- column A is reached by the page builder only after column A has been
+   -- broken and output, so the insertion arrives at the head of column B's list
+   -- with its caller already committed to the page: `{ vglue, insertion,
+   -- vglue }`, and no vbox anywhere before it. The walk runs off the start of
+   -- the list and indexes nil, which SILE reports as `attempt to index a nil
+   -- value` inside `insertions`, from `findBestBreak`, naming no part of the
+   -- document. Every full-Bible build died this way and a single book usually
+   -- did not, which is what made it look like a size limit rather than a page.
+   --
+   -- So that case is decided here instead. Nothing can be carried, so the note
+   -- either fits the area as it stands — upstream's own test, after which
+   -- upstream places it — or the page ends before it and the next page takes it
+   -- whole. Splitting it is not offered and cannot be missed: the only list
+   -- that gets as far as moving the note is a later column's, where
+   -- `_note_headroom` has already capped the area at what the committed column
+   -- left beneath it — and no part of a note fits in nothing. A note at the
+   -- head of a *page* arrives with the ceiling back at `note_ceiling` and is
+   -- upstream's to place and split, exactly as before.
+   local upstream_insertion = SILE.insertions.processInsertion
+   SILE.insertions.processInsertion = function (vboxlist, i, totalHeight, target)
+      local ins = vboxlist[i]
+      -- A note already committed to this page is upstream's first line and
+      -- has to stay upstream's: the page builder reruns a list it has not
+      -- broken yet, so the same insertion is offered again — from the head of
+      -- the next column, once the break is taken at the penalty in front of
+      -- it — and the only right answer is the one upstream gives, which is to
+      -- leave the page alone. Deciding it here instead broke a page that was
+      -- not full.
+      if ins.seen then
+         return upstream_insertion(vboxlist, i, totalHeight, target)
+      end
+      for k = i, 1, -1 do
+         if vboxlist[k].is_vbox then
+            return upstream_insertion(vboxlist, i, totalHeight, target)
+         end
+      end
+      local options = SILE.scratch.insertions.classes[ins.class]
+      -- **Only where moving the note can help.** The area is at its full
+      -- ceiling on every page `_note_headroom` has not capped — the first
+      -- column of one, which is where a note that moved lands — and a note
+      -- upstream cannot place in a whole ceiling it cannot place on any page
+      -- either. Moving that one is not a decision but a loop: the page ends,
+      -- the note arrives at the head of the next page, and nothing has
+      -- changed. Upstream splits it instead, which is what P4.1 asks of a note
+      -- that long, so an uncapped area is upstream's to answer. Found as a
+      -- backend suite that never finished rather than one that failed.
+      if options.maxHeight >= note_ceiling() then
+         return upstream_insertion(vboxlist, i, totalHeight, target)
+      end
+      local area = self.thisPageInsertionBoxForClass(ins.class)
+      -- The skip above a note, at its largest: `topBox` opens the area and
+      -- `interInsertionSkip` divides the notes in it, both are set just above,
+      -- and the first is the taller. Upstream measures whichever one it will
+      -- actually use, which is never taller than this, so a note this says fits
+      -- is a note it agrees fits.
+      local lead = options.topBox.height:absolute() + options.topBox.depth:absolute()
+      local needed = ins.contentHeight:absolute() + ins.contentDepth:absolute() + lead
+      local ratio = options.stealFrom[SILE.typesetter.frame.id]
+      local in_area = area.height:absolute() + area.depth:absolute() + needed <= options.maxHeight
+      local on_page = not ratio or totalHeight + needed * ratio <= target
+      if in_area and on_page then
+         return upstream_insertion(vboxlist, i, totalHeight, target)
+      end
+      -- -20000 is the penalty upstream inserts to break a page it has found
+      -- full; the page builder reads it back as the break as soon as this
+      -- returns, and the insertion is the first thing the next page sees.
+      table.insert(vboxlist, i, SILE.types.node.penalty(-20000))
+      return target
+   end
+
    if self._bcopts.columns >= 2 then
       -- A narrow column needs a looser breaker than a full measure does.
       SILE.settings:set("linebreak.tolerance", 9000)

@@ -2,6 +2,18 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+* **A whole Bible composes.** A footnote called in the last lines of the left
+  column is reached by the page builder only after that column has been set,
+  so the typesetter went looking for the line that called it in order to carry
+  both onto the next page together — and that line was no longer there. It died
+  with `attempt to index a nil value` from inside its own note machinery,
+  naming no book, chapter or page. Every sixty-six-book build hit it and a
+  handful of books usually did not, which is what made it look like a limit on
+  size. Such a note now moves to the next page on its own, and all eight
+  presets compose a full Bible.
+
 ## 0.2.3
 
 * The 0.2.2 build stopped at its own new import check, which did not know

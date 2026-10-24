@@ -11,9 +11,13 @@
 
 mod common;
 
+use biblecompose_scripture::normalize::normalize;
+use biblecompose_scripture::{BookCode, ScriptureDocument};
+use biblecompose_testkit::corpus;
 use biblecompose_testkit::pdf::Line;
+use camino::Utf8Path;
 
-use common::{body_lines, have_backend, note_lines, pages, typeset, NOTE, ONE_COLUMN};
+use common::{attempt, body_lines, have_backend, note_lines, pages, typeset, NOTE, ONE_COLUMN};
 
 /// Every caller in the body, in reading order.
 ///
@@ -327,5 +331,62 @@ show_cross_references = false
         callers(&lines).is_empty(),
         "no callers either: {:?}",
         callers(&lines)
+    );
+}
+
+/// **A note the first column could not reserve for still composes.**
+///
+/// The defect that stopped every full-Bible build. A note called in the last
+/// lines of column A is reached by the page builder only after column A has
+/// been broken and output, so it arrives at the head of column B with the line
+/// that called it already committed to the page — and the note area has already
+/// been capped at what that column left beneath it, which is nothing. The
+/// typesetter's answer to a note it cannot place is to carry it onto the next
+/// page together with the line that called it, and there is no such line to
+/// carry: the walk that looks for it ran off the start of the page's vertical
+/// list and died with `attempt to index a nil value`, naming no book, chapter
+/// or page. A sixty-six-book build always found a page like this; a handful of
+/// books usually did not, which is what made it look like a limit on size.
+///
+/// Mark at 11pt on a 6x9 page in two columns is where the corpus produces one,
+/// on page 7, in the backend's own font — so this is the whole defect in a
+/// book already committed here. What is asserted is that the book composes;
+/// `notes_never_overlap_the_column_above_them` is what says the note that
+/// moved did not land on the column it moved off.
+#[test]
+fn a_note_the_first_column_could_not_reserve_for_does_not_stop_the_build() {
+    if !have_backend() {
+        return;
+    }
+    let entry = corpus::books()
+        .into_iter()
+        .find(|e| e.book == "MRK")
+        .expect("Mark is in the corpus");
+    let source = corpus::read(&entry);
+    let code = BookCode::parse(&entry.book).expect("a book code");
+    let parsed = biblecompose_scripture::usfm::parse(entry.path.as_str(), source);
+    let (book, _) = normalize(code, Utf8Path::new(entry.path.as_str()), &parsed.document);
+    let doc = ScriptureDocument::new(vec![book]);
+
+    let (_g, report) = attempt(
+        &doc,
+        "[page]
+columns = 2
+size = \"6x9in\"
+[typography]
+font_family = \"DejaVu Serif\"
+font_size = \"11pt\"
+leading = \"13pt\"
+",
+        &[],
+    );
+    assert!(
+        report.output.is_some(),
+        "Mark did not compose: {:?}",
+        report
+            .diagnostics
+            .iter()
+            .map(|d| d.to_string())
+            .collect::<Vec<_>>()
     );
 }

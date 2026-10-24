@@ -38,6 +38,28 @@ pub fn class_options(s: &Settings) -> Vec<(String, String)> {
 /// A project font crosses as a path (FONT-003): fontconfig has never heard of
 /// it, so a family name would silently resolve to something else — which is
 /// the failure the coverage check exists to catch, reintroduced one step later.
+/// One `-O` value that may hold anything a person wrote, in the form SILE's
+/// own parser reads back whole.
+///
+/// **`-O` is read with the grammar SILE reads command parameters with.** An
+/// unquoted value ends at a comma or a semicolon, ends at a `]` as well, and
+/// loses the space around it; a quoted one keeps everything, with `\"` for a
+/// quote. So anything that is a person's text rather than a keyword, a number
+/// or a measurement crosses quoted.
+///
+/// The head templates always did. What was missed is everything else, and it
+/// stayed missed for as long as no other value could hold one of those
+/// characters. A project that carries its own font can: a Google Fonts variable
+/// font is called `NotoSerifDevanagari[wdth,wght].ttf` — a comma *and* a
+/// bracket in one name — so `fontfile` reached the class as
+/// `…/NotoSerifDevanagari[wdth` and the build died inside SILE's shaper on a
+/// file whose name was half a name. A publication called `Genesis, Exodus`
+/// lost everything after the comma from the PDF's own properties, and said
+/// nothing at all about it.
+fn quoted(text: &str) -> String {
+    format!("\"{}\"", text.replace('"', "\\\""))
+}
+
 pub fn class_options_with(
     s: &Settings,
     body_font: Option<&crate::font::ResolvedFont>,
@@ -58,11 +80,15 @@ pub fn class_options_with(
     put("footsep", s.page.footer_gap.to_sile());
 
     // Typography.
+    // **Not quoted**, unlike the path below it. A family name is handed to
+    // fontconfig, where a comma already means "or this one instead", so it is
+    // not a place a publisher's arbitrary text ends up — and the contract that
+    // it crosses as written is asserted.
     put("fontfamily", s.typography.font_family.to_string());
     put(
         "fontfile",
         match body_font {
-            Some(font) if font.from_project => font.path.to_string(),
+            Some(font) if font.from_project => quoted(&font.path.to_string()),
             // A system font is named, so the backend picks the face for the
             // weight and style each run asks for rather than being pinned to
             // the one file this check happened to read.
@@ -91,9 +117,9 @@ pub fn class_options_with(
         v.as_ref().map(|n| n.to_string()).unwrap_or_default()
     };
     put("anchors", s.output.anchors.to_string());
-    put("title", said(&s.project.name));
-    put("author", said(&s.project.author));
-    put("subject", said(&s.project.subject));
+    put("title", quoted(&said(&s.project.name)));
+    put("author", quoted(&said(&s.project.author)));
+    put("subject", quoted(&said(&s.project.subject)));
 
     // What appears on the page.
     put("chapternumbers", flag(*s.numbering.show_chapter_numbers));
@@ -140,29 +166,36 @@ pub fn class_options_with(
     // a decision as whether it is there, and which side of the spread it is
     // on is part of where. The class picks a side by the page's parity.
     //
-    // Each is a template — `{Book} {Range}` — and crosses **quoted**. SILE
-    // reads `-O` with the grammar it reads command parameters with, where an
-    // unquoted value ends at a comma or a semicolon and loses its outer
-    // spaces; a quoted one keeps everything, with `\"` for a quote.
-    let quoted = |t: &biblecompose_config::value::HeadTemplate| {
-        format!("\"{}\"", t.as_str().replace('"', "\\\""))
-    };
+    // Each is a template — `{Book} {Range}` — and crosses **quoted**, for the
+    // reason written over `quoted`.
     for (prefix, side) in [
         ("verso", &s.headers.left_page),
         ("recto", &s.headers.right_page),
     ] {
-        put(&format!("{prefix}headerleft"), quoted(&side.header_left));
+        put(
+            &format!("{prefix}headerleft"),
+            quoted(side.header_left.as_str()),
+        );
         put(
             &format!("{prefix}headercenter"),
-            quoted(&side.header_center),
+            quoted(side.header_center.as_str()),
         );
-        put(&format!("{prefix}headerright"), quoted(&side.header_right));
-        put(&format!("{prefix}footerleft"), quoted(&side.footer_left));
+        put(
+            &format!("{prefix}headerright"),
+            quoted(side.header_right.as_str()),
+        );
+        put(
+            &format!("{prefix}footerleft"),
+            quoted(side.footer_left.as_str()),
+        );
         put(
             &format!("{prefix}footercenter"),
-            quoted(&side.footer_center),
+            quoted(side.footer_center.as_str()),
         );
-        put(&format!("{prefix}footerright"), quoted(&side.footer_right));
+        put(
+            &format!("{prefix}footerright"),
+            quoted(side.footer_right.as_str()),
+        );
     }
 
     out
@@ -289,4 +322,29 @@ fn properties_of(
         "a property was written twice, or one exists that PROPERTIES does not list"
     );
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// **A value that holds a person's text survives SILE's `-O` grammar.**
+    ///
+    /// The font name is the one a fetched Devanagari family actually has, and
+    /// it carries both characters that end an unquoted value. Unquoted, the
+    /// path reached the class as `…[wdth` and the build died in the shaper on
+    /// a file whose name was half a name.
+    #[test]
+    fn a_value_with_a_comma_or_a_bracket_in_it_crosses_whole() {
+        assert_eq!(
+            quoted("C:/p/assets/fonts/NotoSerifDevanagari[wdth,wght].ttf"),
+            "\"C:/p/assets/fonts/NotoSerifDevanagari[wdth,wght].ttf\""
+        );
+        assert_eq!(quoted("Genesis, Exodus"), "\"Genesis, Exodus\"");
+        assert_eq!(quoted("{Book} {Range}"), "\"{Book} {Range}\"");
+        assert_eq!(quoted(""), "\"\"");
+
+        // `\"` is the one escape the quoted form understands.
+        assert_eq!(quoted(r#"a "quoted" name"#), r#""a \"quoted\" name""#);
+    }
 }

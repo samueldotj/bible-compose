@@ -37,6 +37,46 @@
 
 local plain = require("classes.plain")
 
+-- **A variable font needs a temporary file, and Windows will not give SILE
+-- one.** `shapers/harfbuzz.lua` instantiates a variable font by writing the
+-- instance out and reading it back, and asks `os.tmpname` where to put it.
+-- LuaJIT's `os.tmpname` there is the C runtime's `tmpnam`, which answers with a
+-- name at the root of the current drive — `\saeo.` on the machine this was
+-- found on — that no ordinary process may create. `io.open` returns nil, the
+-- shaper writes to it anyway, and the build dies with `attempt to index local
+-- 'file' (a nil value)` from inside the shaper, naming neither the font nor the
+-- one thing that matters about it.
+--
+-- Every variable font fails that way, and 23 of the 35 families the font
+-- catalogue offers are variable — the whole Noto Serif set, which for eighteen
+-- scripts is the only face there is. So this is not a corner: on Windows it was
+-- most of the catalogue, and the only symptom was an internal error.
+--
+-- The name comes from `TEMP` instead, which is where a Windows program is meant
+-- to put one. Forward slashes, because Windows accepts them everywhere and a
+-- backslash inside a Lua string is an escape waiting to be misread — `"\\b"`
+-- read as a backspace is how the first attempt at this fix appeared to fail.
+-- The name is checked rather than trusted to be unique, because BibleCompose
+-- composes several documents at once and two of them may well start in the same
+-- second.
+if package.config:sub(1, 1) == "\\" then
+   local temp = os.getenv("TEMP") or os.getenv("TMP")
+   if temp then
+      local stamp, nth = os.time(), 0
+      os.tmpname = function ()
+         while true do
+            nth = nth + 1
+            local path = ("%s/biblecompose-%d-%d.tmp"):format(temp, stamp, nth)
+            local taken = io.open(path, "rb")
+            if not taken then
+               return path
+            end
+            taken:close()
+         end
+      end
+   end
+end
+
 local class = pl.class(plain)
 class._name = "biblecompose"
 

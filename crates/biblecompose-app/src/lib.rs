@@ -12,6 +12,7 @@ pub mod hyphenation;
 pub mod project;
 pub mod publish;
 pub mod state;
+pub mod typeface;
 pub mod watch;
 
 use biblecompose_config::{ResolvedStyles, Settings};

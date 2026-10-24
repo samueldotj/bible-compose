@@ -61,6 +61,30 @@ fn every_suggested_language_is_a_plain_tag() {
     }
 }
 
+/// Every language the dialog offers can be given a font (FONT-006).
+///
+/// The two lists are written for different reasons — one is the languages a
+/// first project is likely to be in, the other the scripts the catalogue has a
+/// family for — and they meet in the window, where picking a language and then
+/// finding nothing to download is the application offering help it has not
+/// got. A tag added to one and not the other is the whole failure, and it is
+/// invisible until somebody with that language goes looking.
+#[test]
+fn every_suggested_language_can_be_given_a_font() {
+    let mut without = Vec::new();
+    for tag in values("src/lib/languages.ts", "tag") {
+        if biblecompose_app::typeface::suggest(&tag, &Default::default(), None).is_empty() {
+            without.push(tag);
+        }
+    }
+    assert!(
+        without.is_empty(),
+        "the new-project dialog offers these languages and the font catalogue has \
+         nothing for them: {without:?}. Add the script to `scripts/font-catalogue.mjs` \
+         with a family that covers it, or drop the language from the dialog.",
+    );
+}
+
 /// The window groups the book list by testament, and the names it groups into
 /// are the canon's.
 ///

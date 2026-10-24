@@ -247,12 +247,42 @@ result to be stale, and nothing outside the project can be missed.
 * **Turn some books off** in Books while you are adjusting things.
   One book is one book's work; tick the rest back when the page is right.
 
+### Nothing on this machine can set my script
+
+Open the body font setting and look at the top of the list. BibleCompose keeps
+a catalogue of openly licensed families — Charis SIL and the two Gentiums for
+Latin, Greek and Cyrillic, Scheherazade New for Arabic, Annapurna SIL for
+Devanagari, Padauk for Myanmar, Abyssinica SIL for Ethiopic, and a Noto serif
+for most of the rest — and offers the ones that cover your Scripture. It works
+out the script from your text where you have some and from your language
+setting where you do not.
+
+**Add to project** fetches the family and writes it, with its licence, into
+`assets/fonts/` inside your project. That is the folder a build looks in
+first, so from then on the font travels with the book: whoever else opens the
+project, or prints it, gets the same page without installing anything. The
+size beside the button is what will be downloaded.
+
+Each family says which faces it brings. Some bring only a regular, and that is
+worth reading before you choose — see below.
+
+This is the one thing BibleCompose uses the internet for. Nothing else it does
+leaves your machine, and it never fetches anything without being asked.
+
 ### The italics are not italic
 
 The font BibleCompose ships with has a regular and a bold face and no italic,
 so styles asking for italic are set in the regular face. The build warns about
 this (`FONT-005`) and names the styles. Choose a family that has an italic, or
 put the font file in `assets/fonts/` inside your project.
+
+The same thing happens to a family you fetched that brings only a regular, and
+for a reason worth knowing: a font inside your project is handed to the
+typesetter as a *file*, and a file is one face. Several of the catalogue's
+families are a single variable font — one file that holds every weight from
+thin to black — and a build can only use the weight that file opens at. The
+picker says which faces each family brings before you fetch it, so if your
+styles need a bold, choose a family that lists one.
 
 ---
 

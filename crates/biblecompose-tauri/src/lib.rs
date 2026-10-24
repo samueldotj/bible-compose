@@ -38,6 +38,8 @@ use tauri::{Emitter, Manager};
 /// diagnostic that explains it.
 const BUILD_EVENT: &str = "build";
 
+mod download;
+
 // ---------------------------------------------------------------- wire types
 
 /// What the frontend's `Diagnostic` interface expects.
@@ -229,6 +231,42 @@ pub struct WireFont {
     pub source: &'static str,
     /// How many of the open Scripture's distinct characters it cannot draw.
     /// Absent when there is no project open to check it against.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub missing: Option<usize>,
+}
+
+/// One openly licensed family the catalogue could fetch for this project
+/// (FONT-006).
+#[derive(Debug, Clone, Serialize)]
+pub struct WireSuggestion {
+    pub family: String,
+    /// One sentence on why it is worth choosing.
+    pub note: &'static str,
+    /// The script it is offered for, by display name.
+    pub script: &'static str,
+    /// `regular`, `bold`, `italic`, `bold-italic` — the faces a build could
+    /// select once it is packaged. Short of four means a style asking for one
+    /// of the others will be set in the nearest the family has (FONT-005), and
+    /// the window says so before the download rather than after.
+    pub faces: Vec<&'static str>,
+    /// What fetching the whole family costs, licence included.
+    pub bytes: usize,
+    /// Whether `assets/fonts/` already holds every file of it.
+    pub packaged: bool,
+}
+
+/// What a font that was just fetched and written amounts to (FONT-006).
+#[derive(Debug, Clone, Serialize)]
+pub struct WirePackaged {
+    pub family: String,
+    /// The files now in `assets/fonts/`.
+    pub files: Vec<String>,
+    /// The licence written beside them, named after the family.
+    pub licence: String,
+    pub faces: Vec<&'static str>,
+    /// How many of the open Scripture's distinct characters it still cannot
+    /// draw — the same count the picker shows, answered for the font that was
+    /// just packaged so a publisher is not left to go and look.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub missing: Option<usize>,
 }
@@ -801,6 +839,151 @@ fn fonts(session: tauri::State<'_, Arc<Session>>, root: Option<String>) -> Vec<W
             missing: c.missing,
         })
         .collect()
+}
+
+/// Which openly licensed families would suit this project (FONT-006).
+///
+/// The companion to [`fonts`], and the answer to the question it leaves open.
+/// `fonts` can only offer what the machine has, so a translator on a machine
+/// with no face for their script gets a list in which nothing covers the book
+/// — a correct answer and a dead end. This is the way out: the families that
+/// *do* cover it, which the application can fetch and package with the book.
+///
+/// The project's characters decide the script where there are any, and the
+/// language tag where there are not — which is the case a new project is in,
+/// and the case where a suggestion is worth most.
+#[tauri::command]
+fn font_suggestions(
+    session: tauri::State<'_, Arc<Session>>,
+    root: Option<String>,
+    language: String,
+) -> Vec<WireSuggestion> {
+    let characters = session
+        .characters
+        .lock()
+        .expect("the session lock is not poisoned")
+        .clone();
+    let root = root.map(Utf8PathBuf::from);
+
+    biblecompose_app::typeface::suggest(&language, &characters, root.as_deref())
+        .into_iter()
+        .map(|s| WireSuggestion {
+            family: s.family.to_owned(),
+            note: s.note,
+            script: s.script,
+            faces: s.faces.iter().map(|f| f.as_str()).collect(),
+            bytes: s.bytes,
+            packaged: s.packaged,
+        })
+        .collect()
+}
+
+/// Fetch one family and write it into the project (FONT-006).
+///
+/// Off the caller's thread, because this is the one command that waits on
+/// something outside the machine. Blocking rather than event-driven all the
+/// same: it is a few seconds and one outcome, and a progress channel for a
+/// 2 MB download would be more machinery than the thing it reports on.
+///
+/// Rejects with diagnostics the way [`set_setting`] does, having written
+/// nothing — every check in `typeface::package` runs before the first byte
+/// reaches the disk.
+#[tauri::command]
+async fn install_font(
+    session: tauri::State<'_, Arc<Session>>,
+    root: String,
+    family: String,
+) -> Result<WirePackaged, Vec<WireDiagnostic>> {
+    let characters = session
+        .characters
+        .lock()
+        .expect("the session lock is not poisoned")
+        .clone();
+    let session = Arc::clone(&session);
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let packaged = fetch_and_package(&Utf8PathBuf::from(&root), &family, &characters)?;
+        // The project now has a file it did not have, and that is this
+        // application's own edit — reporting it back as an external change
+        // (FUN-007) would ask the publisher whether to reload their own click.
+        forget_changes(&session, Utf8Path::new(&root));
+        Ok(packaged)
+    })
+    .await
+    .unwrap_or_else(|e| {
+        Err(vec![WireDiagnostic::from(&AppDiagnostic::error(
+            biblecompose_diagnostics::code::UNRESOLVED,
+            format!("the download did not finish: {e}"),
+        ))])
+    })
+}
+
+/// [`install_font`] without the Tauri binding or the threading.
+///
+/// The licence first, and deliberately: it is small, it is the thing that
+/// makes redistributing somebody else's font permissible at all, and a family
+/// whose licence cannot be fetched is one this application has no business
+/// writing into a book.
+fn fetch_and_package(
+    root: &Utf8Path,
+    family: &str,
+    characters: &BTreeSet<char>,
+) -> Result<WirePackaged, Vec<WireDiagnostic>> {
+    use biblecompose_app::typeface;
+
+    let refuse = |message: String, help: &str| {
+        vec![WireDiagnostic::from(
+            &AppDiagnostic::error(biblecompose_diagnostics::code::UNRESOLVED, message)
+                .help(help.to_owned()),
+        )]
+    };
+
+    let Some(entry) = typeface::typeface(family) else {
+        return Err(refuse(
+            format!("{family} is not a font BibleCompose can fetch"),
+            "choose one of the suggested families, or put the font file in assets/fonts/ by hand",
+        ));
+    };
+
+    let mut fetched = Vec::with_capacity(entry.files.len() + 1);
+    for (name, url, bytes) in std::iter::once(("OFL.txt", entry.licence_url(), entry.licence.bytes))
+        .chain(
+            entry
+                .files
+                .iter()
+                .map(|f| (f.name, entry.url(f.name), f.bytes)),
+        )
+    {
+        let got = download::fetch(&url, bytes).map_err(|e| {
+            refuse(
+                e,
+                "nothing has been written to the project — try again when the connection is better",
+            )
+        })?;
+        fetched.push(typeface::Fetched {
+            name: name.to_owned(),
+            bytes: got,
+        });
+    }
+
+    let packaged =
+        typeface::package(entry, &fetched, root).map_err(|d| vec![WireDiagnostic::from(&d)])?;
+
+    // The coverage question, answered for the font that was just packaged.
+    // Through the same path the picker uses, so the two cannot give different
+    // answers about one family.
+    let missing = biblecompose_app::fonts(root, characters)
+        .into_iter()
+        .find(|c| c.family == packaged.family)
+        .and_then(|c| c.missing);
+
+    Ok(WirePackaged {
+        family: packaged.family,
+        files: packaged.files,
+        licence: packaged.licence,
+        faces: packaged.faces.iter().map(|f| f.as_str()).collect(),
+        missing,
+    })
 }
 
 /// What has changed on disk since the project was last read (FUN-007).
@@ -1562,6 +1745,8 @@ pub fn run() {
             set_style,
             reset_style,
             fonts,
+            font_suggestions,
+            install_font,
             recent_projects,
             forget_project,
             create_project,

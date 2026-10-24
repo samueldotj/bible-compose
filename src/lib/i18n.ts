@@ -216,6 +216,13 @@ export interface Chrome {
   readonly fontsInstalledNote: string;
   readonly setsThisScripture: string;
   readonly nothingMatchesCovering: string;
+  // Fetching a font (FONT-006).
+  readonly fontsToFetch: string;
+  readonly fontsToFetchNote: string;
+  readonly addToProject: string;
+  readonly fetchingFont: string;
+  readonly inThisProjectAlready: string;
+  readonly fetchNeedsConnection: string;
 
   // Build.
   readonly buildNote: string;
@@ -315,6 +322,20 @@ export interface Phrases {
   readonly setInThisProject: (tag: string) => string;
   /** `cannot draw 12 characters`, beside a font. */
   readonly cannotDraw: (count: number) => string;
+  /**
+   * Which faces a family would bring, in words (FONT-006).
+   *
+   * Worth a sentence rather than four ticks, because the interesting case is
+   * the short one: a project font reaches the typesetter as a file, a file is
+   * one face, and a family that brings only a regular will set a style asking
+   * for bold in the regular (FONT-005). A publisher choosing between two
+   * families is mostly choosing on this.
+   */
+  readonly faces: (faces: readonly string[]) => string;
+  /** A download size somebody has to agree to, rounded to something readable. */
+  readonly downloadSize: (bytes: number) => string;
+  /** What was written, and whether it can set the book. */
+  readonly fontAdded: (family: string, missing: number | undefined) => string;
 }
 
 /** What the build is doing, in words (GUI-006). */
@@ -676,6 +697,13 @@ export const EN: Catalogue = {
     fontsInstalledNote: "on this machine only",
     setsThisScripture: "sets this Scripture",
     nothingMatchesCovering: "Nothing matches that can set this Scripture.",
+    fontsToFetch: "Fits this language",
+    fontsToFetchNote: "openly licensed — BibleCompose can fetch it into the project",
+    addToProject: "Add to project",
+    fetchingFont: "Fetching…",
+    inThisProjectAlready: "already in this project",
+    fetchNeedsConnection:
+      "Fetching a font is the one thing BibleCompose needs a connection for. Nothing else leaves this machine.",
 
     buildNote: "An error stops the build. Warnings print anyway unless Strict settings is on.",
     severity: "Severity",
@@ -755,6 +783,31 @@ export const EN: Catalogue = {
     languageWithTag: (name, tag) => `${name} (${tag})`,
     setInThisProject: (tag) => `${tag} — set in this project`,
     cannotDraw: (count) => `cannot draw ${count} character${count === 1 ? "" : "s"}`,
+    faces: (faces) => {
+      const words: Record<string, string> = {
+        regular: "regular",
+        bold: "bold",
+        italic: "italic",
+        "bold-italic": "bold italic",
+      };
+      const named = faces.map((f) => words[f] ?? f);
+      if (named.length === 0) return "no faces";
+      if (named.length === 1) return `${named[0]} only`;
+      const last = named[named.length - 1];
+      return `${named.slice(0, -1).join(", ")} and ${last}`;
+    },
+    downloadSize: (bytes) =>
+      bytes >= 1048576
+        ? `${(bytes / 1048576).toFixed(bytes >= 10485760 ? 0 : 1)} MB`
+        : `${Math.round(bytes / 1024)} kB`,
+    fontAdded: (family, missing) => {
+      if (missing === undefined) return `${family} is now in this project.`;
+      return missing === 0
+        ? `${family} is now in this project, and it can set this Scripture.`
+        : `${family} is now in this project, but it cannot draw ${missing} character${
+            missing === 1 ? "" : "s"
+          } of this Scripture.`;
+    },
   },
   states: {
     idle: "Idle",

@@ -44,7 +44,7 @@
     "publisher": "BibleCompose",
     "category": "Productivity",
     "shortDescription": "Typeset Scripture from USFM",
-    "longDescription": "BibleCompose composes a folder of USFM into a printable PDF. It carries its own typesetter, needs no internet connection, and never writes to the Scripture it is given.",
+    "longDescription": "BibleCompose composes a folder of USFM into a printable PDF. It carries its own typesetter, composes without an internet connection, and never writes to the Scripture it is given. The one thing it can fetch is an openly licensed font for your language, and only when you ask it to.",
     "copyright": "Copyright the BibleCompose contributors",
     "licenseFile": "../../LICENSE",
     "linux": {

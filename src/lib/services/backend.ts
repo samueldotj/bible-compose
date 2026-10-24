@@ -120,6 +120,53 @@ export interface FontChoice {
   readonly missing?: number;
 }
 
+/** Which face a build could select, once a family is in the project. */
+export type FontFace = "regular" | "bold" | "italic" | "bold-italic";
+
+/**
+ * One openly licensed family BibleCompose can fetch for this project
+ * (FONT-006).
+ *
+ * The answer to the question {@link FontChoice} leaves open. The picker can
+ * only list what the machine has, so a translator whose machine has no face
+ * for their script gets a list in which nothing covers the book — true, and a
+ * dead end. These are the families that do cover it.
+ */
+export interface FontSuggestion {
+  readonly family: string;
+  /** One sentence on why it is worth choosing. */
+  readonly note: string;
+  /** The script it is offered for, by name. */
+  readonly script: string;
+  /**
+   * The faces a build could select once it is packaged.
+   *
+   * Short of four is normal and worth showing: a project font is passed to
+   * the typesetter as a *file*, and a file is one face, so a family that
+   * ships only a regular will set a style asking for bold in the regular
+   * (FONT-005). Saying so before the download beats saying so after.
+   */
+  readonly faces: readonly FontFace[];
+  /** What fetching the whole family costs, licence included. */
+  readonly bytes: number;
+  /** Whether `assets/fonts/` already holds every file of it. */
+  readonly packaged: boolean;
+}
+
+/** What a font that was just fetched and written amounts to (FONT-006). */
+export interface PackagedFont {
+  readonly family: string;
+  readonly files: readonly string[];
+  readonly licence: string;
+  readonly faces: readonly FontFace[];
+  /**
+   * How many of the open Scripture's characters it still cannot draw. Zero is
+   * the answer a publisher is hoping for and absent means there was nothing to
+   * check it against.
+   */
+  readonly missing?: number;
+}
+
 /**
  * The page as numbers, in points, for the diagram beside the page settings.
  *
@@ -310,6 +357,22 @@ export interface Backend {
    */
   fonts(root: string | null): Promise<readonly FontChoice[]>;
   /**
+   * Which openly licensed families would suit this project (FONT-006).
+   *
+   * The Scripture's own characters decide the script where there are any, and
+   * the language tag where there are not — which is a new project's case, and
+   * the case where a suggestion is worth most.
+   */
+  fontSuggestions(root: string | null, language: string): Promise<readonly FontSuggestion[]>;
+  /**
+   * Fetch one family and write it into `assets/fonts/`, where it travels with
+   * the book (FONT-003).
+   *
+   * The one call in this interface that waits on something outside the
+   * machine. Rejects with diagnostics, having written nothing.
+   */
+  installFont(root: string, family: string): Promise<PackagedFont>;
+  /**
    * Returns as soon as the build is handed to a thread (GUI-012). Every
    * build is the whole publication, typeset afresh.
    */
@@ -349,6 +412,8 @@ export const tauriBackend: Backend = {
   resetStyle: (root, selector, property) =>
     invoke("reset_style", { root, selector, property }),
   fonts: (root) => invoke("fonts", { root }),
+  fontSuggestions: (root, language) => invoke("font_suggestions", { root, language }),
+  installFont: (root, family) => invoke("install_font", { root, family }),
   startBuild: (root) => invoke("start_build", { root }),
   cancelBuild: () => invoke("cancel_build"),
   onBuildEvent: async (handler) => {

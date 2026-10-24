@@ -35,6 +35,14 @@ serde_json.workspace = true
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2.7.2"
 
+# The only HTTP client in the workspace, and it is here rather than in the app
+# crate on purpose: the shell is the layer that already owns privileged I/O,
+# and keeping egress out of `biblecompose-app` is what lets the build path and
+# the command-line tool be free of network code by construction rather than by
+# intention (ARCHITECTURE section 7.6, NFR-004). Pure Rust TLS, so a release
+# does not pick up whatever OpenSSL the build machine had.
+ureq = { version = "3", default-features = false, features = ["rustls"] }
+
 [dev-dependencies]
 biblecompose-testkit.workspace = true
 tempfile.workspace = true

@@ -13,9 +13,28 @@
    *
    * So the list is the same one a build resolves against, in the same order,
    * with the coverage answer beside each name.
+   *
+   * # And what to do when none of them will do
+   *
+   * The list above has a dead end in it. A translator whose machine has no
+   * face for their script sees every entry marked as unable to draw the book —
+   * correct, and no help at all. FONT-006 is the way out, and it sits at the
+   * top of this dialog rather than in a settings pane somewhere, because this
+   * is where somebody is standing when they find out they have a problem.
+   *
+   * A suggestion is openly licensed and gets fetched into `assets/fonts/`,
+   * which is the detail that makes it worth doing at all: a font in the
+   * project travels with the book (FONT-003), so the page sets the same way on
+   * the machine of whoever prints it. A font merely installed here does not.
    */
   import { untrack } from "svelte";
-  import { backend, type FontChoice } from "../lib/services/backend";
+  import {
+    asDiagnostics,
+    backend,
+    type Diagnostic,
+    type FontChoice,
+    type FontSuggestion,
+  } from "../lib/services/backend";
   import { session } from "../lib/session.svelte";
   import { phrases, t } from "../lib/i18n";
   import { modal } from "../lib/modal";
@@ -36,15 +55,60 @@
   let coveringOnly = $state(true);
   let selected = $state(untrack(() => current));
 
+  let suggestions = $state<readonly FontSuggestion[]>([]);
+  /** The family being fetched, so only its own row shows the wait. */
+  let fetching = $state<string | null>(null);
+  let refused = $state<Diagnostic[]>([]);
+  let added = $state<string | null>(null);
+
+  const language = $derived(
+    session.settings.find((s) => s.key === "project.language")?.value ?? "",
+  );
+
+  async function load(): Promise<void> {
+    const root = session.project?.root ?? null;
+    fonts = await backend().fonts(root);
+    // A dialog that cannot say what the machine has is broken; one that cannot
+    // say what could be fetched is merely less useful, so a failure here is
+    // swallowed rather than replacing the list with an error.
+    suggestions = await backend()
+      .fontSuggestions(root, language)
+      .catch(() => []);
+  }
+
   $effect(() => {
-    void backend()
-      .fonts(session.project?.root ?? null)
-      .then((list) => (fonts = list))
-      .catch((e: unknown) => {
-        failure = String(e);
-        fonts = [];
-      });
+    void load().catch((e: unknown) => {
+      failure = String(e);
+      fonts = [];
+    });
   });
+
+  /**
+   * Fetch one family and select it, without choosing it.
+   *
+   * Two steps on purpose. Downloading a font and changing what the book is set
+   * in are different decisions, and a publisher looking at four families
+   * should be able to fetch one and look at it in the list — with its real
+   * coverage count beside it — before committing the page to it.
+   */
+  async function add(suggestion: FontSuggestion): Promise<void> {
+    const root = session.project?.root;
+    if (!root || fetching) return;
+
+    fetching = suggestion.family;
+    refused = [];
+    added = null;
+    try {
+      const packaged = await backend().installFont(root, suggestion.family);
+      added = phrases().fontAdded(packaged.family, packaged.missing);
+      selected = packaged.family;
+      await load();
+    } catch (e: unknown) {
+      refused = asDiagnostics(e);
+    } finally {
+      fetching = null;
+    }
+  }
 
   const checked = $derived((fonts ?? []).some((f) => f.missing !== undefined));
 
@@ -56,6 +120,17 @@
       if (coveringOnly && checked && (f.missing ?? 0) > 0) return false;
       return true;
     });
+  });
+
+  /**
+   * The suggestions worth showing: only with a project open, because there is
+   * nowhere to put a font without one, and an offer that cannot be taken is
+   * worse than no offer.
+   */
+  const offered = $derived.by(() => {
+    if (!session.project) return [];
+    const needle = filter.trim().toLowerCase();
+    return suggestions.filter((s) => !needle || s.family.toLowerCase().includes(needle));
   });
 
   const groups = $derived.by(() => {
@@ -112,6 +187,42 @@
     {/if}
 
     <div class="list">
+      {#if offered.length > 0}
+        <h3 class="kicker">{t("fontsToFetch")} <span>— {t("fontsToFetchNote")}</span></h3>
+        {#each offered as suggestion (suggestion.family)}
+          <div class="font offer" class:selected={suggestion.family === selected}>
+            <span class="family" style={`font-family: ${JSON.stringify(suggestion.family)}, serif`}>
+              {suggestion.family}
+            </span>
+            <span class="why muted">
+              {suggestion.script} · {phrases().faces(suggestion.faces)} · {suggestion.note}
+            </span>
+            {#if suggestion.packaged}
+              <span class="coverage">{t("inThisProjectAlready")}</span>
+            {:else}
+              <button
+                type="button"
+                class="btn small"
+                disabled={fetching !== null}
+                onclick={() => void add(suggestion)}
+              >
+                {fetching === suggestion.family
+                  ? t("fetchingFont")
+                  : `${t("addToProject")} · ${phrases().downloadSize(suggestion.bytes)}`}
+              </button>
+            {/if}
+          </div>
+        {/each}
+
+        {#if added}
+          <p class="note added">{added}</p>
+        {/if}
+        {#each refused as problem (problem.code + problem.message)}
+          <p class="error">{problem.message}{problem.help ? ` — ${problem.help}` : ""}</p>
+        {/each}
+        <p class="note muted offline">{t("fetchNeedsConnection")}</p>
+      {/if}
+
       {#if fonts === null}
         <p class="note muted">{t("readingFonts")}</p>
       {:else if failure}
@@ -203,6 +314,38 @@
   }
   .family {
     font-size: 15px;
+  }
+  /* A suggestion is a row of three parts rather than two: the name, why it is
+     being suggested, and the one control. It does not become selected by being
+     clicked — the whole row is not a button, because the button in it does
+     something a click should never do by accident. */
+  .font.offer {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px 10px;
+    cursor: default;
+  }
+  .font.offer:hover {
+    background: transparent;
+  }
+  .font.offer .why {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: 12px;
+  }
+  .font.offer .btn,
+  .font.offer .coverage {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    white-space: nowrap;
+  }
+  .added {
+    color: var(--acc);
+  }
+  .offline {
+    font-size: 12px;
+    padding-block-end: 4px;
   }
   .coverage {
     flex: none;

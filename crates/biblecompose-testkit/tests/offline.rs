@@ -8,11 +8,21 @@
 //!
 //! # Why the shell is exempt
 //!
+//! Two reasons now, and the second one arrived deliberately.
+//!
 //! `tauri` depends on `reqwest`, and there is nothing to be done about that —
 //! it is how the framework serves the window's own assets. So the rule is
 //! drawn where it can be held: the CLI and every crate the build pipeline is
 //! made of are clean, and the window is fenced by its content-security policy
 //! and its capability list instead, both of which are asserted below.
+//!
+//! And since FONT-006 the shell has one HTTP client of its own, `ureq`, for
+//! fetching a font a publisher asked for by name (ARCHITECTURE §7.6). That is
+//! the only request this application can make, and putting it *here* rather
+//! than in `biblecompose-app` is the whole reason the test above still passes:
+//! the crate that composes a page has no client linked into it, so "a build
+//! needs no network" stays a property of the graph. The tests below hold that
+//! arrangement in place — one client, named, reached from one module.
 //!
 //! Read from `Cargo.lock`, which is committed, so this is a fact about the
 //! versions actually built and not about what a resolver might pick.
@@ -112,22 +122,77 @@ fn the_pipeline_cannot_reach_the_network() {
     }
 }
 
-/// The exemption is real, and narrow: only the shell, and only because the
-/// framework brings it. If this ever stops being true the rule above can be
-/// widened to cover everything, which would be better.
+/// The one client the shell carries on purpose (FONT-006).
+const THE_CLIENT: &str = "ureq";
+
+/// The exemption is real, and narrow: only the shell, only one client of its
+/// own, and only for fetching a font somebody asked for.
+///
+/// Written as an exact comparison rather than a ban, so that adding a second
+/// client fails here and has to be argued for. A general-purpose fetcher is
+/// not something that should be able to arrive in this application by being
+/// convenient for one feature.
 #[test]
-fn the_shell_is_the_only_exemption_and_it_is_the_frameworks() {
+fn the_shell_carries_exactly_one_client_of_its_own() {
     let graph = locked();
+    let direct = graph.get(THE_SHELL).cloned().unwrap_or_default();
+
+    let own: Vec<&str> = direct
+        .iter()
+        .map(String::as_str)
+        .filter(|d| NETWORKING.contains(d))
+        .collect();
+    assert_eq!(
+        own,
+        vec![THE_CLIENT],
+        "the shell may depend on {THE_CLIENT} directly and on nothing else that \
+         can open a socket — FONT-006 is one request to one host, and a second \
+         client means somebody added a second reason"
+    );
+
+    // And the framework's own, still reached and still not ours to remove.
     let reachable = reachable_from(&graph, THE_SHELL);
     assert!(
         reachable.contains("reqwest"),
-        "if the shell no longer reaches an HTTP client, delete this exemption"
+        "if the shell no longer reaches the framework's client, say so here"
     );
-    // Through `tauri` and not directly, which is the whole of the excuse.
-    let direct = graph.get(THE_SHELL).cloned().unwrap_or_default();
-    assert!(
-        !direct.iter().any(|d| NETWORKING.contains(&d.as_str())),
-        "the shell now depends on an HTTP client directly: {direct:?}"
+}
+
+/// **One egress point.** The client is named in one module of the shell, and
+/// that module checks the host before it connects.
+///
+/// The dependency graph says the shell *may* make a request; this says where
+/// from. Without it, the rule degrades the first time somebody reaches for
+/// `ureq::get` in a command because it was two lines shorter than routing
+/// through `download`, and the host check — the thing that makes "one host"
+/// true — would be bypassed with nothing to notice it.
+#[test]
+fn the_client_is_reached_from_one_module() {
+    let src = repo_root().join("crates/biblecompose-tauri/src");
+    let mut users: Vec<String> = Vec::new();
+    for entry in std::fs::read_dir(src.as_std_path()).expect("the shell has sources") {
+        let path = entry.expect("readable entry").path();
+        if path.extension().and_then(|e| e.to_str()) != Some("rs") {
+            continue;
+        }
+        let text = std::fs::read_to_string(&path).expect("readable source");
+        if text.contains(THE_CLIENT) {
+            users.push(
+                path.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or_default()
+                    .to_owned(),
+            );
+        }
+    }
+    users.sort();
+
+    assert_eq!(
+        users,
+        vec!["download.rs"],
+        "{THE_CLIENT} is meant to be named in download.rs and nowhere else — it \
+         is the module that refuses any host but the font catalogue's, and a \
+         request made around it is a request nobody checked"
     );
 }
 

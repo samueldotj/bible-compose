@@ -4,6 +4,28 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## Unreleased
 
+* **A font for your language, fetched into the book.** The font picker could
+  only ever offer what was installed, so a translator on a machine with no face
+  for their script saw a list in which every entry reported a coverage gap —
+  true, and a dead end. It now opens with the openly licensed families that
+  *do* cover the Scripture, worked out from the text where there is any and
+  from the language setting where there is not. **Add to project** fetches one
+  into `assets/fonts/`, where a build finds it first and the book then carries
+  its own typeface, so the page sets the same way on the machine of whoever
+  prints it. 35 families over 28 scripts, from one pinned commit of Google
+  Fonts, each with a recorded length and checksum; a download is checked
+  against both, parsed, asked what family it belongs to and asked for a glyph
+  in the script it was offered for, and if any of that fails nothing at all is
+  written. Each family says up front which faces it brings, because a project
+  font is passed to the typesetter as a file and a file is one face.
+
+  This is the only thing BibleCompose uses a network for, it happens on a
+  click about a named font, and the request goes to one host that is checked
+  before anything is dialled. The HTTP client lives in the desktop shell and
+  not in the crate that composes a page, so loading, validating, composing and
+  writing a PDF have no network code in them to reach — which is NFR-004 held
+  up by the dependency graph rather than by good intentions.
+
 * **A whole Bible composes.** A footnote called in the last lines of the left
   column is reached by the page builder only after that column has been set,
   so the typesetter went looking for the line that called it in order to carry

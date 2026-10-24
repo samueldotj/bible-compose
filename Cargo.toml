@@ -43,6 +43,11 @@ unicode-segmentation = "1"
 # do not need, and system enumeration is what its own backends already do.
 fontdb = { version = "0.24", default-features = false, features = ["fs", "memmap"] }
 ttf-parser = "0.25"
+
+# The font catalogue records a SHA-256 for every file it can fetch, because a
+# download that writes a binary into a publisher’s book has to be the file the
+# catalogue describes and not merely a file of the right length (FONT-006).
+sha2 = "0.10"
 toml = "0.8"
 
 # The configuration layer's single parse (ARCHITECTURE §6, CFG-003). Chosen

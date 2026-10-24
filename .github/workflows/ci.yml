@@ -102,6 +102,12 @@ jobs:
       # drifted from the tests it describes. Both are cheap to fix and
       # impossible to notice by eye.
       - run: node scripts/traceability.mjs --check
+      # The font catalogue is generated and checked in. This re-renders it from
+      # the values it already records and compares the text, so it catches a
+      # hand edit and a generator change without fetching anything — the one
+      # job that must not need a network is the one asserting the application
+      # does not need one either (NFR-004).
+      - run: node scripts/font-catalogue.mjs --check
 
   architecture:
     name: architectural rules

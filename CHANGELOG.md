@@ -2,7 +2,7 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
-## Unreleased
+## 0.3.0
 
 * **The progress bar knows how long the book is.** It had one source for that
   — the page count of the previous build of the same project — which left the
@@ -20,7 +20,9 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   each of those moves the length as much as the type size does — margins alone
   swung that canon by a fifth. On a handful of books with long chapters it can
   be a quarter out, which is why the window still says *about* and why a
-  remembered count always wins.
+  remembered count always wins. A count is remembered against the books it
+  covered as well as the settings, so adding Acts and Romans to the four
+  gospels no longer answers with the gospels' length.
 
 * **A font for your language, fetched into the book.** The font picker could
   only ever offer what was installed, so a translator on a machine with no face
@@ -44,6 +46,17 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   writing a PDF have no network code in them to reach — which is NFR-004 held
   up by the dependency graph rather than by good intentions.
 
+  Two defects between that and a page. A font path crosses to the typesetter
+  through an option list that ends a value at a comma or a `]`, and a Google
+  Fonts variable font is called `NotoSerifDevanagari[wdth,wght].ttf` — so the
+  path arrived cut in half, and a publication called `Genesis, Exodus` had
+  been losing its subtitle from the PDF's properties the same way, silently.
+  And a variable font could not be loaded at all on Windows, where the
+  typesetter writes the instance to a temporary file and the name it is given
+  cannot be created: 23 of the 35 families on offer are variable, so on that
+  platform most of the catalogue reported an internal error. A family that
+  carries its weights on an axis is also no longer said to have no bold.
+
 * **A whole Bible composes.** A footnote called in the last lines of the left
   column is reached by the page builder only after that column has been set,
   so the typesetter went looking for the line that called it in order to carry
@@ -53,6 +66,25 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   handful of books usually did not, which is what made it look like a limit on
   size. Such a note now moves to the next page on its own, and all eight
   presets compose a full Bible.
+
+* **Edit a book's USFM without leaving the publication.** Double-click a book
+  — or use the pencil beside it, which is the same thing and reachable from
+  the keyboard — and it opens in easy-usfm, which this application now
+  carries: nothing to install, and the two share the engine that reads USFM,
+  so a warning means the same thing in both. An editor opened this way closes
+  when the window does, and is *asked* to close rather than killed, so one
+  with unsaved work puts its own question up instead of losing it.
+
+* **Smaller things in the window.** The path along the bottom is now the
+  control that opens the PDF — the buttons that used to sit there vanished
+  under the pointer as the help text replaced them, which made them
+  impossible to click rather than merely awkward. Keep intermediates and
+  Strict settings have left that line for Build, where the rest of a build's
+  settings are. Generate PDF goes to Build, and Build says so with a spinner
+  while it works. A language can be found by typing its name — the list
+  matched on the tag, so typing “Hindi” offered nothing at all — and eighteen
+  Indian languages were added to it, Assamese and Sanskrit among them, both
+  of which this project's own corpus already had books in.
 
 ## 0.2.3
 

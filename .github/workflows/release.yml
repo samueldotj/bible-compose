@@ -36,7 +36,7 @@ env:
   # a tag for a release, the way `usfm3`, the SILE revision and the font
   # catalogue's commit are all pinned, and for the same reason: a user
   # reporting a bug should be reporting it about something nameable.
-  EASY_USFM_REF: main
+  EASY_USFM_REF: v0.2.0
   CARGO_TERM_COLOR: always
   SILE_REF: ${{ inputs.sile_ref || 'v0.15.13' }}
 

@@ -422,6 +422,9 @@ pub struct Session {
     /// What the open project looked like on disk when it was last read
     /// (FUN-007).
     watched: Mutex<Option<(Utf8PathBuf, Fingerprint)>>,
+    /// The editors this window started, so closing it closes them (the
+    /// reasoning is over `editor::close_started`).
+    editors: editor::Started,
     /// The distinct characters the open Scripture sets, kept so the font
     /// picker can check three hundred families against them without reading
     /// the books again (GUI-003).
@@ -677,7 +680,7 @@ fn open_in_editor(
         ));
     }
 
-    editor::open(&path).map_err(|e| vec![WireDiagnostic::from(&e)])
+    editor::open(&path, &session.editors).map_err(|e| vec![WireDiagnostic::from(&e)])
 }
 
 #[tauri::command]
@@ -1813,8 +1816,20 @@ pub fn run() {
             cancel_build,
             is_building,
         ])
-        .run(tauri::generate_context!())
-        .expect("the desktop shell failed to start");
+        .build(tauri::generate_context!())
+        .expect("the desktop shell failed to start")
+        // **An editor this window opened closes with it.** Built and then
+        // run, rather than `run` alone, because that is what it takes to see
+        // the application leaving. `Exit` and not `ExitRequested`: the latter
+        // can be stopped, and asking a publisher's editors to close over a
+        // shutdown that was then called off would be closing them for nothing.
+        .run(|handle, event| {
+            if matches!(event, tauri::RunEvent::Exit) {
+                if let Some(session) = handle.try_state::<Arc<Session>>() {
+                    editor::close_started(&session.editors);
+                }
+            }
+        });
 }
 
 #[cfg(test)]

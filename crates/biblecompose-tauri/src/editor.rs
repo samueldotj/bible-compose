@@ -219,16 +219,25 @@ fn beside_us() -> Option<Utf8PathBuf> {
     candidate.is_file().then_some(candidate)
 }
 
+/// The editors this window started, kept so they can be closed with it.
+///
+/// The `Child` handles and not their process ids. On Windows a live handle
+/// reserves the id, so what this holds cannot quietly become some other
+/// program that started after an editor was closed — which is the way a list
+/// of bare numbers goes wrong, and it goes wrong by shutting down something
+/// nobody was talking about.
+#[derive(Default)]
+pub struct Started(std::sync::Mutex<Vec<std::process::Child>>);
+
 /// Start the editor on one file.
 ///
 /// One window per file, which is what easy-usfm is for — its own README calls
 /// it an editor for individual USFM files, and a second window is cheaper than
 /// deciding what should happen to unsaved work in the first.
 ///
-/// Not waited on, and deliberately not in this process's job object: the
-/// editor outlives the window that opened it, and a publisher who closes
-/// BibleCompose while still editing a book must not lose it.
-pub fn open(file: &Utf8Path) -> Result<(), Diagnostic> {
+/// Not waited on: the editor runs for as long as somebody is editing, and this
+/// window has a build to get on with.
+pub fn open(file: &Utf8Path, started: &Started) -> Result<(), Diagnostic> {
     if !file.is_file() {
         return Err(Diagnostic::error(
             code::NOT_FOUND,
@@ -237,22 +246,77 @@ pub fn open(file: &Utf8Path) -> Result<(), Diagnostic> {
         .help("the book may have been moved or renamed since the project was opened"));
     }
     let editor = locate()?;
-    std::process::Command::new(editor.as_std_path())
+    let child = std::process::Command::new(editor.as_std_path())
         .arg(file.as_std_path())
         .spawn()
-        .map(|_| ())
         .map_err(|e| {
             Diagnostic::error(
                 code::COULD_NOT_CREATE,
                 format!("the USFM editor could not be started: {e}"),
             )
             .help(format!("it was looked for at {editor}"))
-        })
+        })?;
+
+    if let Ok(mut open) = started.0.lock() {
+        open.push(child);
+    }
+    Ok(())
+}
+
+/// Ask every editor this window started to close, and let it answer.
+///
+/// **Asked, not killed, and the difference is somebody's work.** easy-usfm is
+/// a text editor: it guards its window against closing with unsaved changes,
+/// and a request to close is what lets that guard run. `Child::kill` is
+/// `TerminateProcess` on Windows and `SIGKILL` on Unix — neither can be caught,
+/// so either would discard whatever had been typed since the last save without
+/// asking, in a window the publisher may not even have been looking at.
+///
+/// So: `taskkill` without `/F`, which posts a close to the process's windows,
+/// and `SIGTERM` elsewhere. An editor with unsaved work puts its question up
+/// and stays until it is answered; one without simply goes. Nothing is forced
+/// afterwards, because "it would not close" is a decision the person made.
+///
+/// Best-effort throughout, and silent: this runs while the application is
+/// already on its way out, where there is nowhere left to report anything.
+pub fn close_started(started: &Started) {
+    let Ok(mut open) = started.0.lock() else { return };
+    for child in open.iter_mut() {
+        // Already gone is the ordinary case — most people close the editor
+        // themselves — and asking a finished process to close would be asking
+        // an id that no longer means anything.
+        if matches!(child.try_wait(), Ok(Some(_)) | Err(_)) {
+            continue;
+        }
+        let pid = child.id();
+        let _ = if cfg!(windows) {
+            std::process::Command::new("taskkill")
+                .args(["/PID", &pid.to_string()])
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status()
+        } else {
+            std::process::Command::new("kill")
+                .args(["-TERM", &pid.to_string()])
+                .status()
+        };
+    }
+    open.clear();
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Serialises the tests that reach for `BIBLECOMPOSE_EDITOR`.
+    ///
+    /// It is one variable for the whole process and the harness runs tests on
+    /// threads, so without this the override test's deliberately wrong path
+    /// was what the launch test read — and the launch test failed on a defect
+    /// belonging to the suite rather than to the code. Poison is stepped over:
+    /// a test that panicked holding it has already failed, and taking the rest
+    /// down after it reports nothing new.
+    static ENV: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     /// **The override wins, and a bad one is reported rather than ignored.**
     ///
@@ -261,6 +325,7 @@ mod tests {
     /// through to the bundled copy.
     #[test]
     fn the_override_is_honoured_and_a_wrong_one_is_named() {
+        let _env = ENV.lock().unwrap_or_else(|e| e.into_inner());
         let dir = tempfile::tempdir().expect("temp dir");
         let fake = Utf8PathBuf::from_path_buf(dir.path().join(EXE_NAME)).expect("UTF-8");
         std::fs::write(fake.as_std_path(), b"not really an editor").expect("write");
@@ -311,11 +376,81 @@ mod tests {
         }
     }
 
+    /// **An editor this window started closes when asked.**
+    ///
+    /// The whole mechanism, against a real editor, because the interesting
+    /// part is not the bookkeeping: `taskkill` without `/F` posts a close to a
+    /// process's *windows*, and a process without one refuses it. easy-usfm has
+    /// a window; a stand-in would have proved nothing.
+    ///
+    /// Skipped, loudly, unless `BIBLECOMPOSE_EDITOR` names one, because it
+    /// opens a window for a moment and a test suite should not do that on a
+    /// machine that did not ask for it.
+    #[test]
+    fn an_editor_this_window_started_closes_when_asked() {
+        let _env = ENV.lock().unwrap_or_else(|e| e.into_inner());
+        let Some(set) = std::env::var_os(EDITOR_ENV) else {
+            eprintln!("skipping: {EDITOR_ENV} is not set");
+            return;
+        };
+        if !Utf8PathBuf::from(set.to_string_lossy().into_owned()).is_file() {
+            eprintln!("skipping: {EDITOR_ENV} does not name a file");
+            return;
+        }
+
+        let dir = tempfile::tempdir().expect("temp dir");
+        let book = Utf8PathBuf::from_path_buf(dir.path().join("01_GEN.usfm")).expect("UTF-8");
+        std::fs::write(book.as_std_path(), "\\id GEN\n\\c 1\n\\p\n\\v 1 In the beginning.\n")
+            .expect("write");
+
+        let started = Started::default();
+        open(book.as_path(), &started).expect("the editor starts");
+
+        // It is ours and it is running.
+        {
+            let mut open = started.0.lock().expect("the lock");
+            assert_eq!(open.len(), 1);
+            assert!(
+                matches!(open[0].try_wait(), Ok(None)),
+                "the editor should still be running"
+            );
+        }
+
+        // Give the window time to exist: a close posted before there is one to
+        // post it to is a close that goes nowhere.
+        std::thread::sleep(std::time::Duration::from_secs(6));
+        close_started(&started);
+
+        // And it goes. Polled rather than slept at, because a window closing
+        // is not instant and the time it takes is not this test's to assert.
+        let mut gone = false;
+        for _ in 0..40 {
+            if std::process::Command::new("tasklist")
+                .args(["/FI", "IMAGENAME eq easy-usfm-tauri.exe"])
+                .output()
+                .map(|o| !String::from_utf8_lossy(&o.stdout).contains("easy-usfm-tauri"))
+                .unwrap_or(false)
+            {
+                gone = true;
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(250));
+        }
+        assert!(gone, "the editor was asked to close and did not");
+        assert!(
+            started.0.lock().expect("the lock").is_empty(),
+            "the list should be emptied once they have been asked"
+        );
+    }
+
     /// A book that is not there is said so before anything is started.
     #[test]
     fn a_file_that_is_not_there_is_refused_without_launching_anything() {
-        let err = open(Utf8Path::new("/definitely/not/here/01_GEN.usfm"))
-            .expect_err("a missing file is an error");
+        let err = open(
+            Utf8Path::new("/definitely/not/here/01_GEN.usfm"),
+            &Started::default(),
+        )
+        .expect_err("a missing file is an error");
         assert_eq!(err.code, code::NOT_FOUND);
         assert!(err.message.contains("01_GEN.usfm"), "{}", err.message);
     }

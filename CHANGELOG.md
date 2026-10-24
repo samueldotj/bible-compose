@@ -2,6 +2,12 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
+## 0.2.3
+
+* The 0.2.2 build stopped at its own new import check, which did not know
+  `bcryptprimitives.dll` is part of Windows. The check now does. Nothing
+  else changed, and 0.2.2 was never drafted.
+
 ## 0.2.2
 
 * **The Windows runtime is whole again.** MSYS2 split the GCC runtime that

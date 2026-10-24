@@ -268,7 +268,7 @@ cp "$WORK"/msys2gcc/mingw64/bin/*.dll "$ST/"
 # as "error loading module" with no name after it. Caught here, on the
 # machine that built the stage, with the names.
 say "every import resolves"
-SYSTEM_DLLS='^(api-ms-win-|ext-ms-)|^(kernel32|kernelbase|user32|advapi32|shell32|ole32|oleaut32|ws2_32|wsock32|msvcrt|ucrtbase|bcrypt|crypt32|gdi32|gdiplus|comdlg32|shlwapi|userenv|ntdll|rpcrt4|secur32|iphlpapi|dbghelp|imm32|winmm|version|psapi|setupapi|netapi32|dnsapi|ncrypt|comctl32|uxtheme|dwmapi|winspool|mpr|wldap32|normaliz|powrprof|cfgmgr32|propsys|synchronization)\.dll$'
+SYSTEM_DLLS='^(api-ms-win-|ext-ms-)|^(kernel32|kernelbase|user32|advapi32|shell32|ole32|oleaut32|ws2_32|wsock32|msvcrt|ucrtbase|bcrypt|bcryptprimitives|cryptbase|sechost|wintrust|crypt32|gdi32|gdiplus|comdlg32|shlwapi|userenv|ntdll|rpcrt4|secur32|iphlpapi|dbghelp|imm32|winmm|version|psapi|setupapi|netapi32|dnsapi|ncrypt|comctl32|uxtheme|dwmapi|winspool|mpr|wldap32|normaliz|powrprof|cfgmgr32|propsys|synchronization)\.dll$'
 unresolved=0
 while IFS= read -r f; do
   while IFS= read -r d; do

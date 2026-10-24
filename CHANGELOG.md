@@ -2,6 +2,15 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
+## 0.3.1
+
+* The 0.3.0 build stopped at its own new step. Staging the editor runs that
+  project's `tauri build`, which builds its interface with `wasm-pack` first,
+  and the step that installs `wasm-pack` had been added to the job that builds
+  the typesetter rather than the one that builds the installers — so all three
+  installer jobs failed together on `wasm-pack: not found`. It is on the right
+  job now. Nothing else changed, and 0.3.0 was never drafted.
+
 ## 0.3.0
 
 * **The progress bar knows how long the book is.** It had one source for that

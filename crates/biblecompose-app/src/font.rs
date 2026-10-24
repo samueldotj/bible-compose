@@ -396,8 +396,45 @@ pub fn faces_of(family: &str, project_root: &Utf8Path, backend_dirs: &[Utf8PathB
         if face.weight.0 >= 600 {
             faces.bold = true;
         }
+        if !faces.bold && bold_on_an_axis(&db, face.id) {
+            faces.bold = true;
+        }
     }
     faces
+}
+
+/// Whether a face carries its bold on a weight axis rather than in a file.
+///
+/// **`fontdb` describes a variable font by its default instance**, so a family
+/// that holds every weight from Thin to Black on one axis arrives here looking
+/// like a family with a single regular face. Noto Serif Devanagari is one file
+/// reporting weight 400, and FONT-005 duly warned that the 21 styles asking for
+/// bold would each be set in the regular — of the 35 families the font
+/// catalogue offers, 23 are variable, so the warning was wrong far more often
+/// than it was right. A warning that is wrong by default is how a publisher
+/// learns to ignore warnings.
+///
+/// They are not set in the regular: SILE instantiates the axis. Measured on
+/// that same font by setting one line at weight 400 and again at 700 and
+/// comparing the PDFs, and by watching it write five instances during one
+/// build of the book that found this.
+///
+/// **The weight axis only, and `ital` and `slnt` deliberately left alone.**
+/// SILE picks a face for `style="italic"` through fontconfig rather than by
+/// pinning an axis, and nothing here has established that it would reach an
+/// italic axis at all. Claiming an italic that never arrives is this same
+/// defect pointing the other way, and the quieter direction to be wrong in.
+fn bold_on_an_axis(db: &fontdb::Database, id: fontdb::ID) -> bool {
+    db.with_face_data(id, |data, index| {
+        let face = ttf_parser::Face::parse(data, index).ok()?;
+        let axes = face.tables().fvar?.axes;
+        Some(
+            axes.into_iter()
+                .any(|axis| axis.tag == ttf_parser::Tag::from_bytes(b"wght") && axis.max_value >= 600.0),
+        )
+    })
+    .flatten()
+    .unwrap_or(false)
 }
 
 /// Report every style whose emphasis the font cannot draw (FONT-005).

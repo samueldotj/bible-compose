@@ -21,6 +21,15 @@ fn latin() -> Vec<Utf8PathBuf> {
     vec![repo_root().join("tests/fonts")]
 }
 
+/// The window's own faces, which are variable fonts and committed as such.
+///
+/// `Newsreader-Variable.ttf` holds every weight from 200 to 800 on a `wght`
+/// axis, and its italic is a second file beside it — so the family is the one
+/// case that tells a bold on an axis apart from a bold in a file.
+fn variable() -> Vec<Utf8PathBuf> {
+    vec![repo_root().join("src/assets/fonts")]
+}
+
 fn tamil() -> Vec<Utf8PathBuf> {
     vec![repo_root().join("spike/assets/fonts")]
 }
@@ -474,6 +483,50 @@ fn the_vendored_font_has_a_bold_and_no_italic() {
         return;
     }
     assert!(!faces.italic);
+}
+
+/// **A family whose bold is on an axis has a bold.**
+///
+/// `fontdb` describes a variable font by its default instance, so Newsreader
+/// arrives reporting weight 400 and this check used to call it boldless. 23 of
+/// the 35 families the font catalogue offers are variable, so FONT-005 was
+/// warning that bold would be lost on most of them while SILE was quietly
+/// instantiating the axis and setting it correctly.
+#[test]
+fn a_bold_carried_on_a_weight_axis_counts_as_a_bold() {
+    let faces = font::faces_of("Newsreader", Utf8Path::new("."), &variable());
+    assert!(
+        faces.bold,
+        "Newsreader carries 200..800 on a wght axis, so it has a bold"
+    );
+}
+
+/// **And nothing is warned about on such a family.**
+///
+/// The whole defect, end to end: a style asking for weight 700 against a
+/// family whose only file is variable produced a warning naming every such
+/// style. Newsreader's italic is a separate file, so neither half is missing
+/// and the correct number of diagnostics is none.
+#[test]
+fn a_variable_family_draws_no_missing_face_warning() {
+    let styles = styles_from("[character.bd]
+weight = 700
+");
+
+    let mut diagnostics = Diagnostics::new();
+    font::preflight_faces(
+        "Newsreader",
+        &styles,
+        Utf8Path::new("."),
+        &variable(),
+        &mut diagnostics,
+    );
+
+    let complaints: Vec<String> = diagnostics.iter().map(|d| d.to_string()).collect();
+    assert!(
+        complaints.is_empty(),
+        "a family with both faces needs no warning: {complaints:?}"
+    );
 }
 
 /// **And a style asking for it is warned about, once, by name.**

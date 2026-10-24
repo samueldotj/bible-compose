@@ -9,6 +9,7 @@ pub mod asset;
 pub mod backend_input;
 pub mod font;
 pub mod hyphenation;
+pub mod pages;
 pub mod project;
 pub mod publish;
 pub mod state;
@@ -345,7 +346,18 @@ pub fn build_with(
     reporter.advance(BuildState::Typesetting);
     let backend_version;
     // What the last successful build of this project needed, if there was one.
-    let expected = remembered_pages(&request.project_root);
+    // **A build in this shape if there has been one, and an estimate if not.**
+    // The shape is what makes the first answer trustworthy: one bare number
+    // could not say which settings produced it, so taking the body size from
+    // 9.2pt to 14pt left the bar measuring against a document a third shorter
+    // than the one being set. A shape that has not been built before falls to
+    // the estimate rather than to this project's last number, because the
+    // things the shape holds are the things that change the length — a miss
+    // means the previous count is answering about a different document.
+    let shape = pages::Shape::of(&request.settings);
+    let expected = pages::remembered(&shape)
+        .or_else(|| pages::estimate(doc, &request.settings))
+        .or_else(|| remembered_pages(&request.project_root));
     let pages = AtomicU32::new(0);
     let outcome = {
         let reporter = &*reporter;
@@ -406,7 +418,12 @@ pub fn build_with(
     // ---- publish -----------------------------------------------------------
     // Recorded before publishing, because the page count is a fact about the
     // typeset document whether or not moving it into place succeeds.
-    remember_pages(&request.project_root, pages.load(Ordering::Relaxed));
+    // Both: the project keeps its own last count, and the shape is remembered
+    // for every project on this machine, which is the whole point — the second
+    // publication in a language already set should not watch an endless bar.
+    let set = pages.load(Ordering::Relaxed);
+    remember_pages(&request.project_root, set);
+    pages::remember(&shape, set);
 
     reporter.advance(BuildState::Publishing);
     if let Err(e) = publish(&outcome.pdf, &destination) {

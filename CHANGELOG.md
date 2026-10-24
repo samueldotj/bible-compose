@@ -4,6 +4,24 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## Unreleased
 
+* **The progress bar knows how long the book is.** It had one source for that
+  — the page count of the previous build of the same project — which left the
+  first build of anything showing a bar with no end, and could not say which
+  settings produced the number it had, so taking the body size from 9.2pt to
+  14pt left the bar measuring against a document a third shorter than the one
+  being set. A finished build is now remembered against the six settings that
+  decide a publication's length, and shared between projects, so the second
+  Marathi New Testament at 11pt is counted exactly from its first page. Where
+  nothing has been built in that shape yet there is an estimate instead, from
+  the document's own chapter count against one measured constant: a whole
+  canon of 1189 chapters at 11pt on 13.4pt leading is 3776 pages, and the same
+  canon at 9.2pt on 11.2pt is predicted within 0.4% of the 2651 it sets in.
+  It scales by `size × leading` and by the area of the text block, because
+  each of those moves the length as much as the type size does — margins alone
+  swung that canon by a fifth. On a handful of books with long chapters it can
+  be a quarter out, which is why the window still says *about* and why a
+  remembered count always wins.
+
 * **A font for your language, fetched into the book.** The font picker could
   only ever offer what was installed, so a translator on a machine with no face
   for their script saw a list in which every entry reported a coverage gap —

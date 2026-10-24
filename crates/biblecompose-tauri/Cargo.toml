@@ -23,6 +23,10 @@ crate-type = ["lib", "cdylib", "staticlib"]
 # expects to find SILE on the machine, which is the right thing for a
 # developer and the wrong thing for a publisher.
 embedded-sile = ["biblecompose-app/embedded-sile"]
+# And the editor, on the same terms and for the same reason: a shipped build
+# carries easy-usfm so that opening a book's USFM needs nothing installed, and
+# a dev build does not carry 9 MB it can find next to its own executable.
+embedded-editor = ["dep:rust-embed"]
 
 [dependencies]
 biblecompose-scripture.workspace = true
@@ -42,6 +46,15 @@ tauri-plugin-dialog = "2.7.2"
 # intention (ARCHITECTURE section 7.6, NFR-004). Pure Rust TLS, so a release
 # does not pick up whatever OpenSSL the build machine had.
 ureq = { version = "3", default-features = false, features = ["rustls"] }
+
+# Carries easy-usfm, under `embedded-editor`. The same two features the
+# typesetter's embed needs: `interpolate-folder-path` so the folder can come
+# from the environment, and `debug-embed` so a debug build embeds rather than
+# reading the stage off disk at run time, which is the opposite of the point.
+rust-embed = { version = "8", optional = true, features = [
+    "interpolate-folder-path",
+    "debug-embed",
+] }
 
 [dev-dependencies]
 biblecompose-testkit.workspace = true

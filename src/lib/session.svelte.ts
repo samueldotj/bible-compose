@@ -425,6 +425,28 @@ export class Session {
     }
   }
 
+  /**
+   * Open one book's USFM in easy-usfm.
+   *
+   * `path` is the book's own, as the project reported it — the shell checks it
+   * against the open project before starting anything, so a path from
+   * anywhere else is refused there rather than trusted here.
+   *
+   * A failure is a fault rather than a field error, for the same reason
+   * `showPdf`'s is: nothing the publisher typed caused it, and the shapes it
+   * takes are a build that carries no editor and a book that has been moved
+   * since the project was read.
+   */
+  async editBook(path: string): Promise<void> {
+    try {
+      await backend().openInEditor(path);
+    } catch (e: unknown) {
+      this.fault = asDiagnostics(e)
+        .map((d) => d.message)
+        .join(" ");
+    }
+  }
+
   async showFolder(): Promise<void> {
     const path = this.folderToOpen;
     if (!path) return;

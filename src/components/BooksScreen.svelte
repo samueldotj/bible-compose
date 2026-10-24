@@ -88,6 +88,7 @@
                   if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
                 }}
                 ondragend={commitOrder}
+                ondblclick={() => void session.editBook(book.path)}
                 ondragover={(e) => {
                   e.preventDefault();
                   if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
@@ -122,6 +123,19 @@
                     {book.included ? phrases().chapters(book.chapters) : "—"}
                   </span>
                 </button>
+                <!--
+                  The keyboard's way to what double-clicking the row does.
+                  The gesture alone would be unreachable without a pointer,
+                  which P6.3 audited this window for, and undiscoverable even
+                  with one.
+                -->
+                <button
+                  type="button"
+                  class="edit"
+                  data-search-key="action:edit-book"
+                  aria-label={phrases().editBook(book.code)}
+                  onclick={() => void session.editBook(book.path)}>✎</button
+                >
                 <span class="nudge">
                   <button
                     type="button"
@@ -283,6 +297,22 @@
     display: flex;
     flex-direction: column;
     gap: 1px;
+  }
+  .edit {
+    flex: none;
+    inline-size: 20px;
+    block-size: 20px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--mut);
+    font: 11px/1 var(--sans);
+    cursor: pointer;
+  }
+  .edit:hover {
+    color: var(--ink);
+    border-color: var(--line2);
   }
   .nudge button {
     inline-size: 20px;

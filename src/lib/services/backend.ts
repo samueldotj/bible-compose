@@ -306,6 +306,16 @@ export interface Backend {
    */
   openPdf(path: string): Promise<void>;
   /**
+   * Open one book's USFM in easy-usfm (the editor this application carries).
+   *
+   * The two share the engine that reads USFM, so a diagnostic means the same
+   * thing in both — this is the short way between seeing a warning against a
+   * book and being in the file that caused it. The shell refuses a path that
+   * is not inside the open project, so this takes a book's own path and
+   * nothing else.
+   */
+  openInEditor(path: string): Promise<void>;
+  /**
    * Open a web address in the machine's browser.
    *
    * Not by following a link: this is a webview showing the application, so a
@@ -396,6 +406,7 @@ export const tauriBackend: Backend = {
   closeProject: () => invoke("close_project"),
   openFolder: (path) => invoke("open_folder", { path }),
   openPdf: (path) => invoke("open_pdf", { path }),
+  openInEditor: (path) => invoke("open_in_editor", { path }),
   openUrl: (url) => invoke("open_url", { url }),
   presets: () => invoke("presets"),
   headFields: () => invoke("head_fields"),

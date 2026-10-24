@@ -1,0 +1,12 @@
+This directory stands in for a real easy-usfm build so that
+`cargo build --features embedded-editor` compiles without one.
+
+A build that reaches this file at run time is misconfigured: it was compiled to
+carry the editor but nothing was carried. `editor::locate()` detects this file
+by name and reports it.
+
+To stage a real one, build easy-usfm (`npm run build` then
+`cargo build --release -p easy-usfm-tauri`) and set BIBLECOMPOSE_EDITOR_BUNDLE
+to a directory holding the result — on Windows that is the single
+`easy-usfm-tauri.exe`; on macOS the `.app`, and on Linux the AppImage beside
+whatever it needs.

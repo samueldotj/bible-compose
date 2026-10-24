@@ -278,6 +278,8 @@ export interface Chrome {
  */
 export interface Phrases {
   readonly includeBook: (code: string) => string;
+  /** `Edit Genesis in easy-usfm`, on the pencil beside a book. */
+  readonly editBook: (code: string) => string;
   readonly moveEarlier: (code: string) => string;
   readonly moveLater: (code: string) => string;
   readonly resetSetting: (label: string) => string;
@@ -747,6 +749,7 @@ export const EN: Catalogue = {
   },
   phrases: {
     includeBook: (code) => `Include ${code}`,
+    editBook: (code) => `Edit ${code} in easy-usfm`,
     moveEarlier: (code) => `Move ${code} earlier`,
     moveLater: (code) => `Move ${code} later`,
     resetSetting: (label) => `Reset ${label}`,

@@ -39,6 +39,7 @@ use tauri::{Emitter, Manager};
 const BUILD_EVENT: &str = "build";
 
 mod download;
+pub mod editor;
 
 // ---------------------------------------------------------------- wire types
 
@@ -629,6 +630,56 @@ fn open_folder(path: String) -> Result<(), Vec<WireDiagnostic>> {
 /// registered application. `cmd /c start` would do the same and would also put
 /// the path through a shell — for a filename this application chose that is
 /// safe today and is one refactor away from not being.
+/// Open one book's USFM in easy-usfm (GUI-009's neighbour).
+///
+/// The editor this application carries, started on that file — see
+/// [`editor`] for where it comes from and why the launching lives in the
+/// shell rather than in the crate that composes a page.
+///
+/// The path is checked against the open project rather than trusted. It comes
+/// from this application's own book list today, but a command reachable from
+/// the webview is a command that can be called with anything, and "start a
+/// program on this path" is not something to leave open to whatever a
+/// publication's text might one day contain.
+#[tauri::command]
+fn open_in_editor(
+    path: String,
+    session: tauri::State<'_, Arc<Session>>,
+) -> Result<(), Vec<WireDiagnostic>> {
+    let path = Utf8PathBuf::from(path);
+    let root = session
+        .watched
+        .lock()
+        .expect("the session lock is not poisoned")
+        .as_ref()
+        .map(|(root, _)| root.clone());
+
+    let refuse = |message: String, help: &str| {
+        vec![WireDiagnostic::from(
+            &AppDiagnostic::error(biblecompose_diagnostics::code::NOT_FOUND, message).help(help),
+        )]
+    };
+
+    let Some(root) = root else {
+        return Err(refuse(
+            "no project is open".to_owned(),
+            "open a project before editing one of its books",
+        ));
+    };
+
+    // Inside the project, and said in components rather than characters: a
+    // `..` walks back out of a path that still begins with the root, and
+    // `starts_with` compares components and would be satisfied by it.
+    if path.components().any(|c| c.as_str() == "..") || !path.starts_with(&root) {
+        return Err(refuse(
+            format!("{path} is not inside the open project"),
+            "only the books of the open project can be opened for editing",
+        ));
+    }
+
+    editor::open(&path).map_err(|e| vec![WireDiagnostic::from(&e)])
+}
+
 #[tauri::command]
 fn open_pdf(path: String) -> Result<(), Vec<WireDiagnostic>> {
     let path = Utf8PathBuf::from(path);
@@ -1753,6 +1804,7 @@ pub fn run() {
             close_project,
             open_folder,
             open_pdf,
+            open_in_editor,
             open_url,
             presets,
             head_fields,

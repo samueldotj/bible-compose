@@ -48,6 +48,8 @@ export const EN_HELP: Readonly<Record<string, string>> = {
   "action:theme": "Light, dark, or whatever the system says. Kept on this machine, not in the project.",
   "action:reload": "Files in the project folder have changed since it was read. Read them again.",
   "action:open-folder": "Show the output folder — or the project's folder, before anything has been built — in the file manager.",
+  "action:edit-book":
+    "Open this book’s USFM in easy-usfm, the editor this application carries. Double-clicking the book does the same.",
   "action:open-pdf": "Open the PDF the last build wrote, in the machine's own viewer.",
   "action:spread": "Show the two pages a reader meets together, or one page alone.",
   "action:fit": "Fit the page to the room it has, or show it at a fixed size.",

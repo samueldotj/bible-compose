@@ -269,6 +269,7 @@ dependencies = [
  "biblecompose-scripture",
  "biblecompose-testkit",
  "camino",
+ "rust-embed",
  "serde",
  "serde_json",
  "tauri",

@@ -584,6 +584,14 @@ export class Session {
 
   async build(): Promise<void> {
     if (!this.project || this.building) return;
+    // **Starting a build shows the build.** Everything worth watching from
+    // here — the state, the progress, the log, the diagnostics and the path
+    // the PDF went to — is on that one section, and a publisher who pressed
+    // Generate PDF from the top bar was left looking at whichever section
+    // they happened to be in. Here rather than on the button, so the palette
+    // and the keyboard reach it too; the Build section's own button sets what
+    // is already set.
+    this.pane = "build";
     this.#forgetBuild();
     this.building = true;
     this.built = true;

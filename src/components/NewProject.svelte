@@ -12,9 +12,11 @@
    * dropdown. `project.language` takes any BCP-47 tag, and a publisher setting
    * a language that is not in anybody's list is the ordinary case in this
    * field — a dropdown would be the application telling them their language
-   * does not exist.
+   * does not exist. The list offers names and `resolveLanguage` turns the one
+   * that was picked back into its tag, so the field can be searched the way a
+   * person thinks of their language rather than the way the file stores it.
    */
-  import { LANGUAGES } from "../lib/languages";
+  import { LANGUAGES, resolveLanguage } from "../lib/languages";
   import { backend, type Diagnostic } from "../lib/services/backend";
   import { session } from "../lib/session.svelte";
   import { t } from "../lib/i18n";
@@ -24,7 +26,7 @@
 
   let parent = $state("");
   let name = $state("");
-  let language = $state("en");
+  let language = $state("English");
   let refused = $state<Diagnostic[]>([]);
   let working = $state(false);
 
@@ -39,7 +41,7 @@
   async function create(): Promise<void> {
     if (!ready) return;
     working = true;
-    refused = await session.create(parent, folder, language.trim());
+    refused = await session.create(parent, folder, resolveLanguage(language));
     working = false;
     if (refused.length === 0) onclose();
   }
@@ -82,9 +84,17 @@
       <label class="field">
         <span class="kicker">{t("language")}</span>
         <input type="text" class="input" list="bc-languages" bind:value={language} placeholder={t("languageTagHint")} spellcheck="false" />
+        <!--
+          The name is the option's *value*, because that is what the browser
+          filters its suggestions on: with the tag there, typing "Hindi"
+          matched nothing and the only way to reach a language was to scroll
+          the whole list. `resolveLanguage` turns the name back into the tag on
+          the way out, so what reaches `biblecompose.toml` is still BCP-47 and
+          a publisher who knows their tag can still type it.
+        -->
         <datalist id="bc-languages">
           {#each LANGUAGES as l (l.tag)}
-            <option value={l.tag}>{l.name}</option>
+            <option value={l.name} label={l.tag}></option>
           {/each}
         </datalist>
       </label>

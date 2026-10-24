@@ -516,7 +516,7 @@ export const EN: Catalogue = {
     creates: "Creates ",
     create: "Create",
     creating: "Creating…",
-    languageTagHint: "a BCP-47 tag, such as ta",
+    languageTagHint: "a language, or a BCP-47 tag such as ta",
     language: "Language",
     noUsfmHere: "This folder has no USFM in it.",
     noProjectOpen: "No project open.",

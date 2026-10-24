@@ -2,8 +2,8 @@
   /**
    * One line along the bottom of the window.
    *
-   * From the left: what the build is doing, and where the PDF goes or went,
-   * with the two links that open them. Under the pointer, the line instead
+   * From the left: what the build is doing, and where the PDF goes or went —
+   * the path itself opens it. Under the pointer, the line instead
    * says what the control it is on does — a setting, a section, a style
    * property, a template — so the window explains itself without a manual.
    * At the right, the two questions about the next build.
@@ -13,7 +13,7 @@
   import { labelFor } from "../lib/labels";
   import { session } from "../lib/session.svelte";
   import { labelForSelector } from "../lib/styles";
-  import { locale, phrases, t } from "../lib/i18n";
+  import { locale, phrases } from "../lib/i18n";
 
   function explain(key: string | null): string | null {
     if (key === null) return null;
@@ -67,17 +67,19 @@
     <span class="help">{help}</span>
   {:else}
     {#if session.output}
-      <span class="mono path" title={session.output}>{phrases().wrote(session.output)}</span>
-      <button type="button" class="link" data-search-key="action:open-pdf" onclick={() => void session.showPdf()}>
-        {t("openPdf")}
+      <!--
+        **The path is the control, and it carries no `data-search-key` on
+        purpose.** The help above replaces this whole branch, so anything
+        tagged here unmounts the moment the pointer arrives — which is what
+        made the two buttons that used to sit along this line impossible to
+        click, rather than merely hard to. The actions keep their keys on the
+        Build inspector's copies, which is where the search looks for them.
+      -->
+      <button type="button" class="link mono path" title={session.output} onclick={() => void session.showPdf()}>
+        {phrases().wrote(session.output)}
       </button>
     {:else if session.project}
       <span class="mono path" title={session.project.output}>→ {session.project.output}</span>
-    {/if}
-    {#if session.project}
-      <button type="button" class="link" data-search-key="action:open-folder" onclick={() => void session.showFolder()}>
-        {t("openFolder")}
-      </button>
     {/if}
   {/if}
 

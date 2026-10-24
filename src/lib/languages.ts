@@ -54,6 +54,24 @@ export const LANGUAGES: readonly Language[] = [
   { tag: "gu", name: "ગુજરાતી — Gujarati" },
   { tag: "pa", name: "ਪੰਜਾਬੀ — Punjabi" },
   { tag: "or", name: "ଓଡ଼ିଆ — Odia" },
+  { tag: "as", name: "অসমীয়া — Assamese" },
+  { tag: "mai", name: "मैथिली — Maithili" },
+  { tag: "sat", name: "ᱥᱟᱱᱛᱟᱲᱤ — Santali" },
+  { tag: "kok", name: "कोंकणी — Konkani" },
+  { tag: "sd", name: "سنڌي — Sindhi" },
+  { tag: "ks", name: "کٲشُر — Kashmiri" },
+  { tag: "doi", name: "डोगरी — Dogri" },
+  { tag: "mni", name: "ꯃꯤꯇꯩꯂꯣꯟ — Meitei" },
+  { tag: "brx", name: "बड़ो — Bodo" },
+  { tag: "sa", name: "संस्कृतम् — Sanskrit" },
+  { tag: "bho", name: "भोजपुरी — Bhojpuri" },
+  { tag: "awa", name: "अवधी — Awadhi" },
+  { tag: "mag", name: "मगही — Magahi" },
+  { tag: "hne", name: "छत्तीसगढ़ी — Chhattisgarhi" },
+  { tag: "tcy", name: "ತುಳು — Tulu" },
+  { tag: "lus", name: "Mizo" },
+  { tag: "kha", name: "Khasi" },
+  { tag: "grt", name: "Garo" },
   { tag: "si", name: "සිංහල — Sinhala" },
   { tag: "ne", name: "नेपाली — Nepali" },
   { tag: "ur", name: "اردو — Urdu" },
@@ -73,4 +91,36 @@ export const LANGUAGES: readonly Language[] = [
 /** The name for a tag, when the list happens to know one. */
 export function languageName(tag: string): string | undefined {
   return LANGUAGES.find((l) => l.tag === tag.trim())?.name;
+}
+
+/** Case-folded and stripped, for comparing one typed word with one listed. */
+function fold(text: string): string {
+  return text.trim().toLowerCase();
+}
+
+/**
+ * The tag for whatever somebody typed in the language field.
+ *
+ * The list offers names and the setting takes tags, so the two have to meet
+ * somewhere, and this is the place. A name from the list becomes its tag;
+ * anything else is passed through untouched, because the field is deliberately
+ * open and `bho` typed by someone who knows the tag must stay `bho`.
+ *
+ * Either side of the dash matches, so "Hindi" and "हिन्दी" both land on `hi` —
+ * which is the whole point. Before this, the list filtered on the tag, so
+ * typing a language's name offered nothing at all and a publisher had to
+ * scroll past two dozen entries to reach their own.
+ */
+export function resolveLanguage(typed: string): string {
+  const text = typed.trim();
+  if (text === "") return text;
+  const wanted = fold(text);
+  for (const l of LANGUAGES) {
+    if (fold(l.name) === wanted) return l.tag;
+    const dash = l.name.indexOf("—");
+    if (dash < 0) continue;
+    if (fold(l.name.slice(0, dash)) === wanted) return l.tag;
+    if (fold(l.name.slice(dash + 1)) === wanted) return l.tag;
+  }
+  return text;
 }

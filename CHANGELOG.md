@@ -2,6 +2,15 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
+## 0.2.1
+
+Housekeeping, so the build is trusted again.
+
+* **CI is green on every platform.** The Linux jobs now install the GTK and
+  WebKit packages the window links, the corpus is pinned to LF so a Windows
+  checkout cannot change its checksums, and two tests follow the files the
+  new window renamed. Nothing in the application changed.
+
 ## 0.2.0
 
 The window, rebuilt around the page.

@@ -67,17 +67,31 @@ say "ICU and the C++ runtime from MSYS2, not Fedora"
 # dictionaries for scripts written without spaces. MSYS2 packages are plain
 # zstd tarballs; no MSYS2 installation is needed to use one.
 cd "$WORK"
-fetch_msys2 () {  # $1 = package name glob, extracts into $2
-  local p
-  p=$(curl -s https://repo.msys2.org/mingw/mingw64/ \
-      | grep -oE "$1-[0-9][^\"]*\.pkg\.tar\.zst" | sort -V | tail -1)
+INDEX=$(curl -s https://repo.msys2.org/mingw/mingw64/)
+fetch_msys2 () {  # $1 = package name, extracts into $2; false if there is none
+  local enc p
+  # The index writes `+` as `%2B`, so `libstdc++` has to be asked for that way.
+  enc=$(printf '%s' "$1" | sed 's/+/%2B/g')
+  p=$(printf '%s' "$INDEX" | grep -oE "$enc-[0-9][^\"]*\.pkg\.tar\.zst" | sort -V | tail -1)
+  if [ -z "$p" ]; then
+    echo "  (no $1 package today)"
+    return 1
+  fi
   [ -f "$p" ] || curl -sLO "https://repo.msys2.org/mingw/mingw64/$p"
   mkdir -p "$2" && tar --use-compress-program=unzstd -xf "$p" -C "$2"
   echo "  $p"
 }
-fetch_msys2 mingw-w64-x86_64-icu       "$WORK/msys2icu"
-fetch_msys2 mingw-w64-x86_64-gcc-libs  "$WORK/msys2gcc"
-fetch_msys2 mingw-w64-x86_64-libwinpthread-git "$WORK/msys2gcc"
+fetch_msys2 mingw-w64-x86_64-icu "$WORK/msys2icu"
+# The GCC runtime. It was one package, `gcc-libs`, until MSYS2 split it at
+# 16.2.0-4 into libgcc, libstdc++, libatomic, libgomp and libquadmath, with
+# `gcc-libs` left as a name that installs them. A stage built the week after
+# the split carried Fedora's libstdc++ and no libatomic, and ICU would not
+# load on a Windows machine. Every one of these is asked for, and the ones
+# the repository does not have today are not an error — the DLL check at the
+# end is what says whether the runtime is whole.
+for pkg in gcc-libs libgcc libstdc++ libatomic libgomp libquadmath libwinpthread-git; do
+  fetch_msys2 "mingw-w64-x86_64-$pkg" "$WORK/msys2gcc" || true
+done
 
 # Retire Fedora's ICU so pkg-config cannot find it, then install MSYS2's.
 mkdir -p "$WORK/icu-retired"
@@ -247,6 +261,29 @@ done
 # the C++ runtime must come from MSYS2 as well. Skipping this fails at load with
 # "The specified procedure could not be found", naming neither library nor cause.
 cp "$WORK"/msys2gcc/mingw64/bin/*.dll "$ST/"
+
+# Every import of every module resolves to a file in the stage or to Windows
+# itself. The closure walk above copies what Fedora has and says nothing about
+# what it has not, and a DLL that is simply absent fails on the target machine
+# as "error loading module" with no name after it. Caught here, on the
+# machine that built the stage, with the names.
+say "every import resolves"
+SYSTEM_DLLS='^(api-ms-win-|ext-ms-)|^(kernel32|kernelbase|user32|advapi32|shell32|ole32|oleaut32|ws2_32|wsock32|msvcrt|ucrtbase|bcrypt|crypt32|gdi32|gdiplus|comdlg32|shlwapi|userenv|ntdll|rpcrt4|secur32|iphlpapi|dbghelp|imm32|winmm|version|psapi|setupapi|netapi32|dnsapi|ncrypt|comctl32|uxtheme|dwmapi|winspool|mpr|wldap32|normaliz|powrprof|cfgmgr32|propsys|synchronization)\.dll$'
+unresolved=0
+while IFS= read -r f; do
+  while IFS= read -r d; do
+    lc=$(printf '%s' "$d" | tr '[:upper:]' '[:lower:]')
+    find "$ST" -maxdepth 1 -iname "$d" | grep -q . && continue
+    printf '%s' "$lc" | grep -qE "$SYSTEM_DLLS" && continue
+    echo "  $(basename "$f") needs $d, which is not in the stage"
+    unresolved=1
+  done < <($OD -p "$f" 2>/dev/null | sed -n 's/^[[:space:]]*DLL Name:[[:space:]]*//p')
+done < <(find "$ST" -name '*.dll' -o -name '*.exe' -o -name '*.so')
+if [ "$unresolved" -ne 0 ]; then
+  echo "the stage would not load on a Windows machine"
+  exit 1
+fi
+echo "  every module's imports are in the stage or in Windows"
 
 printf '  %s files, %s, %s DLLs\n' \
   "$(find "$ST" -type f | wc -l)" "$(du -sh "$ST" | cut -f1)" \

@@ -2,6 +2,15 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
+## 0.2.2
+
+* **The Windows runtime is whole again.** MSYS2 split the GCC runtime that
+  SILE's ICU needs into separate packages, and the 0.2.1 build, made after
+  the split, left libstdc++ and libatomic out — so its typesetter would not
+  load on a fresh Windows machine and no 0.2.1 was published. The
+  cross-build now fetches every piece and refuses to stage a runtime with
+  an import nothing in it satisfies.
+
 ## 0.2.1
 
 Housekeeping, so the build is trusted again.

@@ -197,8 +197,31 @@ once, the unpacked one is under the cache directory:
 
 ```bash
 node scripts/stage-backend.mjs <runtime> stage
-BIBLECOMPOSE_SILE_BUNDLE="$PWD/stage" npx tauri build --features embedded-sile
+node scripts/stage-editor.mjs ../easy-usfm editor-stage
+BIBLECOMPOSE_SILE_BUNDLE="$PWD/stage" \
+  BIBLECOMPOSE_EDITOR_BUNDLE="$PWD/editor-stage" \
+  npx tauri build --features embedded-sile,embedded-editor
 ```
 
 Without `--features embedded-sile` the window is a shell that expects to find
 SILE on the machine, which is right for development and wrong for a publisher.
+
+`embedded-editor` is the same bargain for easy-usfm, which the window opens a
+book's USFM in. Without it, double-clicking a book reports that this build
+carries no editor — unless `BIBLECOMPOSE_EDITOR` points at one, which is how a
+development machine does it.
+
+**Stage the editor with `tauri build`, never with `cargo build`.** A Tauri
+application decides at build time where its interface comes from, and only the
+CLI switches it to the compiled-in assets; a cargo release build leaves it
+pointing at `devUrl`. Such a binary runs, opens a window, accepts the file it
+was handed, and then shows *"Hmmm… can't reach this page"* on every machine
+with nothing serving port 1420. `stage-editor.mjs` builds it the right way, and
+`--verify` refuses a stage built the wrong way by looking for the hashed asset
+name Vite gave the entry chunk — which a production build carries and a cargo
+build has nowhere in it.
+
+Checking for `devUrl` instead looks like the obvious test and does not work:
+`generate_context!` compiles the whole of `tauri.conf.json` into every build,
+so `localhost:1420` is in a correct production binary too. Both of those
+mistakes were made while this was written, the second one three times.

@@ -281,6 +281,36 @@ mod tests {
         assert!(err.message.contains(EDITOR_ENV), "{}", err.message);
     }
 
+    /// **The carried editor unpacks, and the second look is the warm one.**
+    ///
+    /// Only compiled when the feature is on, and it asserts whichever of the
+    /// two shapes that build has: a real stage unpacks to a runnable
+    /// executable, and the placeholder — which is what `cargo build
+    /// --features embedded-editor` gets without a stage, so that the feature
+    /// type-checks in CI — says so in a sentence rather than unpacking
+    /// nothing and failing later at a launch.
+    #[cfg(feature = "embedded-editor")]
+    #[test]
+    fn the_carried_editor_unpacks_and_is_then_found_warm() {
+        match unpack() {
+            Ok(exe) => {
+                assert!(exe.is_file(), "{exe} should be a file");
+                let size = std::fs::metadata(exe.as_std_path()).expect("metadata").len();
+                assert!(size > 1_000_000, "{exe} is only {size} bytes");
+                assert!(exe.as_str().ends_with(EXE_NAME), "{exe}");
+                // Again: the same answer, and nothing rewritten.
+                assert_eq!(unpack().expect("the warm path"), exe);
+            }
+            Err(e) => {
+                assert!(
+                    e.message.contains("without an editor to carry"),
+                    "a build with no stage should say so: {}",
+                    e.message
+                );
+            }
+        }
+    }
+
     /// A book that is not there is said so before anything is started.
     #[test]
     fn a_file_that_is_not_there_is_refused_without_launching_anything() {

@@ -29,6 +29,14 @@ on:
     tags: ["v*"]
 
 env:
+  # **Which easy-usfm the installers carry.** The window opens a book's USFM
+  # in that editor and ships it (ADR-001 shares the engine between the two,
+  # not a release schedule), so a build has to say which one. `main` means
+  # the editor in an installer is whatever main was on the day — pin this to
+  # a tag for a release, the way `usfm3`, the SILE revision and the font
+  # catalogue's commit are all pinned, and for the same reason: a user
+  # reporting a bug should be reporting it about something nameable.
+  EASY_USFM_REF: main
   CARGO_TERM_COLOR: always
   SILE_REF: ${{ inputs.sile_ref || 'v0.15.13' }}
 
@@ -48,7 +56,12 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
+      # `wasm32` because the editor staged below builds its own interface
+      # with `wasm-pack` before Tauri is handed it.
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: jetli/wasm-pack-action@v0.4.0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -187,6 +200,7 @@ jobs:
         shell: bash
         env:
           BIBLECOMPOSE_SILE_BUNDLE: ${{ github.workspace }}/stage
+          BIBLECOMPOSE_EDITOR_BUNDLE: ${{ github.workspace }}/editor-stage
         run: cargo build --release --bin biblecompose --features biblecompose-sile/embedded-sile
 
       # -------------------------------------------------------- the criterion
@@ -378,6 +392,30 @@ jobs:
 
       - run: npm ci
 
+      # ------------------------------------------------------------- editor
+      #
+      # A second checkout rather than a submodule: the two repositories share
+      # a crate (ADR-001) and not a history, and a submodule would tie every
+      # commit here to one there.
+      - uses: actions/checkout@v4
+        with:
+          repository: samueldotj/easy-usfm
+          ref: ${{ env.EASY_USFM_REF }}
+          path: easy-usfm
+
+      - name: the editor's own dependencies
+        working-directory: easy-usfm
+        run: npm ci
+
+      # **`tauri build`, never `cargo build`** — the reason is written over
+      # `scripts/stage-editor.mjs`, and the script refuses a stage built the
+      # wrong way rather than letting it ship.
+      - name: stage the editor
+        run: node scripts/stage-editor.mjs easy-usfm editor-stage
+
+      - name: the staged editor carries its own interface
+        run: node scripts/stage-editor.mjs --verify editor-stage
+
       # ------------------------------------------------------------ signing
       #
       # **Windows signing is configuration, not an environment variable.** The
@@ -451,9 +489,9 @@ jobs:
           done
 
           if [ -n "${TAURI_EXTRA_CONFIG:-}" ]; then
-            npx tauri build --features embedded-sile --config "$TAURI_EXTRA_CONFIG"
+            npx tauri build --features embedded-sile,embedded-editor --config "$TAURI_EXTRA_CONFIG"
           else
-            npx tauri build --features embedded-sile
+            npx tauri build --features embedded-sile,embedded-editor
           fi
 
       # Notarization is run here rather than left to the bundler, because what

@@ -124,7 +124,11 @@ jobs:
   # and building it for those is P5.7.
   backend:
     name: end-to-end with a real SILE
-    runs-on: ubuntu-latest
+    # Pinned, not `ubuntu-latest`: the upstream SILE 0.15.13 binary links
+    # ICU 70 (`libicui18n.so.70`), which the 24.04 image carries and the
+    # 26.04 image that `ubuntu-latest` became in October 2026 does not. Move
+    # this when the pinned SILE is one built against a newer ICU.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

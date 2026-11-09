@@ -88,7 +88,7 @@ pub fn class_options_with(
     put(
         "fontfile",
         match body_font {
-            Some(font) if font.from_project => quoted(&font.path.to_string()),
+            Some(font) if font.from_project => quoted(font.path.as_str()),
             // A system font is named, so the backend picks the face for the
             // weight and style each run asks for rather than being pinned to
             // the one file this check happened to read.

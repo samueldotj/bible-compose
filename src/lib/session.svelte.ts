@@ -447,6 +447,21 @@ export class Session {
     }
   }
 
+  /**
+   * Give the project a title page and a copyright page to edit. The project
+   * is reread with the new book in it; a refusal is shown as a fault.
+   */
+  async addFrontMatter(): Promise<void> {
+    if (!this.project) return;
+    try {
+      this.project = await backend().addFrontMatter(this.project.root);
+    } catch (e: unknown) {
+      this.fault = asDiagnostics(e)
+        .map((d) => d.message)
+        .join(" ");
+    }
+  }
+
   async showFolder(): Promise<void> {
     const path = this.folderToOpen;
     if (!path) return;

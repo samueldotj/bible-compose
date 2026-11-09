@@ -117,6 +117,52 @@ weight = 600
 space_above = "6pt"
 space_below = "2pt"
 
+# `\mt1`–`\mt4` on a title page. In a book of Scripture `\mt` is the book's
+# name and is never set from here; in the front matter it is the title of the
+# publication, set large, centred and alone on the page, and these are the
+# four lines a title page conventionally has — the title, the edition, the
+# translation or publisher, and a line of small print. Sizes rather than
+# weights down the hierarchy, for the reason the section headings give.
+[heading.mt1]
+font_size = "24pt"
+weight = 600
+space_above = "0pt"
+space_below = "14pt"
+align = "center"
+
+[heading.mt2]
+font_size = "14pt"
+weight = 400
+space_above = "0pt"
+space_below = "10pt"
+align = "center"
+
+[heading.mt3]
+font_size = "11pt"
+weight = 400
+italic = true
+space_above = "0pt"
+space_below = "8pt"
+align = "center"
+
+[heading.mt4]
+font_size = "9.2pt"
+weight = 400
+italic = false
+space_above = "0pt"
+space_below = "6pt"
+align = "center"
+
+# ------------------------------------------------------------- paragraphs
+#
+# Most paragraph markers are body text and are not here. `\pc` is the one
+# whose whole meaning is its alignment — a centred paragraph, which is what a
+# copyright page is made of — and until the front matter it was being set as
+# body text, flush left, with nothing in the corpus to show it.
+
+[paragraph.pc]
+align = "center"
+
 # ----------------------------------------------------------------- poetry
 #
 # Nine points per level, which is what the M0 class used. Each level is

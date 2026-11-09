@@ -48,6 +48,7 @@ pub fn normalize(code: BookCode, path: &Utf8Path, document: &Document) -> (Book,
     let mut cx = Cx {
         path,
         document,
+        peripheral: code.is_peripheral(),
         diagnostics: Diagnostics::new(),
         hoisted: Vec::new(),
     };
@@ -78,6 +79,10 @@ pub fn normalize(code: BookCode, path: &Utf8Path, document: &Document) -> (Book,
 struct Cx<'a> {
     path: &'a Utf8Path,
     document: &'a Document,
+    /// Whether this is front matter rather than Scripture. One marker reads
+    /// differently: `\mt` names a book of Scripture and titles a page of
+    /// front matter.
+    peripheral: bool,
     diagnostics: Diagnostics,
     /// Figures found while walking inline content.
     ///
@@ -133,7 +138,11 @@ impl Cx<'_> {
                     return;
                 };
 
-                if self.book_name(marker, node, names) {
+                // `\mt1 The Holy Bible` on a title page is the title page's
+                // title, set on the page; in a book of Scripture the same
+                // marker names the book and goes into `names` instead.
+                let page_title = self.peripheral && is_major_title(marker);
+                if !page_title && self.book_name(marker, node, names) {
                     return;
                 }
 
@@ -205,6 +214,23 @@ impl Cx<'_> {
 
             NodeKind::Figure => blocks.push(Block::Figure(self.figure(node))),
 
+            // `\periph` — a page of front matter. An anchor waiting for a
+            // block is not this division's: it belongs to what came before.
+            NodeKind::Periph => {
+                if !pending.is_empty() {
+                    blocks.push(Block::Paragraph {
+                        style: ParaStyle::P,
+                        content: std::mem::take(pending),
+                    });
+                }
+                self.divisions(node, names, blocks);
+            }
+
+            // The whitespace the parser keeps between a marker and the
+            // next line. Not content: carried into a paragraph it would be
+            // a leading space in a title.
+            NodeKind::Text if node.text.as_deref().is_some_and(|t| t.trim().is_empty()) => {}
+
             // Anything else at top level is inline content the parser placed
             // outside a paragraph — malformed, but the text is still the
             // author's and must survive.
@@ -217,6 +243,46 @@ impl Cx<'_> {
         // A figure found inside the block just handled belongs after it, not
         // at the end of the book.
         blocks.append(&mut self.hoisted);
+    }
+
+    /// One `\periph` and every one after it, as sibling divisions.
+    ///
+    /// The parser closes a `\periph` only at the end of the file, so the
+    /// second division arrives as the last child of the first, the third as
+    /// the last child of the second, and so on down. That is a faithful
+    /// record of a marker with no closing form; it is not what a division
+    /// *is*, which is the content between one `\periph` and the next. So a
+    /// nested `\periph` ends the division being built and starts the next
+    /// one beside it. Content after a nested division — which the parser
+    /// does not produce, but a tree is a tree — continues under the same
+    /// name rather than being lost.
+    fn divisions(&mut self, node: &Node, names: &mut BookNames, blocks: &mut Vec<Block>) {
+        let id = node.attribute("id").map(str::to_owned);
+        let title = node
+            .attribute("alt")
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+            .or(id.as_deref())
+            .unwrap_or_default()
+            .to_owned();
+
+        let mut content = Vec::new();
+        let mut pending: Vec<Inline> = Vec::new();
+        // The division is written once even when it is empty — `\periph
+        // Title Page` with nothing under it is still a page the publisher
+        // asked for and a bookmark they expect — and a continuation only
+        // when there is something to continue with.
+        let mut written = false;
+        for child in &node.children {
+            if child.kind == NodeKind::Periph {
+                written |=
+                    finish_division(&id, &title, &mut content, &mut pending, blocks, !written);
+                self.divisions(child, names, blocks);
+                continue;
+            }
+            self.top_level(child, names, &mut content, &mut pending);
+        }
+        finish_division(&id, &title, &mut content, &mut pending, blocks, !written);
     }
 
     /// `\h`, `\toc1`–`\toc3`, `\mt1`–`\mt4`. Returns whether it was one.
@@ -551,6 +617,44 @@ fn cell_span(marker: Option<&str>) -> u8 {
     match (digits(first), last.parse::<u8>()) {
         (Ok(from), Ok(to)) if to >= from => to - from + 1,
         _ => 1,
+    }
+}
+
+/// Close a division being built: an anchor still waiting becomes a paragraph
+/// of its own, and the division is pushed if it has content or if `force`
+/// says an empty one is still wanted. Returns whether anything was pushed.
+fn finish_division(
+    id: &Option<String>,
+    title: &str,
+    content: &mut Vec<Block>,
+    pending: &mut Vec<Inline>,
+    blocks: &mut Vec<Block>,
+    force: bool,
+) -> bool {
+    if !pending.is_empty() {
+        content.push(Block::Paragraph {
+            style: ParaStyle::P,
+            content: std::mem::take(pending),
+        });
+    }
+    if content.is_empty() && !force {
+        return false;
+    }
+    blocks.push(Block::Division {
+        id: id.clone(),
+        title: title.to_owned(),
+        content: std::mem::take(content),
+    });
+    true
+}
+
+/// `\mt`, `\mt1`–`\mt4` — and not `\mte`, which is a title at the *end* of
+/// a book, or `\mt1a`, which is nothing.
+fn is_major_title(marker: &str) -> bool {
+    match marker.strip_prefix("mt") {
+        Some("") => true,
+        Some(level) => level.len() == 1 && level.chars().all(|c| c.is_ascii_digit()),
+        None => false,
     }
 }
 

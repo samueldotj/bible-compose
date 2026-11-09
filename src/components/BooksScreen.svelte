@@ -10,13 +10,23 @@
    * list to search rather than to read.
    */
   import Toggle from "./ui/Toggle.svelte";
-  import { columns, drag, commitOrder, included, move, selectGroup, toggle } from "../lib/books.svelte";
+  import {
+    columns,
+    drag,
+    commitOrder,
+    frontMatter,
+    included,
+    move,
+    selectGroup,
+    toggle,
+  } from "../lib/books.svelte";
   import { session } from "../lib/session.svelte";
   import type { Testament } from "../lib/services/backend";
   import { phrases, t } from "../lib/i18n";
 
   let filter = $state("");
   const needle = $derived(filter.trim().toLowerCase());
+  const front = $derived(frontMatter());
   const matches = (b: { name: string; code: string }) =>
     needle === "" || b.name.toLowerCase().includes(needle) || b.code.toLowerCase().includes(needle);
 
@@ -49,7 +59,71 @@
 
   {#if session.books.length === 0}
     <p class="muted">{t("noUsfmHere")}</p>
-  {:else}
+  {/if}
+
+  <!--
+    The front matter: one book at most, always bound first, never reordered,
+    so a row of its own rather than a column. When the folder has none, the
+    row offers to write one — the only thing in this window that creates a
+    USFM file, and it says so in its help.
+  -->
+  <section class="front" aria-label={t("frontMatter")}>
+    <div class="colhead">
+      <span class="title">{t("frontMatter")}</span>
+    </div>
+    {#if front}
+      <ul>
+        <li
+          class:out={!front.included}
+          class:selected={session.selectedBook === front.code}
+          class:hidden={!matches(front)}
+          ondblclick={() => void session.editBook(front.path)}
+        >
+          <span class="grip" aria-hidden="true"></span>
+          <Toggle
+            checked={front.included}
+            disabled={!session.editable}
+            label={phrases().includeBook(front.code)}
+            onchange={(on) => toggle(front.code, on)}
+          />
+          <button
+            type="button"
+            class="row wide"
+            aria-current={session.selectedBook === front.code ? "true" : undefined}
+            onclick={() => (session.selectedBook = front.code)}
+          >
+            <span class="dot {status(front)}" aria-hidden="true"></span>
+            <span class="name">{front.name}</span>
+            <span class="mono code">{front.code}</span>
+            <span class="muted chapters">
+              {front.included ? front.sections.join(" · ") : "—"}
+            </span>
+          </button>
+          <button
+            type="button"
+            class="edit"
+            data-search-key="action:edit-book"
+            aria-label={phrases().editBook(front.code)}
+            onclick={() => void session.editBook(front.path)}>✎</button
+          >
+          <span class="nudge"></span>
+        </li>
+      </ul>
+    {:else}
+      <p class="muted none">
+        {t("noFrontMatter")}
+        <button
+          type="button"
+          class="link"
+          data-search-key="action:add-front-matter"
+          disabled={!session.editable}
+          onclick={() => void session.addFrontMatter()}>{t("addFrontMatter")}</button
+        >
+      </p>
+    {/if}
+  </section>
+
+  {#if session.books.length > 0}
     <div class="testaments">
       {#each columns() as column (column.id)}
         {@const codes = column.books.map((b) => b.code)}
@@ -189,6 +263,27 @@
   .filter {
     inline-size: 240px;
     block-size: 32px;
+  }
+  .front {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+  }
+  .front ul {
+    flex: none;
+    overflow: visible;
+  }
+  .front .row.wide {
+    grid-template-columns: auto 1fr 44px auto;
+  }
+  .none {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+    margin: 0;
+    padding: 10px 0;
+    font-size: 13px;
   }
   .testaments {
     flex: 1;

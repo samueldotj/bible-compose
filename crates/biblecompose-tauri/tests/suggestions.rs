@@ -99,7 +99,11 @@ fn every_testament_the_canon_has_gets_a_column() {
 
     let spellings: std::collections::BTreeSet<&str> =
         BookCode::all().map(|c| c.testament().as_str()).collect();
-    assert_eq!(spellings.len(), 3, "the canon's testaments: {spellings:?}");
+    assert_eq!(
+        spellings.len(),
+        4,
+        "the canon's three testaments and the front matter: {spellings:?}"
+    );
 
     let typed = std::fs::read_to_string(
         repo_root()

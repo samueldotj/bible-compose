@@ -185,6 +185,91 @@ pub fn create(parent: &Utf8Path, name: &str, language: &str) -> Result<Utf8PathB
     Ok(root)
 }
 
+/// The front matter's file, where [`add_front_matter`] writes it.
+pub const FRONT_MATTER_FILE: &str = "FRT.usfm";
+
+/// Give a project a title page and a copyright page to edit.
+///
+/// **The one place this application writes a `.usfm`**, and the reason it is
+/// allowed to: the file does not exist yet. BLD-004's promise is that a build
+/// never modifies its source, and every suite checks the checksum of every
+/// file it started with; this writes a file nobody started with, once, into a
+/// folder that has no front matter, when a publisher presses a button that
+/// says so. If the folder already has front matter — under this name or any
+/// other, since a book is its `\id` and not its filename (PRJ-003) — it
+/// refuses, because "add front matter" to a project that has some is a
+/// different verb.
+///
+/// What is written is a starter, not a template: USFM's own `FRT` book with
+/// two `\periph` divisions, the publication's name on the title page, and a
+/// copyright line with a space where the holder goes. The words are the
+/// publisher's to replace, in any USFM editor; the structure is what the
+/// build reads.
+pub fn add_front_matter(root: &Utf8Path) -> Result<Utf8PathBuf, Diagnostic> {
+    let path = root.join(FRONT_MATTER_FILE);
+    let refuse = |message: String, help: &str| {
+        Diagnostic::error(biblecompose_diagnostics::code::COULD_NOT_CREATE, message)
+            .at(SourceLoc::file(path.clone()))
+            .help(help)
+    };
+
+    if path.exists() {
+        return Err(refuse(
+            format!("{path} already exists"),
+            "edit the file that is there, or move it aside first",
+        ));
+    }
+    let found = discover(root);
+    if let Some(have) = found.books.iter().find(|b| b.book.is_peripheral()) {
+        return Err(refuse(
+            format!("{} already holds the front matter", have.path),
+            "edit that file; a publication has one FRT",
+        ));
+    }
+
+    let (settings, _) = settings(root);
+    let name = settings
+        .project
+        .name
+        .as_deref()
+        .map(|n| n.to_string())
+        .or_else(|| root.file_name().map(str::to_owned))
+        .unwrap_or_else(|| "The Holy Bible".to_owned());
+    let subject = settings.project.subject.as_deref().map(|s| s.to_string());
+    let author = settings.project.author.as_deref().map(|a| a.to_string());
+
+    let mut usfm = String::new();
+    usfm.push_str(&format!("\\id FRT Front matter for {name}\n"));
+    // No backslash in the remark: a marker named in passing is a marker.
+    usfm.push_str("\\rem Each periph line below starts a page. Edit the words; add a page with another one.\n");
+    usfm.push_str("\\h Front matter\n");
+    usfm.push_str("\\periph Title Page|id=\"title\"\n");
+    usfm.push_str(&format!("\\mt1 {name}\n"));
+    if let Some(subject) = &subject {
+        usfm.push_str(&format!("\\mt2 {subject}\n"));
+    }
+    if let Some(author) = &author {
+        usfm.push_str(&format!("\\mt3 {author}\n"));
+    }
+    usfm.push_str("\\periph Copyright|id=\"copyright\"\n");
+    usfm.push_str(&format!("\\pc {name}\n"));
+    match &author {
+        Some(author) => usfm.push_str(&format!(
+            "\\pc Copyright © {author}. All rights reserved.\n"
+        )),
+        None => usfm.push_str("\\pc Copyright © \n"),
+    }
+
+    std::fs::write(path.as_std_path(), usfm).map_err(|e| {
+        refuse(
+            format!("could not write {path}"),
+            "check that the folder can be written to",
+        )
+        .detail(e.to_string())
+    })?;
+    Ok(path)
+}
+
 /// Read the project's settings.
 ///
 /// CFG-001: a folder with no settings file is the common case and not an
@@ -387,7 +472,15 @@ pub fn load(root: &Utf8Path, plan: &BookPlan) -> Loaded {
 
     for found in selected {
         let parsed = biblecompose_scripture::usfm::parse(found.path.clone(), found.source);
-        diagnostics.extend(parsed.diagnostics);
+        // The parser reads front matter as a chapterless book of Scripture
+        // and says so, as an error. It is not one here: a title page has
+        // divisions, not chapters.
+        let peripheral = found.book.is_peripheral();
+        diagnostics.extend(
+            parsed.diagnostics.into_iter().filter(|d| {
+                !(peripheral && biblecompose_scripture::usfm::presumes_chapters(d.code))
+            }),
+        );
 
         let (book, normalized) = normalize(found.book, &found.path, &parsed.document);
         diagnostics.extend(normalized);

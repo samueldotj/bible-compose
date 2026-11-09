@@ -97,7 +97,7 @@ back.
 
 | Section | |
 |---|---|
-| **Books** | Which books, and in what order |
+| **Books** | Which books, and in what order; the front matter |
 | **Template** | Eight kinds of book to start from |
 | **Contents** | What appears — introductions, headings, chapter and verse numbers — and where books, chapters and verses start |
 | **Paragraph** | How a paragraph is set: justification, poetry indents, quotations, drop caps |
@@ -188,6 +188,41 @@ verses' length at the body size, not a trial setting, so it errs by a line
 now and then. In the file these are `contents.book_starts`,
 `contents.chapter_starts`, `contents.verse_starts` and
 `contents.start_verses`; in one column, "next column" is the next page.
+
+### A title page and a copyright page
+
+Front matter is a USFM book like the others, the peripheral book `FRT`, and
+it goes in the folder beside them. Inside it, each `\periph` starts a page:
+
+```
+\id FRT
+\h Front matter
+\periph Title Page|id="title"
+\mt1 The Holy Bible
+\mt2 Berean Standard Bible
+\periph Copyright|id="copyright"
+\pc Copyright © 2026 The Publisher. All rights reserved.
+\pc Scripture quotations may be reproduced …
+```
+
+If the project has none, **Books** offers **Add a title page and copyright
+page**, which writes exactly this file — with the publication's name on the
+title page and the publisher on the copyright line, where the settings say
+them — for you to edit. It is the one thing in BibleCompose that creates a
+USFM file, and it refuses when the project already has front matter.
+
+The front matter is bound first whatever the book order says, set in one
+column however many the body has, and its pages carry no running head and no
+page number. The first book of Scripture after it opens on a right-hand page
+numbered 1. Every `\periph` with an `id` is a bookmark in the PDF under its
+title. `\mt1`–`\mt4` on a title page are the `heading.mt1`–`mt4` styles,
+and `\pc` is `paragraph.pc`; everything else in the file sets as it would in
+a book. Paratext writes this file, so one from a translation project drops
+in as it is.
+
+A generated table of contents is not here yet: page numbers are not known
+until the books are set, and a hand-written list goes wrong the first time a
+font changes.
 
 ### The chapter number
 
@@ -290,7 +325,9 @@ styles need a bold, choose a family that lists one.
 
 **Your Scripture is never written to.** Not by a build, not by a settings
 change, not ever. Every acceptance test checks the checksum of every source
-file afterwards.
+file afterwards. The one USFM file BibleCompose writes is the starter front
+matter, a new file into a project that has none, when you press the button
+that says so.
 
 **Nothing needs the internet.** Not opening a project, not validating, not
 building. There is no HTTP client anywhere below the window, and the shipped

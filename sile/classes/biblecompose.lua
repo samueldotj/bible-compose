@@ -253,9 +253,13 @@ end
 
 -- Frames. `inner`/`outer` are resolved per master so the geometry mirrors
 -- across the spread, which is what makes a bound book read correctly.
-function class:_frameset (inner, outer)
+--
+-- `columns` overrides the project's count: the front matter is set in one
+-- column whatever the body is set in, because a title page in two columns is
+-- not a title page.
+function class:_frameset (inner, outer, columns)
    local o = self._bcopts
-   local twocol = o.columns >= 2
+   local twocol = (columns or o.columns) >= 2
    -- **The parentheses are load-bearing.** SILE's frame grammar makes `-`
    -- right-associative (`core/frameparser.lua`: `minus` recurses into
    -- `additive` on its right), so `100%ph - a - b` means `100%ph - (a - b)`.
@@ -417,6 +421,21 @@ function class:_init (options)
    self:registerPostinit(function (self_)
       local o = self_._bcopts
       self_.firstContentFrame = "contentA"
+      -- The front matter's pair: the same margins, one column. Defined
+      -- first, so that the body's pair below is what `SILE.frames` holds
+      -- when the document opens — `defineMaster` registers every frame it
+      -- builds under its id, last one wins, and the root element measures
+      -- `contentA` to set the emergency stretch.
+      self_:defineMaster({
+         id = "front-right",
+         firstContentFrame = "contentA",
+         frames = self_:_frameset(o.margininner, o.marginouter, 1),
+      })
+      self_:defineMaster({
+         id = "front-left",
+         firstContentFrame = "contentA",
+         frames = self_:_frameset(o.marginouter, o.margininner, 1),
+      })
       self_:defineMaster({
          id = "right",
          firstContentFrame = "contentA",
@@ -635,6 +654,12 @@ function class:newPage ()
    if options then
       options.maxHeight = note_ceiling()
    end
+   -- Kept off on every page, not only at the start. `open-spread` silences
+   -- the folio package for the blank page it inserts with `nofoliothispage`,
+   -- which the package honours by setting its switch to "once" and then,
+   -- having skipped that page, to *on* — so from the next page the package
+   -- would print a centred number of its own under the one this class sets.
+   SILE.scratch.counters.folio.off = true
    return plain.newPage(self)
 end
 
@@ -659,6 +684,11 @@ function class:endPage ()
    local blank = headers and headers.skipthispage
    if blank then
       headers.skipthispage = false
+   elseif SILE.scratch.biblecompose and SILE.scratch.biblecompose.in_front then
+      -- A page of front matter carries neither: a title page is not headed
+      -- with its own title, and the copyright page is not numbered. The
+      -- pages are counted — the body's folio restarts at 1 after them — and
+      -- the count is simply not printed, which is what a bound book does.
    else
       -- Which side of the spread this page is. `twoside` answers by the
       -- folio's parity; page 1 is a recto, as in every bound book.
@@ -2219,7 +2249,44 @@ function class:registerXmlCommands ()
       -- reaches `newPage`.
       local s = scratch()
       if s.books > 0 then
-         start_at(self._bcopts.bookstarts)
+         local where = self._bcopts.bookstarts
+         if s.after_front then
+            -- Out of the front matter and onto the body's page masters,
+            -- before the eject that lays out the page they apply to. A
+            -- column break or none at all cannot do it — the front's page
+            -- is one column and the body's may be two — so those become a
+            -- right-hand page, which is where a book of Scripture opens
+            -- after its front matter in any case.
+            self.oddPageMaster = "right"
+            self.evenPageMaster = "left"
+            if where == nil or where == "continuous" or where == "next_column" then
+               where = "right_page"
+            end
+         end
+         start_at(where)
+         if s.after_front then
+            -- **Built now, not left on the queue.** `supereject` pushes a
+            -- penalty and nothing builds the page until the next line of
+            -- text arrives — the body's first verse, by which time the
+            -- front flag is down and the folio has been reset, so the
+            -- copyright page went out headed "Genesis" and numbered 2.
+            -- Measured, on exactly that page. Leaving horizontal mode runs
+            -- the page builder, and the last page of the front matter goes
+            -- out while it is still the front matter.
+            SILE.typesetter:leaveHmode()
+         end
+      end
+      if s.after_front then
+         -- Every page of the front matter is out by now — `start_at` ejected
+         -- the last of them — so the pages from here on are the body's and
+         -- get their head and folio back.
+         s.after_front = false
+         s.in_front = false
+         -- Numbered from 1, as the body of a bound book is; the front
+         -- matter's pages were counted and not printed. On the side the page
+         -- is actually on, so a book a project opens on the left is page 2
+         -- rather than an odd number on a verso.
+         SILE.scratch.counters.folio.value = (self.oddPage and self:oddPage()) and 1 or 2
       end
       s.books = s.books + 1
       s.chapters_in_book = 0
@@ -2262,6 +2329,88 @@ function class:registerXmlCommands ()
          end
       end
       s.book_items = nil
+   end)
+
+   -- The front matter: USFM's `FRT`, as the emitter writes it. Set in one
+   -- column with no head and no folio, divided into pages by its divisions,
+   -- and followed by a book that opens on a right-hand page numbered 1.
+   --
+   -- Nothing here is a setting, and that is deliberate for a first release:
+   -- what a title page and a copyright page look like is decided by the
+   -- `\mt` and `\pc` styles in the sheet, and where they sit is decided by
+   -- convention. What a publisher can change is the words.
+   self:registerCommand("front", function (options, content)
+      local s = scratch()
+      -- The front's page masters from the next page on. When the front
+      -- matter is first, as it is bound to be, there is no next page yet —
+      -- page 1 is already laid out on the body's master — so it is switched
+      -- underneath the typesetter, which `switchMasterOnePage` does for a
+      -- page with nothing on it yet. When something precedes it, the eject
+      -- lays the new page out on these.
+      self.oddPageMaster = "front-right"
+      self.evenPageMaster = "front-left"
+      if s.books > 0 then
+         local where = self._bcopts.bookstarts
+         if where == nil or where == "continuous" or where == "next_column" then
+            where = "next_page"
+         end
+         start_at(where)
+         -- Built now, so the page before the front matter ends as a page of
+         -- the body — see the same call in `book`.
+         SILE.typesetter:leaveHmode()
+      else
+         self:switchMasterOnePage("front-right")
+      end
+      s.in_front = true
+      s.front_started = false
+      s.books = s.books + 1
+      s.chapters_in_book = 0
+      s.carried = nil
+      s.code = options.code or "FRT"
+      s.chapter = ""
+      -- Only element children, as `book` does: the whitespace between
+      -- divisions is the emitter's layout and not a paragraph.
+      elements(content)
+      -- Remembered rather than acted on: the pages of the front matter are
+      -- still in the typesetter, and the book after it is what ejects them.
+      s.after_front = true
+   end)
+
+   -- One page of the front matter. The first opens on the page the front
+   -- began on; each one after it opens a new page. Bookmarked under its own
+   -- title, so the outline reads "Title Page, Copyright, Genesis…" and the
+   -- front matter never appears in it under a name it does not print.
+   self:registerCommand("division", function (options, content)
+      local s = scratch()
+      if s.in_front then
+         if s.front_started then
+            start_at("next_page")
+            -- Built now, so the destination and bookmark below land on the
+            -- page this division opens rather than the one it closes.
+            SILE.typesetter:leaveHmode()
+         end
+         s.front_started = true
+         local id = options.id or ""
+         local dest = anchor(s.code, id)
+         if id ~= "" then
+            destination(dest, "chapter")
+            if options.title and options.title ~= "" and o_anchors() ~= "none" then
+               SILE.call("pdf:bookmark", { dest = dest, title = options.title, level = 1 })
+            end
+         end
+         -- A title sits in the upper third of its page rather than at the
+         -- head of it: the eye expects the title of a book about a third of
+         -- the way down, with more paper above it than a heading gets.
+         if id == "title" or id == "halftitle" then
+            local ok, frame = pcall(SILE.getFrame, "contentA")
+            if ok and frame then
+               skip((frame:height():tonumber() * 0.22) .. "pt")
+            end
+         end
+      end
+      -- In a book of Scripture a `\periph` is a division of nothing this
+      -- class lays out differently, so its content simply follows on.
+      elements(content)
    end)
 
    self:registerCommand("heading", function (options, content)

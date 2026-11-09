@@ -53,7 +53,11 @@ export interface Diagnostic {
  * Sent with each book rather than derived here: sixty-six codes divided into
  * testaments is exactly the sort of list that drifts when it is written twice.
  */
-export type Testament = "old" | "new" | "deuterocanon";
+/**
+ * Which group of the book list a book sits in. `front` is not a testament:
+ * it is the front matter, USFM's `FRT`, listed above the testaments.
+ */
+export type Testament = "front" | "old" | "new" | "deuterocanon";
 
 export interface BookSummary {
   readonly code: string;
@@ -71,6 +75,11 @@ export interface BookSummary {
    */
   readonly included: boolean;
   readonly testament: Testament;
+  /**
+   * The pages of the front matter, by title — `Title Page`, `Copyright`.
+   * Empty for a book of Scripture, which has chapters instead.
+   */
+  readonly sections: readonly string[];
 }
 
 /** Which control a setting needs, decided by the schema and not by the form. */
@@ -348,6 +357,12 @@ export interface Backend {
    * settings, and open it. Rejects with the reason, having created nothing.
    */
   createProject(parent: string, name: string, language: string): Promise<Project>;
+  /**
+   * Write a starter `FRT.usfm` — a title page and a copyright page — into a
+   * project that has no front matter, and reread it. Rejects, having written
+   * nothing, when the project already has some.
+   */
+  addFrontMatter(root: string): Promise<Project>;
   /** What has changed on disk since then (FUN-007). */
   changedFiles(): Promise<Changes>;
   /**
@@ -415,6 +430,7 @@ export const tauriBackend: Backend = {
   forgetProject: (root) => invoke("forget_project", { root }),
   createProject: (parent, name, language) =>
     invoke("create_project", { parent, name, language }),
+  addFrontMatter: (root) => invoke("add_front_matter", { root }),
   changedFiles: () => invoke("changed_files"),
   setSetting: (root, key, value) => invoke("set_setting", { root, key, value }),
   resetSetting: (root, key) => invoke("reset_setting", { root, key }),

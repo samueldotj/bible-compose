@@ -56,6 +56,8 @@ export const EN_HELP: Readonly<Record<string, string>> = {
   "action:mirror": "Copy the left page's six slots to the right page, swapped so outer stays outer.",
   "action:units": "The unit the measurements are shown and typed in. The file keeps whatever unit you type.",
   "action:apply-template": "Write this template's settings into the project. Asks first, because there is no undo for a settings file.",
+  "action:add-front-matter":
+    "Write a FRT.usfm into the project — a title page and a copyright page, each a \\periph — for you to edit. Only when the project has no front matter yet.",
   "action:include-all": "Put every book of this testament in the publication.",
   "action:clear": "Take every book of this testament out of the publication.",
   "action:restore-canonical": "Put the books back in the order the canon gives them, leaving the selection alone.",

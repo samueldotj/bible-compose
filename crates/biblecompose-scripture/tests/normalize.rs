@@ -21,6 +21,122 @@ fn book(src: &str) -> Book {
     run(src).0
 }
 
+/// The same, for the front matter.
+fn front(src: &str) -> Book {
+    let document = usfm_core::Document::parse(src);
+    let code = BookCode::parse("FRT").expect("FRT");
+    normalize(code, Utf8Path::new("FRT.usfm"), &document).0
+}
+
+/// The divisions of a book, as `(id, title, blocks)`.
+fn divisions(b: &Book) -> Vec<(Option<&str>, &str, &[Block])> {
+    b.blocks
+        .iter()
+        .filter_map(|blk| match blk {
+            Block::Division { id, title, content } => {
+                Some((id.as_deref(), title.as_str(), content.as_slice()))
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+/// `\periph` divisions arrive from the parser nested inside one another —
+/// each is open until the end of the file — and come out as siblings, in
+/// order, each holding only its own content.
+#[test]
+fn periph_divisions_are_unnested_into_siblings() {
+    let b = front(concat!(
+        "\\id FRT\n\\h Front matter\n",
+        "\\periph Title Page|id=\"title\"\n\\mt1 The Holy Bible\n",
+        "\\periph Copyright|id=\"copyright\"\n\\pc Copyright 2024.\n\\pc All rights reserved.\n",
+        "\\periph Preface\n\\ip A word before.\n",
+    ));
+
+    let found = divisions(&b);
+    assert_eq!(found.len(), 3, "{:#?}", b.blocks);
+    assert_eq!(found[0].0, Some("title"));
+    assert_eq!(found[0].1, "Title Page");
+    assert_eq!(found[1].0, Some("copyright"));
+    assert_eq!(found[1].1, "Copyright");
+    assert_eq!(
+        found[1].2.len(),
+        2,
+        "two paragraphs and nothing of the preface"
+    );
+    // A division with no `id` is still a division, named by its words.
+    assert_eq!(found[2].0, None);
+    assert_eq!(found[2].1, "Preface");
+
+    // Nothing outside the divisions but what was written outside them, and
+    // the whitespace the parser keeps after a `\periph` line is not content.
+    assert_eq!(b.blocks.len(), 3, "{:#?}", b.blocks);
+    assert_eq!(b.names.running.as_deref(), Some("Front matter"));
+    assert_eq!(
+        text_of(&b),
+        "The Holy BibleCopyright 2024.All rights reserved.A word before."
+    );
+}
+
+/// On a title page `\mt` is the title, set on the page; in a book of
+/// Scripture the same marker is the book's name and is not a block.
+#[test]
+fn a_major_title_is_a_heading_in_front_matter_and_a_name_in_scripture() {
+    let f =
+        front("\\id FRT\n\\periph Title Page|id=\"title\"\n\\mt1 The Holy Bible\n\\mt2 In Tamil\n");
+    let (_, _, blocks) = divisions(&f)[0];
+    assert!(
+        matches!(
+            blocks,
+            [
+                Block::Heading {
+                    style: HeadingStyle::Mt,
+                    level: 1,
+                    ..
+                },
+                Block::Heading {
+                    style: HeadingStyle::Mt,
+                    level: 2,
+                    ..
+                },
+            ]
+        ),
+        "{blocks:#?}"
+    );
+    assert!(
+        f.names.title.is_empty(),
+        "a page title is not the book's name"
+    );
+
+    let s = book("\\id MAT\n\\mt1 Matthew\n\\c 1\n\\p\n\\v 1 Text.\n");
+    assert_eq!(s.names.title, ["Matthew"]);
+    assert!(
+        !s.blocks.iter().any(|b| matches!(
+            b,
+            Block::Heading {
+                style: HeadingStyle::Mt,
+                ..
+            }
+        )),
+        "{:#?}",
+        s.blocks
+    );
+}
+
+/// A `\periph` in a book of Scripture is still a division — nothing is
+/// dropped — and `\mte`, a title at the end of a book, is not mistaken for
+/// a page title.
+#[test]
+fn a_division_in_scripture_keeps_its_content() {
+    let s =
+        book("\\id MAT\n\\periph Introduction\n\\ip About this book.\n\\c 1\n\\p\n\\v 1 Text.\n");
+    let found = divisions(&s);
+    assert_eq!(found.len(), 1, "{:#?}", s.blocks);
+    assert_eq!(found[0].1, "Introduction");
+    assert!(text_of(&s).contains("About this book."));
+    assert!(text_of(&s).contains("Text."));
+}
+
 /// Everything under the block, as the emitter would see it.
 fn text_of(b: &Book) -> String {
     ScriptureDocument::new(vec![b.clone()]).text()

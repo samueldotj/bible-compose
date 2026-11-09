@@ -9,7 +9,9 @@
   import { phrases, t } from "../lib/i18n";
 
   const chosen = $derived(rows().filter((b) => b.included));
-  const chapters = $derived(chosen.reduce((n, b) => n + b.chapters, 0));
+  /** Books of Scripture: the front matter has pages, not chapters, and is not counted among the books. */
+  const scripture = $derived(chosen.filter((b) => b.testament !== "front"));
+  const chapters = $derived(scripture.reduce((n, b) => n + b.chapters, 0));
   const file = (path: string) => path.split(/[/\\]/).pop() ?? path;
 </script>
 
@@ -26,7 +28,7 @@
         </li>
       {/each}
     </ul>
-    <p class="muted note">{phrases().chaptersInBooks(chapters, chosen.length)}</p>
+    <p class="muted note">{phrases().chaptersInBooks(chapters, scripture.length)}</p>
   {/if}
 
   <div class="section-title">{t("orderTitle")}</div>

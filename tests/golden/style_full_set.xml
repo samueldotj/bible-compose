@@ -1,5 +1,6 @@
 <biblecompose version="1" class="biblecompose">
 <styles>
+<style for="paragraph.pc" align="center"/>
 <style for="poetry.q1" indent="9pt"/>
 <style for="poetry.q2" indent="18pt"/>
 <style for="poetry.q3" indent="27pt"/>
@@ -48,6 +49,10 @@
 <style for="heading.iot2" font_size="9.6pt" weight="600" space_above="6pt" space_below="2pt"/>
 <style for="heading.iot3" font_size="9.6pt" weight="600" space_above="6pt" space_below="2pt"/>
 <style for="heading.iot4" font_size="9.6pt" weight="600" space_above="6pt" space_below="2pt"/>
+<style for="heading.mt1" font_size="24pt" weight="600" space_above="0pt" space_below="14pt" align="center"/>
+<style for="heading.mt2" font_size="14pt" weight="400" space_above="0pt" space_below="10pt" align="center"/>
+<style for="heading.mt3" font_size="11pt" weight="400" italic="true" space_above="0pt" space_below="8pt" align="center"/>
+<style for="heading.mt4" font_size="9.2pt" weight="400" italic="false" space_above="0pt" space_below="6pt" align="center"/>
 <style for="character.add" italic="true"/>
 <style for="character.bd" weight="700"/>
 <style for="character.bdit" weight="700" italic="true"/>

@@ -569,10 +569,69 @@ pub fn lists_and_tables() -> ScriptureDocument {
 }
 
 /// Every fixture, for tests that should run over all of them.
+/// Front matter ahead of a book of Scripture: a title page and a copyright
+/// page, each a `\periph` division, then John.
+///
+/// What the class has to get right is at the seams — the front matter sets
+/// in one column with no head and no folio, each division opens a page, and
+/// the Scripture after it starts on a right-hand page numbered 1 — so the
+/// fixture has a seam on each side of a division and a book after the last.
+pub fn front_matter() -> ScriptureDocument {
+    let mut john = john_1_1_5();
+    let mut books = vec![Book::new(
+        book("FRT"),
+        BookNames {
+            running: Some("Front matter".to_owned()),
+            ..BookNames::default()
+        },
+        vec![
+            Block::Division {
+                id: Some("title".to_owned()),
+                title: "Title Page".to_owned(),
+                content: vec![
+                    Block::Heading {
+                        style: HeadingStyle::Mt,
+                        level: 1,
+                        content: vec![text("The Holy Bible")],
+                    },
+                    Block::Heading {
+                        style: HeadingStyle::Mt,
+                        level: 2,
+                        content: vec![text("Berean Standard Bible")],
+                    },
+                ],
+            },
+            Block::Division {
+                id: Some("copyright".to_owned()),
+                title: "Copyright".to_owned(),
+                content: vec![
+                    Block::Paragraph {
+                        style: ParaStyle::Pc,
+                        content: vec![text(
+                            "The Holy Bible, Berean Standard Bible, BSB is produced in \
+                             cooperation with Bible Hub, Discovery Bible, OpenBible.com, \
+                             and the Berean Bible Translation Committee.",
+                        )],
+                    },
+                    Block::Paragraph {
+                        style: ParaStyle::Pc,
+                        content: vec![text(
+                            "This text of God's Word has been dedicated to the public domain.",
+                        )],
+                    },
+                ],
+            },
+        ],
+    )];
+    books.append(&mut john.books);
+    ScriptureDocument::new(books)
+}
+
 pub fn all() -> Vec<(&'static str, ScriptureDocument)> {
     vec![
         ("john_1_1_5", john_1_1_5()),
         ("two_books", two_books()),
+        ("front_matter", front_matter()),
         ("kitchen_sink", kitchen_sink()),
         ("adversarial", adversarial()),
         ("apparatus", apparatus()),

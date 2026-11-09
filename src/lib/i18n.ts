@@ -129,6 +129,10 @@ export interface Chrome {
   readonly filesTitle: string;
   readonly openProjectFolder: string;
   readonly notIncluded: string;
+  readonly frontMatter: string;
+  readonly frontMatterDesc: string;
+  readonly noFrontMatter: string;
+  readonly addFrontMatter: string;
 
   // Template.
   readonly startFrom: string;
@@ -604,6 +608,11 @@ export const EN: Catalogue = {
     filesTitle: "Files",
     openProjectFolder: "Open project folder",
     notIncluded: "not included",
+    frontMatter: "Front matter",
+    frontMatterDesc:
+      "A title page and a copyright page, set before the first book in one column with no running head or page number. The body's page numbers start after it.",
+    noFrontMatter: "No front matter yet.",
+    addFrontMatter: "Add a title page and copyright page",
 
     startFrom: "Start from a template",
     presetNote: "Each one writes its settings into the project, where you can change them one at a time.",

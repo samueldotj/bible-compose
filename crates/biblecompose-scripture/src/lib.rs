@@ -196,6 +196,25 @@ pub enum Block {
     Figure(FigureRef),
     /// `\b` — a deliberate blank line between poetry stanzas.
     Break,
+    /// `\periph` — one division of a peripheral book: a title page, the
+    /// copyright page, a preface. Each is a page of its own in the
+    /// publication, which is what makes it a block and not a heading.
+    ///
+    /// Nested rather than flat, because what a division *is* is the content
+    /// between one `\periph` and the next, and a boundary marker would leave
+    /// every reader of the model re-deriving that. The parser hands the
+    /// divisions over nested inside one another — each `\periph` is open
+    /// until the end of the file — and normalization unnests them, so here
+    /// they are siblings in the order they were written.
+    Division {
+        /// The `id` attribute — `title`, `copyright` — when the file gives
+        /// one. USFM names the common pages and a project may invent others.
+        id: Option<String>,
+        /// The words after the marker: `Title Page`, `Copyright`. What a
+        /// bookmark shows and what the book list calls the page.
+        title: String,
+        content: Vec<Block>,
+    },
 }
 
 impl Block {
@@ -220,6 +239,11 @@ impl Block {
                     }
                 }
             }
+            Block::Division { content, .. } => {
+                for block in content {
+                    block.each_inline(f);
+                }
+            }
             Block::Figure(_) | Block::Break => {}
         }
     }
@@ -242,6 +266,11 @@ impl Block {
                     out.push_str(caption);
                 }
             }
+            Block::Division { content, .. } => {
+                for block in content {
+                    block.write_text(out);
+                }
+            }
             Block::Break => {}
         }
     }
@@ -257,6 +286,11 @@ impl Block {
                     for cell in &row.cells {
                         collect_unsupported(&cell.content, found);
                     }
+                }
+            }
+            Block::Division { content, .. } => {
+                for block in content {
+                    block.collect_unsupported(found);
                 }
             }
             Block::Figure(_) | Block::Break => {}
@@ -552,6 +586,11 @@ styles! {
         S => "s", Sr => "sr", R => "r", D => "d", Sp => "sp",
         /// Introduction headings, for the same reason as the paragraphs.
         Is => "is", Imt => "imt", Iot => "iot",
+        /// `\\mt` as a heading on the page — which it is only in front
+        /// matter, where `\\mt1 The Holy Bible` is the title page's title.
+        /// In a book of Scripture the same marker is the book's name and is
+        /// kept in `BookNames` instead; see `normalize`.
+        Mt => "mt",
     }
 
     /// Character-level markers.
@@ -612,6 +651,9 @@ mod tests {
                     Block::Table { .. } => "table",
                     Block::Figure(_) => "figure",
                     Block::Break => "break",
+                    // Front matter has a fixture of its own; the kitchen
+                    // sink is a book of Scripture.
+                    Block::Division { .. } => "division",
                 });
                 collect_inline_kinds(block, &mut seen);
             }

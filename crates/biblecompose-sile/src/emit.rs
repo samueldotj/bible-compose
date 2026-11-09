@@ -244,6 +244,11 @@ fn emit_book(w: &mut Writer<Cursor<Vec<u8>>>, book: &Book, state: &mut EmitState
         .to_owned();
     state.chapter = 0;
 
+    if book.code.is_peripheral() {
+        emit_front(w, book, state);
+        return;
+    }
+
     newline(w, state);
     let mut el = BytesStart::new("book");
     el.push_attribute(("code", book.code.as_str()));
@@ -264,6 +269,30 @@ fn emit_book(w: &mut Writer<Cursor<Vec<u8>>>, book: &Book, state: &mut EmitState
 
     newline(w, state);
     write(w, Event::End(BytesEnd::new("book")), state);
+}
+
+/// Front matter: a `<front>` rather than a `<book>`, because the class does
+/// something different with almost every part of it.
+///
+/// No name is written and no title is set — a title page has its own title
+/// in `\mt1`, and "Front matter" printed above it would be the file naming
+/// itself. The divisions carry what the class needs: each opens a page and
+/// each is bookmarked under its own title. The code is the only other thing
+/// the class is told, and it is told that so the destinations it writes are
+/// `FRT.title` and `FRT.copyright`, which is the form every other anchor in
+/// the document takes (SCR-008).
+fn emit_front(w: &mut Writer<Cursor<Vec<u8>>>, book: &Book, state: &mut EmitState) {
+    newline(w, state);
+    let mut el = BytesStart::new("front");
+    el.push_attribute(("code", book.code.as_str()));
+    write(w, Event::Start(el), state);
+
+    for block in &book.blocks {
+        emit_block(w, block, state);
+    }
+
+    newline(w, state);
+    write(w, Event::End(BytesEnd::new("front")), state);
 }
 
 /// Parts of a book a project has chosen not to print.
@@ -431,6 +460,19 @@ fn emit_block(w: &mut Writer<Cursor<Vec<u8>>>, block: &Block, state: &mut EmitSt
         }
         Block::Break => {
             write(w, Event::Empty(BytesStart::new("break")), state);
+        }
+        Block::Division { id, title, content } => {
+            let mut el = BytesStart::new("division");
+            if let Some(id) = id {
+                el.push_attribute(("id", id.as_str()));
+            }
+            el.push_attribute(("title", title.as_str()));
+            write(w, Event::Start(el), state);
+            for block in content {
+                emit_block(w, block, state);
+            }
+            newline(w, state);
+            write(w, Event::End(BytesEnd::new("division")), state);
         }
     }
 }

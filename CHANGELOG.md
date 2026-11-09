@@ -2,6 +2,43 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+* **A title page and a copyright page.** Front matter is USFM's peripheral
+  book `FRT`, and the application now knows it: a file beginning `\id FRT`
+  is bound before Genesis whatever the book order says, each `\periph` in it
+  is a page, and the pages are set in one column with no running head and no
+  folio however the body is set. The first book of Scripture after it opens
+  on a right-hand page numbered 1, the pages before it counted and not
+  printed, which is what a bound book does. Each `\periph` with an `id` is a
+  bookmark under its own title, so the outline reads *Title Page, Copyright,
+  Genesis*. `\mt1`–`\mt4` on a title page are headings in the sheet
+  (`heading.mt1`–`mt4`, large and centred) rather than the book's name, which
+  is what they are in a book of Scripture and still are there. The parser's
+  rule that a book without a `\c` is broken is set aside for a book that has
+  divisions instead of chapters, and nothing else is: an unclosed marker in a
+  copyright notice is reported like any other.
+
+  **Books** lists the front matter in a row of its own above the testaments,
+  with the titles of its pages where a book has its chapter count. A project
+  with none is offered **Add a title page and copyright page**, which writes
+  a starter `FRT.usfm` with the publication's name on it. That is the one
+  USFM file BibleCompose creates: a new file, into a folder that has no front
+  matter, on a button press; it refuses when the folder has some under any
+  name, and every build still checks the checksum of every file it started
+  with.
+
+  Found on the way: `\pc`, the centred paragraph, had no entry in the
+  built-in sheet and was set flush left. It is centred now. And the folio
+  package was being switched back on by the blank page a right-hand book
+  start inserts, which would have printed a second, centred page number under
+  the class's own from that page on; the class now keeps it off on every
+  page.
+
+* **Not yet**: a generated table of contents, which needs the page numbers a
+  first pass produces; a preface or any other `\periph` sets as a page
+  already, named by its words.
+
 ## 0.3.1
 
 * The 0.3.0 build stopped at its own new step. Staging the editor runs that

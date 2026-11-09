@@ -39,6 +39,10 @@ export function isCanonical(): boolean {
  * The columns, in canonical order of testament, and only the ones this
  * project has books in: an empty column headed "Old Testament" would be
  * furniture for a New Testament edition.
+ *
+ * The front matter is not a column. It is one book at most, it is always
+ * bound first, and it is not reordered among anything — so it has a row of
+ * its own above the columns, from [`frontMatter`].
  */
 export const TESTAMENTS: readonly Testament[] = ["old", "new", "deuterocanon"];
 
@@ -47,6 +51,11 @@ export function columns(): { id: Testament; books: BookSummary[] }[] {
   return TESTAMENTS.map((id) => ({ id, books: all.filter((b) => b.testament === id) })).filter(
     (c) => c.books.length > 0,
   );
+}
+
+/** The project's front matter — USFM's `FRT` — if the folder has one. */
+export function frontMatter(): BookSummary | undefined {
+  return rows().find((b) => b.testament === "front");
 }
 
 /**

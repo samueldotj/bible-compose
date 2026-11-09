@@ -663,6 +663,47 @@ fn an_existing_folder_is_not_taken_over() {
     );
 }
 
+/// The front matter reaches the window as a book grouped under `front`, with
+/// the titles of its pages where a book of Scripture has a chapter count.
+#[test]
+fn front_matter_is_listed_first_with_its_pages() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let root = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("UTF-8 temp path");
+    std::fs::write(
+        root.join("JHN.usfm").as_std_path(),
+        "\\id JHN\n\\h John\n\\c 1\n\\p\n\\v 1 In the beginning was the Word.\n",
+    )
+    .expect("write");
+    std::fs::write(
+        root.join("FRT.usfm").as_std_path(),
+        concat!(
+            "\\id FRT\n\\h Front matter\n",
+            "\\periph Title Page|id=\"title\"\n\\mt1 The Holy Bible\n",
+            "\\periph Copyright|id=\"copyright\"\n\\pc Copyright.\n",
+        ),
+    )
+    .expect("write");
+
+    let p = project_at(&root);
+    assert!(!p.blocked, "{:?}", p.diagnostics);
+    let codes: Vec<&str> = p.books.iter().map(|b| b.code.as_str()).collect();
+    assert_eq!(codes, ["FRT", "JHN"]);
+    let front = &p.books[0];
+    assert_eq!(front.testament, "front");
+    assert_eq!(front.name, "Front matter");
+    assert_eq!(front.chapters, 0);
+    assert_eq!(front.sections, ["Title Page", "Copyright"]);
+    assert!(
+        front.errors == 0,
+        "a chapterless front matter is not an error"
+    );
+    assert!(
+        p.books[1].sections.is_empty(),
+        "a book of Scripture has chapters, not pages"
+    );
+    assert_eq!(p.canonical_order, ["FRT", "JHN"]);
+}
+
 // ------------------------------------------------------------- open_url ----
 
 /// **What may be handed to a shell handler, and what may not.**

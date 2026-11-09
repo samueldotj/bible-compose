@@ -13,6 +13,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Testament {
+    /// Not a testament: the front matter, which USFM carries as the
+    /// peripheral book `FRT`. It is in this enum because this is the
+    /// grouping the book list is divided by, and a book with no group would
+    /// be a book with nowhere to be listed. It sorts first, as it is bound.
+    Front,
     Old,
     New,
     Deuterocanon,
@@ -26,6 +31,7 @@ impl Testament {
     /// that cannot be checked against this one, is an answer that drifts.
     pub const fn as_str(self) -> &'static str {
         match self {
+            Testament::Front => "front",
             Testament::Old => "old",
             Testament::New => "new",
             Testament::Deuterocanon => "deuterocanon",
@@ -85,6 +91,18 @@ impl BookCode {
         self.entry().testament
     }
 
+    /// Whether this is a peripheral book — front matter rather than
+    /// Scripture.
+    ///
+    /// A peripheral book has no chapters, is divided by `\periph` into
+    /// pages rather than by `\c` into chapters, and is set with none of the
+    /// furniture a page of Scripture gets: no running head, no folio, and
+    /// one column whatever the body is set in. Every one of those is a
+    /// decision somebody downstream makes by asking this.
+    pub fn is_peripheral(self) -> bool {
+        self.testament() == Testament::Front
+    }
+
     /// The English name, used only as a fallback when a project supplies no
     /// `\h` or `\toc` — never in place of one.
     pub fn english_name(self) -> &'static str {
@@ -93,6 +111,12 @@ impl BookCode {
 
     pub fn all() -> impl Iterator<Item = BookCode> {
         TABLE.iter().map(|e| BookCode(e.code))
+    }
+
+    /// The Scripture books alone — [`all`](Self::all) without the front
+    /// matter. What "the canon" means when a count of books is wanted.
+    pub fn scripture() -> impl Iterator<Item = BookCode> {
+        Self::all().filter(|b| !b.is_peripheral())
     }
 }
 
@@ -129,13 +153,20 @@ macro_rules! table {
     };
 }
 
-use Testament::{Deuterocanon as D, New as N, Old as O};
+use Testament::{Deuterocanon as D, Front as F, New as N, Old as O};
 #[allow(clippy::enum_glob_use)]
 const _: () = {
-    let _ = (O, N, D);
+    let _ = (F, O, N, D);
 };
 
 table! {
+    // The front matter: USFM's peripheral book for everything bound before
+    // Genesis — a title page, the copyright page, a preface. Order 0 so that
+    // it sorts ahead of every book of Scripture without renumbering them,
+    // and so that a configured `books.order` that never mentions it still
+    // puts it first, which is the only place front matter goes.
+    0 "FRT" "Front matter" Front;
+
     1 "GEN" "Genesis" Old;              2 "EXO" "Exodus" Old;
     3 "LEV" "Leviticus" Old;            4 "NUM" "Numbers" Old;
     5 "DEU" "Deuteronomy" Old;          6 "JOS" "Joshua" Old;
@@ -207,7 +238,7 @@ mod tests {
 
     #[test]
     fn protestant_canon_is_complete_and_in_order() {
-        let protestant: Vec<_> = BookCode::all()
+        let protestant: Vec<_> = BookCode::scripture()
             .filter(|b| b.testament() != Testament::Deuterocanon)
             .collect();
         assert_eq!(protestant.len(), 66);
@@ -233,11 +264,15 @@ mod tests {
         orders.sort_unstable();
         for (i, o) in orders.iter().enumerate() {
             assert_eq!(
-                *o as usize,
-                i + 1,
-                "canonical order must be contiguous from 1"
+                *o as usize, i,
+                "canonical order must be contiguous from 0, the front matter"
             );
         }
+        assert_eq!(
+            BookCode::parse("GEN").unwrap().order(),
+            1,
+            "Genesis is the first book of Scripture"
+        );
         let mut codes: Vec<&str> = BookCode::all().map(|b| b.as_str()).collect();
         codes.sort_unstable();
         let before = codes.len();
@@ -258,6 +293,24 @@ mod tests {
         assert_eq!(order, ["GEN", "EXO", "ACT"]);
         // Alphabetically ACT would come first; canonically it does not.
         assert_ne!(order[0], "ACT");
+    }
+
+    /// The front matter is a book the canon knows, sorts first, and is the
+    /// only peripheral one — so a count of Scripture books leaves it out.
+    #[test]
+    fn the_front_matter_is_a_peripheral_book_that_sorts_first() {
+        let frt = BookCode::parse("FRT").expect("FRT is in the table");
+        assert!(frt.is_peripheral());
+        assert_eq!(frt.testament(), Testament::Front);
+        assert_eq!(frt.english_name(), "Front matter");
+        assert!(frt < BookCode::parse("GEN").unwrap());
+
+        let mut books = vec![BookCode::parse("GEN").unwrap(), frt];
+        sort_canonical(&mut books);
+        assert_eq!(books[0], frt);
+
+        assert!(BookCode::scripture().all(|b| !b.is_peripheral()));
+        assert_eq!(BookCode::scripture().count() + 1, BookCode::all().count());
     }
 
     #[test]

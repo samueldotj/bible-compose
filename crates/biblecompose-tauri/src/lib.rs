@@ -113,9 +113,14 @@ pub struct WireBook {
     /// the order, and a list that hid it would be a list you could not put it
     /// back from. It is not parsed, so it has no chapters and no diagnostics.
     pub included: bool,
-    /// `old`, `new` or `deuterocanon`, from the canon table — so the window can
-    /// group the list without a second copy of which book is where.
+    /// `front`, `old`, `new` or `deuterocanon`, from the canon table — so the
+    /// window can group the list without a second copy of which book is
+    /// where.
     pub testament: &'static str,
+    /// The pages of the front matter, by the title each `\periph` gives —
+    /// `Title Page`, `Copyright`. Empty for a book of Scripture, which is
+    /// divided into chapters and counted above instead.
+    pub sections: Vec<String>,
 }
 
 /// One row of the settings form (GUI-002).
@@ -843,6 +848,22 @@ fn create_project(
     Ok(project)
 }
 
+/// Write a starter `FRT.usfm` — a title page and a copyright page — into the
+/// open project, and reread it so the new book is in the list.
+///
+/// The only command that writes a `.usfm`, and `project::add_front_matter`
+/// says why it may: the file is new, the folder had no front matter, and a
+/// person asked. Refused with the reason when either is not so.
+#[tauri::command]
+fn add_front_matter(
+    session: tauri::State<'_, Arc<Session>>,
+    root: String,
+) -> Result<WireProject, Vec<WireDiagnostic>> {
+    let root = Utf8PathBuf::from(root);
+    project::add_front_matter(&root).map_err(|d| vec![WireDiagnostic::from(&d)])?;
+    Ok(observe(&session, &root))
+}
+
 /// Read the project and remember what it looked like.
 ///
 /// Every command that touches the project goes through this, including the
@@ -1525,6 +1546,16 @@ fn wire_project(root: &Utf8Path, opened: project::Opened) -> WireProject {
                 warnings,
                 included: true,
                 testament: book.code.testament().as_str(),
+                sections: book
+                    .blocks
+                    .iter()
+                    .filter_map(|block| match block {
+                        biblecompose_scripture::Block::Division { title, .. } => {
+                            Some(title.clone())
+                        }
+                        _ => None,
+                    })
+                    .collect(),
             }
         })
         .collect();
@@ -1547,6 +1578,7 @@ fn wire_project(root: &Utf8Path, opened: project::Opened) -> WireProject {
                 warnings: 0,
                 included: false,
                 testament: out.code.testament().as_str(),
+                sections: Vec::new(),
             },
         );
     }
@@ -1804,6 +1836,7 @@ pub fn run() {
             recent_projects,
             forget_project,
             create_project,
+            add_front_matter,
             close_project,
             open_folder,
             open_pdf,

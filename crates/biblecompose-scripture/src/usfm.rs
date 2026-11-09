@@ -40,6 +40,19 @@ pub fn parse(path: impl Into<Utf8PathBuf>, source: impl Into<String>) -> ParsedF
     }
 }
 
+/// Whether a diagnostic presumes the book has chapters.
+///
+/// The parser reads every file as a book of Scripture, and a book of
+/// Scripture with no `\c` is broken — so a front-matter file, which has
+/// divisions and no chapters, is reported as missing one, as an error, and
+/// an error blocks the build. The parser is right about what it was told
+/// and wrong about what the file is; the caller knows which, and drops
+/// these for a peripheral book. Nothing else is dropped: an unclosed marker
+/// in a copyright notice is as wrong as one in Genesis.
+pub fn presumes_chapters(code: Code) -> bool {
+    code == code::MISSING_CHAPTER_MARKER || code == code::BODY_PARAGRAPH_BEFORE_CHAPTER
+}
+
 /// One upstream diagnostic, in BibleCompose's vocabulary.
 ///
 /// The message and the code are carried across untouched. What is added is

@@ -19,7 +19,7 @@ PDF's name is derived from the publication's, and it was always `bible.pdf`.
 |---|---|---|
 | **PRJ-001** | The application shall allow the user to open a folder as a BibleCompose project. | [`a_project_of_one_book_is_a_project`](../crates/biblecompose-project/tests/discovery.rs) (+1 more) |
 | **PRJ-002** | The application shall recursively discover .usfm and .sfm files in the selected project… | [`nested_directories_are_discovered_without_registration`](../crates/biblecompose-project/tests/discovery.rs) |
-| **PRJ-003** | Each Scripture file shall be identified primarily from its USFM \id marker, not from fi… | [`a_renamed_file_still_loads_as_the_book_it_declares`](../crates/biblecompose-project/tests/discovery.rs) (+1 more) |
+| **PRJ-003** | Each Scripture file shall be identified primarily from its USFM \id marker, not from fi… | [`a_title_page_and_a_copyright_page_precede_the_scripture`](../crates/biblecompose-app/tests/front_matter.rs) (+2 more) |
 | **PRJ-004** | The application shall detect duplicate canonical book IDs and block PDF generation unti… | [`two_files_claiming_one_book_block_the_build`](../crates/biblecompose-project/tests/discovery.rs) (+2 more) |
 | **PRJ-005** | The application shall support projects containing a subset of Bible books. | [`a_project_of_one_book_is_a_project`](../crates/biblecompose-project/tests/discovery.rs) (+3 more) |
 | **PRJ-007** | The project shall remain portable as a normal filesystem directory. | [`climbing_out_of_the_project_is_refused`](../crates/biblecompose-app/tests/figures.rs) |

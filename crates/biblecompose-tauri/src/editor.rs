@@ -89,7 +89,9 @@ fn cache_root() -> Option<Utf8PathBuf> {
     } else {
         std::env::var_os("XDG_CACHE_HOME")
             .map(std::path::PathBuf::from)
-            .or_else(|| std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".cache")))
+            .or_else(|| {
+                std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".cache"))
+            })
     }?;
     Utf8PathBuf::from_path_buf(root)
         .ok()
@@ -146,10 +148,8 @@ fn unpack() -> Result<Utf8PathBuf, Diagnostic> {
         #[cfg(unix)]
         if path.ends_with(EXE_NAME) {
             use std::os::unix::fs::PermissionsExt;
-            let _ = std::fs::set_permissions(
-                out.as_std_path(),
-                std::fs::Permissions::from_mode(0o755),
-            );
+            let _ =
+                std::fs::set_permissions(out.as_std_path(), std::fs::Permissions::from_mode(0o755));
         }
     }
     if let Some(parent) = root.parent() {
@@ -196,15 +196,13 @@ pub fn locate() -> Result<Utf8PathBuf, Diagnostic> {
     #[cfg(not(feature = "embedded-editor"))]
     {
         beside_us().ok_or_else(|| {
-            Diagnostic::error(
-                code::NOT_FOUND,
-                "this build does not carry the USFM editor",
-            )
-            .help(format!(
-                "build with the embedded-editor feature, or set {EDITOR_ENV} to an \
+            Diagnostic::error(code::NOT_FOUND, "this build does not carry the USFM editor").help(
+                format!(
+                    "build with the embedded-editor feature, or set {EDITOR_ENV} to an \
                  easy-usfm build — in this workspace that is \
                  target/debug/{EXE_NAME} of the easy-usfm checkout"
-            ))
+                ),
+            )
         })
     }
 }
@@ -280,7 +278,9 @@ pub fn open(file: &Utf8Path, started: &Started) -> Result<(), Diagnostic> {
 /// Best-effort throughout, and silent: this runs while the application is
 /// already on its way out, where there is nowhere left to report anything.
 pub fn close_started(started: &Started) {
-    let Ok(mut open) = started.0.lock() else { return };
+    let Ok(mut open) = started.0.lock() else {
+        return;
+    };
     for child in open.iter_mut() {
         // Already gone is the ordinary case — most people close the editor
         // themselves — and asking a finished process to close would be asking
@@ -360,7 +360,9 @@ mod tests {
         match unpack() {
             Ok(exe) => {
                 assert!(exe.is_file(), "{exe} should be a file");
-                let size = std::fs::metadata(exe.as_std_path()).expect("metadata").len();
+                let size = std::fs::metadata(exe.as_std_path())
+                    .expect("metadata")
+                    .len();
                 assert!(size > 1_000_000, "{exe} is only {size} bytes");
                 assert!(exe.as_str().ends_with(EXE_NAME), "{exe}");
                 // Again: the same answer, and nothing rewritten.
@@ -400,8 +402,11 @@ mod tests {
 
         let dir = tempfile::tempdir().expect("temp dir");
         let book = Utf8PathBuf::from_path_buf(dir.path().join("01_GEN.usfm")).expect("UTF-8");
-        std::fs::write(book.as_std_path(), "\\id GEN\n\\c 1\n\\p\n\\v 1 In the beginning.\n")
-            .expect("write");
+        std::fs::write(
+            book.as_std_path(),
+            "\\id GEN\n\\c 1\n\\p\n\\v 1 In the beginning.\n",
+        )
+        .expect("write");
 
         let started = Started::default();
         open(book.as_path(), &started).expect("the editor starts");

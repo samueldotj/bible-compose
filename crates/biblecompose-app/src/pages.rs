@@ -121,13 +121,7 @@ impl Shape {
     fn line(&self, pages: u32) -> String {
         format!(
             "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{pages}",
-            self.language,
-            self.font,
-            self.size,
-            self.leading,
-            self.trim,
-            self.columns,
-            self.books
+            self.language, self.font, self.size, self.leading, self.trim, self.columns, self.books
         )
     }
 
@@ -200,7 +194,8 @@ fn text_block_pt2(settings: &Settings) -> Option<f64> {
     let page = &settings.page;
     let width = page.size.width.points() - page.margin_inner.points() - page.margin_outer.points();
     let height = page.size.height.points() - page.margin_top.points() - page.margin_bottom.points();
-    (width.is_finite() && height.is_finite() && width > 0.0 && height > 0.0).then_some(width * height)
+    (width.is_finite() && height.is_finite() && width > 0.0 && height > 0.0)
+        .then_some(width * height)
 }
 
 /// Where page counts are remembered across projects.
@@ -218,7 +213,9 @@ fn store() -> Option<Utf8PathBuf> {
     } else {
         std::env::var_os("XDG_CACHE_HOME")
             .map(std::path::PathBuf::from)
-            .or_else(|| std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".cache")))
+            .or_else(|| {
+                std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".cache"))
+            })
     }?;
     let root = Utf8PathBuf::from_path_buf(root).ok()?;
     Some(root.join("biblecompose").join("pages"))
@@ -339,7 +336,10 @@ mod tests {
         );
         let got = scale(1189, &smaller);
         let off = (got as f64 - 2651.0).abs() / 2651.0;
-        assert!(off < 0.01, "got {got} against a measured 2651, {off:.3} out");
+        assert!(
+            off < 0.01,
+            "got {got} against a measured 2651, {off:.3} out"
+        );
     }
 
     /// **Leading counts as much as the body size.**
@@ -389,15 +389,17 @@ mod tests {
     #[test]
     fn a_remembered_count_is_found_only_for_the_shape_that_made_it() {
         let dir = tempfile::tempdir().expect("temp dir");
-        let path = camino::Utf8PathBuf::from_path_buf(dir.path().join("pages"))
-            .expect("UTF-8 temp path");
+        let path =
+            camino::Utf8PathBuf::from_path_buf(dir.path().join("pages")).expect("UTF-8 temp path");
 
-        let eleven = Shape::of(&books(&["MAT"]), &with(
-            "[project]\nlanguage = \"ta\"\n[typography]\nfont_size = \"11pt\"\n",
-        ));
-        let fourteen = Shape::of(&books(&["MAT"]), &with(
-            "[project]\nlanguage = \"ta\"\n[typography]\nfont_size = \"14pt\"\n",
-        ));
+        let eleven = Shape::of(
+            &books(&["MAT"]),
+            &with("[project]\nlanguage = \"ta\"\n[typography]\nfont_size = \"11pt\"\n"),
+        );
+        let fourteen = Shape::of(
+            &books(&["MAT"]),
+            &with("[project]\nlanguage = \"ta\"\n[typography]\nfont_size = \"14pt\"\n"),
+        );
         assert_ne!(eleven, fourteen);
 
         remember_in(path.as_path(), &eleven, 3776);
@@ -425,13 +427,15 @@ mod tests {
     #[test]
     fn adding_a_book_does_not_reuse_the_count_of_the_books_before_it() {
         let dir = tempfile::tempdir().expect("temp dir");
-        let path = camino::Utf8PathBuf::from_path_buf(dir.path().join("pages"))
-            .expect("UTF-8 temp path");
+        let path =
+            camino::Utf8PathBuf::from_path_buf(dir.path().join("pages")).expect("UTF-8 temp path");
         let settings = reference();
 
         let gospels = Shape::of(&books(&["MAT", "MRK", "LUK", "JHN"]), &settings);
-        let plus_two =
-            Shape::of(&books(&["MAT", "MRK", "LUK", "JHN", "ACT", "ROM"]), &settings);
+        let plus_two = Shape::of(
+            &books(&["MAT", "MRK", "LUK", "JHN", "ACT", "ROM"]),
+            &settings,
+        );
         assert_ne!(gospels, plus_two, "six books are not four");
 
         remember_in(path.as_path(), &gospels, 120);
@@ -470,21 +474,30 @@ mod tests {
             camino::Utf8PathBuf::from_path_buf(dir.path().join("pages")).expect("UTF-8 temp path");
 
         for n in 0..(KEEP + 10) {
-            let shape = Shape::of(&books(&["MAT"]), &with(&format!(
-                "[typography]\nfont_size = \"{}pt\"\n",
-                9.0 + n as f64 / 10.0
-            )));
+            let shape = Shape::of(
+                &books(&["MAT"]),
+                &with(&format!(
+                    "[typography]\nfont_size = \"{}pt\"\n",
+                    9.0 + n as f64 / 10.0
+                )),
+            );
             remember_in(path.as_path(), &shape, 100 + n as u32);
         }
         let lines = std::fs::read_to_string(path.as_std_path()).expect("read");
         assert_eq!(lines.lines().filter(|l| !l.is_empty()).count(), KEEP);
 
         // The newest is still there and the oldest is not.
-        let newest = Shape::of(&books(&["MAT"]), &with(&format!(
-            "[typography]\nfont_size = \"{}pt\"\n",
-            9.0 + (KEEP + 9) as f64 / 10.0
-        )));
-        let oldest = Shape::of(&books(&["MAT"]), &with("[typography]\nfont_size = \"9pt\"\n"));
+        let newest = Shape::of(
+            &books(&["MAT"]),
+            &with(&format!(
+                "[typography]\nfont_size = \"{}pt\"\n",
+                9.0 + (KEEP + 9) as f64 / 10.0
+            )),
+        );
+        let oldest = Shape::of(
+            &books(&["MAT"]),
+            &with("[typography]\nfont_size = \"9pt\"\n"),
+        );
         assert!(remembered_in(path.as_path(), &newest).is_some());
         assert_eq!(remembered_in(path.as_path(), &oldest), None);
     }

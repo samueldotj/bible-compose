@@ -428,10 +428,9 @@ fn bold_on_an_axis(db: &fontdb::Database, id: fontdb::ID) -> bool {
     db.with_face_data(id, |data, index| {
         let face = ttf_parser::Face::parse(data, index).ok()?;
         let axes = face.tables().fvar?.axes;
-        Some(
-            axes.into_iter()
-                .any(|axis| axis.tag == ttf_parser::Tag::from_bytes(b"wght") && axis.max_value >= 600.0),
-        )
+        Some(axes.into_iter().any(|axis| {
+            axis.tag == ttf_parser::Tag::from_bytes(b"wght") && axis.max_value >= 600.0
+        }))
     })
     .flatten()
     .unwrap_or(false)

@@ -509,9 +509,11 @@ fn a_bold_carried_on_a_weight_axis_counts_as_a_bold() {
 /// and the correct number of diagnostics is none.
 #[test]
 fn a_variable_family_draws_no_missing_face_warning() {
-    let styles = styles_from("[character.bd]
+    let styles = styles_from(
+        "[character.bd]
 weight = 700
-");
+",
+    );
 
     let mut diagnostics = Diagnostics::new();
     font::preflight_faces(

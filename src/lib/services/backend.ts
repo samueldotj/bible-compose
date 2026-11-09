@@ -80,6 +80,12 @@ export interface BookSummary {
    * Empty for a book of Scripture, which has chapters instead.
    */
   readonly sections: readonly string[];
+  /**
+   * The built-in front matter: the folder has no `FRT` of its own, so this
+   * is the application's text, not a file. `path` is where the file would
+   * go; the window offers to write it there.
+   */
+  readonly builtin: boolean;
 }
 
 /** Which control a setting needs, decided by the schema and not by the form. */

@@ -365,6 +365,8 @@ function class:_init (options)
    self:loadPackage("image")
    -- Destinations, bookmarks and document properties (PDF-005, SCR-008).
    self:loadPackage("pdf")
+   -- The dots between a book's name and its page in the table of contents.
+   self:loadPackage("leaders")
    -- The dropped initial, when `dropcaps` asks for one.
    self:loadPackage("dropcaps")
    -- **A paragraph shorter than its initial is padded to clear it.** The
@@ -676,19 +678,74 @@ local scratch, anchor, destination, o_anchors, start_at, margin_number
 -- The three an "auto" start measures with, for the same reason.
 local opening_text, lines_left, lines_needed
 
+--- End the document — and, when it ends in front matter, square the front
+-- matter off first.
+--
+-- The last page of the front matter is still in the typesetter here. It is
+-- built, the count is made even with a blank page if it has to be — the
+-- body's first page was set as a recto and must land on one — and the count
+-- is written to the backend's log in a form the application reads back:
+-- how many pages to move from the end of the file to its front, and how
+-- many bookmarks to move with them.
+function class:finish ()
+   local s = SILE.scratch.biblecompose
+   local front = s and s.in_front
+   if front then
+      -- The page the typesetter is on is the front matter's last and has
+      -- not been counted: `plain.finish` ends it, and ends *only* it — an
+      -- eject here would leave an empty page open for `finish` to output
+      -- as a blank after everything. Measured: a fifth page, after the
+      -- count was reported. So the count is read as one more than the
+      -- pages already out, and a blank is added only when that makes an
+      -- odd number — the blank is ended here, and the box on it is what
+      -- `finish` then ends as the last page, with nothing on it.
+      if ((s.front_pages or 0) + 1) % 2 == 1 then
+         SILE.typesetter:leaveHmode()
+         SILE.call("supereject")
+         SILE.typesetter:leaveHmode()
+         SILE.call("hbox")
+      end
+   end
+   local result = plain.finish(self)
+   if front then
+      io.stderr:write(
+         "\nbiblecompose-front-pages " .. tostring(s.front_pages or 0) .. " " .. tostring(s.front_marks or 0) .. "\n"
+      )
+   end
+   return result
+end
+
 function class:endPage ()
    local o = self._bcopts
    -- A page left blank to open the next on the right side carries neither
    -- head nor folio: `open-spread` marks it, and the mark is for one page.
    local headers = SILE.scratch.headers
    local blank = headers and headers.skipthispage
+   local s = SILE.scratch.biblecompose
+   -- Where each book began, for the table of contents: the info nodes that
+   -- landed on this page, with the number this page prints. Read here and
+   -- not in `newPage`, which is where the package clears them.
+   local began = SILE.scratch.info and SILE.scratch.info.thispage.toc
+   if s and began then
+      local counters = self.packages.counters
+      local page = counters:formatCounter(SILE.scratch.counters.folio)
+      s.toc = s.toc or {}
+      for _, entry in ipairs(began) do
+         s.toc[#s.toc + 1] = { name = entry.name, dest = entry.dest, page = page }
+      end
+   end
+   if s and s.in_front then
+      -- Counted, blank or not, because the application moves exactly this
+      -- many pages from the end of the file to its front.
+      s.front_pages = (s.front_pages or 0) + 1
+   end
    if blank then
       headers.skipthispage = false
-   elseif SILE.scratch.biblecompose and SILE.scratch.biblecompose.in_front then
+   elseif s and s.in_front then
       -- A page of front matter carries neither: a title page is not headed
       -- with its own title, and the copyright page is not numbered. The
-      -- pages are counted — the body's folio restarts at 1 after them — and
-      -- the count is simply not printed, which is what a bound book does.
+      -- pages are counted and the count is simply not printed, which is what
+      -- a bound book does; the body before them is numbered from 1.
    else
       -- Which side of the spread this page is. `twoside` answers by the
       -- folio's parity; page 1 is a recto, as in every bound book.
@@ -2249,44 +2306,7 @@ function class:registerXmlCommands ()
       -- reaches `newPage`.
       local s = scratch()
       if s.books > 0 then
-         local where = self._bcopts.bookstarts
-         if s.after_front then
-            -- Out of the front matter and onto the body's page masters,
-            -- before the eject that lays out the page they apply to. A
-            -- column break or none at all cannot do it — the front's page
-            -- is one column and the body's may be two — so those become a
-            -- right-hand page, which is where a book of Scripture opens
-            -- after its front matter in any case.
-            self.oddPageMaster = "right"
-            self.evenPageMaster = "left"
-            if where == nil or where == "continuous" or where == "next_column" then
-               where = "right_page"
-            end
-         end
-         start_at(where)
-         if s.after_front then
-            -- **Built now, not left on the queue.** `supereject` pushes a
-            -- penalty and nothing builds the page until the next line of
-            -- text arrives — the body's first verse, by which time the
-            -- front flag is down and the folio has been reset, so the
-            -- copyright page went out headed "Genesis" and numbered 2.
-            -- Measured, on exactly that page. Leaving horizontal mode runs
-            -- the page builder, and the last page of the front matter goes
-            -- out while it is still the front matter.
-            SILE.typesetter:leaveHmode()
-         end
-      end
-      if s.after_front then
-         -- Every page of the front matter is out by now — `start_at` ejected
-         -- the last of them — so the pages from here on are the body's and
-         -- get their head and folio back.
-         s.after_front = false
-         s.in_front = false
-         -- Numbered from 1, as the body of a bound book is; the front
-         -- matter's pages were counted and not printed. On the side the page
-         -- is actually on, so a book a project opens on the left is page 2
-         -- rather than an odd number on a verso.
-         SILE.scratch.counters.folio.value = (self.oddPage and self:oddPage()) and 1 or 2
+         start_at(self._bcopts.bookstarts)
       end
       s.books = s.books + 1
       s.chapters_in_book = 0
@@ -2309,14 +2329,28 @@ function class:registerXmlCommands ()
       if s.code ~= "" and o_anchors() ~= "none" then
          SILE.call("pdf:bookmark", { dest = anchor(s.code), title = named, level = 1 })
       end
+      -- A note of where this book begins, for the table of contents. An
+      -- info node is output with the line it sits in, so `endPage` learns
+      -- which page that was once the page is built — which is the only
+      -- moment anyone knows. Inside the title's own paragraph when there
+      -- is one, because `center` complains about a paragraph already begun.
+      local entry = function ()
+         SILE.call("info", {
+            category = "toc",
+            value = { name = options.tocname or named, dest = anchor(s.code) },
+         })
+      end
       if options.name then
          SILE.call("center", {}, function ()
+            entry()
             SILE.call("font", { size = "16pt", weight = 600 }, function ()
                SILE.typesetter:typeset(options.name)
             end)
          end)
          SILE.call("par")
          skip("5pt")
+      else
+         entry()
       end
       -- One child at a time, noting which, so a chapter opening in any of
       -- them can measure what follows it — the rest of its heading or
@@ -2331,9 +2365,19 @@ function class:registerXmlCommands ()
       s.book_items = nil
    end)
 
-   -- The front matter: USFM's `FRT`, as the emitter writes it. Set in one
-   -- column with no head and no folio, divided into pages by its divisions,
-   -- and followed by a book that opens on a right-hand page numbered 1.
+   -- The front matter: USFM's `FRT`, as the emitter writes it — **last**,
+   -- after every book, though it is bound first. Its table of contents
+   -- names the page each book starts on, and that is known only once the
+   -- books are set; so the class sets the front matter at the end of the
+   -- run, reports how many pages it took, and the application moves those
+   -- pages to the front of the file. The body is numbered from 1 and never
+   -- learns how long the front matter is.
+   --
+   -- Set in one column with no head and no folio, divided into pages by its
+   -- divisions. It opens on a right-hand page — the position it will have at
+   -- the front of the book — and is padded to an even number of pages, so
+   -- that the body's first page, a recto when it was set, is still a recto
+   -- once the front matter sits before it.
    --
    -- Nothing here is a setting, and that is deliberate for a first release:
    -- what a title page and a copyright page look like is decided by the
@@ -2341,28 +2385,35 @@ function class:registerXmlCommands ()
    -- convention. What a publisher can change is the words.
    self:registerCommand("front", function (options, content)
       local s = scratch()
-      -- The front's page masters from the next page on. When the front
-      -- matter is first, as it is bound to be, there is no next page yet —
-      -- page 1 is already laid out on the body's master — so it is switched
-      -- underneath the typesetter, which `switchMasterOnePage` does for a
-      -- page with nothing on it yet. When something precedes it, the eject
-      -- lays the new page out on these.
-      self.oddPageMaster = "front-right"
-      self.evenPageMaster = "front-left"
       if s.books > 0 then
-         local where = self._bcopts.bookstarts
-         if where == nil or where == "continuous" or where == "next_column" then
-            where = "next_page"
-         end
-         start_at(where)
-         -- Built now, so the page before the front matter ends as a page of
-         -- the body — see the same call in `book`.
+         -- The next page, whichever side it is: **not** a right-hand page,
+         -- because the page that would make it one is a blank — and a
+         -- blank set after the last book is a blank at the end of the
+         -- finished file, which is the trailing-blank defect P5.3 owes a
+         -- test to. The side is handled below instead.
+         start_at("next_page")
+         -- **Built now, not left on the queue.** `supereject` pushes a
+         -- penalty and nothing builds the page until the next line of text
+         -- arrives, by which time the front flag is up — so the last page
+         -- of Scripture would go out with no head and no folio, and be
+         -- counted as front matter. Measured, on exactly that page.
          SILE.typesetter:leaveHmode()
-      else
-         self:switchMasterOnePage("front-right")
       end
+      -- The front matter's first page will be page 1 of the book, a recto,
+      -- whatever side it is set on here. So the masters are assigned by
+      -- where this page *is*: a recto master on it and alternating from
+      -- there, which puts the inner margin on the inside once the pages are
+      -- moved. The page the typesetter is on was laid out on the body's
+      -- master and is re-laid underneath it, which `switchMasterOnePage`
+      -- does for a page with nothing on it yet.
+      local odd = not self.oddPage or self:oddPage()
+      self.oddPageMaster = odd and "front-right" or "front-left"
+      self.evenPageMaster = odd and "front-left" or "front-right"
+      self:switchMasterOnePage("front-right")
       s.in_front = true
       s.front_started = false
+      s.front_pages = 0
+      s.front_marks = 0
       s.books = s.books + 1
       s.chapters_in_book = 0
       s.carried = nil
@@ -2371,10 +2422,43 @@ function class:registerXmlCommands ()
       -- Only element children, as `book` does: the whitespace between
       -- divisions is the emitter's layout and not a paragraph.
       elements(content)
-      -- Remembered rather than acted on: the pages of the front matter are
-      -- still in the typesetter, and the book after it is what ejects them.
-      s.after_front = true
+      -- The last page is still in the typesetter; `finish` ends it, pads
+      -- the front to an even count, and reports the count.
    end)
+
+   --- The table of contents: every book, with the page it begins on.
+   --
+   -- From what `endPage` collected as the books went by, which is complete
+   -- because the front matter is set after them. Each line is the name, a
+   -- row of dots and the page number at the margin — `parfillskip` set to
+   -- nothing so the last line of the entry is justified like the others,
+   -- which is what puts the number at the edge — and the whole line is a
+   -- link to the book when the project writes destinations at all.
+   local function table_of_contents ()
+      local entries = scratch().toc or {}
+      if #entries == 0 then
+         return
+      end
+      SILE.settings:temporarily(function ()
+         SILE.settings:set("document.parindent", SILE.types.node.glue())
+         SILE.settings:set("current.parindent", SILE.types.node.glue())
+         SILE.settings:set("typesetter.parfillskip", SILE.types.node.glue())
+         SILE.settings:set("document.parskip", SILE.types.node.vglue("2pt"))
+         for _, entry in ipairs(entries) do
+            local line = function ()
+               SILE.typesetter:typeset(entry.name)
+               SILE.call("dotfill")
+               SILE.typesetter:typeset(entry.page)
+            end
+            if entry.dest and entry.dest ~= "" and o_anchors() ~= "none" then
+               SILE.call("pdf:link", { dest = entry.dest }, line)
+            else
+               line()
+            end
+            SILE.call("par")
+         end
+      end)
+   end
 
    -- One page of the front matter. The first opens on the page the front
    -- began on; each one after it opens a new page. Bookmarked under its own
@@ -2396,6 +2480,9 @@ function class:registerXmlCommands ()
             destination(dest, "chapter")
             if options.title and options.title ~= "" and o_anchors() ~= "none" then
                SILE.call("pdf:bookmark", { dest = dest, title = options.title, level = 1 })
+               -- Counted so the application can move these to the head of
+               -- the outline, where the pages they name are going.
+               s.front_marks = (s.front_marks or 0) + 1
             end
          end
          -- A title sits in the upper third of its page rather than at the
@@ -2411,6 +2498,11 @@ function class:registerXmlCommands ()
       -- In a book of Scripture a `\periph` is a division of nothing this
       -- class lays out differently, so its content simply follows on.
       elements(content)
+      -- The division's own words first — a heading, usually — and then the
+      -- list the build generates.
+      if s.in_front and options.id == "toc" then
+         table_of_contents()
+      end
    end)
 
    self:registerCommand("heading", function (options, content)

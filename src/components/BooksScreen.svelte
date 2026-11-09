@@ -77,7 +77,9 @@
           class:out={!front.included}
           class:selected={session.selectedBook === front.code}
           class:hidden={!matches(front)}
-          ondblclick={() => void session.editBook(front.path)}
+          ondblclick={() => {
+            if (!front.builtin) void session.editBook(front.path);
+          }}
         >
           <span class="grip" aria-hidden="true"></span>
           <Toggle
@@ -97,15 +99,32 @@
             <span class="mono code">{front.code}</span>
             <span class="muted chapters">
               {front.included ? front.sections.join(" · ") : "—"}
+              {#if front.builtin}
+                <span class="badge">{t("builtIn")}</span>
+              {/if}
             </span>
           </button>
-          <button
-            type="button"
-            class="edit"
-            data-search-key="action:edit-book"
-            aria-label={phrases().editBook(front.code)}
-            onclick={() => void session.editBook(front.path)}>✎</button
-          >
+          {#if front.builtin}
+            <!--
+              The application's own text, not a file: there is nothing to
+              open in an editor until it is written down, which this does.
+            -->
+            <button
+              type="button"
+              class="link add"
+              data-search-key="action:add-front-matter"
+              disabled={!session.editable}
+              onclick={() => void session.addFrontMatter()}>{t("addToProject")}</button
+            >
+          {:else}
+            <button
+              type="button"
+              class="edit"
+              data-search-key="action:edit-book"
+              aria-label={phrases().editBook(front.code)}
+              onclick={() => void session.editBook(front.path)}>✎</button
+            >
+          {/if}
           <span class="nudge"></span>
         </li>
       </ul>
@@ -275,6 +294,13 @@
   }
   .front .row.wide {
     grid-template-columns: auto 1fr 44px auto;
+  }
+  .front .chapters .badge {
+    margin-inline-start: 8px;
+  }
+  .front .add {
+    white-space: nowrap;
+    font-size: 12px;
   }
   .none {
     display: flex;

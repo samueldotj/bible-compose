@@ -143,8 +143,11 @@ fn built_from(usfm: &str, columns: usize, page: &str, styles: &str, contents: &s
     std::fs::write(root.join("GEN.usfm").as_std_path(), usfm).expect("the book");
     std::fs::write(
         root.join("biblecompose.toml").as_std_path(),
+        // Genesis alone: these are measurements of a body page, and the
+        // built-in front matter a project is given would put a title page
+        // and a contents page in front of the one being measured.
         format!(
-            "schema_version = 1\n[page]\ncolumns = {columns}\n{page}\n[contents]\n{contents}\n"
+            "schema_version = 1\n[books]\ninclude = [\"GEN\"]\n[page]\ncolumns = {columns}\n{page}\n[contents]\n{contents}\n"
         ),
     )
     .expect("the settings");
@@ -542,7 +545,9 @@ fn two_books(columns: usize, contents: &str) -> (usize, usize, Vec<usize>) {
     std::fs::write(root.join("EXO.usfm").as_std_path(), SECOND_BOOK).expect("Exodus");
     std::fs::write(
         root.join("biblecompose.toml").as_std_path(),
-        format!("schema_version = 1\n[page]\ncolumns = {columns}\n[contents]\n{contents}\n"),
+        format!(
+            "schema_version = 1\n[books]\ninclude = [\"GEN\", \"EXO\"]\n[page]\ncolumns = {columns}\n[contents]\n{contents}\n"
+        ),
     )
     .expect("the settings");
     let opened = project::open(&root);

@@ -133,6 +133,7 @@ export interface Chrome {
   readonly frontMatterDesc: string;
   readonly noFrontMatter: string;
   readonly addFrontMatter: string;
+  readonly builtIn: string;
 
   // Template.
   readonly startFrom: string;
@@ -610,9 +611,10 @@ export const EN: Catalogue = {
     notIncluded: "not included",
     frontMatter: "Front matter",
     frontMatterDesc:
-      "A title page and a copyright page, set before the first book in one column with no running head or page number. The body's page numbers start after it.",
+      "A title page, a copyright page and a table of contents, set before the first book in one column with no running head or page number. Turn it off to leave it out.",
     noFrontMatter: "No front matter yet.",
     addFrontMatter: "Add a title page and copyright page",
+    builtIn: "built-in",
 
     startFrom: "Start from a template",
     presetNote: "Each one writes its settings into the project, where you can change them one at a time.",

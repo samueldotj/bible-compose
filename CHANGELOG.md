@@ -20,13 +20,11 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   copyright notice is reported like any other.
 
   **Books** lists the front matter in a row of its own above the testaments,
-  with the titles of its pages where a book has its chapter count. A project
-  with none is offered **Add a title page and copyright page**, which writes
-  a starter `FRT.usfm` with the publication's name on it. That is the one
-  USFM file BibleCompose creates: a new file, into a folder that has no front
-  matter, on a button press; it refuses when the folder has some under any
-  name, and every build still checks the checksum of every file it started
-  with.
+  with the titles of its pages where a book has its chapter count. The one
+  USFM file BibleCompose creates is the front matter it writes on request
+  (below): a new file, into a folder that has no front matter, on a button
+  press; it refuses when the folder has some under any name, and every build
+  still checks the checksum of every file it started with.
 
   Found on the way: `\pc`, the centred paragraph, had no entry in the
   built-in sheet and was set flush left. It is centred now. And the folio
@@ -35,9 +33,37 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   the class's own from that page on; the class now keeps it off on every
   page.
 
-* **Not yet**: a generated table of contents, which needs the page numbers a
-  first pass produces; a preface or any other `\periph` sets as a page
-  already, named by its words.
+* **A table of contents, generated.** A `\periph Table of Contents|id="toc"`
+  in the front matter is filled with every book in the publication and the
+  page it begins on — the book's `\toc1` name where the file gives one, its
+  running-head name where it does not, dot leaders, and the number the page
+  prints — each line a link to the book where the project writes
+  destinations. A list typed into that division is set aside for the
+  generated one and the file is told so, once, as information. **Without a
+  second pass over the publication.** Page numbers are known only once the
+  books are set, and the usual answer is to set everything twice, which on a
+  Bible is minutes to learn numbers the first run knew by the time it
+  finished. Instead the typesetter sets the front matter *last*, after the
+  books, reports how many pages it took, and the application moves those
+  pages to the front of the file — a page tree in a different order, which
+  nothing else in a PDF cares about, and the outline's front entries moved
+  up with them. The body is numbered from 1 and never learns how long the
+  front matter is, so the numbers the contents page prints are the numbers
+  on the pages. The front matter is padded to an even count, so the first
+  book still opens on a right-hand page.
+
+* **Every project has front matter unless it says otherwise.** A folder
+  with no `FRT` of its own is given the built-in one: a title page with the
+  publication's name, edition and publisher where the settings give them, a
+  copyright page, and a table of contents. It appears in Books marked
+  *built-in*, on by default, and its switch leaves it out like any other
+  book — `books.include` without `FRT`. **Add to project** writes it down as
+  `FRT.usfm` so the words can be edited, which is the one USFM file this
+  application creates, and after that the project's own file is what sets.
+  Where the settings say nothing — no publisher, no edition — the line is
+  left out rather than left blank, so the built-in pages never print a
+  "Copyright ©" with nobody after it. *Contents* is the one English word in
+  them; an edition in another language writes its own.
 
 ## 0.3.1
 

@@ -32,8 +32,11 @@ fn a_folder_of_usfm_opens_with_its_books_and_its_defaults() {
     let (_dir, root) = project(None);
     let p = project_at(&root);
 
-    assert_eq!(p.books.len(), 1);
-    let john = &p.books[0];
+    // John, and the built-in front matter ahead of it: a project with no
+    // `FRT` of its own is given one, on by default.
+    assert_eq!(p.books.len(), 2);
+    assert!(p.books[0].builtin, "{:?}", p.books[0].code);
+    let john = &p.books[1];
     assert_eq!(john.code, "JHN");
     assert_eq!(john.name, "John", "the running head name, not the code");
     assert_eq!(john.chapters, 2);
@@ -137,13 +140,18 @@ fn resetting_a_field_restores_the_default() {
 fn a_book_left_out_stays_listed_and_is_marked() {
     let (_dir, root) = project(None);
     let before = project_at(&root);
-    assert_eq!(before.books.len(), 1);
-    assert!(before.books[0].included);
+    let scripture =
+        |p: &biblecompose_tauri_lib::WireProject| -> Vec<biblecompose_tauri_lib::WireBook> {
+            p.books.iter().filter(|b| !b.builtin).cloned().collect()
+        };
+    assert_eq!(scripture(&before).len(), 1);
+    assert!(scripture(&before)[0].included);
 
     let p = write_setting(&root, "books.include", "MAT").expect("MAT is a book code");
-    assert_eq!(p.books.len(), 1, "still on disk, still listed");
-    assert!(!p.books[0].included, "and no longer in the publication");
-    assert_eq!(p.books[0].chapters, 0, "a book left out is never parsed");
+    let john = scripture(&p);
+    assert_eq!(john.len(), 1, "still on disk, still listed");
+    assert!(!john[0].included, "and no longer in the publication");
+    assert_eq!(john[0].chapters, 0, "a book left out is never parsed");
 }
 
 /// A file that will not parse blocks the build, and says so on the first line
@@ -177,7 +185,11 @@ fn a_book_carries_its_own_problem_count() {
     .expect("write");
 
     let p = project_at(&root);
-    let john = &p.books[0];
+    let john = p
+        .books
+        .iter()
+        .find(|b| b.code == "JHN")
+        .expect("John is listed");
     assert!(
         john.errors + john.warnings > 0,
         "an unknown marker should be reported against its own book"
@@ -469,7 +481,10 @@ fn an_external_style_edit_is_reflected_after_reload() {
 #[test]
 fn an_external_settings_edit_is_reflected_after_reload() {
     let (_dir, root) = project(None);
-    assert_eq!(project_at(&root).books.len(), 1);
+    assert!(project_at(&root)
+        .books
+        .iter()
+        .any(|b| b.code == "JHN" && b.included));
 
     std::fs::write(
         root.join("biblecompose.toml").as_std_path(),
@@ -478,9 +493,13 @@ fn an_external_settings_edit_is_reflected_after_reload() {
     .expect("write");
 
     let after = project_at(&root);
-    assert_eq!(after.books.len(), 1, "the book is still in the folder");
+    let john = after
+        .books
+        .iter()
+        .find(|b| b.code == "JHN")
+        .expect("the book is still in the folder");
     assert!(
-        !after.books[0].included,
+        !john.included,
         "the reloaded project must honour the file as written"
     );
 }
@@ -621,9 +640,10 @@ fn creating_a_project_writes_a_folder_and_its_settings() {
     // full of defaults is a file somebody has to maintain to change nothing.
     assert!(!written.contains("page"), "{written}");
 
-    // And it is a project: it opens, with no books yet and nothing blocking.
+    // And it is a project: it opens, with no books of Scripture yet — only
+    // the built-in front matter — and nothing blocking.
     let p = project_at(&root);
-    assert!(p.books.is_empty());
+    assert!(p.books.iter().all(|b| b.builtin), "{:?}", p.books);
     let name = p.settings.iter().find(|s| s.key == "project.name").unwrap();
     assert_eq!(name.value, "Tamil Bible");
     assert!(name.overridden);
@@ -702,6 +722,58 @@ fn front_matter_is_listed_first_with_its_pages() {
         "a book of Scripture has chapters, not pages"
     );
     assert_eq!(p.canonical_order, ["FRT", "JHN"]);
+    assert!(!front.builtin, "the project's own file");
+}
+
+/// A project with no front matter of its own gets the built-in one — listed,
+/// marked as built-in, and on by default — and `books.include` can leave it
+/// out like any other book, after which it is still listed, off.
+#[test]
+fn a_project_without_front_matter_gets_the_built_in_one() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let root = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("UTF-8 temp path");
+    std::fs::write(
+        root.join("JHN.usfm").as_std_path(),
+        "\\id JHN\n\\h John\n\\c 1\n\\p\n\\v 1 In the beginning was the Word.\n",
+    )
+    .expect("write");
+    std::fs::write(
+        root.join("biblecompose.toml").as_std_path(),
+        "schema_version = 1\n[project]\nname = \"Vedapusthakam\"\n",
+    )
+    .expect("write");
+
+    let p = project_at(&root);
+    assert!(!p.blocked, "{:?}", p.diagnostics);
+    let codes: Vec<&str> = p.books.iter().map(|b| b.code.as_str()).collect();
+    assert_eq!(codes, ["FRT", "JHN"]);
+    let front = &p.books[0];
+    assert!(front.builtin);
+    assert!(front.included);
+    assert_eq!(
+        front.sections,
+        ["Title Page", "Copyright", "Table of Contents"]
+    );
+    assert!(
+        front.path.ends_with("FRT.usfm"),
+        "where the file would go: {}",
+        front.path
+    );
+    assert!(!root.join("FRT.usfm").exists(), "and nothing was written");
+
+    write_setting(&root, "books.include", "JHN").expect("leave the front matter out");
+    let p = project_at(&root);
+    let front = &p.books[0];
+    assert_eq!(front.code, "FRT");
+    assert!(front.builtin);
+    assert!(!front.included);
+    assert!(
+        !p.diagnostics
+            .iter()
+            .any(|d| d.message.contains("configured but no file")),
+        "the built-in front matter is present: {:?}",
+        p.diagnostics
+    );
 }
 
 // ------------------------------------------------------------- open_url ----

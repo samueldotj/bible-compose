@@ -257,6 +257,129 @@ fn front_matter_is_set_in_one_column_even_when_the_body_has_two() {
     );
 }
 
+/// The table of contents: every book with the page it begins on, under the
+/// heading the file gives it, after the copyright page — and the front matter
+/// padded to an even number of pages so the first book still opens on a
+/// right-hand page.
+#[test]
+fn the_contents_page_lists_every_book_with_its_page() {
+    if !have_backend() {
+        return;
+    }
+    let with_toc = format!("{FRONT}\\periph Table of Contents|id=\"toc\"\n\\imt1 Contents\n");
+    let john = concat!(
+        "\\id JHN\n\\h John\n\\toc1 The Gospel according to John\n\\c 1\n\\p\n",
+        "\\v 1 In the beginning was the Word.\n",
+    );
+    let (_guard, report) = build(
+        &[
+            ("FRT.usfm", &with_toc),
+            ("GEN.usfm", GENESIS),
+            ("JHN.usfm", john),
+        ],
+        "",
+    );
+    assert_eq!(
+        report.state,
+        biblecompose_app::BuildState::Succeeded,
+        "{:?}",
+        report.diagnostics
+    );
+    let lines = lines(&report);
+    // Title, copyright, contents, a blank to make the front matter even, then
+    // Genesis and John.
+    assert_eq!(
+        common::pages(&lines),
+        [1, 2, 3, 5, 6],
+        "{:?}",
+        common::pages(&lines)
+    );
+
+    let contents = page_text(&lines, 3);
+    assert!(contents.starts_with("Contents"), "{contents}");
+    // The long name from `\toc1` where the file gives one, the running
+    // head's where it does not; the page is the one the body prints.
+    assert!(contents.contains("Genesis"), "{contents}");
+    assert!(contents.contains("TheGospelaccordingtoJohn"), "{contents}");
+    let entry = |name: &str| -> String {
+        lines
+            .iter()
+            .filter(|l| l.page == 3 && l.text().contains(name))
+            .map(|l| l.text())
+            .collect()
+    };
+    assert!(entry("Genesis").ends_with('1'), "{}", entry("Genesis"));
+    assert!(entry("John").ends_with('2'), "{}", entry("John"));
+    assert!(
+        entry("Genesis").contains("...."),
+        "dot leaders: {}",
+        entry("Genesis")
+    );
+    assert!(
+        furniture(&lines, 3).is_empty(),
+        "a contents page is not headed"
+    );
+
+    // Page 4 is the blank, with nothing on it at all; Genesis is page 5 and
+    // still numbered 1, on a right-hand page.
+    assert!(lines.iter().all(|l| l.page != 4));
+    assert_eq!(common::folio(&lines, 5), "1");
+    assert_eq!(common::folio(&lines, 6), "2");
+}
+
+/// A project with no `FRT` of its own is given the built-in front matter:
+/// the publication's name on a title page, a copyright page, a contents page
+/// — and `books.include` leaves it out like any book.
+#[test]
+fn a_project_without_front_matter_is_given_the_built_in_one() {
+    if !have_backend() {
+        return;
+    }
+    let (_guard, report) = build(
+        &[("GEN.usfm", GENESIS)],
+        "[project]\nname = \"Vedapusthakam\"\nauthor = \"The Translators\"\n",
+    );
+    assert_eq!(
+        report.state,
+        biblecompose_app::BuildState::Succeeded,
+        "{:?}",
+        report.diagnostics
+    );
+    let lines = lines(&report);
+    assert_eq!(
+        common::pages(&lines),
+        [1, 2, 3, 5],
+        "{:?}",
+        common::pages(&lines)
+    );
+    assert!(
+        page_text(&lines, 1).contains("Vedapusthakam"),
+        "{}",
+        page_text(&lines, 1)
+    );
+    assert!(
+        page_text(&lines, 2).contains("TheTranslators"),
+        "{}",
+        page_text(&lines, 2)
+    );
+    assert!(
+        page_text(&lines, 3).contains("Genesis"),
+        "{}",
+        page_text(&lines, 3)
+    );
+    assert!(
+        page_text(&lines, 5).contains("Inthebeginning"),
+        "{}",
+        page_text(&lines, 5)
+    );
+    assert_eq!(common::folio(&lines, 5), "1");
+
+    let (_guard, report) = build(&[("GEN.usfm", GENESIS)], "[books]\ninclude = [\"GEN\"]\n");
+    let path = report.output.as_ref().expect("a PDF");
+    let without = Pdf::lines(&std::fs::read(path.as_std_path()).expect("read the PDF"));
+    assert_eq!(common::pages(&without), [1], "turned off, it is gone");
+}
+
 /// Front matter that is switched off is left out like any other book, and
 /// the body then starts on page 1 as it always did.
 #[test]
@@ -328,7 +451,8 @@ fn the_starter_front_matter_is_written_once_and_reads_back() {
             .iter()
             .filter(|b| matches!(b, biblecompose_scripture::Block::Division { .. }))
             .count(),
-        2
+        3,
+        "a title page, a copyright page and a table of contents"
     );
 
     // A second time refuses, naming the file that is in the way.

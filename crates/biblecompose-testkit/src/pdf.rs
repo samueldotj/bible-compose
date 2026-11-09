@@ -53,8 +53,16 @@ impl Pdf {
     /// fixture in the set while passing on the rest.
     pub fn parse(raw: &[u8]) -> Pdf {
         let mut blob = raw.to_vec();
+        // Each page once. A page the typesetter packed into an object stream
+        // is visible only among the unpacked objects; a page the application
+        // wrote back as a plain object — as it does when it moves the front
+        // matter — is visible in the file *and* among the objects, and was
+        // being counted twice over the two together. The larger of the two
+        // counts is the number of pages whichever way the file was written.
+        let mut bodies = Vec::new();
         for body in objects(raw).values() {
             blob.extend_from_slice(body);
+            bodies.extend_from_slice(body);
         }
 
         Pdf {
@@ -63,7 +71,7 @@ impl Pdf {
                 .trim_start_matches('%')
                 .trim()
                 .to_owned(),
-            pages: count_pages(&blob),
+            pages: count_pages(raw).max(count_pages(&bodies)),
             page_sizes: page_sizes(&blob),
             fonts: fonts(&blob),
             embedded_font_files: count(&blob, b"/FontFile"),

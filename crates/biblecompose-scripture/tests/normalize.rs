@@ -123,6 +123,42 @@ fn a_major_title_is_a_heading_in_front_matter_and_a_name_in_scripture() {
     );
 }
 
+/// A hand-written list in the Table of Contents gives way to the generated
+/// one, and says so once; the heading above it stays.
+#[test]
+fn a_table_in_the_contents_division_is_replaced_and_reported() {
+    let document = usfm_core::Document::parse(concat!(
+        "\\id FRT\n\\periph Table of Contents|id=\"toc\"\n\\imt1 Contents\n",
+        "\\tr \\tc1 Genesis \\tcr2 1\n\\tr \\tc1 Exodus \\tcr2 40\n",
+        "\\periph Preface\n\\tr \\tc1 kept \\tc2 here\n",
+    ));
+    let code = BookCode::parse("FRT").expect("FRT");
+    let (b, diagnostics) = normalize(code, Utf8Path::new("FRT.usfm"), &document);
+
+    let found = divisions(&b);
+    assert_eq!(found.len(), 2, "{:#?}", b.blocks);
+    assert!(
+        matches!(found[0].2, [Block::Heading { .. }]),
+        "the heading stays and the rows go: {:#?}",
+        found[0].2
+    );
+    assert!(
+        found[1]
+            .2
+            .iter()
+            .any(|blk| matches!(blk, Block::Table { .. })),
+        "a table anywhere else is left alone: {:#?}",
+        found[1].2
+    );
+    let said: Vec<String> = diagnostics.iter().map(|d| d.to_string()).collect();
+    assert_eq!(said.len(), 1, "{said:?}");
+    assert!(said[0].contains("Table of Contents"), "{said:?}");
+    assert!(
+        said[0].starts_with("info"),
+        "information, not a fault: {said:?}"
+    );
+}
+
 /// A `\periph` in a book of Scripture is still a division — nothing is
 /// dropped — and `\mte`, a title at the end of a book, is not mistaken for
 /// a page title.

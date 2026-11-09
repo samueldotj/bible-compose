@@ -1,5 +1,5 @@
 <biblecompose version="1" class="biblecompose">
-<book code="PSA" name="Psalms" altname="Psalms">
+<book code="PSA" name="Psalms" altname="Psalms" tocname="Psalms">
 <heading style="d" level="1"><chapter n="3"/>A Psalm of David, when he fled from Absalom his son.</heading>
 <heading style="s" level="1">A first-level heading</heading>
 <heading style="r" level="1">(2 Samuel 15:13-30)</heading>

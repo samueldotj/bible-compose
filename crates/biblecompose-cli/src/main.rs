@@ -114,8 +114,9 @@ fn document(books: Option<&Utf8Path>, fixture: &str) -> Result<project::Opened, 
             document: load(fixture)?,
             diagnostics: Diagnostics::new(),
             // A fixture has no folder, so there is nothing on disk to leave
-            // out of it.
+            // out of it, and its front matter, if it has any, is its own.
             left_out: Vec::new(),
+            builtin_front: false,
         });
     };
 

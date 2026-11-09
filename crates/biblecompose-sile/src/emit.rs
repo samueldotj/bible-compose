@@ -98,7 +98,16 @@ pub fn emit_hiding(doc: &ScriptureDocument, styles: &[StyleRule], hidden: Hidden
 
     emit_styles(&mut w, styles, &mut state);
 
-    for book in &doc.books {
+    // Scripture first and the front matter after it, whatever order the
+    // publication lists them in. The front matter's table of contents names
+    // the page each book starts on, and those pages are known only once the
+    // books are set — so the class sets the front matter last and the
+    // application moves its pages to the front of the file afterwards. The
+    // body is numbered from 1 either way, so nothing in it depends on how
+    // long the front matter turns out to be.
+    let (front, scripture): (Vec<&Book>, Vec<&Book>) =
+        doc.books.iter().partition(|b| b.code.is_peripheral());
+    for book in scripture.into_iter().chain(front) {
         emit_book(&mut w, book, &mut state);
     }
 
@@ -260,6 +269,11 @@ fn emit_book(w: &mut Writer<Cursor<Vec<u8>>>, book: &Book, state: &mut EmitState
     // decision to make, and a missing attribute would make it the emitter's.
     if let Some(name) = book.names.for_alternate_head() {
         el.push_attribute(("altname", name));
+    }
+    // What the table of contents calls it: `\toc1` is the long name USFM
+    // keeps for exactly this.
+    if let Some(name) = book.names.for_contents() {
+        el.push_attribute(("tocname", name));
     }
     write(w, Event::Start(el), state);
 

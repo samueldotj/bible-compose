@@ -189,10 +189,19 @@ now and then. In the file these are `contents.book_starts`,
 `contents.chapter_starts`, `contents.verse_starts` and
 `contents.start_verses`; in one column, "next column" is the next page.
 
-### A title page and a copyright page
+### Title page, copyright page, table of contents
 
-Front matter is a USFM book like the others, the peripheral book `FRT`, and
-it goes in the folder beside them. Inside it, each `\periph` starts a page:
+Every publication opens with front matter: a title page carrying the
+publication's name, edition and publisher where **PDF metadata** gives them,
+a copyright page, and a table of contents listing every book with the page
+it begins on. **Books** shows it in a row of its own above the testaments,
+marked *built-in*. Its switch turns it off, like any book.
+
+To change the words, press **Add to project**. That writes the same front
+matter into the folder as `FRT.usfm` — the one USFM file BibleCompose ever
+creates, and only when the project has none — and from then on the file is
+yours. It is a USFM book like the others, the peripheral book `FRT`, and
+each `\periph` in it is a page:
 
 ```
 \id FRT
@@ -203,26 +212,29 @@ it goes in the folder beside them. Inside it, each `\periph` starts a page:
 \periph Copyright|id="copyright"
 \pc Copyright © 2026 The Publisher. All rights reserved.
 \pc Scripture quotations may be reproduced …
+\periph Table of Contents|id="toc"
+\imt1 Contents
 ```
 
-If the project has none, **Books** offers **Add a title page and copyright
-page**, which writes exactly this file — with the publication's name on the
-title page and the publisher on the copyright line, where the settings say
-them — for you to edit. It is the one thing in BibleCompose that creates a
-USFM file, and it refuses when the project already has front matter.
+The division with `id="toc"` is where the generated list goes, under
+whatever heading you give it; the list itself uses each book's `\toc1` name,
+or its `\h` name when there is none. Rows you type there are not printed —
+the build says so, once — because the page numbers come from the typesetting
+and a typed list goes wrong the first time a font changes. Leave that
+division out and there is no contents page. A preface, or any other
+`\periph`, is a page named by its words. Paratext writes this file, so one
+from a translation project drops in as it is.
 
 The front matter is bound first whatever the book order says, set in one
 column however many the body has, and its pages carry no running head and no
-page number. The first book of Scripture after it opens on a right-hand page
-numbered 1. Every `\periph` with an `id` is a bookmark in the PDF under its
-title. `\mt1`–`\mt4` on a title page are the `heading.mt1`–`mt4` styles,
-and `\pc` is `paragraph.pc`; everything else in the file sets as it would in
-a book. Paratext writes this file, so one from a translation project drops
-in as it is.
+page number; it is padded to an even number of pages so the first book opens
+on a right-hand page, numbered 1. Every `\periph` with an `id` is a bookmark
+in the PDF under its title. `\mt1`–`\mt4` on a title page are the
+`heading.mt1`–`mt4` styles, and `\pc` is `paragraph.pc`.
 
-A generated table of contents is not here yet: page numbers are not known
-until the books are set, and a hand-written list goes wrong the first time a
-font changes.
+The contents page costs no second build. The typesetter sets the front
+matter after the last book, when the page numbers are known, and
+BibleCompose moves its pages to the front of the file.
 
 ### The chapter number
 
@@ -325,9 +337,9 @@ styles need a bold, choose a family that lists one.
 
 **Your Scripture is never written to.** Not by a build, not by a settings
 change, not ever. Every acceptance test checks the checksum of every source
-file afterwards. The one USFM file BibleCompose writes is the starter front
-matter, a new file into a project that has none, when you press the button
-that says so.
+file afterwards. The one USFM file BibleCompose writes is the front matter,
+a new file into a project that has none, when you press the button that
+says so.
 
 **Nothing needs the internet.** Not opening a project, not validating, not
 building. There is no HTTP client anywhere below the window, and the shipped

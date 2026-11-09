@@ -5,6 +5,7 @@
 //! the only thing that orchestrates — `biblecompose-core` from SRS §12.1 is
 //! gone because its stated job had exactly one caller.
 
+pub mod arrange;
 pub mod asset;
 pub mod backend_input;
 pub mod font;
@@ -359,10 +360,16 @@ pub fn build_with(
         .or_else(|| pages::estimate(doc, &request.settings))
         .or_else(|| remembered_pages(&request.project_root));
     let pages = AtomicU32::new(0);
+    // What the class says, at the end of its run, about the front matter it
+    // set last — see `arrange`.
+    let mut front = arrange::FrontMatter::default();
     let outcome = {
         let reporter = &*reporter;
         backend.run(&job, cancel, &mut |event| match event {
             BackendEvent::Log(line) => {
+                if let Some(reported) = arrange::FrontMatter::parse_log_line(&line.text) {
+                    front = reported;
+                }
                 let stream = match line.stream {
                     Stream::Stdout => "stdout",
                     Stream::Stderr => "stderr",
@@ -426,6 +433,11 @@ pub fn build_with(
     pages::remember(&shape, set);
 
     reporter.advance(BuildState::Publishing);
+    // The front matter was set last; it is bound first.
+    if let Err(e) = arrange::front_first(&outcome.pdf, front) {
+        build_dir.keep();
+        return failed(reporter, diagnostics, e);
+    }
     if let Err(e) = publish(&outcome.pdf, &destination) {
         build_dir.keep();
         return failed(reporter, diagnostics, e);

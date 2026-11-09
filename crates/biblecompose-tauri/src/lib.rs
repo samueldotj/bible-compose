@@ -121,6 +121,10 @@ pub struct WireBook {
     /// `Title Page`, `Copyright`. Empty for a book of Scripture, which is
     /// divided into chapters and counted above instead.
     pub sections: Vec<String>,
+    /// The built-in front matter: the folder has no `FRT` of its own, so this
+    /// book is the application's text and not a file. `path` is where the
+    /// file would go, and the window offers to write it there.
+    pub builtin: bool,
 }
 
 /// One row of the settings form (GUI-002).
@@ -1556,6 +1560,7 @@ fn wire_project(root: &Utf8Path, opened: project::Opened) -> WireProject {
                         _ => None,
                     })
                     .collect(),
+                builtin: opened.builtin_front && book.code.is_peripheral(),
             }
         })
         .collect();
@@ -1579,6 +1584,7 @@ fn wire_project(root: &Utf8Path, opened: project::Opened) -> WireProject {
                 included: false,
                 testament: out.code.testament().as_str(),
                 sections: Vec::new(),
+                builtin: opened.builtin_front && out.code.is_peripheral(),
             },
         );
     }

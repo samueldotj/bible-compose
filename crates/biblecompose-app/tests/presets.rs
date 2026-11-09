@@ -78,6 +78,13 @@ fn build_with(preset_id: &str) -> (tempfile::TempDir, Utf8PathBuf, Vec<Line>, Pd
     let complaints = preset::apply(&mut file, chosen);
     assert!(complaints.is_empty(), "{preset_id}: {complaints:?}");
     file.save().expect("write the settings");
+    // Genesis alone. What is measured here is the preset's page of
+    // Scripture; the built-in front matter a project is given — a title
+    // page, a copyright page, a contents page and the blank that makes them
+    // even — is the same for every preset and is measured elsewhere.
+    let mut written = std::fs::read_to_string(path.as_std_path()).expect("read the settings");
+    written.push_str("\n[books]\ninclude = [\"GEN\"]\n");
+    std::fs::write(path.as_std_path(), written).expect("write the settings");
 
     // And read back off disk, so a preset that wrote something unreadable
     // fails here rather than being resolved from memory.

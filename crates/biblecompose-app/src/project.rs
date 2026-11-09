@@ -31,6 +31,10 @@ pub struct Loaded {
     /// them. Not parsed — that is the point of leaving them out — so there is
     /// nothing here but the identity and the file.
     pub left_out: Vec<LeftOut>,
+    /// The front matter is the built-in one: the folder has no `FRT` of its
+    /// own, so the publication was given [`front_matter_template`]. The
+    /// window says so, and offers to write it down.
+    pub builtin_front: bool,
 }
 
 /// A book the project has but does not publish.
@@ -200,11 +204,11 @@ pub const FRONT_MATTER_FILE: &str = "FRT.usfm";
 /// refuses, because "add front matter" to a project that has some is a
 /// different verb.
 ///
-/// What is written is a starter, not a template: USFM's own `FRT` book with
-/// two `\periph` divisions, the publication's name on the title page, and a
-/// copyright line with a space where the holder goes. The words are the
-/// publisher's to replace, in any USFM editor; the structure is what the
-/// build reads.
+/// What is written is the built-in front matter — the same text the build
+/// uses for a project that has none (see [`front_matter_template`]) — so
+/// pressing the button changes nothing about the page and everything about
+/// who owns the words: they are the publisher's to edit, in any USFM editor,
+/// from then on.
 pub fn add_front_matter(root: &Utf8Path) -> Result<Utf8PathBuf, Diagnostic> {
     let path = root.join(FRONT_MATTER_FILE);
     let refuse = |message: String, help: &str| {
@@ -228,6 +232,34 @@ pub fn add_front_matter(root: &Utf8Path) -> Result<Utf8PathBuf, Diagnostic> {
     }
 
     let (settings, _) = settings(root);
+    let usfm = front_matter_template(root, &settings);
+
+    std::fs::write(path.as_std_path(), usfm).map_err(|e| {
+        refuse(
+            format!("could not write {path}"),
+            "check that the folder can be written to",
+        )
+        .detail(e.to_string())
+    })?;
+    Ok(path)
+}
+
+/// The front matter a project gets when it has none of its own.
+///
+/// USFM's `FRT` book with three `\periph` divisions — a title page carrying
+/// the publication's name, edition and publisher where the settings give
+/// them; a copyright page; and a table of contents, which the build fills
+/// with every book and the page it starts on. Every project is set with it
+/// unless the project turns the front matter off (`books.include`) or
+/// carries an `FRT` of its own, which always wins.
+///
+/// Written from the settings and never from the Scripture, so it says only
+/// what the publisher has already said. Where they have said nothing, the
+/// line is left out rather than left blank: a copyright page reading
+/// "Copyright ©" and no more would be a page that looks finished and is
+/// not. "Contents" is the one English word in it; a publisher whose edition
+/// is not in English presses *Add to project* and writes their own.
+pub fn front_matter_template(root: &Utf8Path, settings: &Settings) -> String {
     let name = settings
         .project
         .name
@@ -241,7 +273,9 @@ pub fn add_front_matter(root: &Utf8Path) -> Result<Utf8PathBuf, Diagnostic> {
     let mut usfm = String::new();
     usfm.push_str(&format!("\\id FRT Front matter for {name}\n"));
     // No backslash in the remark: a marker named in passing is a marker.
-    usfm.push_str("\\rem Each periph line below starts a page. Edit the words; add a page with another one.\n");
+    usfm.push_str(
+        "\\rem Each periph line below starts a page. Edit the words; add a page with another one.\n",
+    );
     usfm.push_str("\\h Front matter\n");
     usfm.push_str("\\periph Title Page|id=\"title\"\n");
     usfm.push_str(&format!("\\mt1 {name}\n"));
@@ -253,21 +287,17 @@ pub fn add_front_matter(root: &Utf8Path) -> Result<Utf8PathBuf, Diagnostic> {
     }
     usfm.push_str("\\periph Copyright|id=\"copyright\"\n");
     usfm.push_str(&format!("\\pc {name}\n"));
-    match &author {
-        Some(author) => usfm.push_str(&format!(
-            "\\pc Copyright © {author}. All rights reserved.\n"
-        )),
-        None => usfm.push_str("\\pc Copyright © \n"),
+    if let Some(subject) = &subject {
+        usfm.push_str(&format!("\\pc {subject}\n"));
     }
-
-    std::fs::write(path.as_std_path(), usfm).map_err(|e| {
-        refuse(
-            format!("could not write {path}"),
-            "check that the folder can be written to",
-        )
-        .detail(e.to_string())
-    })?;
-    Ok(path)
+    if let Some(author) = &author {
+        usfm.push_str(&format!(
+            "\\pc Copyright © {author}. All rights reserved.\n"
+        ));
+    }
+    usfm.push_str("\\periph Table of Contents|id=\"toc\"\n");
+    usfm.push_str("\\imt1 Contents\n");
+    usfm
 }
 
 /// Read the project's settings.
@@ -323,6 +353,8 @@ pub struct Opened {
     pub diagnostics: Diagnostics,
     /// Books the folder has and the settings leave out (see [`Loaded`]).
     pub left_out: Vec<LeftOut>,
+    /// The front matter is the built-in one (see [`Loaded`]).
+    pub builtin_front: bool,
 }
 
 impl Opened {
@@ -390,7 +422,8 @@ pub fn open(root: &Utf8Path) -> Opened {
     let (book_plan, plan_diagnostics) = plan(&settings);
     diagnostics.extend(plan_diagnostics);
 
-    let loaded = load(root, &book_plan);
+    let template = front_matter_template(root, &settings);
+    let loaded = load_with_front(root, &book_plan, Some(&template));
     diagnostics.extend(loaded.diagnostics);
 
     Opened {
@@ -400,6 +433,7 @@ pub fn open(root: &Utf8Path) -> Opened {
         document: loaded.document,
         diagnostics,
         left_out: loaded.left_out,
+        builtin_front: loaded.builtin_front,
     }
 }
 
@@ -433,7 +467,33 @@ pub fn styles(root: &Utf8Path, strict: bool) -> (ResolvedStyles, Diagnostics) {
 /// duplicate book code does not stop the other books from being parsed and
 /// reported on.
 pub fn load(root: &Utf8Path, plan: &BookPlan) -> Loaded {
-    let found = discover(root);
+    load_with_front(root, plan, None)
+}
+
+/// [`load`], giving the project `front` as its front matter when the folder
+/// has none.
+///
+/// The built-in front matter joins the books discovery found, before
+/// selection — so `books.include` can leave it out like any other book, a
+/// `books.order` naming it is not told the file is missing, and nothing after
+/// this point knows it did not come from disk except the flag that says so.
+/// Its path is the one [`add_front_matter`] would write, because that is
+/// what it is: the file this project would have.
+pub fn load_with_front(root: &Utf8Path, plan: &BookPlan, front: Option<&str>) -> Loaded {
+    let mut found = discover(root);
+    let mut builtin_front = false;
+    if let Some(template) = front {
+        if !found.books.iter().any(|b| b.book.is_peripheral()) {
+            if let Some(code) = BookCode::parse("FRT") {
+                found.books.push(biblecompose_project::DiscoveredBook {
+                    book: code,
+                    path: root.join(FRONT_MATTER_FILE),
+                    source: template.to_owned(),
+                });
+                builtin_front = true;
+            }
+        }
+    }
     let mut diagnostics = found.diagnostics;
 
     // Selection before parsing: a book the project leaves out should not spend
@@ -499,6 +559,7 @@ pub fn load(root: &Utf8Path, plan: &BookPlan) -> Loaded {
         document,
         diagnostics,
         left_out,
+        builtin_front,
     }
 }
 

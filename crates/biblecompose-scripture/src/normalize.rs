@@ -275,6 +275,7 @@ impl Cx<'_> {
         let mut written = false;
         for child in &node.children {
             if child.kind == NodeKind::Periph {
+                self.without_hand_contents(&id, node, &mut content);
                 written |=
                     finish_division(&id, &title, &mut content, &mut pending, blocks, !written);
                 self.divisions(child, names, blocks);
@@ -282,7 +283,43 @@ impl Cx<'_> {
             }
             self.top_level(child, names, &mut content, &mut pending);
         }
+        self.without_hand_contents(&id, node, &mut content);
         finish_division(&id, &title, &mut content, &mut pending, blocks, !written);
+    }
+
+    /// The table of contents is generated, with the page each book starts
+    /// on; a list the file carries cannot know those and is set aside for
+    /// the one that does. Said once, as information: the publisher wrote it,
+    /// and should know it is not what the page shows.
+    ///
+    /// Before each close of the division rather than after the loop, because
+    /// the next `\periph` closes it from inside the loop.
+    fn without_hand_contents(
+        &mut self,
+        id: &Option<String>,
+        node: &Node,
+        content: &mut Vec<Block>,
+    ) {
+        if id.as_deref() != Some("toc") {
+            return;
+        }
+        let before = content.len();
+        content.retain(|b| !matches!(b, Block::Table { .. }));
+        if content.len() != before {
+            self.diagnostics.push(
+                Diagnostic::info(
+                    code::UNSUPPORTED_MARKER,
+                    "the table in the Table of Contents is replaced by the generated one",
+                )
+                .help(
+                    "the build lists every book with the page it starts on; \
+                     keep a heading here and leave the rows out",
+                )
+                .at(self
+                    .location(node)
+                    .unwrap_or_else(|| SourceLoc::file(self.path))),
+            );
+        }
     }
 
     /// `\h`, `\toc1`–`\toc3`, `\mt1`–`\mt4`. Returns whether it was one.

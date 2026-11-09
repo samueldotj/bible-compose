@@ -167,6 +167,18 @@ impl BookNames {
             .or(self.short.as_deref())
             .or(self.running.as_deref())
     }
+
+    /// What a table of contents calls the book.
+    ///
+    /// `\toc1` is the long name USFM keeps for this purpose, so it comes
+    /// first; the title is the next most formal thing the file says; the
+    /// running head's name is what is left. The same precedence as
+    /// [`for_alternate_head`](Self::for_alternate_head), kept as its own
+    /// question because the two are asked by different parts of the page
+    /// and a publisher may one day want to answer them differently.
+    pub fn for_contents(&self) -> Option<&str> {
+        self.for_alternate_head()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

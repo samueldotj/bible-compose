@@ -101,6 +101,27 @@ footer_right = \"last_reference\"
 [assets]
 missing_figure = \"omit\"
 
+[cover]
+binding = \"hardcover\"
+paper = \"cream\"
+pages = 1200
+spine_width = \"1.5in\"
+bleed = \"3mm\"
+title = \"The Holy Bible\"
+subtitle = \"English Standard Version\"
+spine_title = \"Holy Bible\"
+spine_foot = \"Publisher\"
+back_text = \"In the beginning.\"
+font_family = \"Gentium Book Plus\"
+uppercase = false
+background = \"#202020\"
+foil = \"#ffffff\"
+border = \"corners\"
+border_inset = \"0.5in\"
+border_width = \"2pt\"
+ornaments = false
+show_guides = true
+
 [output]
 keep_intermediates = true
 anchors = \"verse\"

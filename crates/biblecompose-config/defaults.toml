@@ -201,6 +201,53 @@ footer_right = ""
 # and so is one in a format the backend cannot read.
 missing_figure = "stop"
 
+# The cover, written as `output/book_cover.pdf` by `biblecompose cover`: one
+# sheet holding the back, the spine and the front, sized from `page.size`, the
+# paper and the binding. The built-in one is black with gold lettering and no
+# picture, which is what a Bible's cover usually is.
+[cover]
+# "paperback" — the trim of back, spine and front with `bleed` round them — or
+# "hardcover", a case wrap: boards 1/8in larger than the page at the head, the
+# foot and the fore-edge, a 3/8in hinge either side of the spine, and 3/4in
+# folded round the boards on every edge.
+binding = "paperback"
+# What the pages are printed on, which is how thick the book is: "bible" (about
+# 30 g/m²), "thin", "white" or "cream".
+paper = "bible"
+# Zero counts the pages of the book's PDF in `output/`, and estimates them when
+# the book has not been built yet. Set it once the printer has the real count.
+pages = 0
+# Zero works the spine out from the pages and the paper. A printer that has
+# said how wide it is should be believed instead.
+spine_width = "0in"
+bleed = "0.125in"
+# A line break — "Holy\nBible" — is a line on the cover. With two or more
+# lines, every line but the last is set smaller and spaced wider, as the
+# "Holy" above a larger "Bible". Each line shrinks to fit the width.
+title = "Holy\nBible"
+subtitle = ""
+# Empty is the title, on one line.
+spine_title = ""
+spine_foot = ""
+# A paragraph on the back cover. Empty leaves it plain.
+back_text = ""
+# Empty is `typography.font_family`. Any TrueType or OpenType font in the
+# project's `assets/fonts` or on the machine.
+font_family = ""
+uppercase = true
+background = "#0b0b0c"
+foil = "#c9a961"
+# "none", "single", "double", "triple", "thick_thin", "panel", "corners",
+# "rules" or "dotted".
+border = "double"
+border_inset = "0.3in"
+border_width = "1.5pt"
+# A rule with a diamond above and below the title.
+ornaments = true
+# Hairlines at the trim, the spine and the hinges, for checking a proof.
+# Off for the file that goes to the printer.
+show_guides = false
+
 [output]
 keep_intermediates = false
 # `name` is deliberately absent. What the PDF is called is derived from the

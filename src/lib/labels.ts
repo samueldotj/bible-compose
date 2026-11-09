@@ -44,6 +44,38 @@ export const GROUPS: readonly Group[] = [
   // What the PDF says about itself, and what it is called. The publication's
   // name and language lead: they are the PDF's title and language, and this
   // is the one section about the file rather than the page.
+  // The cover: its shape, its words, and how it looks.
+  {
+    id: "cover_shape",
+    title: "Binding and spine",
+    keys: ["cover.binding", "cover.paper", "cover.pages", "cover.spine_width", "cover.bleed"],
+  },
+  {
+    id: "cover_words",
+    title: "Lettering",
+    keys: [
+      "cover.title",
+      "cover.subtitle",
+      "cover.spine_title",
+      "cover.spine_foot",
+      "cover.back_text",
+      "cover.font_family",
+      "cover.uppercase",
+    ],
+  },
+  {
+    id: "cover_look",
+    title: "Colour and border",
+    keys: [
+      "cover.background",
+      "cover.foil",
+      "cover.border",
+      "cover.border_inset",
+      "cover.border_width",
+      "cover.ornaments",
+      "cover.show_guides",
+    ],
+  },
   {
     id: "metadata",
     title: "PDF metadata",
@@ -135,6 +167,12 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   "strict",
 ]);
 
+/**
+ * Text settings whose line breaks mean something — a line of the cover's
+ * title is a line on the cover — and so get a box that keeps them.
+ */
+export const MULTILINE: ReadonlySet<string> = new Set(["cover.title", "cover.back_text"]);
+
 export function labelFor(key: string): string {
   return locale().labels[key] ?? key;
 }
@@ -144,7 +182,11 @@ export function placeholderFor(key: string): string | undefined {
   return locale().placeholders[key];
 }
 
-export function wordsFor(choice: string): string {
+export function wordsFor(choice: string, key?: string): string {
+  // A setting may word one of its spellings its own way — `none` is "No
+  // mark" for a note and "No border" for a cover — as `<key>:<spelling>`.
+  const own = key === undefined ? undefined : locale().choices[`${key}:${choice}`];
+  if (own !== undefined) return own;
   const known = locale().choices[choice];
   if (known !== undefined) return known;
   const words = choice.replace(/_/g, " ");
@@ -158,7 +200,7 @@ export function wordsFor(choice: string): string {
  * page. Books is a table, Template a gallery, Build a list of problems, and
  * the Styles inspector's Inspect view a table over every element.
  */
-export type Canvas = "spread" | "books" | "templates" | "build";
+export type Canvas = "spread" | "books" | "templates" | "build" | "cover";
 
 /**
  * One entry of the rail: a section of the window, with its inspector.
@@ -184,6 +226,8 @@ export interface Tab {
   readonly headers?: boolean;
   /** Trim & margins: guides on the page, measurements in the inspector. */
   readonly trim?: boolean;
+  /** The Cover section: its inspector leads with Make cover. */
+  readonly cover?: boolean;
   /** The inspector's own width. The book and template inspectors are narrower. */
   readonly narrow?: boolean;
 }
@@ -224,6 +268,14 @@ export const TABS: readonly Tab[] = [
   { id: "figures", title: "Figures", nav: "page", canvas: "spread", settingGroups: ["figures"] },
   { id: "styles", title: "Styles", nav: "type", canvas: "spread", settingGroups: [], styles: true },
   { id: "metadata", title: "PDF metadata", nav: "output", canvas: "spread", settingGroups: ["metadata"] },
+  {
+    id: "cover",
+    title: "Cover",
+    nav: "output",
+    canvas: "cover",
+    settingGroups: ["cover_shape", "cover_words", "cover_look"],
+    cover: true,
+  },
   { id: "build", title: "Build", nav: "output", canvas: "build", settingGroups: [] },
 ];
 

@@ -15,6 +15,7 @@
   import BooksInspector from "./components/BooksInspector.svelte";
   import BooksScreen from "./components/BooksScreen.svelte";
   import BuildInspector from "./components/BuildInspector.svelte";
+  import CoverCanvas from "./components/CoverCanvas.svelte";
   import BuildScreen from "./components/BuildScreen.svelte";
   import HeadersInspector from "./components/HeadersInspector.svelte";
   import PageInspector from "./components/PageInspector.svelte";
@@ -124,6 +125,8 @@
           <TemplateScreen />
         {:else if tab.canvas === "build"}
           <BuildScreen />
+        {:else if tab.canvas === "cover"}
+          <CoverCanvas />
         {:else if inspecting}
           <StyleInspector />
         {:else}

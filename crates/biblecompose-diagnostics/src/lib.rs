@@ -516,6 +516,17 @@ pub mod code {
             DESTINATION_LOCKED = "001",
             DESTINATION_UNWRITABLE = "002",
             PUBLISH_FAILED = "003",
+            // The cover's spine was worked out from an estimate of the page
+            // count, because the book has not been built and `cover.pages`
+            // is not set. A warning: the cover is right in every other way,
+            // and a proof wants it before the book is final.
+            COVER_PAGES_ESTIMATED = "004",
+            // Nothing says how many pages there are — no setting, no built
+            // book, no Scripture to estimate from — so the spine has no width.
+            COVER_PAGES_UNKNOWN = "005",
+            // The spine is too narrow to letter. The cover is made, with a
+            // plain spine, which is what a printer would do too.
+            COVER_SPINE_NARROW = "006",
         }
         Usfm "USFM" {
             // BibleCompose's own. Bare digits, deliberately: every code

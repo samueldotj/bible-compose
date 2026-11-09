@@ -602,6 +602,74 @@ spelled! {
     }
 }
 
+spelled! {
+    /// How the book is bound, which decides the shape of its cover.
+    ///
+    /// A paperback's cover is the trim of the back, the spine and the front
+    /// with a bleed around them. A hardcover's is a case wrap: two boards a
+    /// little larger than the page, a hinge either side of the spine, and a
+    /// margin that folds round the boards on every edge.
+    CoverBinding {
+        Paperback => "paperback",
+        Hardcover => "hardcover",
+    }
+}
+
+spelled! {
+    /// The paper the book is printed on, which decides how wide the spine is.
+    ///
+    /// A thickness per page — half a leaf — taken from what printers publish
+    /// for each stock. A printer's own spine calculator is the authority; these
+    /// are close enough to lay a cover out, and `cover.spine_width` overrides
+    /// them for a printer that has said otherwise.
+    CoverPaper {
+        /// Bible paper, about 30 g/m². Roughly 1,250 pages to the inch.
+        Bible => "bible",
+        /// Thin opaque text paper, about 40 g/m².
+        Thin => "thin",
+        /// White offset, the usual print-on-demand stock.
+        White => "white",
+        /// Cream book paper — a little bulkier than white.
+        Cream => "cream",
+    }
+}
+
+impl CoverPaper {
+    /// The thickness of one page, in inches.
+    pub const fn inches_per_page(self) -> f64 {
+        match self {
+            CoverPaper::Bible => 0.0008,
+            CoverPaper::Thin => 0.0013,
+            CoverPaper::White => 0.002252,
+            CoverPaper::Cream => 0.0025,
+        }
+    }
+}
+
+spelled! {
+    /// The frame drawn round the front and back of the cover.
+    CoverBorder {
+        /// No frame.
+        None => "none",
+        /// One line.
+        Single => "single",
+        /// Two lines of one weight, close together.
+        Double => "double",
+        /// Three lines, the middle one heavier.
+        Triple => "triple",
+        /// A heavy line outside a hairline, as a tooled leather cover.
+        ThickThin => "thick_thin",
+        /// A line with each corner cut in, as a panel.
+        Panel => "panel",
+        /// Brackets at the four corners and nothing between them.
+        Corners => "corners",
+        /// A rule across the head and the foot, and nothing at the sides.
+        Rules => "rules",
+        /// A line of dots.
+        Dotted => "dotted",
+    }
+}
+
 /// An ink colour, as `#rrggbb`.
 ///
 /// # Why hex and not names

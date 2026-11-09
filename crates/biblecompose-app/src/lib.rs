@@ -8,6 +8,7 @@
 pub mod arrange;
 pub mod asset;
 pub mod backend_input;
+pub mod cover;
 pub mod font;
 pub mod hyphenation;
 pub mod pages;
@@ -85,6 +86,15 @@ pub fn fonts(
         .map(|b| b.font_dirs())
         .unwrap_or_default();
     font::choices(project_root, &dirs, characters)
+}
+
+/// The directories the backend this installation ships keeps its fonts in,
+/// or none when there is no backend — for a caller, such as the cover, that
+/// resolves a family the way the build would without running the build.
+pub fn backend_font_dirs() -> Vec<Utf8PathBuf> {
+    SileBackend::discover()
+        .map(|b| b.font_dirs())
+        .unwrap_or_default()
 }
 
 /// Run a build against the backend this installation ships.

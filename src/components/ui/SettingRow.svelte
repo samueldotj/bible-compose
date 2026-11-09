@@ -16,7 +16,7 @@
   import FontPicker from "../FontPicker.svelte";
   import Toggle from "./Toggle.svelte";
   import { LANGUAGES } from "../../lib/languages";
-  import { labelFor, placeholderFor, wordsFor } from "../../lib/labels";
+  import { labelFor, MULTILINE, placeholderFor, wordsFor } from "../../lib/labels";
   import { session } from "../../lib/session.svelte";
   import { ui } from "../../lib/ui.svelte";
   import type { Setting } from "../../lib/services/backend";
@@ -182,9 +182,42 @@
       <span class="select-wrap">
         <select {id} class="input" value={setting.value} {disabled} onchange={(e) => commit(e.currentTarget.value)}>
           {#each setting.choices ?? [] as choice (choice)}
-            <option value={choice}>{wordsFor(choice)}</option>
+            <option value={choice}>{wordsFor(choice, key)}</option>
           {/each}
         </select>
+      </span>
+    {:else if setting.kind === "text" && MULTILINE.has(key)}
+      <textarea
+        {id}
+        class="input text lines"
+        class:bad={errors.length > 0}
+        rows={key === "cover.title" ? 2 : 4}
+        dir="auto"
+        value={setting.value}
+        placeholder={placeholderFor(key) ?? ""}
+        spellcheck="false"
+        {disabled}
+        onchange={(e) => commit(e.currentTarget.value)}
+      ></textarea>
+    {:else if setting.kind === "color"}
+      <span class="pair">
+        <input
+          class="swatch"
+          type="color"
+          value={setting.value}
+          aria-label={labelFor(key)}
+          {disabled}
+          onchange={(e) => commit(e.currentTarget.value)}
+        />
+        <input
+          {id}
+          class="input count"
+          type="text"
+          value={setting.value}
+          spellcheck="false"
+          {disabled}
+          onchange={(e) => commit(e.currentTarget.value)}
+        />
       </span>
     {:else if setting.kind === "language"}
       <span class="select-wrap">
@@ -303,6 +336,21 @@
   }
   .pair .text {
     inline-size: 120px;
+  }
+  .lines {
+    resize: vertical;
+    min-block-size: 3.4em;
+    font: inherit;
+    line-height: 1.35;
+  }
+  .swatch {
+    inline-size: 30px;
+    block-size: 30px;
+    padding: 0;
+    border: 1px solid var(--line2);
+    border-radius: var(--radius);
+    background: var(--field);
+    cursor: pointer;
   }
   .select-wrap {
     max-inline-size: 60%;

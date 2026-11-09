@@ -12,9 +12,10 @@
 use std::process::ExitCode;
 
 use biblecompose_app::{
-    backend_version, build, emit, project, BuildEvent, BuildReporter, BuildRequest, BuildState,
-    CancelToken, CONTRACT_VERSION,
+    backend_font_dirs, backend_version, build, cover, emit, project, BuildEvent, BuildReporter,
+    BuildRequest, BuildState, CancelToken, CONTRACT_VERSION,
 };
+use biblecompose_config::value::CoverBinding;
 use biblecompose_config::Settings;
 use biblecompose_diagnostics::Diagnostics;
 use biblecompose_diagnostics::Severity;
@@ -88,6 +89,35 @@ enum Command {
         /// sequence.
         #[arg(long)]
         events: bool,
+    },
+
+    /// Make the book's cover: back, spine and front on one sheet.
+    ///
+    /// Sized from `page.size`, `cover.paper` and `cover.binding`, and
+    /// lettered from the `[cover]` settings. Written to
+    /// `output/book_cover.pdf` beside the book unless `--output` says
+    /// otherwise. The spine is measured from the book's PDF when it has been
+    /// built, so build the book first for a cover that goes to print.
+    Cover {
+        /// The project folder.
+        #[arg(long, default_value = ".")]
+        project: Utf8PathBuf,
+        /// Where the cover goes.
+        #[arg(long, short)]
+        output: Option<Utf8PathBuf>,
+        /// "paperback" or "hardcover", over `cover.binding`.
+        #[arg(long)]
+        binding: Option<String>,
+        /// The page count, over `cover.pages` and the built book.
+        #[arg(long)]
+        pages: Option<u32>,
+        /// Directories searched for the cover's font after the project's.
+        #[arg(long = "font-path")]
+        font_path: Vec<Utf8PathBuf>,
+        /// Write the window's preview of the cover — an SVG with the trim,
+        /// spine and hinge guides drawn — here, instead of the PDF.
+        #[arg(long)]
+        preview: Option<Utf8PathBuf>,
     },
 
     /// Report the backend version (SILE-002).
@@ -215,6 +245,90 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
                 println!("{name}");
             }
             Ok(ExitCode::SUCCESS)
+        }
+
+        Command::Cover {
+            project,
+            output,
+            binding,
+            pages,
+            font_path,
+            preview,
+        } => {
+            let mut opened = project::open(&project);
+            if opened.blocked() {
+                for d in opened.diagnostics.iter() {
+                    print_diagnostic(&mut std::io::stderr(), d);
+                }
+                return Err(format!("{project} cannot be opened"));
+            }
+            // What the Scripture had to say is the build's to report; the
+            // cover only needs the folder to open.
+            // The flags are this one run's, and change nothing in the
+            // project: they are read through the same spellings as the file.
+            if let Some(b) = binding {
+                let chosen = CoverBinding::NAMES
+                    .iter()
+                    .find(|(name, _)| name.eq_ignore_ascii_case(b.trim()))
+                    .map(|(_, v)| *v)
+                    .ok_or_else(|| {
+                        format!(
+                            "--binding {b:?} is not one of: {}",
+                            CoverBinding::SPELLINGS.join(", ")
+                        )
+                    })?;
+                opened.settings.cover.binding =
+                    opened.settings.cover.binding.clone().map(|_| chosen);
+            }
+            if let Some(p) = pages {
+                opened.settings.cover.pages = opened.settings.cover.pages.clone().map(|_| p);
+            }
+            let mut dirs = font_path;
+            dirs.extend(backend_font_dirs());
+            if let Some(svg_path) = preview {
+                let shown = cover::preview(&opened, &dirs, true);
+                for d in shown.diagnostics.iter() {
+                    print_diagnostic(&mut std::io::stderr(), d);
+                }
+                let Some(svg) = shown.svg else {
+                    return Ok(ExitCode::FAILURE);
+                };
+                std::fs::write(svg_path.as_std_path(), svg)
+                    .map_err(|e| format!("could not write {svg_path}: {e}"))?;
+                println!("wrote {svg_path}");
+                return Ok(ExitCode::SUCCESS);
+            }
+            let output = output.unwrap_or_else(|| cover::default_output(&opened));
+            let report = cover::make(&opened, &output, &dirs);
+            for d in report.diagnostics.iter() {
+                let stream: &mut dyn std::io::Write = match d.severity {
+                    Severity::Error => &mut std::io::stderr(),
+                    _ => &mut std::io::stdout(),
+                };
+                print_diagnostic(stream, d);
+            }
+            match (&report.output, &report.geometry) {
+                (Some(path), Some(g)) => {
+                    let inch = |v: f64| v / 72.0;
+                    let from = match &report.pages_from {
+                        Some(cover::PageSource::Setting) => "from cover.pages".to_owned(),
+                        Some(cover::PageSource::Book(p)) => format!("counted in {p}"),
+                        Some(cover::PageSource::Estimate) => "estimated".to_owned(),
+                        Some(cover::PageSource::NotNeeded) | None => "not needed".to_owned(),
+                    };
+                    println!(
+                        "{} cover, {:.3} x {:.3}in, spine {:.3}in ({} pages, {from})",
+                        g.binding,
+                        inch(g.width),
+                        inch(g.height),
+                        inch(g.spine),
+                        g.pages
+                    );
+                    println!("wrote {path}");
+                    Ok(ExitCode::SUCCESS)
+                }
+                _ => Ok(ExitCode::FAILURE),
+            }
         }
 
         Command::Version => {

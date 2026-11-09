@@ -14,8 +14,9 @@ use crate::edit::SettingValue;
 use crate::provenance::Origin;
 use crate::settings::Settings;
 use crate::value::{
-    Anchors, BookStart, CallerStyle, ChapterStart, DropCap, MissingAsset, NumberPlacement,
-    QuoteHang, QuoteStart, ReferencePlacement, RestartNumbering, VerseStart,
+    Anchors, BookStart, CallerStyle, ChapterStart, CoverBinding, CoverBorder, CoverPaper, DropCap,
+    MissingAsset, NumberPlacement, QuoteHang, QuoteStart, ReferencePlacement, RestartNumbering,
+    VerseStart,
 };
 
 /// What kind of control a key needs, and how its text is to be read back.
@@ -34,6 +35,8 @@ pub enum Kind {
     Length,
     /// `"6x9in"`, or a named size.
     PageSize,
+    /// `#rrggbb`. Text in the file; a form can offer a swatch.
+    Color,
     Integer,
     Boolean,
     /// A path relative to the project folder.
@@ -59,6 +62,7 @@ impl Kind {
             Kind::Language => "language",
             Kind::Length => "length",
             Kind::PageSize => "page_size",
+            Kind::Color => "color",
             Kind::Integer => "integer",
             Kind::Boolean => "boolean",
             Kind::Path => "path",
@@ -398,6 +402,39 @@ impl Settings {
             Choice(MissingAsset::SPELLINGS),
             self.assets.missing_figure.to_string(),
         );
+
+        let c = &self.cover;
+        push(
+            "cover.binding",
+            Choice(CoverBinding::SPELLINGS),
+            c.binding.to_string(),
+        );
+        push(
+            "cover.paper",
+            Choice(CoverPaper::SPELLINGS),
+            c.paper.to_string(),
+        );
+        push("cover.pages", Integer, c.pages.to_string());
+        push("cover.spine_width", Length, c.spine_width.to_string());
+        push("cover.bleed", Length, c.bleed.to_string());
+        push("cover.title", Text, c.title.to_string());
+        push("cover.subtitle", Text, c.subtitle.to_string());
+        push("cover.spine_title", Text, c.spine_title.to_string());
+        push("cover.spine_foot", Text, c.spine_foot.to_string());
+        push("cover.back_text", Text, c.back_text.to_string());
+        push("cover.font_family", Font, c.font_family.to_string());
+        push("cover.uppercase", Boolean, c.uppercase.to_string());
+        push("cover.background", Color, c.background.to_string());
+        push("cover.foil", Color, c.foil.to_string());
+        push(
+            "cover.border",
+            Choice(CoverBorder::SPELLINGS),
+            c.border.to_string(),
+        );
+        push("cover.border_inset", Length, c.border_inset.to_string());
+        push("cover.border_width", Length, c.border_width.to_string());
+        push("cover.ornaments", Boolean, c.ornaments.to_string());
+        push("cover.show_guides", Boolean, c.show_guides.to_string());
 
         push(
             "output.name",

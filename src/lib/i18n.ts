@@ -240,6 +240,16 @@ export interface Chrome {
   readonly allSeverities: string;
   readonly options: string;
   readonly keepHint: string;
+  // The Cover section.
+  readonly makeCover: string;
+  readonly makingCover: string;
+  readonly openCover: string;
+  readonly coverIdle: string;
+  readonly coverGuides: string;
+  readonly coverNoGuides: string;
+  readonly coverDrawing: string;
+  readonly coverNothing: string;
+  readonly coverPreviewLabel: string;
   readonly strictHint: string;
   readonly outputFolder: string;
   readonly lastBuild: string;
@@ -325,6 +335,8 @@ export interface Phrases {
   /** `Fix in Contents`, the link on a problem row. */
   readonly booksInFolder: (count: number) => string;
   readonly wrote: (path: string) => string;
+  /** `Hardcover, 15.82 × 10.75 in, spine 1.32 in for 1,400 pages`. */
+  readonly coverMade: (binding: string, width: number, height: number, spine: number, pages: number, estimated: boolean) => string;
   readonly languageWithTag: (name: string, tag: string) => string;
   readonly setInThisProject: (tag: string) => string;
   /** `cannot draw 12 characters`, beside a font. */
@@ -457,6 +469,25 @@ export const EN_LABELS: Readonly<Record<string, string>> = {
   "headers.right_page.footer_center": "Centre",
   "headers.right_page.footer_right": "Outer",
   "assets.missing_figure": "A figure with no file",
+  "cover.binding": "Binding",
+  "cover.paper": "Paper",
+  "cover.pages": "Pages",
+  "cover.spine_width": "Spine width",
+  "cover.bleed": "Bleed",
+  "cover.title": "Title",
+  "cover.subtitle": "Subtitle",
+  "cover.spine_title": "Spine title",
+  "cover.spine_foot": "Foot of the spine",
+  "cover.back_text": "Back cover text",
+  "cover.font_family": "Font",
+  "cover.uppercase": "Capitals",
+  "cover.background": "Cover colour",
+  "cover.foil": "Lettering colour",
+  "cover.border": "Border",
+  "cover.border_inset": "Border inset",
+  "cover.border_width": "Border weight",
+  "cover.ornaments": "Ornaments",
+  "cover.show_guides": "Trim guides",
   "output.name": "PDF file name",
   "output.anchors": "PDF bookmarks reach",
   "output.keep_intermediates": "Keep intermediates",
@@ -470,6 +501,10 @@ export const EN_PLACEHOLDERS: Readonly<Record<string, string>> = {
   // Both of these end up in the PDF's properties and nowhere else, so the
   // placeholder says what leaving them empty costs, which is nothing.
   "project.author": "left out of the PDF",
+  "cover.spine_title": "the title",
+  "cover.spine_foot": "left plain",
+  "cover.back_text": "left plain",
+  "cover.font_family": "the body font",
   "project.subject": "left out of the PDF",
 };
 
@@ -511,6 +546,21 @@ export const EN_CHOICES: Readonly<Record<string, string>> = {
   next_page: "Next page",
   left_page: "Left page",
   right_page: "Right page",
+  paperback: "Paperback",
+  hardcover: "Hardcover (case wrap)",
+  bible: "Bible paper",
+  thin: "Thin text paper",
+  white: "White",
+  cream: "Cream",
+  "cover.border:none": "No border",
+  single: "Single line",
+  double: "Double line",
+  triple: "Triple line",
+  thick_thin: "Thick and thin",
+  panel: "Panel, corners cut",
+  corners: "Corner brackets",
+  rules: "Rules at head and foot",
+  dotted: "Dotted",
 };
 
 /** The English catalogue. */
@@ -728,6 +778,15 @@ export const EN: Catalogue = {
     allSeverities: "All",
     options: "Options",
     keepHint: "Leave the typesetter's files in the output folder",
+    makeCover: "Make cover PDF",
+    makingCover: "Making the cover…",
+    coverGuides: "Guides",
+    coverNoGuides: "Plain",
+    coverDrawing: "Drawing the cover…",
+    coverNothing: "The cover cannot be drawn yet.",
+    coverPreviewLabel: "Preview of the cover: back, spine and front",
+    openCover: "Open cover",
+    coverIdle: "Back, spine and front on one sheet, written as book_cover.pdf in the output folder. Build the book first so the spine is measured from its pages.",
     strictHint: "Treat a warning in the settings as an error and stop",
     outputFolder: "Output",
     lastBuild: "Last build",
@@ -794,6 +853,9 @@ export const EN: Catalogue = {
     themeIs: (name) => `Theme: ${name}`,
     booksInFolder: (count) => (count === 1 ? "1 book in the folder" : `${count} books in the folder`),
     wrote: (path) => `wrote ${path}`,
+    coverMade: (binding, width, height, spine, pages, estimated) =>
+      `${binding.charAt(0).toUpperCase()}${binding.slice(1)}, ${width.toFixed(2)} × ${height.toFixed(2)} in, spine ${spine.toFixed(3)} in` +
+      (pages > 0 ? ` for ${estimated ? "an estimated " : ""}${pages.toLocaleString("en")} pages` : ""),
     languageWithTag: (name, tag) => `${name} (${tag})`,
     setInThisProject: (tag) => `${tag} — set in this project`,
     cannotDraw: (count) => `cannot draw ${count} character${count === 1 ? "" : "s"}`,

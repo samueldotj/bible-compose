@@ -4,6 +4,30 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## Unreleased
 
+* **A cover.** `biblecompose cover`, and **Make cover PDF** in a new Cover
+  section of the window, write `output/book_cover.pdf`: the back, the spine
+  and the front on one sheet, sized from `page.size`, the paper and the
+  binding. The spine is the page count — counted in the built book, or
+  `cover.pages`, or estimated with a warning — times the thickness of a page
+  of `bible`, `thin`, `white` or `cream` paper, or `cover.spine_width` when the
+  printer has said. A `paperback` is the trim with a bleed; a `hardcover` a
+  case wrap with boards, hinges and a turn-in. The page carries a `TrimBox`
+  and a `BleedBox`. Everything on it is a `[cover]` setting: the title,
+  subtitle, spine and back text, the font (embedded whole), capitals, the
+  cover and foil colours, ornaments, proof guides, and nine borders — `none`,
+  `single`, `double`, `triple`, `thick_thin`, `panel`, `corners`, `rules`,
+  `dotted`. The built-in cover is black and gold with no picture. Drawn by
+  the application rather than the typesetter, so it needs no backend and
+  takes a moment; the lettering is not shaped, which the guide says.
+  The Cover section shows the whole sheet as it will be printed, redrawn as
+  each setting changes: the PDF's own drawing written out as SVG, the
+  lettering as the font's outlines, with the trim, spine and hinges drawn
+  over it on request (`biblecompose cover --preview` writes the same file).
+  The title and the back text are edited in boxes that keep line breaks.
+  New diagnostics `OUT-004` (spine from an estimate), `OUT-005` (no page
+  count at all) and `OUT-006` (spine too narrow to letter). A colour setting
+  has a swatch in the settings form.
+
 * **A title page and a copyright page.** Front matter is USFM's peripheral
   book `FRT`, and the application now knows it: a file beginning `\id FRT`
   is bound before Genesis whatever the book order says, each `\periph` in it

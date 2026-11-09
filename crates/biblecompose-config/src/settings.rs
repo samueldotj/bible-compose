@@ -25,9 +25,9 @@ use biblecompose_diagnostics::{code, Diagnostic, Diagnostics, Severity, SourceLo
 use crate::document::{ConfigDocument, Located, Node};
 use crate::provenance::{Provenance, Sourced};
 use crate::value::{
-    self, Anchors, BookStart, CallerStyle, ChapterStart, DropCap, HeadTemplate, Length,
-    MissingAsset, NumberPlacement, PageSize, QuoteHang, QuoteStart, ReferencePlacement,
-    RestartNumbering, VerseStart,
+    self, Anchors, BookStart, CallerStyle, ChapterStart, Color, CoverBinding, CoverBorder,
+    CoverPaper, DropCap, HeadTemplate, Length, MissingAsset, NumberPlacement, PageSize, QuoteHang,
+    QuoteStart, ReferencePlacement, RestartNumbering, VerseStart,
 };
 
 /// The settings vocabulary this release speaks.
@@ -76,6 +76,7 @@ pub struct Settings {
     pub notes: Notes,
     pub headers: Headers,
     pub assets: Assets,
+    pub cover: Cover,
     pub output: Output,
 }
 
@@ -274,6 +275,47 @@ pub struct Assets {
     pub missing_figure: Sourced<MissingAsset>,
 }
 
+/// The book's cover, as `book_cover.pdf`: one sheet holding the back, the
+/// spine and the front, sized from the page, the paper and the binding.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Cover {
+    pub binding: Sourced<CoverBinding>,
+    pub paper: Sourced<CoverPaper>,
+    /// How many pages the book has. Zero counts them from the book's PDF, or
+    /// estimates them when it has not been built.
+    pub pages: Sourced<u32>,
+    /// The spine's width, when the printer has said what it is. Zero works it
+    /// out from the pages and the paper.
+    pub spine_width: Sourced<Length>,
+    /// Beyond the trim on every side, for a paperback. A hardcover's wrap
+    /// takes its place.
+    pub bleed: Sourced<Length>,
+    /// The front's words. A line break in the title is a line on the cover.
+    pub title: Sourced<String>,
+    pub subtitle: Sourced<String>,
+    /// Empty uses the title, on one line.
+    pub spine_title: Sourced<String>,
+    /// At the foot of the spine — the publisher's name, usually.
+    pub spine_foot: Sourced<String>,
+    /// A paragraph on the back. Empty leaves the back plain.
+    pub back_text: Sourced<String>,
+    /// Empty uses `typography.font_family`.
+    pub font_family: Sourced<String>,
+    pub uppercase: Sourced<bool>,
+    pub background: Sourced<Color>,
+    /// The colour of the lettering and the border — the foil, on a stamped
+    /// cover.
+    pub foil: Sourced<Color>,
+    pub border: Sourced<CoverBorder>,
+    /// From the edge of the board (or the trim) to the border.
+    pub border_inset: Sourced<Length>,
+    pub border_width: Sourced<Length>,
+    /// A rule with a diamond above and below the title.
+    pub ornaments: Sourced<bool>,
+    /// Thin lines at the trim, the spine and the hinges, for a proof.
+    pub show_guides: Sourced<bool>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Output {
     pub keep_intermediates: Sourced<bool>,
@@ -331,6 +373,10 @@ fn missing_asset(n: &Node) -> Result<Located<MissingAsset>, Diagnostic> {
 /// The maximum a page can be divided into before a column is too narrow to
 /// break a line of Scripture in.
 const MAX_COLUMNS: i64 = 4;
+
+/// More pages than any bound book has. A larger number is a typo, and a spine
+/// worked out from it would be wider than the sheet it is printed on.
+const MAX_COVER_PAGES: i64 = 10_000;
 
 impl Settings {
     /// Everything built in. What a folder with no `biblecompose.toml` gets.
@@ -691,6 +737,29 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
         },
         assets: Assets {
             missing_figure: r.value("assets.missing_figure", missing_asset),
+        },
+        cover: Cover {
+            binding: r.value("cover.binding", |n| value::choice(n, CoverBinding::NAMES)),
+            paper: r.value("cover.paper", |n| value::choice(n, CoverPaper::NAMES)),
+            pages: r.value("cover.pages", |n| {
+                value::integer_in(n, 0, MAX_COVER_PAGES).map(|l| l.map(|v| v as u32))
+            }),
+            spine_width: r.value("cover.spine_width", value::length_or_zero),
+            bleed: r.value("cover.bleed", value::length_or_zero),
+            title: r.value("cover.title", |n| n.string()),
+            subtitle: r.value("cover.subtitle", |n| n.string()),
+            spine_title: r.value("cover.spine_title", |n| n.string()),
+            spine_foot: r.value("cover.spine_foot", |n| n.string()),
+            back_text: r.value("cover.back_text", |n| n.string()),
+            font_family: r.value("cover.font_family", |n| n.string()),
+            uppercase: r.value("cover.uppercase", |n| n.boolean()),
+            background: r.value("cover.background", value::color),
+            foil: r.value("cover.foil", value::color),
+            border: r.value("cover.border", |n| value::choice(n, CoverBorder::NAMES)),
+            border_inset: r.value("cover.border_inset", value::length_or_zero),
+            border_width: r.value("cover.border_width", value::length),
+            ornaments: r.value("cover.ornaments", |n| n.boolean()),
+            show_guides: r.value("cover.show_guides", |n| n.boolean()),
         },
         output: Output {
             keep_intermediates: r.value("output.keep_intermediates", |n| n.boolean()),

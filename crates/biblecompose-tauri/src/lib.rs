@@ -868,6 +868,113 @@ fn add_front_matter(
     Ok(observe(&session, &root))
 }
 
+/// The cover that was made, and what the window needs to say about it.
+#[derive(Debug, Clone, Serialize)]
+pub struct WireCover {
+    pub path: String,
+    pub binding: String,
+    /// The sheet, in inches, as a printer quotes it.
+    pub width_in: f64,
+    pub height_in: f64,
+    pub spine_in: f64,
+    pub pages: u32,
+    /// `setting`, `book`, `estimate` or `not_needed`.
+    pub pages_from: &'static str,
+    /// Warnings worth showing beside it — an estimated spine above all.
+    pub diagnostics: Vec<WireDiagnostic>,
+}
+
+/// Make `output/book_cover.pdf` for the project at `root`.
+///
+/// A function of its own, outside the command, so the test suite can call it
+/// without a window. Rejects with every diagnostic when no cover was written.
+pub fn make_cover_at(root: &Utf8Path) -> Result<WireCover, Vec<WireDiagnostic>> {
+    let opened = project::open(root);
+    if opened.blocked() {
+        return Err(opened
+            .diagnostics
+            .iter()
+            .map(WireDiagnostic::from)
+            .collect());
+    }
+    let output = biblecompose_app::cover::default_output(&opened);
+    let report =
+        biblecompose_app::cover::make(&opened, &output, &biblecompose_app::backend_font_dirs());
+    let wire: Vec<WireDiagnostic> = report
+        .diagnostics
+        .iter()
+        .map(WireDiagnostic::from)
+        .collect();
+    match (report.output, report.geometry) {
+        (Some(path), Some(g)) => Ok(WireCover {
+            path: path.to_string(),
+            binding: g.binding.to_string(),
+            width_in: g.width / 72.0,
+            height_in: g.height / 72.0,
+            spine_in: g.spine / 72.0,
+            pages: g.pages,
+            pages_from: pages_from(report.pages_from.as_ref()),
+            diagnostics: wire,
+        }),
+        _ => Err(wire),
+    }
+}
+
+/// The cover as the window shows it, before it is made.
+#[derive(Debug, Clone, Serialize)]
+pub struct WireCoverPreview {
+    /// The whole sheet as SVG — drawn by the code that draws the PDF, the
+    /// lettering as the font's outlines. Absent when there is nothing to
+    /// draw, and the diagnostics say why.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub svg: Option<String>,
+    pub binding: String,
+    pub width_in: f64,
+    pub height_in: f64,
+    pub spine_in: f64,
+    pub pages: u32,
+    pub pages_from: &'static str,
+    pub diagnostics: Vec<WireDiagnostic>,
+}
+
+fn pages_from(from: Option<&biblecompose_app::cover::PageSource>) -> &'static str {
+    match from {
+        Some(biblecompose_app::cover::PageSource::Setting) => "setting",
+        Some(biblecompose_app::cover::PageSource::Book(_)) => "book",
+        Some(biblecompose_app::cover::PageSource::Estimate) => "estimate",
+        _ => "not_needed",
+    }
+}
+
+/// Draw the cover of the project at `root` for the window, writing nothing.
+pub fn cover_preview_at(root: &Utf8Path, guides: bool) -> WireCoverPreview {
+    let opened = project::open(root);
+    let shown =
+        biblecompose_app::cover::preview(&opened, &biblecompose_app::backend_font_dirs(), guides);
+    let g = shown.geometry.as_ref();
+    WireCoverPreview {
+        svg: shown.svg,
+        binding: g.map(|g| g.binding.to_string()).unwrap_or_default(),
+        width_in: g.map_or(0.0, |g| g.width / 72.0),
+        height_in: g.map_or(0.0, |g| g.height / 72.0),
+        spine_in: g.map_or(0.0, |g| g.spine / 72.0),
+        pages: g.map_or(0, |g| g.pages),
+        pages_from: pages_from(shown.pages_from.as_ref()),
+        diagnostics: shown.diagnostics.iter().map(WireDiagnostic::from).collect(),
+    }
+}
+
+#[tauri::command]
+fn cover_preview(root: String, guides: bool) -> WireCoverPreview {
+    cover_preview_at(&Utf8PathBuf::from(root), guides)
+}
+
+/// The book's cover, beside the book (`biblecompose cover` from the window).
+#[tauri::command]
+fn make_cover(root: String) -> Result<WireCover, Vec<WireDiagnostic>> {
+    make_cover_at(&Utf8PathBuf::from(root))
+}
+
 /// Read the project and remember what it looked like.
 ///
 /// Every command that touches the project goes through this, including the
@@ -1843,6 +1950,8 @@ pub fn run() {
             forget_project,
             create_project,
             add_front_matter,
+            make_cover,
+            cover_preview,
             close_project,
             open_folder,
             open_pdf,

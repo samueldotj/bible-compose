@@ -16,6 +16,7 @@ import {
   type BuildEvent,
   type Changes,
   type BuildState,
+  type CoverResult,
   type Defaults,
   type Diagnostic,
   type HeadField,
@@ -90,6 +91,9 @@ export class Session {
   log = $state<LogLine[]>([]);
   buildDiagnostics = $state<Diagnostic[]>([]);
   output = $state<string | null>(null);
+  /** The cover last made for this project, and whether one is being made. */
+  cover = $state<CoverResult | null>(null);
+  makingCover = $state(false);
   backendVersion = $state<string | null>(null);
   /** Pages set so far, and what the last build of this project needed. */
   pagesDone = $state(0);
@@ -455,6 +459,38 @@ export class Session {
     if (!this.project) return;
     try {
       this.project = await backend().addFrontMatter(this.project.root);
+    } catch (e: unknown) {
+      this.fault = asDiagnostics(e)
+        .map((d) => d.message)
+        .join(" ");
+    }
+  }
+
+  /**
+   * Write `output/book_cover.pdf` from the `[cover]` settings. Fast — the
+   * cover is drawn by the application, not typeset — so it is awaited
+   * rather than streamed like a build.
+   */
+  async makeCover(): Promise<void> {
+    if (!this.project || this.makingCover) return;
+    this.makingCover = true;
+    try {
+      this.cover = await backend().makeCover(this.project.root);
+    } catch (e: unknown) {
+      this.cover = null;
+      this.fault = asDiagnostics(e)
+        .map((d) => d.message)
+        .join(" ");
+    } finally {
+      this.makingCover = false;
+    }
+  }
+
+  async showCover(): Promise<void> {
+    const pdf = this.cover?.path;
+    if (!pdf) return;
+    try {
+      await backend().openPdf(pdf);
     } catch (e: unknown) {
       this.fault = asDiagnostics(e)
         .map((d) => d.message)

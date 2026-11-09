@@ -236,6 +236,71 @@ The contents page costs no second build. The typesetter sets the front
 matter after the last book, when the page numbers are known, and
 BibleCompose moves its pages to the front of the file.
 
+### The cover
+
+**Cover**, under Output, makes the book's cover as a PDF of its own,
+`book_cover.pdf` in the output folder: the back, the spine and the front on
+one sheet, the way a printer asks for it. The middle of the window shows the
+whole sheet as it will be printed, redrawn as each setting changes — the
+same drawing that goes into the PDF, so what you see is what is made.
+**Guides** draws the trim, the spine and the hinges over it in magenta;
+**Plain** shows the cover alone. The built-in cover is black with
+gold lettering and no picture — *HOLY* over a larger *BIBLE*, a double
+border, a small ornament above and below.
+
+Its size comes from three things:
+
+* **The page.** Each face of the cover is `page.size`, so a 6×9in book has a
+  6×9in front.
+* **The paper.** The spine is the page count times the thickness of one page:
+  `bible` paper (about 1,250 pages to the inch), `thin`, `white` or `cream`.
+  The page count is counted in the book's PDF, so **build the book first**.
+  With no PDF yet the count is estimated and the cover says so; set
+  `cover.pages`, or `cover.spine_width` to the printer's own figure, to be
+  exact.
+* **The binding.** A `paperback` is the trim with `cover.bleed` all round. A
+  `hardcover` is a case wrap: boards 1/8in larger than the page at the head,
+  the foot and the fore-edge, a 3/8in hinge either side of the spine, and
+  3/4in folded round the boards on every edge. Printers' templates differ
+  by a fraction; check yours against **Trim guides**, which draws hairlines
+  at the trim, the spine and the hinges.
+
+The words are settings too: `title` (a line break is a line on the cover,
+every line but the last set smaller), `subtitle`, `spine_title`, `spine_foot`
+for the publisher, `back_text` for a paragraph on the back, and
+`font_family` — any TrueType or OpenType font, ideally one in
+`assets/fonts` so it travels with the book. The look is `background`,
+`foil` (the lettering and the border), `ornaments`, and `border`:
+
+| `border` | |
+|---|---|
+| `none` | no frame |
+| `single` | one line |
+| `double` | two lines close together — the default |
+| `triple` | three lines, the middle one heavier |
+| `thick_thin` | a heavy line outside a hairline, as tooled leather |
+| `panel` | a frame with its corners cut, doubled |
+| `corners` | brackets at the four corners only |
+| `rules` | a double rule across the head and the foot |
+| `dotted` | a line of dots |
+
+`border_inset` is how far in from the edge it sits, and `border_width` its
+heaviest line.
+
+```toml
+[cover]
+binding = "hardcover"
+paper = "bible"
+title = "Holy\nBible"
+subtitle = "Berean Standard Bible"
+spine_foot = "The Publisher"
+border = "thick_thin"
+```
+
+The lettering is drawn one glyph per character, without the shaping a
+script whose letters join needs; for such a script, letter the cover in a
+design program and use this one for its measurements.
+
 ### The chapter number
 
 **Styles → Chapter and verse → Chapter number** decides more than a face and
@@ -368,4 +433,15 @@ biblecompose validate --books ./My\ Bible
 ```
 
 `build` takes `--output` and `--keep-intermediates`.
+
+```bash
+biblecompose cover --project ./My\ Bible
+```
+
+writes `output/book_cover.pdf` from the `[cover]` settings and prints the
+sheet's size and the spine's. `--binding hardcover` and `--pages 1400`
+override the settings for one run, `--output` puts it elsewhere, and
+`--font-path` adds a folder to look for the cover's font in.
+`--preview cover.svg` writes the window's preview, guides and all, instead
+of the PDF.
 `biblecompose version` reports the application and the typesetter it carries.

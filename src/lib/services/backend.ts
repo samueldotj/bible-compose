@@ -99,6 +99,8 @@ export type SettingKind =
   | "choice"
   | "length"
   | "page_size"
+  /** `#rrggbb`. */
+  | "color"
   | "integer"
   | "boolean"
   | "path"
@@ -119,6 +121,33 @@ export interface Setting {
   /** The project file set it, so it can be reset (CFG-007). */
   readonly overridden: boolean;
   readonly location?: SourceLocation;
+}
+
+/** The cover that `makeCover` wrote. */
+export interface CoverResult {
+  readonly path: string;
+  readonly binding: string;
+  /** The whole sheet, and the spine, in inches. */
+  readonly width_in: number;
+  readonly height_in: number;
+  readonly spine_in: number;
+  readonly pages: number;
+  /** Where the page count came from, which says whether the spine can be trusted. */
+  readonly pages_from: "setting" | "book" | "estimate" | "not_needed";
+  readonly diagnostics: readonly Diagnostic[];
+}
+
+/** The cover as the Cover section draws it, before it is made. */
+export interface CoverPreview {
+  /** The whole sheet as SVG, drawn by the code that draws the PDF. Absent when nothing can be drawn. */
+  readonly svg?: string;
+  readonly binding: string;
+  readonly width_in: number;
+  readonly height_in: number;
+  readonly spine_in: number;
+  readonly pages: number;
+  readonly pages_from: CoverResult["pages_from"];
+  readonly diagnostics: readonly Diagnostic[];
 }
 
 /** Where a build would find a font, which decides whether it travels with the book. */
@@ -369,6 +398,14 @@ export interface Backend {
    * nothing, when the project already has some.
    */
   addFrontMatter(root: string): Promise<Project>;
+  /**
+   * Write `output/book_cover.pdf` — back, spine and front on one sheet —
+   * from the `[cover]` settings. Rejects with the reason, having written
+   * nothing.
+   */
+  makeCover(root: string): Promise<CoverResult>;
+  /** Draw the cover from the settings as they stand, writing nothing. */
+  coverPreview(root: string, guides: boolean): Promise<CoverPreview>;
   /** What has changed on disk since then (FUN-007). */
   changedFiles(): Promise<Changes>;
   /**
@@ -437,6 +474,8 @@ export const tauriBackend: Backend = {
   createProject: (parent, name, language) =>
     invoke("create_project", { parent, name, language }),
   addFrontMatter: (root) => invoke("add_front_matter", { root }),
+  makeCover: (root) => invoke("make_cover", { root }),
+  coverPreview: (root, guides) => invoke("cover_preview", { root, guides }),
   changedFiles: () => invoke("changed_files"),
   setSetting: (root, key, value) => invoke("set_setting", { root, key, value }),
   resetSetting: (root, key) => invoke("reset_setting", { root, key }),

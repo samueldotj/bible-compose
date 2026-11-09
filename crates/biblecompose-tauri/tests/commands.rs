@@ -6,7 +6,9 @@
 //! CI on a machine with no display. What is left needing a person is the
 //! window itself.
 
-use biblecompose_tauri_lib::{clear_setting, project_at, write_setting};
+use biblecompose_tauri_lib::{
+    clear_setting, cover_preview_at, make_cover_at, project_at, write_setting,
+};
 use camino::Utf8PathBuf;
 
 /// A project folder with one real book in it.
@@ -854,4 +856,104 @@ fn the_start_screens_link_is_openable() {
     for link in links {
         assert!(openable(link), "{link} is on the start screen and refused");
     }
+}
+
+/// The window's Make cover: `output/book_cover.pdf` beside the book, sized
+/// from the settings, with the font the project ships.
+#[test]
+fn the_window_makes_a_cover_beside_the_book() {
+    let (_dir, root) = project(Some(
+        "schema_version = 1\n[cover]\nbinding = \"hardcover\"\npages = 1200\nfont_family = \"Newsreader\"\n",
+    ));
+    let fonts = root.join("assets/fonts");
+    std::fs::create_dir_all(fonts.as_std_path()).unwrap();
+    std::fs::copy(
+        biblecompose_testkit::repo_root()
+            .join("src/assets/fonts/Newsreader-Variable.ttf")
+            .as_std_path(),
+        fonts.join("Newsreader-Variable.ttf").as_std_path(),
+    )
+    .unwrap();
+
+    let cover = make_cover_at(&root).expect("a cover");
+    assert!(cover.path.ends_with("book_cover.pdf"), "{}", cover.path);
+    assert!(Utf8PathBuf::from(&cover.path).is_file());
+    assert_eq!(cover.binding, "hardcover");
+    assert_eq!(cover.pages, 1200);
+    assert_eq!(cover.pages_from, "setting");
+    assert!(cover.spine_in > 1.0, "{}", cover.spine_in);
+
+    // And the cover is a setting like any other: written by the form.
+    let p = project_at(&root);
+    assert!(p
+        .settings
+        .iter()
+        .any(|s| s.key == "cover.border" && s.kind == "choice"));
+    assert!(p
+        .settings
+        .iter()
+        .any(|s| s.key == "cover.foil" && s.kind == "color"));
+}
+
+/// The Cover section's canvas: the same cover, as SVG, redrawn from the
+/// settings as they stand — and a setting changed is a preview changed.
+#[test]
+fn the_cover_preview_follows_the_settings() {
+    let (_dir, root) = project(Some(
+        "schema_version = 1
+[cover]
+pages = 800
+font_family = \"Newsreader\"
+",
+    ));
+    let fonts = root.join("assets/fonts");
+    std::fs::create_dir_all(fonts.as_std_path()).unwrap();
+    std::fs::copy(
+        biblecompose_testkit::repo_root()
+            .join("src/assets/fonts/Newsreader-Variable.ttf")
+            .as_std_path(),
+        fonts.join("Newsreader-Variable.ttf").as_std_path(),
+    )
+    .unwrap();
+
+    let paper = cover_preview_at(&root, true);
+    let svg = paper.svg.expect("a drawing");
+    assert!(svg.starts_with("<svg"));
+    // The lettering is outlines, not text the window would need the font for.
+    assert!(svg.contains("<path id=\"cover-g"));
+    // Guides were asked for, in magenta.
+    assert!(svg.contains("#ff00ff"));
+    assert_eq!(paper.binding, "paperback");
+    // Nothing was written.
+    assert!(!root.join("output/book_cover.pdf").exists());
+
+    write_setting(&root, "cover.binding", "hardcover").expect("a valid value");
+    let hard = cover_preview_at(&root, false);
+    assert_eq!(hard.binding, "hardcover");
+    assert!(hard.width_in > paper.width_in);
+    assert!(!hard.svg.unwrap().contains("#ff00ff"));
+}
+
+#[test]
+fn a_cover_with_no_font_previews_nothing_and_says_why() {
+    let (_dir, root) = project(Some(
+        "schema_version = 1
+[cover]
+pages = 800
+font_family = \"No Such Family 9\"
+",
+    ));
+    let p = cover_preview_at(&root, false);
+    assert!(p.svg.is_none());
+    assert!(p.diagnostics.iter().any(|d| d.code == "FONT-001"));
+}
+
+/// A cover title's line break is a line on the cover, so the form must be
+/// able to write one and read it back.
+#[test]
+fn a_cover_title_keeps_its_line_break_through_the_form() {
+    let (_dir, root) = project(Some("schema_version = 1\n"));
+    let p = write_setting(&root, "cover.title", "The Holy\nBible").expect("a valid value");
+    let title = p.settings.iter().find(|s| s.key == "cover.title").unwrap();
+    assert_eq!(title.value, "The Holy\nBible");
 }

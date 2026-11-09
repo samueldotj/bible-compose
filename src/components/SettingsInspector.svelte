@@ -8,6 +8,7 @@
    */
   import Inspector from "./ui/Inspector.svelte";
   import SettingRow from "./ui/SettingRow.svelte";
+  import CoverActions from "./CoverActions.svelte";
   import { EDITED_ELSEWHERE, GROUPS, navTitle, tabTitle, type Tab } from "../lib/labels";
   import { session } from "../lib/session.svelte";
   import { SWITCH_GROUPS } from "../lib/switches";
@@ -28,6 +29,9 @@
 </script>
 
 <Inspector kicker={navTitle(tab.nav)} title={tabTitle(tab)} description={locale().help[`tab:${tab.id}`]}>
+  {#if tab.cover}
+    <CoverActions />
+  {/if}
   {#each switchGroups as group (group.title)}
     <div class="section-title">{word(`group:${group.title}`, group.title)}</div>
     {#each group.switches as s (s.key)}

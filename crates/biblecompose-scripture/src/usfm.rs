@@ -27,17 +27,105 @@ pub struct ParsedFile {
 pub fn parse(path: impl Into<Utf8PathBuf>, source: impl Into<String>) -> ParsedFile {
     let path = path.into();
     let document = Document::parse(source);
-    let diagnostics = document
-        .diagnostics()
-        .iter()
-        .map(|d| translate(&path, &document, d))
-        .collect();
+    let mut diagnostics = Vec::new();
+    let mut gaps = Vec::new();
+    let mut gaps_at = None;
+    for d in document.diagnostics() {
+        match gap(d) {
+            Some(missing) => {
+                gaps.push(missing);
+                gaps_at.get_or_insert((diagnostics.len(), d));
+            }
+            None => diagnostics.push(translate(&path, &document, d)),
+        }
+    }
+    if let Some((at, first)) = gaps_at {
+        let mut summary = translate(&path, &document, first);
+        summary.message = missing_verses(&book_name(&path, &document), gaps);
+        diagnostics.insert(at, summary);
+    }
 
     ParsedFile {
         path,
         document,
         diagnostics,
     }
+}
+
+/// The chapter and verse of one upstream verse-gap note.
+///
+/// `usfm-core` reports a gap one verse at a time, which suits an editor that
+/// underlines each place and does not suit a problems list: one stray
+/// `\v 2017` in 1 Thessalonians was 1,998 identical-looking notes. So the
+/// gaps in a file are gathered here into one note per book (see
+/// [`missing_verses`]). The numbers come from upstream's message, whose
+/// wording a test pins; one this does not recognise is passed through
+/// unmerged rather than lost.
+fn gap(d: &UpstreamDiagnostic) -> Option<(u16, u16)> {
+    if d.code != Upstream::VerseGap {
+        return None;
+    }
+    let (chapter, verse) = d
+        .message
+        .strip_prefix("chapter ")?
+        .split_once(" has no verse ")?;
+    Some((chapter.parse().ok()?, verse.parse().ok()?))
+}
+
+/// The book's code from its `\id`, or the file's name if it has none.
+fn book_name(path: &Utf8Path, document: &Document) -> String {
+    document
+        .content()
+        .iter()
+        .find(|node| node.kind == usfm_core::NodeKind::Book)
+        .and_then(|node| node.attribute("code"))
+        .map(str::to_string)
+        .unwrap_or_else(|| path.file_name().unwrap_or(path.as_str()).to_string())
+}
+
+/// `1TH is missing 1,998 verses: 2:18–2015, 3:5`. Runs become ranges, in
+/// chapter order.
+fn missing_verses(book: &str, mut gaps: Vec<(u16, u16)>) -> String {
+    gaps.sort_unstable();
+    gaps.dedup();
+    let count = gaps.len();
+
+    let mut runs: Vec<(u16, u16, u16)> = Vec::new();
+    for (chapter, verse) in gaps {
+        match runs.last_mut() {
+            Some((c, _, end)) if *c == chapter && verse == *end + 1 => *end = verse,
+            _ => runs.push((chapter, verse, verse)),
+        }
+    }
+    let list: Vec<String> = runs
+        .iter()
+        .map(|&(chapter, start, end)| {
+            if start == end {
+                format!("{chapter}:{start}")
+            } else {
+                format!("{chapter}:{start}\u{2013}{end}")
+            }
+        })
+        .collect();
+
+    let what = if count == 1 {
+        "1 verse".to_string()
+    } else {
+        format!("{} verses", thousands(count))
+    };
+    format!("{book} is missing {what}: {}", list.join(", "))
+}
+
+fn thousands(n: usize) -> String {
+    let digits = n.to_string();
+    let mut out = String::new();
+    for (i, ch) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i) % 3 == 0 {
+            out.push(',');
+        }
+        out.push(ch);
+    }
+    out
 }
 
 /// Whether a diagnostic presumes the book has chapters.
@@ -163,6 +251,74 @@ mod tests {
             .strip_prefix("USFM-")
             .expect("USFM- prefix")
             .starts_with(|ch: char| ch.is_ascii_digit()));
+    }
+
+    fn gap_notes(source: &str) -> Vec<String> {
+        parse("1TH.usfm", source)
+            .diagnostics
+            .into_iter()
+            .filter(|d| d.code == code::VERSE_GAP)
+            .map(|d| d.message)
+            .collect()
+    }
+
+    /// Pins the wording [`gap`] reads. If `usfm-core` rewords it, this fails
+    /// rather than the notes quietly going back to one per verse.
+    #[test]
+    fn upstream_still_words_a_gap_the_way_it_is_read() {
+        let doc = Document::parse("\\id 1TH\n\\c 1\n\\p\n\\v 1 a\n\\v 3 c\n");
+        let found: Vec<_> = doc
+            .diagnostics()
+            .iter()
+            .filter(|d| d.code == Upstream::VerseGap)
+            .map(gap)
+            .collect();
+        assert_eq!(found, [Some((1, 2))]);
+    }
+
+    #[test]
+    fn a_book_s_missing_verses_are_one_note() {
+        let notes = gap_notes(
+            "\\id 1TH\n\\c 1\n\\p\n\\v 1 a\n\\v 5 b\n\\v 7 c\n\\c 2\n\\p\n\\v 1 d\n\\v 2017 e\n",
+        );
+        assert_eq!(
+            notes,
+            ["1TH is missing 2,019 verses: 1:2\u{2013}4, 1:6, 2:2\u{2013}2016"]
+        );
+    }
+
+    #[test]
+    fn one_missing_verse_is_said_in_the_singular() {
+        assert_eq!(
+            gap_notes("\\id JUD\n\\c 1\n\\p\n\\v 1 a\n\\v 3 b\n"),
+            ["JUD is missing 1 verse: 1:2"]
+        );
+    }
+
+    #[test]
+    fn the_note_sits_at_the_first_gap_and_keeps_its_place() {
+        let parsed = parse(
+            "1TH.usfm",
+            "\\id 1TH\n\\c 1\n\\p\n\\v 1 a\n\\v 3 b\n\\v 3 again\n\\c 2\n\\p\n\\v 2 c\n",
+        );
+        let gaps: Vec<_> = parsed
+            .diagnostics
+            .iter()
+            .filter(|d| d.code == code::VERSE_GAP)
+            .collect();
+        assert_eq!(gaps.len(), 1);
+        assert_eq!(gaps[0].severity, Severity::Info);
+        assert!(gaps[0].location.as_ref().and_then(|at| at.line).is_some());
+        // Other diagnostics are untouched: the duplicate is still reported.
+        assert!(parsed
+            .diagnostics
+            .iter()
+            .any(|d| d.code.as_str() == "USFM-E042"));
+    }
+
+    #[test]
+    fn a_book_with_no_gaps_has_no_gap_note() {
+        assert!(gap_notes("\\id 1TH\n\\c 1\n\\p\n\\v 1 a\n\\v 2 b\n").is_empty());
     }
 
     /// Every mirrored code has to be in `code::ALL`, or a build log carrying

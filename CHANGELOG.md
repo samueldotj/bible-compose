@@ -2,6 +2,16 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
+## 0.4.2
+
+* **The installers carry the editor.** Double-clicking a book's USFM in an
+  installed copy said *"this build was compiled to carry the editor but
+  without an editor to carry"* — in every installer since 0.3.0. The release
+  workflow staged the editor and then built the window without pointing at
+  it, and the build quietly took a placeholder in its place. The installers
+  are now built against the staged editor, and the release refuses to build
+  one that is missing either the editor or the typesetter.
+
 ## 0.4.1
 
 Everything listed under 0.4.0, which was tagged and never released: its

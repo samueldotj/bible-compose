@@ -193,7 +193,6 @@ jobs:
         shell: bash
         env:
           BIBLECOMPOSE_SILE_BUNDLE: ${{ github.workspace }}/stage
-          BIBLECOMPOSE_EDITOR_BUNDLE: ${{ github.workspace }}/editor-stage
         run: cargo build --release --bin biblecompose --features biblecompose-sile/embedded-sile
 
       # -------------------------------------------------------- the criterion
@@ -486,7 +485,22 @@ jobs:
         shell: bash
         env:
           BIBLECOMPOSE_SILE_BUNDLE: ${{ github.workspace }}/stage
+          # **Here, on the step that builds the window.** It was on `bundle`'s
+          # step, which builds the command line and stages no editor, so every
+          # installer from 0.3.0 to 0.4.1 carried the placeholder and answered
+          # a double-click on a book with "this build was compiled to carry
+          # the editor but without an editor to carry". The editor was staged
+          # three steps above and never pointed at.
+          BIBLECOMPOSE_EDITOR_BUNDLE: ${{ github.workspace }}/editor-stage
         run: |
+          # Both stages, or no build. An unset variable is not an error to
+          # rust-embed — the build script points it at a placeholder so the
+          # features type-check without a stage — so an installer missing
+          # either one builds, installs and runs, and fails only when used.
+          for stage in "${BIBLECOMPOSE_SILE_BUNDLE:?}" "${BIBLECOMPOSE_EDITOR_BUNDLE:?}"; do
+            [ -d "$stage" ] || { echo "::error::no stage at $stage"; exit 1; }
+          done
+
           # **An empty variable is not an absent one, and the bundler cannot
           # tell.** The signing secrets are lifted to the job's environment so
           # the steps above can test them; a repository without them gets

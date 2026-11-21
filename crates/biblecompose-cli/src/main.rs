@@ -443,20 +443,8 @@ fn run(cli: Cli) -> Result<ExitCode, String> {
                         Severity::Error => &mut std::io::stderr(),
                         _ => &mut std::io::stdout(),
                     };
+                    // With its help and detail: the detail is the evidence.
                     print_diagnostic(stream, d);
-                    // **The detail is the evidence**, and it was going
-                    // nowhere. A diagnostic carries one exactly when the
-                    // message is not enough by itself — a linker's own words,
-                    // the signal a process died from, the line a parser
-                    // stopped at — and the window shows it in a panel while
-                    // the command line was dropping it on the floor. Two
-                    // remote build failures were diagnosed without it before
-                    // anyone noticed it was never printed.
-                    if let Some(detail) = &d.detail {
-                        for line in detail.lines() {
-                            let _ = writeln!(stream, "  {line}");
-                        }
-                    }
                 }
                 if let Some(path) = &report.output {
                     println!("wrote {path}");

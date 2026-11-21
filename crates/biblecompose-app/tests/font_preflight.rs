@@ -128,6 +128,45 @@ fn the_example_names_a_place_in_the_text() {
     );
 }
 
+/// A stray character is found by its line, not by its verse. The case that
+/// asked for this: two U+FFFD left in a Gujarati Titus by a bad conversion,
+/// reported only as "first at Kotne Vasavi: Regular 1:13", where the name was
+/// the title every book in the project shared.
+#[test]
+fn a_stray_character_is_reported_with_its_file_line_and_column() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let root = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("UTF-8 path");
+    let line = "\\v 1 In the beginning \u{B95} was.";
+    std::fs::write(
+        root.join("GEN.usfm").as_std_path(),
+        format!("\\id GEN\n\\c 1\n\\p\n{line}\n\\v 2 And again.\n"),
+    )
+    .expect("write");
+    let column = line
+        .chars()
+        .position(|c| c == '\u{B95}')
+        .expect("in the line") as u32
+        + 1;
+
+    let doc = biblecompose_app::project::load(&root, &BookPlan::canonical()).document;
+    let d = check("DejaVu Serif", &doc, &latin());
+    let gap = d
+        .iter()
+        .find(|d| d.code.as_str() == "FONT-002")
+        .expect("the Tamil letter is not in DejaVu Serif");
+
+    assert!(
+        gap.message.contains(&format!("GEN.usfm:4:{column}")),
+        "{}",
+        gap.message
+    );
+    let at = gap.location.as_ref().expect("a location");
+    assert_eq!(at.path.file_name(), Some("GEN.usfm"));
+    assert_eq!((at.line, at.column), (Some(4), Some(column)));
+    // The font it is missing from is still named, in the detail.
+    assert!(gap.detail.as_deref().unwrap_or_default().contains("DejaVu"));
+}
+
 // ------------------------------------------------------------- FONT-001
 
 #[test]

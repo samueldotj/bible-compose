@@ -551,7 +551,7 @@ pub fn preflight(
     match gaps(&font, doc) {
         Ok(gaps) if gaps.is_empty() => Some(font),
         Ok(gaps) => {
-            diagnostics.push(coverage_error(&font, &gaps));
+            diagnostics.push(coverage_error(&font, &gaps, doc));
             Some(font)
         }
         Err(d) => {
@@ -650,8 +650,66 @@ fn describe(c: char) -> String {
     }
 }
 
+/// How many places a coverage message lists before it counts the rest.
+const PLACES_SHOWN: usize = 5;
+
+/// Where `c` is in the project's files: `file:line:column` for the first
+/// [`PLACES_SHOWN`], and how many there are in all.
+///
+/// A chapter and verse finds the passage, and a stray character such as a
+/// U+FFFD left by a bad conversion is found by its line. The model keeps no
+/// source positions, so this reads the files its provenance names. That is a
+/// second read of each, and it happens only when a build is already failing
+/// on a character. A file that cannot be read, such as built-in front matter
+/// that is not on disk, is skipped. The column counts characters from 1, as
+/// the problems list does.
+fn places(doc: &ScriptureDocument, c: char) -> (Vec<SourceLoc>, usize) {
+    let mut shown = Vec::new();
+    let mut total = 0;
+    for source in &doc.provenance {
+        let Ok(text) = std::fs::read_to_string(source.path.as_std_path()) else {
+            continue;
+        };
+        for (line, content) in text.lines().enumerate() {
+            for (column, found) in content.chars().enumerate() {
+                if found != c {
+                    continue;
+                }
+                total += 1;
+                if shown.len() < PLACES_SHOWN {
+                    shown.push(SourceLoc::at(
+                        source.path.clone(),
+                        line as u32 + 1,
+                        column as u32 + 1,
+                    ));
+                }
+            }
+        }
+    }
+    (shown, total)
+}
+
+/// `TIT.usfm:46:99, TIT.usfm:46:100 and 3 more`. The file's name, not its
+/// path, which the location already carries in full.
+fn list_places(shown: &[SourceLoc], total: usize) -> String {
+    let named: Vec<String> = shown
+        .iter()
+        .map(|at| {
+            let file = at.path.file_name().unwrap_or(at.path.as_str());
+            match (at.line, at.column) {
+                (Some(line), Some(column)) => format!("{file}:{line}:{column}"),
+                _ => file.to_owned(),
+            }
+        })
+        .collect();
+    match total.saturating_sub(named.len()) {
+        0 => named.join(", "),
+        more => format!("{} and {more} more", named.join(", ")),
+    }
+}
+
 /// The message a publisher acts on.
-fn coverage_error(font: &ResolvedFont, gaps: &[Gap]) -> Diagnostic {
+fn coverage_error(font: &ResolvedFont, gaps: &[Gap], doc: &ScriptureDocument) -> Diagnostic {
     let total: usize = gaps.iter().map(|g| g.count).sum();
     // The commonest gap that can name a place. A gap whose only occurrences
     // are in a title is a true finding with nowhere to point, and pointing is
@@ -676,21 +734,50 @@ fn coverage_error(font: &ResolvedFont, gaps: &[Gap]) -> Diagnostic {
         ));
     }
 
+    // And where in the files, which is what finds a stray character: the
+    // verse says which passage, the line says which byte to fix.
+    let (shown, in_files) = places(doc, worst.character);
+    if !shown.is_empty() {
+        message.push_str(&format!(" — in {}", list_places(&shown, in_files)));
+    }
+
     // A few, not all: a Latin font against Tamil is missing every letter, and
     // a list of two hundred of them is not more informative than a list of
-    // five.
+    // five. Each with its first place, when it has one in the files.
     let examples: Vec<String> = gaps
         .iter()
         .take(5)
-        .map(|g| format!("{} ×{}", describe(g.character), g.count))
+        .map(|g| {
+            let (first, _) = places(doc, g.character);
+            match first.first() {
+                Some(at) => format!(
+                    "{} ×{} (first in {})",
+                    describe(g.character),
+                    g.count,
+                    list_places(std::slice::from_ref(at), 1)
+                ),
+                None => format!("{} ×{}", describe(g.character), g.count),
+            }
+        })
         .collect();
 
+    // At the first place the character is, so the problems list names the
+    // book and line. The font file it is missing from is in the detail.
+    let at = shown
+        .into_iter()
+        .next()
+        .unwrap_or_else(|| SourceLoc::file(font.path.clone()));
+
     Diagnostic::error(code::MISSING_COVERAGE, message)
-        .at(SourceLoc::file(font.path.clone()))
+        .at(at)
         .help(format!(
             "choose a font that covers this script, or put one in {PROJECT_FONTS}/ — \
              SILE would otherwise set {total} character{} as empty boxes and report success",
             if total == 1 { "" } else { "s" }
         ))
-        .detail(format!("missing: {}", examples.join(", ")))
+        .detail(format!(
+            "missing from {}: {}",
+            font.path,
+            examples.join(", ")
+        ))
 }

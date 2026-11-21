@@ -4660,8 +4660,8 @@ dependencies = [
 
 [[package]]
 name = "usfm-core"
-version = "0.1.0"
-source = "git+https://github.com/samueldotj/easy-usfm.git?rev=37ccab0088153a2fb8c5a36c2ba32acc1ebe769c#37ccab0088153a2fb8c5a36c2ba32acc1ebe769c"
+version = "0.2.0"
+source = "git+https://github.com/samueldotj/easy-usfm.git?rev=44c31171c8f81ade2241753b2b72b0de3524bcae#44c31171c8f81ade2241753b2b72b0de3524bcae"
 dependencies = [
  "blake3",
  "serde",

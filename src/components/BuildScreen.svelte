@@ -7,11 +7,17 @@
    * of the orchestrator, not of this table, and this table's job is not to
    * hide any of them behind a "first error" summary. The badges over the
    * table are the filter: click one to see only its kind.
+   *
+   * The text of a row can be selected and copied; only "Fix in" moves to the
+   * section. "Copy" puts what the filter shows on the clipboard as one report,
+   * each distinct problem once with its count and places, because a project
+   * with one systematic fault reports it thousands of times.
    */
   import { session, type SeverityFilter } from "../lib/session.svelte";
   import { TABS, tabTitle } from "../lib/labels";
   import type { Diagnostic } from "../lib/services/backend";
   import { phrases, t } from "../lib/i18n";
+  import { problemReport } from "../lib/problems";
 
   /** The section that answers a diagnostic, by the stage its code carries. */
   function fixIn(d: Diagnostic): string | null {
@@ -67,6 +73,25 @@
   function filter(kind: SeverityFilter): void {
     session.severity = session.severity === kind ? "all" : kind;
   }
+
+  let copied = $state<"idle" | "done" | "failed">("idle");
+  let reset: ReturnType<typeof setTimeout> | undefined;
+
+  function fileLabel(path: string): string {
+    return session.books.find((b) => b.path === path)?.code ?? (path.split(/[/\\]/).pop() ?? path);
+  }
+
+  async function copy(): Promise<void> {
+    const text = problemReport(session.visibleDiagnostics, fileLabel, phrases());
+    try {
+      await navigator.clipboard.writeText(text);
+      copied = "done";
+    } catch {
+      copied = "failed";
+    }
+    clearTimeout(reset);
+    reset = setTimeout(() => (copied = "idle"), 2000);
+  }
 </script>
 
 <section class="build" aria-label={phrases().problems(session.diagnostics.length)}>
@@ -79,6 +104,13 @@
     </span>
     <span class="spacer"></span>
     <span class="muted small">{t("buildNote")}</span>
+    <button
+      type="button"
+      class="copy"
+      title={t("copyProblemsHint")}
+      disabled={session.visibleDiagnostics.length === 0}
+      onclick={copy}
+    >{copied === "done" ? t("copiedProblems") : copied === "failed" ? t("copyFailed") : t("copyProblems")}</button>
   </div>
 
   <div class="table">
@@ -88,15 +120,19 @@
     <div class="rows">
       {#each session.visibleDiagnostics as d, i (d.code + i)}
         {@const tab = fixIn(d)}
-        <button type="button" class="trow" onclick={() => go(d)}>
+        <div class="trow">
           <span><span class="badge {d.severity}">{d.severity === "info" ? phrases().notes(1).replace(/^1 /, "") : d.severity}</span></span>
           <span class="mono where">{where(d)}</span>
           <span class="msg" title={d.help ? `${d.message} — ${d.help}` : d.message}>
             {d.message}
             {#if d.help}<span class="muted"> — {d.help}</span>{/if}
           </span>
-          <span class="fix">{tab ? `${sectionName(tab)} →` : d.code}</span>
-        </button>
+          {#if tab}
+            <button type="button" class="fix" title={d.code} onclick={() => go(d)}>{`${sectionName(tab)} →`}</button>
+          {:else}
+            <span class="code mono">{d.code}</span>
+          {/if}
+        </div>
       {:else}
         <p class="empty muted">
           {session.diagnostics.length === 0 ? t("nothingToReport") : t("nothingMatchesFilter")}
@@ -186,10 +222,26 @@
     color: inherit;
     font: inherit;
     text-align: start;
-    cursor: pointer;
+    user-select: text;
   }
   .trow:hover {
     background: color-mix(in oklab, var(--acctint) 55%, transparent);
+  }
+  .copy {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--panel);
+    color: inherit;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    cursor: pointer;
+    min-inline-size: 7em;
+  }
+  .copy:disabled {
+    opacity: 0.4;
+    cursor: default;
   }
   .badge {
     text-transform: capitalize;
@@ -206,9 +258,21 @@
     white-space: nowrap;
   }
   .fix {
+    justify-self: start;
+    border: 0;
+    padding: 0;
+    background: none;
     color: var(--acc);
+    font: inherit;
     font-weight: 600;
     white-space: nowrap;
+    cursor: pointer;
+  }
+  .fix:hover {
+    text-decoration: underline;
+  }
+  .code {
+    color: var(--mut);
   }
   .empty {
     padding: 16px;

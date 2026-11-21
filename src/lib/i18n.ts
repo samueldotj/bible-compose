@@ -237,6 +237,11 @@ export interface Chrome {
   readonly fixIn: string;
   readonly nothingToReport: string;
   readonly nothingMatchesFilter: string;
+  /** The button that puts the problems list, grouped, on the clipboard. */
+  readonly copyProblems: string;
+  readonly copyProblemsHint: string;
+  readonly copiedProblems: string;
+  readonly copyFailed: string;
   readonly allSeverities: string;
   readonly options: string;
   readonly keepHint: string;
@@ -319,6 +324,8 @@ export interface Phrases {
   readonly errors: (count: number) => string;
   readonly warnings: (count: number) => string;
   readonly notes: (count: number) => string;
+  /** `once`, `214 times`: how often one problem happened. */
+  readonly occurrences: (count: number) => string;
   /** `pages 412–413`, over the spread, after the book's name. */
   readonly pages: (first: string, last: string) => string;
   /** `7 × 10 in · text block 5.45 × 8.05 in`. */
@@ -775,6 +782,11 @@ export const EN: Catalogue = {
     fixIn: "Fix in",
     nothingToReport: "Nothing to report.",
     nothingMatchesFilter: "Nothing matches the filter.",
+    copyProblems: "Copy",
+    copyProblemsHint:
+      "Copy the problems shown, each distinct one once with how often and where it happened.",
+    copiedProblems: "Copied",
+    copyFailed: "Could not copy",
     allSeverities: "All",
     options: "Options",
     keepHint: "Leave the typesetter's files in the output folder",
@@ -840,6 +852,7 @@ export const EN: Catalogue = {
     errors: (count) => (count === 1 ? "1 error" : `${count} errors`),
     warnings: (count) => (count === 1 ? "1 warning" : `${count} warnings`),
     notes: (count) => (count === 1 ? "1 note" : `${count} notes`),
+    occurrences: (count) => (count === 1 ? "once" : `${count} times`),
     pages: (first, last) => `pages ${first}–${last}`,
     textBlock: (page, block) => `${page} · text block ${block}`,
     pagesSoFar: (done, expected) =>

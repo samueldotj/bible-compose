@@ -290,11 +290,20 @@ pub fn close_started(started: &Started) {
         }
         let pid = child.id();
         let _ = if cfg!(windows) {
-            std::process::Command::new("taskkill")
+            let mut taskkill = std::process::Command::new("taskkill");
+            taskkill
                 .args(["/PID", &pid.to_string()])
                 .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
-                .status()
+                .stderr(std::process::Stdio::null());
+            // A console program started from a window with none gets one of
+            // its own — on Windows 11 a Terminal window, flashing up as the
+            // application closes. CREATE_NO_WINDOW.
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                taskkill.creation_flags(0x0800_0000);
+            }
+            taskkill.status()
         } else {
             std::process::Command::new("kill")
                 .args(["-TERM", &pid.to_string()])

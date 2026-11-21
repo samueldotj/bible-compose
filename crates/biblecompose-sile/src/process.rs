@@ -149,6 +149,11 @@ impl SileBackend {
         let mut c = Command::new(self.exe.as_std_path());
         // No shell anywhere on this path.
         c.stdin(Stdio::null());
+        // And no console window, for the version check as much as a build:
+        // see `platform::CREATE_NO_WINDOW`. A build adds its process group on
+        // top in `before_spawn`.
+        #[cfg(windows)]
+        platform::no_console(&mut c);
         // Every invocation, not just `run`: an unpacked SILE cannot answer
         // `--version` either without being told where its Lua lives. Finding
         // that out the hard way is what SILE-002's "did not report a version"
@@ -646,9 +651,25 @@ mod platform {
     /// group keeps stray Ctrl+C out of it.
     const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
 
+    /// **No console for SILE.** `sile.exe` is a console program, and the
+    /// window is not one (`windows_subsystem = "windows"` in release), so
+    /// without this Windows gives every SILE run a console of its own — which
+    /// on Windows 11, where the default terminal is Windows Terminal, means
+    /// starting a Terminal window. That was 5.4 seconds per run, and the first
+    /// run is the version check the window makes before it draws its start
+    /// screen. A debug build has a console its children share, which is why
+    /// development never saw it. Output is piped either way; nothing is lost.
+    pub const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
     pub fn before_spawn(cmd: &mut Command) {
         let _ = CREATE_SUSPENDED;
-        cmd.creation_flags(CREATE_NEW_PROCESS_GROUP);
+        // `creation_flags` replaces rather than adds, so both, every time.
+        cmd.creation_flags(CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW);
+    }
+
+    /// For a spawn that is not a build: no process group needed, no console.
+    pub fn no_console(cmd: &mut Command) {
+        cmd.creation_flags(CREATE_NO_WINDOW);
     }
 
     /// A Job Object with kill-on-close, so descendants die with the job even

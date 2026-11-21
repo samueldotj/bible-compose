@@ -2,7 +2,36 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
-## Unreleased
+## 0.4.0
+
+* **A `\rem` no longer hides the chapter after it.** When a `\rem` came
+  while a paragraph was open — typically the last line of an introduction,
+  written by the tool that exported the file — the parser made the next `\c`
+  or `\p` part of that paragraph. Chapter 1 then did not exist as far as
+  validation could tell: every paragraph in it was "not allowed before the
+  first `\c` marker", chapter 2 was out of sequence, and a one-chapter book
+  had no chapter at all. A Gujarati New Testament exported through Prince
+  reported 214 such errors across 27 books, none of them real, and could not
+  build. Fixed in easy-usfm, which this release now uses; that also stops a
+  Septuagint `18α` verse being reported as a duplicate of verse 18.
+
+* **The problems can be copied.** The Build page has a **Copy** button that
+  puts the problems the filter shows on the clipboard as one report: each
+  distinct problem once, with how often it happened and every place, per
+  book. 4,888 lines from one project became 88. The text of a row can now
+  be selected; only *Fix in* moves to the section.
+
+* **A book's missing verses are one note.** A gap was reported one verse at
+  a time, so one stray `\v 2017` in 1 Thessalonians was 1,998 notes. Now it
+  is one per book, with runs as ranges — `1TH is missing 2,017 verses: 2:17,
+  2:20–2016, 3:1` — where a huge range points straight at the run-together
+  verse number behind it.
+
+* **A character the font cannot draw is found by its line.** `FONT-002`
+  names the file, line and column of each place the character occurs, and
+  the problems list points there rather than at the font file. Two U+FFFD
+  left in a book by a bad conversion were reported only by a chapter and a
+  title every book in the project shared.
 
 * **A cover.** `biblecompose cover`, and **Make cover PDF** in a new Cover
   section of the window, write `output/book_cover.pdf`: the back, the spine

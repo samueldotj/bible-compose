@@ -1,6 +1,6 @@
 {
   "name": "biblecompose",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Compose USFM Scripture into a print-ready PDF.",
   "private": true,
   "license": "MIT",

@@ -2,6 +2,17 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
+## 0.4.3
+
+* **The window opens at once on Windows.** It took more than five seconds:
+  the first thing it does is ask the typesetter its version, and on Windows
+  every run of the typesetter was given a console window of its own — on
+  Windows 11 a Windows Terminal window, which takes seconds to start. The
+  window waited for it before drawing its start screen, and could not even
+  load its own fonts in the meantime. Every build paid the same toll. The
+  typesetter now runs with no console at all, and so does the `taskkill`
+  that closes the editor when the application exits.
+
 ## 0.4.2
 
 * **The installers carry the editor.** Double-clicking a book's USFM in an

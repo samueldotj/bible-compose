@@ -2,6 +2,17 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
+## 0.4.1
+
+Everything listed under 0.4.0, which was tagged and never released: its
+Linux installer job built the editor in place of the application.
+
+* **The release builds the right application.** `tauri build` finds its app
+  by searching the folder tree, and the installer job had checked the editor
+  out inside that tree to stage it — so there were two to find, and which one
+  came first was the runner's filesystem order. The checkout is now removed
+  once the editor is staged.
+
 ## 0.4.0
 
 * **A `\rem` no longer hides the chapter after it.** When a `\rem` came

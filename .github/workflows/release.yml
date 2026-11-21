@@ -417,6 +417,18 @@ jobs:
       - name: the staged editor carries its own interface
         run: node scripts/stage-editor.mjs --verify editor-stage
 
+      # **The checkout goes once the editor is staged.** `tauri build` finds
+      # its app by walking the working tree for a `tauri.conf.json`, and the
+      # editor's checkout is inside the tree with one of its own. Which it
+      # reaches first is the filesystem's order: 0.3.1 got ours everywhere,
+      # and 0.4.0's Linux job got the editor's — `the package
+      # 'easy-usfm-tauri' does not contain these features: embedded-editor,
+      # embedded-sile`. The stage is a binary and carries no config, so with
+      # the checkout gone there is one app to find.
+      - name: the editor's checkout goes, so tauri build finds only ours
+        shell: bash
+        run: rm -rf easy-usfm
+
       # ------------------------------------------------------------ signing
       #
       # **Windows signing is configuration, not an environment variable.** The

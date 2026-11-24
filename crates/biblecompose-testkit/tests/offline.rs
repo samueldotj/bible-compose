@@ -217,9 +217,26 @@ fn the_window_may_not_load_anything_remote() {
         csp.contains("default-src 'self'"),
         "the window should load nothing it did not ship with: {csp}"
     );
+    // **One kind of `http://` is not remote.** On Windows, Tauri serves a
+    // custom protocol — `bcpdf:`, the pages of the built PDF (GUI-008) — at
+    // `http://<scheme>.localhost`, and the policy has to name it there too.
+    // `.localhost` never leaves the machine (RFC 6761), and the webview
+    // answers it itself without asking the network. Anything else, or any
+    // origin with a port or a path, is a server somewhere.
+    let remote: Vec<&str> = csp
+        .split(|c: char| c.is_whitespace() || c == ';' || c == '"')
+        .filter(|token| token.starts_with("http://") || token.starts_with("https://"))
+        .filter(|token| {
+            let host = token.split_once("://").map_or("", |(_, rest)| rest);
+            let local = host.strip_suffix(".localhost").is_some_and(|name| {
+                !name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric())
+            });
+            !local
+        })
+        .collect();
     assert!(
-        !csp.contains("http://") && !csp.contains("https://"),
-        "the policy names a remote origin: {csp}"
+        remote.is_empty(),
+        "the policy names a remote origin, {remote:?}: {csp}"
     );
 
     // And no capability grants HTTP. The list is meant to stay short.

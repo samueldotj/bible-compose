@@ -665,8 +665,14 @@ fn open_folder(path: String) -> Result<(), Vec<WireDiagnostic>> {
 /// the webview is a command that can be called with anything, and "start a
 /// program on this path" is not something to leave open to whatever a
 /// publication's text might one day contain.
+///
+/// **`async`, and it has to be.** A synchronous command runs on the main
+/// thread, and on Windows a webview built there waits for the main thread to
+/// create it: the editor's window appeared, its page stayed `about:blank`, and
+/// this command never answered. Off the main thread the window is built by
+/// the event loop that is free to build it.
 #[tauri::command]
-fn open_in_editor(
+async fn open_in_editor(
     app: tauri::AppHandle,
     path: String,
     session: tauri::State<'_, Arc<Session>>,

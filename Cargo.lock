@@ -4715,7 +4715,7 @@ dependencies = [
 [[package]]
 name = "tauri-plugin-easy-usfm"
 version = "0.2.0"
-source = "git+https://github.com/samueldotj/easy-usfm.git?rev=c4c01b0bc06e02874dbe09bb149b5517e3761782#c4c01b0bc06e02874dbe09bb149b5517e3761782"
+source = "git+https://github.com/samueldotj/easy-usfm.git?rev=4a8fd73f627a43b2798d2f599459ceb9f5966bcb#4a8fd73f627a43b2798d2f599459ceb9f5966bcb"
 dependencies = [
  "blake3",
  "libc",
@@ -5432,7 +5432,7 @@ dependencies = [
 [[package]]
 name = "usfm-core"
 version = "0.2.0"
-source = "git+https://github.com/samueldotj/easy-usfm.git?rev=c4c01b0bc06e02874dbe09bb149b5517e3761782#c4c01b0bc06e02874dbe09bb149b5517e3761782"
+source = "git+https://github.com/samueldotj/easy-usfm.git?rev=4a8fd73f627a43b2798d2f599459ceb9f5966bcb#4a8fd73f627a43b2798d2f599459ceb9f5966bcb"
 dependencies = [
  "blake3",
  "serde",

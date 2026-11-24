@@ -260,6 +260,13 @@ export interface Chrome {
   readonly lastBuild: string;
   readonly openFolder: string;
   readonly openPdf: string;
+  readonly problemsView: string;
+  readonly previewView: string;
+  readonly previewOpening: string;
+  readonly previewNothing: string;
+  readonly zoomIn: string;
+  readonly zoomOut: string;
+  readonly goToPage: string;
   readonly stageRead: string;
   readonly stageCheck: string;
   readonly stageEmit: string;
@@ -342,6 +349,10 @@ export interface Phrases {
   /** `Fix in Contents`, the link on a problem row. */
   readonly booksInFolder: (count: number) => string;
   readonly wrote: (path: string) => string;
+  /** `Page 12 of 412`, the text of one page of the preview. */
+  readonly previewPage: (page: number, count: number) => string;
+  /** `of 412`, after the page box in the preview's toolbar. */
+  readonly ofPages: (count: number) => string;
   /** `Hardcover, 15.82 × 10.75 in, spine 1.32 in for 1,400 pages`. */
   readonly coverMade: (binding: string, width: number, height: number, spine: number, pages: number, estimated: boolean) => string;
   readonly languageWithTag: (name: string, tag: string) => string;
@@ -804,6 +815,13 @@ export const EN: Catalogue = {
     lastBuild: "Last build",
     openFolder: "Open folder",
     openPdf: "Open PDF",
+    problemsView: "Problems",
+    previewView: "Preview",
+    previewOpening: "Reading the PDF…",
+    previewNothing: "Build the book to see its pages here.",
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
+    goToPage: "Go to page",
     stageRead: "Read USFM",
     stageCheck: "Check the settings",
     stageEmit: "Prepare the typesetting",
@@ -865,6 +883,8 @@ export const EN: Catalogue = {
     settingsFound: (count) => (count === 1 ? "1 setting" : `${count} settings`),
     themeIs: (name) => `Theme: ${name}`,
     booksInFolder: (count) => (count === 1 ? "1 book in the folder" : `${count} books in the folder`),
+    previewPage: (page, count) => `Page ${page} of ${count}`,
+    ofPages: (count) => `of ${count}`,
     wrote: (path) => `wrote ${path}`,
     coverMade: (binding, width, height, spine, pages, estimated) =>
       `${binding.charAt(0).toUpperCase()}${binding.slice(1)}, ${width.toFixed(2)} × ${height.toFixed(2)} in, spine ${spine.toFixed(3)} in` +

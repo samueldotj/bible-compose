@@ -40,6 +40,7 @@ const BUILD_EVENT: &str = "build";
 
 mod download;
 pub mod editor;
+pub mod preview;
 
 // ---------------------------------------------------------------- wire types
 
@@ -438,6 +439,10 @@ pub struct Session {
     /// picker can check three hundred families against them without reading
     /// the books again (GUI-003).
     characters: Mutex<BTreeSet<char>>,
+    /// The built PDF the window is showing, and the workers that draw it
+    /// (GUI-008). Shared with the `bcpdf` scheme, which outlives any one
+    /// command.
+    preview: Arc<preview::Preview>,
 }
 
 // ------------------------------------------------------------ recent projects
@@ -630,10 +635,10 @@ fn open_folder(path: String) -> Result<(), Vec<WireDiagnostic>> {
 
 /// Open the finished PDF in whatever the platform reads PDFs with (GUI-009).
 ///
-/// **There is no integrated preview and this is what stands in for one.**
-/// GUI-008 is a SHOULD and [ADR-003](../../../docs/adr/003-gui.md) declines it:
-/// a viewer inside the window would be a second PDF renderer to keep, and the
-/// one the publisher already trusts is the one their printer will use.
+/// The preview inside the window ([`open_preview`]) shows the pages; this is
+/// for everything a viewer does that a preview does not — printing, searching,
+/// checking the file the printer will be sent — and it is what the platform's
+/// own reader, the one the publisher already trusts, is for.
 ///
 /// Same spawn as `open_folder`, and the same argument for it. The path is one
 /// this application produced and never text out of a document.
@@ -658,6 +663,26 @@ fn open_in_editor(
     path: String,
     session: tauri::State<'_, Arc<Session>>,
 ) -> Result<(), Vec<WireDiagnostic>> {
+    let path = inside_open_project(
+        &session,
+        path,
+        "open a project before editing one of its books",
+        "only the books of the open project can be opened for editing",
+    )?;
+    editor::open(&path, &session.editors).map_err(|e| vec![WireDiagnostic::from(&e)])
+}
+
+/// `path`, if it lies inside the project the window has open.
+///
+/// For the commands that act on a path the webview hands over. They are given
+/// paths this application produced, but a command reachable from the webview
+/// is a command that can be called with anything.
+fn inside_open_project(
+    session: &Session,
+    path: String,
+    none_open: &str,
+    outside: &str,
+) -> Result<Utf8PathBuf, Vec<WireDiagnostic>> {
     let path = Utf8PathBuf::from(path);
     let root = session
         .watched
@@ -673,10 +698,7 @@ fn open_in_editor(
     };
 
     let Some(root) = root else {
-        return Err(refuse(
-            "no project is open".to_owned(),
-            "open a project before editing one of its books",
-        ));
+        return Err(refuse("no project is open".to_owned(), none_open));
     };
 
     // Inside the project, and said in components rather than characters: a
@@ -685,11 +707,83 @@ fn open_in_editor(
     if path.components().any(|c| c.as_str() == "..") || !path.starts_with(&root) {
         return Err(refuse(
             format!("{path} is not inside the open project"),
-            "only the books of the open project can be opened for editing",
+            outside,
         ));
     }
+    Ok(path)
+}
 
-    editor::open(&path, &session.editors).map_err(|e| vec![WireDiagnostic::from(&e)])
+/// Show a PDF of the open project inside the window (GUI-008).
+///
+/// Reads the file and says how many pages it has and how big each is; the
+/// pages themselves are drawn on request through the `bcpdf` scheme (see
+/// [`preview`]). The path must be a PDF inside the open project — the book or
+/// its cover, which is everything this application writes.
+#[tauri::command]
+fn open_preview(
+    path: String,
+    session: tauri::State<'_, Arc<Session>>,
+) -> Result<preview::WirePreview, Vec<WireDiagnostic>> {
+    let path = inside_open_project(
+        &session,
+        path,
+        "open a project before previewing its PDF",
+        "only a PDF the open project built can be previewed",
+    )?;
+    if !path
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("pdf"))
+    {
+        return Err(vec![WireDiagnostic::from(&AppDiagnostic::error(
+            biblecompose_diagnostics::code::NOT_FOUND,
+            format!("{path} is not a PDF"),
+        ))]);
+    }
+    session
+        .preview
+        .open(&path)
+        .map_err(|e| vec![WireDiagnostic::from(&e)])
+}
+
+/// Stop previewing, so the file is no longer held and its pages are refused.
+#[tauri::command]
+fn close_preview(session: tauri::State<'_, Arc<Session>>) {
+    session.preview.close();
+}
+
+/// Answer one `bcpdf` request: a page of the previewed PDF as a PNG.
+fn serve_page(
+    ctx: tauri::UriSchemeContext<'_, tauri::Wry>,
+    request: tauri::http::Request<Vec<u8>>,
+    responder: tauri::UriSchemeResponder,
+) {
+    let Some(session) = ctx.app_handle().try_state::<Arc<Session>>() else {
+        return responder.respond(status(503));
+    };
+    let preview = Arc::clone(&session.preview);
+    preview.request(request.uri().path(), move |result| {
+        let response = match result {
+            Ok(png) => tauri::http::Response::builder()
+                .header(tauri::http::header::CONTENT_TYPE, "image/png")
+                // The address names one drawing of one file and is never
+                // reused, so the webview may keep it as long as it likes.
+                .header(
+                    tauri::http::header::CACHE_CONTROL,
+                    "public, max-age=31536000, immutable",
+                )
+                .body(png)
+                .unwrap_or_else(|_| status(500)),
+            Err(refusal) => status(refusal.status()),
+        };
+        responder.respond(response);
+    });
+}
+
+fn status(code: u16) -> tauri::http::Response<Vec<u8>> {
+    tauri::http::Response::builder()
+        .status(code)
+        .body(Vec::new())
+        .expect("a status with no body is a valid response")
 }
 
 #[tauri::command]
@@ -825,6 +919,7 @@ fn close_project(app: tauri::AppHandle, session: tauri::State<'_, Arc<Session>>)
         .lock()
         .expect("the session lock is not poisoned")
         .clear();
+    session.preview.close();
     shrink_to_launcher(&app);
     name_the_window(&app, None);
 }
@@ -1923,6 +2018,7 @@ fn resize_between(app: &tauri::AppHandle, from: f64, to: f64) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .register_asynchronous_uri_scheme_protocol(preview::SCHEME, serve_page)
         .setup(|app| {
             app.manage(Arc::new(Session::default()));
             if let Some(window) = app.get_webview_window("main") {
@@ -1955,6 +2051,8 @@ pub fn run() {
             close_project,
             open_folder,
             open_pdf,
+            open_preview,
+            close_preview,
             open_in_editor,
             open_url,
             presets,

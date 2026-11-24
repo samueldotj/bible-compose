@@ -2,6 +2,15 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+* **The built PDF can be read inside the window.** After a build, the Output
+  tab shows the pages, one at a time or as facing spreads, with zoom and a
+  page box. A build that succeeds opens on its pages; one that fails opens on
+  its problems, and a switch moves between the two. Pages are drawn as they
+  come into view, so a whole Bible opens as quickly as one book. Open PDF still
+  opens the file in the platform's own reader, which is the one to print from.
+
 ## 0.4.3
 
 * **The window opens at once on Windows.** It took more than five seconds:

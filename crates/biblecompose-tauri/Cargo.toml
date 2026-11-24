@@ -56,6 +56,17 @@ rust-embed = { version = "8", optional = true, features = [
     "debug-embed",
 ] }
 
+# The preview (GUI-008): pages of the built PDF drawn into the window. hayro
+# because it is pure Rust and forbids `unsafe`, so the renderer travels inside
+# the one binary ADR-006 promises rather than as a native library per platform;
+# a trial against PDFium found the two equally fast and equally faithful on
+# Latin, Tamil, Arabic and Hebrew output (ADR-003, revision 3). Default
+# features off: they bundle fallback faces for the standard fourteen fonts,
+# and SILE embeds every face it sets.
+hayro = { version = "0.9", default-features = false }
+# What a drawn page reaches the webview as. Already in the tree under hayro.
+png = "0.18"
+
 [dev-dependencies]
 biblecompose-testkit.workspace = true
 tempfile.workspace = true

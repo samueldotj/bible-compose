@@ -91,6 +91,23 @@ export class Session {
   log = $state<LogLine[]>([]);
   buildDiagnostics = $state<Diagnostic[]>([]);
   output = $state<string | null>(null);
+  /**
+   * What the Output tab's centre shows: the problems table, or the pages of
+   * the PDF just built (GUI-008). A build that succeeds turns to its pages and
+   * one that does not turns to the reasons, because each is what the
+   * publisher came to see.
+   */
+  buildView = $state<"problems" | "preview">("problems");
+  /**
+   * Where the reader was in the preview. Kept here rather than in the viewer,
+   * which is gone while a build runs, so a rebuild comes back to the same
+   * page, at the same size, in the same layout.
+   */
+  previewPlace = $state<{ layout: "page" | "spread"; zoom: number; page: number }>({
+    layout: "page",
+    zoom: 1,
+    page: 1,
+  });
   /** The cover last made for this project, and whether one is being made. */
   cover = $state<CoverResult | null>(null);
   makingCover = $state(false);
@@ -710,6 +727,7 @@ export class Session {
       case "finished":
         this.buildState = event.state;
         this.building = false;
+        this.buildView = event.state === "succeeded" && this.output ? "preview" : "problems";
         // The build may have written a settings-independent artefact, but it
         // cannot have changed the project — so nothing is reloaded here. A
         // reload would also throw away the diagnostics just collected.

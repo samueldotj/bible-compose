@@ -12,12 +12,18 @@
    * section. "Copy" puts what the filter shows on the clipboard as one report,
    * each distinct problem once with its count and places, because a project
    * with one systematic fault reports it thousands of times.
+   *
+   * Once a build has written a PDF the same space can show its pages instead
+   * (GUI-008); the switch over the table chooses, and a build that succeeds
+   * chooses the pages for you.
    */
   import { session, type SeverityFilter } from "../lib/session.svelte";
   import { TABS, tabTitle } from "../lib/labels";
   import type { Diagnostic } from "../lib/services/backend";
   import { phrases, t } from "../lib/i18n";
   import { problemReport } from "../lib/problems";
+  import PdfPreview from "./PdfPreview.svelte";
+  import Segmented from "./ui/Segmented.svelte";
 
   /** The section that answers a diagnostic, by the stage its code carries. */
   function fixIn(d: Diagnostic): string | null {
@@ -95,6 +101,22 @@
 </script>
 
 <section class="build" aria-label={phrases().problems(session.diagnostics.length)}>
+  {#if session.output}
+    <div class="views">
+      <Segmented
+        options={[
+          { value: "preview", label: t("previewView") },
+          { value: "problems", label: `${t("problemsView")} · ${session.diagnostics.length}` },
+        ]}
+        value={session.buildView}
+        onchange={(v) => (session.buildView = v === "preview" ? "preview" : "problems")}
+      />
+    </div>
+  {/if}
+
+  {#if session.output && session.buildView === "preview"}
+    <PdfPreview path={session.output} />
+  {:else}
   <div class="head">
     <h2>{phrases().problems(session.diagnostics.length)}</h2>
     <span class="badges">
@@ -140,6 +162,7 @@
       {/each}
     </div>
   </div>
+  {/if}
 </section>
 
 <style>
@@ -151,6 +174,9 @@
     min-inline-size: 0;
     min-block-size: 0;
     padding: 22px 28px;
+  }
+  .views {
+    display: flex;
   }
   .head {
     display: flex;

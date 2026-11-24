@@ -11,7 +11,7 @@
  * directory reaches for `@tauri-apps`.
  */
 
-import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 
@@ -328,6 +328,17 @@ export type Unsubscribe = () => void;
  * An interface rather than a set of functions so a test can supply a fake
  * without a module mock, and so the surface stays small enough to read.
  */
+/**
+ * A PDF opened for the preview (GUI-008): how many pages, and how big each is
+ * in points, so the whole document can be laid out before a page is drawn.
+ */
+export interface PreviewDocument {
+  /** Names this drawing of this file; every page address carries it. */
+  readonly generation: number;
+  /** `[width, height]` per page, in points, rotation applied. */
+  readonly pages: readonly (readonly [number, number])[];
+}
+
 export interface Backend {
   /** Application and typesetting-backend versions, for the about box and the log. */
   versions(): Promise<{ app: string; contract: string; backend: string }>;
@@ -349,6 +360,20 @@ export interface Backend {
    * their printer will use.
    */
   openPdf(path: string): Promise<void>;
+  /**
+   * Show a PDF of the open project inside the window (GUI-008). The shell
+   * refuses anything that is not a PDF inside the open project.
+   */
+  openPreview(path: string): Promise<PreviewDocument>;
+  /** Let go of the previewed file. Its page addresses stop answering. */
+  closePreview(): Promise<void>;
+  /**
+   * Where one page of the previewed document can be fetched, drawn `width`
+   * device pixels wide, as an image. `page` counts from one. An address and
+   * not the picture, so the webview fetches, caches and discards pages the
+   * way it does any other image.
+   */
+  previewPage(generation: number, page: number, width: number): string;
   /**
    * Open one book's USFM in easy-usfm (the editor this application carries).
    *
@@ -464,6 +489,12 @@ export const tauriBackend: Backend = {
   closeProject: () => invoke("close_project"),
   openFolder: (path) => invoke("open_folder", { path }),
   openPdf: (path) => invoke("open_pdf", { path }),
+  openPreview: (path) => invoke("open_preview", { path }),
+  closePreview: () => invoke("close_preview"),
+  // `bcpdf://localhost/…` on macOS and Linux, `http://bcpdf.localhost/…` on
+  // Windows; Tauri knows which, and the CSP allows both.
+  previewPage: (generation, page, width) =>
+    convertFileSrc(`${generation}_${page}_${Math.round(width)}`, "bcpdf"),
   openInEditor: (path) => invoke("open_in_editor", { path }),
   openUrl: (url) => invoke("open_url", { url }),
   presets: () => invoke("presets"),

@@ -2061,6 +2061,9 @@ pub fn run() {
         .register_asynchronous_uri_scheme_protocol(preview::SCHEME, serve_page)
         .setup(|app| {
             app.manage(Arc::new(Session::default()));
+            // What 0.3.0 to 0.4.3 unpacked to run the editor as a program.
+            // Off the main thread: it is a directory delete nobody waits on.
+            std::thread::spawn(editor::forget_unpacked_editor);
             if let Some(window) = app.get_webview_window("main") {
                 // Enforced by the window manager as well as by the arithmetic
                 // above, so dragging the edge cannot go past it either.

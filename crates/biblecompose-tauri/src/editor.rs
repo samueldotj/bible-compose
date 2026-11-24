@@ -54,15 +54,15 @@ pub fn plugin<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
 pub fn open<R: Runtime>(app: &AppHandle<R>, file: &Utf8Path) -> Result<(), Diagnostic> {
     exists(file)?;
 
-    // A development window is served by Vite and has no assets of its own to
-    // look in; a built one does, and one built without the editor staged
-    // would otherwise open a window onto a page that is not there.
-    if !tauri::is_dev() && app.asset_resolver().get(EDITOR_PAGE.to_string()).is_none() {
+    // Without a stage the window would open onto a page that is not there —
+    // Vite's 404 in development, a blank one in a build — which says nothing
+    // about why.
+    if !staged(app) {
         return Err(Diagnostic::error(
             code::NOT_FOUND,
             "this build does not carry the USFM editor",
         )
-        .help("stage it before building: node scripts/stage-editor.mjs <easy-usfm checkout>"));
+        .help("stage it first: node scripts/stage-editor.mjs <easy-usfm checkout>"));
     }
 
     tauri_plugin_easy_usfm::open_editor(
@@ -77,6 +77,60 @@ pub fn open<R: Runtime>(app: &AppHandle<R>, file: &Utf8Path) -> Result<(), Diagn
             format!("the USFM editor could not be opened: {e}"),
         )
     })
+}
+
+/// Whether the editor's page is there to open.
+///
+/// A built application looks in its own assets. A development window has
+/// none — Vite serves `public/` as it stands — so it looks there, in the
+/// checkout this binary was built from.
+fn staged<R: Runtime>(app: &AppHandle<R>) -> bool {
+    if tauri::is_dev() {
+        Utf8Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../public")
+            .join(EDITOR_PAGE)
+            .is_file()
+    } else {
+        app.asset_resolver().get(EDITOR_PAGE.to_string()).is_some()
+    }
+}
+
+/// Remove the editor 0.3.0 to 0.4.3 unpacked, if it is still there.
+///
+/// Those releases carried easy-usfm as an executable and unpacked it into
+/// `editor/` in the cache, one folder per version — about 9 MB each, and
+/// nothing reads them now. Only that folder: the typesetter beside it is
+/// still this application's. Best-effort and silent, like any cache.
+pub fn forget_unpacked_editor() {
+    if let Some(cache) = cache_root() {
+        forget_unpacked_editor_in(&cache);
+    }
+}
+
+fn forget_unpacked_editor_in(cache: &Utf8Path) {
+    let old = cache.join("editor");
+    if old.is_dir() {
+        let _ = std::fs::remove_dir_all(old.as_std_path());
+    }
+}
+
+/// `biblecompose` in the platform's cache directory: where the releases that
+/// unpacked an editor put it.
+fn cache_root() -> Option<camino::Utf8PathBuf> {
+    let root = if cfg!(windows) {
+        std::env::var_os("LOCALAPPDATA").map(std::path::PathBuf::from)
+    } else if cfg!(target_os = "macos") {
+        std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join("Library/Caches"))
+    } else {
+        std::env::var_os("XDG_CACHE_HOME")
+            .map(std::path::PathBuf::from)
+            .or_else(|| {
+                std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".cache"))
+            })
+    }?;
+    camino::Utf8PathBuf::from_path_buf(root)
+        .ok()
+        .map(|r| r.join("biblecompose"))
 }
 
 /// A book that is not there is said so before anything is opened.
@@ -169,6 +223,29 @@ mod tests {
             !editor.contains("\"allow-"),
             "an editor window is granted none of this application's commands"
         );
+    }
+
+    /// **The old editor goes and the typesetter stays.** They share the cache
+    /// folder, and removing the wrong one costs a publisher an unpack.
+    #[test]
+    fn only_the_old_editor_is_removed_from_the_cache() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let cache = camino::Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("UTF-8");
+        let old = cache.join("editor").join("0.4.3-9322496");
+        std::fs::create_dir_all(old.as_std_path()).expect("old editor");
+        std::fs::write(old.join("easy-usfm-tauri.exe").as_std_path(), b"x").expect("write");
+        let sile = cache.join("sile").join("abc");
+        std::fs::create_dir_all(sile.as_std_path()).expect("typesetter");
+
+        forget_unpacked_editor_in(&cache);
+        assert!(
+            !cache.join("editor").exists(),
+            "the old editor should be gone"
+        );
+        assert!(sile.is_dir(), "the typesetter must be left alone");
+
+        // And a cache with no old editor is nothing to do.
+        forget_unpacked_editor_in(&cache);
     }
 
     /// A book that is not there is said so before anything is opened.

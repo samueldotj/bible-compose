@@ -79,6 +79,16 @@ if (env.BIBLECOMPOSE_SILE) {
 // editing sile/classes/biblecompose.lua must take effect without repacking.
 env.BIBLECOMPOSE_SILE_PATH = join(repo, "sile");
 
+// The editor a book opens in (ADR-007) is served from public/editor/, which
+// only `stage-editor.mjs` fills. Without it the window still opens; a book
+// does not, and the window says why.
+if (!existsSync(join(repo, "public", "editor", "index.html"))) {
+  console.warn(
+    "dev: the USFM editor is not staged — opening a book will say so.\n" +
+      "dev: run `node scripts/stage-editor.mjs ../easy-usfm` to stage it.",
+  );
+}
+
 const npm = platform() === "win32" ? "npm.cmd" : "npm";
 const child = spawn(npm, ["run", "tauri", "dev", ...process.argv.slice(2)], {
   cwd: repo,

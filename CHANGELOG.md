@@ -10,7 +10,8 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   it was asked for and only that book. Asking for a book that is already open
   brings its window forward, and closing BibleCompose asks each editor to
   close, so unsaved work is still offered for saving. Installers are about
-  8 MB smaller.
+  8 MB smaller, and the copy of the editor that earlier versions unpacked
+  into the cache (about 9 MB per version) is removed on first launch.
 
 * **The built PDF can be read inside the window.** After a build, the Output
   tab shows the pages, one at a time or as facing spreads, with zoom and a

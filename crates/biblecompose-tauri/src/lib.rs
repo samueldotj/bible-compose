@@ -171,6 +171,16 @@ pub struct WireHeadField {
     pub example: String,
 }
 
+/// A folder about to become a project (PRJ-001).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct WireFolderCheck {
+    /// It has a `biblecompose.toml` already.
+    pub is_project: bool,
+    /// How many files in it are not USFM.
+    pub other_files: usize,
+}
+
 /// A project the window has opened before (GUI-001).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WireRecent {
@@ -932,17 +942,28 @@ fn close_project(app: tauri::AppHandle, session: tauri::State<'_, Arc<Session>>)
 fn create_project(
     app: tauri::AppHandle,
     session: tauri::State<'_, Arc<Session>>,
-    parent: String,
-    name: String,
+    root: String,
     language: String,
 ) -> Result<WireProject, Vec<WireDiagnostic>> {
-    let root = project::create(Utf8Path::new(&parent), &name, &language)
+    let root = project::create(Utf8Path::new(&root), &language)
         .map_err(|d| vec![WireDiagnostic::from(&d)])?;
     remember(&app, &root);
     grow_to_workspace(&app);
     name_the_window(&app, Some(&root));
     let project = observe(&session, &root);
     Ok(project)
+}
+
+/// What a folder holds, before it becomes a project — so the new-project
+/// dialog can refuse a folder that already is one and warn about one with
+/// more than USFM in it, while the folder is still being chosen.
+#[tauri::command]
+fn check_project_folder(root: String) -> WireFolderCheck {
+    let check = project::check_folder(Utf8Path::new(&root));
+    WireFolderCheck {
+        is_project: check.is_project,
+        other_files: check.other_files.len(),
+    }
 }
 
 /// Write a starter `FRT.usfm` — a title page and a copyright page — into the
@@ -2058,6 +2079,7 @@ pub fn run() {
             recent_projects,
             forget_project,
             create_project,
+            check_project_folder,
             add_front_matter,
             make_cover,
             cover_preview,

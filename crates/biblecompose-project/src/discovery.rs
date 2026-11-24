@@ -197,6 +197,54 @@ pub fn scripture_files(root: &Utf8Path) -> Vec<Utf8PathBuf> {
     out
 }
 
+/// Every file in the folder that is not Scripture, by the same rules.
+///
+/// What a new project is warned about (PRJ-001): a project folder is expected
+/// to hold USFM and nothing else, so anything more is worth saying before the
+/// folder becomes one. Skipped as [`discover`] skips them — the excluded
+/// directories — plus dot files and the two files Windows leaves in folders on
+/// its own, because nobody put those there and nobody can act on hearing of
+/// them.
+pub fn other_files(root: &Utf8Path) -> Vec<Utf8PathBuf> {
+    const SYSTEM_FILES: [&str; 2] = ["desktop.ini", "thumbs.db"];
+
+    fn visit(dir: &Utf8Path, out: &mut Vec<Utf8PathBuf>) {
+        let Ok(entries) = std::fs::read_dir(dir.as_std_path()) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let Ok(path) = Utf8PathBuf::from_path_buf(entry.path()) else {
+                continue;
+            };
+            let name = path.file_name().unwrap_or_default();
+            if entry.file_type().is_ok_and(|t| t.is_dir()) {
+                if !EXCLUDED_DIRS.contains(&name) {
+                    visit(&path, out);
+                }
+                continue;
+            }
+            let system = name.starts_with('.')
+                || SYSTEM_FILES.iter().any(|s| name.eq_ignore_ascii_case(s));
+            if !system && !is_scripture(&path) {
+                out.push(path);
+            }
+        }
+    }
+
+    let mut out = Vec::new();
+    visit(root, &mut out);
+    out.sort();
+    out
+}
+
+fn is_scripture(path: &Utf8Path) -> bool {
+    path.extension().is_some_and(|e| {
+        SCRIPTURE_EXTENSIONS
+            .iter()
+            .any(|s| e.eq_ignore_ascii_case(s))
+    })
+}
+
 fn walk(dir: &Utf8Path, out: &mut Vec<Utf8PathBuf>, diagnostics: &mut Diagnostics) {
     let entries = match std::fs::read_dir(dir.as_std_path()) {
         Ok(e) => e,
@@ -228,12 +276,7 @@ fn walk(dir: &Utf8Path, out: &mut Vec<Utf8PathBuf>, diagnostics: &mut Diagnostic
             continue;
         }
 
-        let is_scripture = path.extension().is_some_and(|e| {
-            SCRIPTURE_EXTENSIONS
-                .iter()
-                .any(|s| e.eq_ignore_ascii_case(s))
-        });
-        if is_scripture {
+        if is_scripture(&path) {
             out.push(path);
         }
     }

@@ -29,6 +29,7 @@ const COMMANDS: &[&str] = &[
     "recent_projects",
     "forget_project",
     "create_project",
+    "check_project_folder",
     "add_front_matter",
     "make_cover",
     "cover_preview",

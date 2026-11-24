@@ -369,6 +369,12 @@
           "markdownDescription": "Enables the changed_files command without any pre-configured scope."
         },
         {
+          "description": "Enables the check_project_folder command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-check-project-folder",
+          "markdownDescription": "Enables the check_project_folder command without any pre-configured scope."
+        },
+        {
           "description": "Enables the close_preview command without any pre-configured scope.",
           "type": "string",
           "const": "allow-close-preview",
@@ -547,6 +553,12 @@
           "type": "string",
           "const": "deny-changed-files",
           "markdownDescription": "Denies the changed_files command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the check_project_folder command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-check-project-folder",
+          "markdownDescription": "Denies the check_project_folder command without any pre-configured scope."
         },
         {
           "description": "Denies the close_preview command without any pre-configured scope.",

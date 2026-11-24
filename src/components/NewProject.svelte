@@ -1,12 +1,16 @@
 <script lang="ts">
   /**
-   * Starting a project: where it goes, what it is called, what language it is
-   * in (PRJ-001).
+   * Starting a project: which folder, and what language it is in (PRJ-001).
    *
-   * Three questions and no more. Everything else about a publication has a
-   * built-in answer, so asking about page size or fonts here would be asking
-   * somebody to decide, before they have seen a page, things they can change
-   * at any time afterwards.
+   * Two questions and no more. The folder chosen *is* the project — usually it
+   * already holds the Scripture — and the publication is named after it.
+   * Everything else has a built-in answer, so asking about page size or fonts
+   * here would be asking somebody to decide, before they have seen a page,
+   * things they can change at any time afterwards.
+   *
+   * The folder is looked at as soon as it is chosen. One that already has a
+   * `biblecompose.toml` is a project, so it is refused with an offer to open
+   * it; one with files other than USFM is warned about and still allowed.
    *
    * The language is a text field with a list behind it rather than a closed
    * dropdown. `project.language` takes any BCP-47 tag, and a publisher setting
@@ -17,33 +21,41 @@
    * person thinks of their language rather than the way the file stores it.
    */
   import { LANGUAGES, resolveLanguage } from "../lib/languages";
-  import { backend, type Diagnostic } from "../lib/services/backend";
+  import { backend, type Diagnostic, type FolderCheck } from "../lib/services/backend";
   import { session } from "../lib/session.svelte";
   import { t } from "../lib/i18n";
   import { modal } from "../lib/modal";
 
   const { onclose }: { onclose: () => void } = $props();
 
-  let parent = $state("");
-  let name = $state("");
+  let folder = $state("");
+  let check = $state<FolderCheck | null>(null);
   let language = $state("English");
   let refused = $state<Diagnostic[]>([]);
   let working = $state(false);
 
-  const folder = $derived(name.trim());
-  const ready = $derived(parent !== "" && folder !== "" && !working);
+  const ready = $derived(folder !== "" && check !== null && !check.isProject && !working);
 
   async function choose(): Promise<void> {
     const chosen = await backend().chooseFolder();
-    if (chosen) parent = chosen;
+    if (!chosen) return;
+    folder = chosen;
+    check = null;
+    refused = [];
+    check = await backend().checkProjectFolder(chosen);
   }
 
   async function create(): Promise<void> {
     if (!ready) return;
     working = true;
-    refused = await session.create(parent, folder, resolveLanguage(language));
+    refused = await session.create(folder, resolveLanguage(language));
     working = false;
     if (refused.length === 0) onclose();
+  }
+
+  async function openInstead(): Promise<void> {
+    onclose();
+    await session.open(folder);
   }
 
   function onkeydown(event: KeyboardEvent): void {
@@ -68,18 +80,19 @@
 
     <div class="body">
       <label class="field">
-        <span class="kicker">{t("where")}</span>
+        <span class="kicker">{t("projectFolder")}</span>
         <span class="pair">
-          <input type="text" class="input" readonly value={parent} placeholder={t("browse")} />
-          <button type="button" class="btn small" onclick={() => void choose()}>{t("browse")}</button>
+          <input type="text" class="input" readonly value={folder} placeholder={t("browse")} />
+          <!-- svelte-ignore a11y_autofocus -->
+          <button type="button" class="btn small" autofocus onclick={() => void choose()}>{t("browse")}</button>
         </span>
       </label>
 
-      <label class="field">
-        <span class="kicker">{t("publicationName")}</span>
-        <!-- svelte-ignore a11y_autofocus -->
-        <input type="text" class="input" autofocus dir="auto" bind:value={name} spellcheck="false" />
-      </label>
+      {#if check?.isProject}
+        <p class="error">{t("alreadyAProject")}</p>
+      {:else if check && check.otherFiles > 0}
+        <p class="warning">{t("otherFilesWarning").replace("{n}", String(check.otherFiles))}</p>
+      {/if}
 
       <label class="field">
         <span class="kicker">{t("language")}</span>
@@ -99,10 +112,6 @@
         </datalist>
       </label>
 
-      {#if folder !== "" && parent !== ""}
-        <p class="preview muted">{t("creates")}<span class="mono">{parent}/{folder}</span></p>
-      {/if}
-
       {#each refused as problem (problem.code + problem.message)}
         <p class="error">{problem.message}{problem.help ? ` — ${problem.help}` : ""}</p>
       {/each}
@@ -110,9 +119,13 @@
 
     <footer>
       <button type="button" class="btn" onclick={onclose}>{t("cancel")}</button>
-      <button type="button" class="btn primary" disabled={!ready} onclick={() => void create()}>
-        {working ? t("creating") : t("create")}
-      </button>
+      {#if check?.isProject}
+        <button type="button" class="btn primary" onclick={() => void openInstead()}>{t("openInstead")}</button>
+      {:else}
+        <button type="button" class="btn primary" disabled={!ready} onclick={() => void create()}>
+          {working ? t("creating") : t("create")}
+        </button>
+      {/if}
     </footer>
   </div>
 </div>
@@ -141,12 +154,10 @@
   .pair .input {
     flex: 1;
   }
-  .preview {
+  .warning {
     margin: 0;
-    font-size: 12px;
-  }
-  .preview .mono {
-    overflow-wrap: anywhere;
+    font-size: 12.5px;
+    color: var(--warn-ink);
   }
   .error {
     margin: 0;

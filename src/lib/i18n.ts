@@ -54,9 +54,11 @@ export interface Chrome {
   readonly noLongerThere: string;
   readonly open: string;
   readonly contract: string;
-  readonly publicationName: string;
-  readonly where: string;
-  readonly creates: string;
+  readonly projectFolder: string;
+  readonly alreadyAProject: string;
+  readonly openInstead: string;
+  /** `{n}` is the number of files. */
+  readonly otherFilesWarning: string;
   readonly create: string;
   readonly creating: string;
   readonly languageTagHint: string;
@@ -607,9 +609,12 @@ export const EN: Catalogue = {
     noLongerThere: "no longer there",
     open: "Open",
     contract: "contract",
-    publicationName: "Publication name",
-    where: "Where it goes",
-    creates: "Creates ",
+    projectFolder: "Project folder",
+    alreadyAProject:
+      "This folder already has a biblecompose.toml — it is a project. Open it instead, or choose a different folder.",
+    openInstead: "Open project",
+    otherFilesWarning:
+      "This folder is expected to hold only USFM files, but it has {n} non-USFM file(s).",
     create: "Create",
     creating: "Creating…",
     languageTagHint: "a language, or a BCP-47 tag such as ta",

@@ -620,18 +620,16 @@ fn the_output_name_cannot_leave_the_project() {
 
 use biblecompose_app::project as app_project;
 
-/// A new project is a folder and one settings file, and it opens.
+/// A new project is the chosen folder plus one settings file, and it opens.
 #[test]
-fn creating_a_project_writes_a_folder_and_its_settings() {
+fn creating_a_project_writes_its_settings_into_the_chosen_folder() {
     let dir = tempfile::tempdir().expect("temp dir");
     let parent = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("UTF-8 temp path");
+    let chosen = parent.join("Tamil Bible");
+    std::fs::create_dir(chosen.as_std_path()).expect("mkdir");
 
-    let root = app_project::create(&parent, "Tamil Bible", "ta").expect("a new project");
-    assert_eq!(
-        root,
-        parent.join("Tamil Bible"),
-        "named after the publication"
-    );
+    let root = app_project::create(&chosen, "ta").expect("a new project");
+    assert_eq!(root, chosen, "the folder itself, not one made inside it");
 
     let written = std::fs::read_to_string(root.join("biblecompose.toml").as_std_path())
         .expect("the settings file was written");
@@ -651,38 +649,62 @@ fn creating_a_project_writes_a_folder_and_its_settings() {
     assert!(name.overridden);
 }
 
-/// The name is a folder name, so it is checked rather than quietly mangled.
+/// A folder of Scripture becomes a project with its books left where they are.
 #[test]
-fn a_name_that_cannot_be_a_folder_is_refused() {
+fn a_folder_of_usfm_becomes_a_project_in_place() {
     let dir = tempfile::tempdir().expect("temp dir");
-    let parent = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("UTF-8 temp path");
+    let root = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("UTF-8 temp path");
+    std::fs::write(root.join("JHN.usfm").as_std_path(), "\\id JHN\n\\c 1\n\\v 1 In\n")
+        .expect("write");
 
-    let refused =
-        app_project::create(&parent, "Acts 1/2", "en").expect_err("a slash is not a name");
-    assert_eq!(refused.code.as_str(), "PRJ-005");
-    assert!(refused.help.is_some());
+    let check = app_project::check_folder(&root);
+    assert!(!check.is_project);
+    assert!(check.other_files.is_empty(), "{:?}", check.other_files);
 
-    let empty = app_project::create(&parent, "   ", "en").expect_err("nor is nothing");
-    assert_eq!(empty.code.as_str(), "PRJ-005");
+    app_project::create(&root, "en").expect("a new project");
+    assert!(root.join("JHN.usfm").exists(), "nothing of theirs was touched");
+    let p = project_at(&root);
+    assert!(p.books.iter().any(|b| b.code == "JHN"), "{:?}", p.books);
 }
 
-/// Over an existing folder it refuses rather than merges: "new project" onto
-/// somebody's work is either a mistake or a different verb.
+/// A folder that already has a `biblecompose.toml` is a project: it is
+/// refused, and its settings are not overwritten.
 #[test]
-fn an_existing_folder_is_not_taken_over() {
+fn a_folder_that_is_already_a_project_is_refused() {
     let dir = tempfile::tempdir().expect("temp dir");
-    let parent = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("UTF-8 temp path");
-    let taken = parent.join("Already Here");
-    std::fs::create_dir(taken.as_std_path()).expect("mkdir");
-    std::fs::write(taken.join("JHN.usfm").as_std_path(), "\\id JHN\n").expect("write");
+    let root = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("UTF-8 temp path");
+    let settings = root.join("biblecompose.toml");
+    std::fs::write(settings.as_std_path(), "schema_version = 1\n").expect("write");
 
-    let refused =
-        app_project::create(&parent, "Already Here", "en").expect_err("something is there");
+    assert!(app_project::check_folder(&root).is_project);
+    let refused = app_project::create(&root, "en").expect_err("already a project");
     assert_eq!(refused.code.as_str(), "PRJ-005");
-    assert!(
-        taken.join("JHN.usfm").exists(),
-        "and nothing of theirs was touched"
+    assert!(refused.help.as_deref().is_some_and(|h| h.contains("open it")));
+    assert_eq!(
+        std::fs::read_to_string(settings.as_std_path()).unwrap(),
+        "schema_version = 1\n",
+        "and their settings are as they were"
     );
+}
+
+/// Files that are not USFM are counted, so the window can warn about them;
+/// what nobody put there on purpose is not.
+#[test]
+fn files_other_than_usfm_are_counted() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let root = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("UTF-8 temp path");
+    for name in ["GEN.usfm", "MAT.SFM", "notes.txt", "cover.png", ".DS_Store", "desktop.ini"] {
+        std::fs::write(root.join(name).as_std_path(), "x").expect("write");
+    }
+    std::fs::create_dir(root.join("drafts").as_std_path()).expect("mkdir");
+    std::fs::write(root.join("drafts/old.docx").as_std_path(), "x").expect("write");
+    std::fs::create_dir(root.join("output").as_std_path()).expect("mkdir");
+    std::fs::write(root.join("output/bible.pdf").as_std_path(), "x").expect("write");
+
+    let check = app_project::check_folder(&root);
+    let mut names: Vec<&str> = check.other_files.iter().filter_map(|p| p.file_name()).collect();
+    names.sort_unstable();
+    assert_eq!(names, ["cover.png", "notes.txt", "old.docx"]);
 }
 
 /// The front matter reaches the window as a book grouped under `front`, with

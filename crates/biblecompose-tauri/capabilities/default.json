@@ -22,6 +22,7 @@
     "allow-recent-projects",
     "allow-forget-project",
     "allow-create-project",
+    "allow-check-project-folder",
     "allow-add-front-matter",
     "allow-make-cover",
     "allow-cover-preview",

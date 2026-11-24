@@ -121,51 +121,61 @@ pub fn output_name(publication: &str) -> Option<String> {
     (!trimmed.is_empty()).then(|| format!("{trimmed}.pdf"))
 }
 
-/// Start a project: a folder with a settings file in it and nothing else.
+/// What a folder holds, asked before it becomes a project (PRJ-001).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FolderCheck {
+    /// It already has a `biblecompose.toml`: it is a project, and the thing
+    /// to do with it is open it.
+    pub is_project: bool,
+    /// Files that are not USFM. A project folder is expected to hold only
+    /// Scripture, so these are warned about — not refused, because a README
+    /// or a stray PDF does a build no harm.
+    pub other_files: Vec<Utf8PathBuf>,
+}
+
+/// Look at a folder that is about to become a project, changing nothing.
+pub fn check_folder(root: &Utf8Path) -> FolderCheck {
+    FolderCheck {
+        is_project: root.join(SETTINGS_FILE).exists(),
+        other_files: biblecompose_project::other_files(root),
+    }
+}
+
+/// Start a project: the chosen folder, with a settings file added to it.
 ///
-/// A project is a folder of USFM, so there is nothing to create but the folder
-/// and the one file that says what the publication is. Everything else has a
-/// built-in answer (CFG-001), which is why a new project is two keys and not a
+/// A project is a folder of USFM, so there is nothing to create but the one
+/// file that says what the publication is. Everything else has a built-in
+/// answer (CFG-001), which is why a new project is two keys and not a
 /// template — a `styles.toml` full of the defaults would be a file a publisher
 /// has to maintain in order to change nothing.
 ///
-/// The folder is created inside `parent` and named after the publication.
-/// Refuses rather than merges when something is already there: "new project"
-/// over an existing folder is either a mistake or a different verb.
-pub fn create(parent: &Utf8Path, name: &str, language: &str) -> Result<Utf8PathBuf, Diagnostic> {
-    let name = name.trim();
+/// The folder is used as it is — usually it already holds the Scripture —
+/// and the publication is named after it. Refuses when the folder already has
+/// a `biblecompose.toml`: that folder is a project, and "new project" over it
+/// would be overwriting somebody's settings rather than opening them.
+pub fn create(root: &Utf8Path, language: &str) -> Result<Utf8PathBuf, Diagnostic> {
     let language = language.trim();
+    let root = root.to_owned();
 
-    if name.is_empty() {
+    let settings = root.join(SETTINGS_FILE);
+    if settings.exists() {
         return Err(Diagnostic::error(
             biblecompose_diagnostics::code::COULD_NOT_CREATE,
-            "a publication needs a name",
+            format!("{root} is already a project"),
         )
-        .help("the folder is named after it"));
+        .at(SourceLoc::file(settings))
+        .help("open it instead, or choose a different folder"));
     }
 
-    // The name doubles as a folder name, so it has to survive being one.
-    // Checked rather than sanitised: quietly turning "1 & 2 Kings" into
-    // "1 _ 2 Kings" is a folder the publisher did not ask for and will not
-    // find.
-    const RESERVED: [char; 9] = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
-    if let Some(bad) = name.chars().find(|c| RESERVED.contains(c)) {
+    let Some(name) = root.file_name().map(str::to_owned).filter(|n| !n.trim().is_empty())
+    else {
         return Err(Diagnostic::error(
             biblecompose_diagnostics::code::COULD_NOT_CREATE,
-            format!("a publication name cannot contain {bad:?}"),
-        )
-        .help("the name is also the folder's, and this character cannot be in one"));
-    }
-
-    let root = parent.join(name);
-    if root.exists() {
-        return Err(Diagnostic::error(
-            biblecompose_diagnostics::code::COULD_NOT_CREATE,
-            format!("{root} already exists"),
+            format!("{root} cannot be a project"),
         )
         .at(SourceLoc::file(root.clone()))
-        .help("choose another name, or open the folder that is already there"));
-    }
+        .help("choose a folder rather than the top of a drive; the publication is named after it"));
+    };
 
     std::fs::create_dir_all(root.as_std_path()).map_err(|e| {
         Diagnostic::error(
@@ -180,7 +190,7 @@ pub fn create(parent: &Utf8Path, name: &str, language: &str) -> Result<Utf8PathB
         root.join(SETTINGS_FILE),
         &TomlFile::settings_header(biblecompose_config::SCHEMA_VERSION),
     );
-    file.set("project.name", name.to_owned());
+    file.set("project.name", name);
     if !language.is_empty() {
         file.set("project.language", language.to_owned());
     }

@@ -295,10 +295,10 @@ export class Session {
    * belong beside the field that caused them — a name with a slash in it is
    * something to correct, not a failure of the application.
    */
-  async create(parent: string, name: string, language: string): Promise<Diagnostic[]> {
+  async create(root: string, language: string): Promise<Diagnostic[]> {
     this.opening = true;
     try {
-      this.project = await backend().createProject(parent, name, language);
+      this.project = await backend().createProject(root, language);
       this.changes = null;
       this.#startWatching();
       this.#forgetBuild();

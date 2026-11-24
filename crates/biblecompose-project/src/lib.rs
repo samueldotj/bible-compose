@@ -10,4 +10,4 @@
 
 pub mod discovery;
 
-pub use discovery::{discover, identify, DiscoveredBook, Discovery};
+pub use discovery::{discover, identify, other_files, DiscoveredBook, Discovery};

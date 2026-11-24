@@ -248,6 +248,14 @@ export interface HeadField {
   readonly example: string;
 }
 
+/** A folder about to become a project (PRJ-001). */
+export interface FolderCheck {
+  /** It already has a `biblecompose.toml`. */
+  readonly isProject: boolean;
+  /** How many files in it are not USFM. */
+  readonly otherFiles: number;
+}
+
 /** A project the window has opened before (GUI-001). */
 export interface Recent {
   readonly root: string;
@@ -413,10 +421,13 @@ export interface Backend {
   /** Drop one from that list. The folder is not touched. */
   forgetProject(root: string): Promise<readonly Recent[]>;
   /**
-   * Make a folder named after the publication inside `parent`, write its
-   * settings, and open it. Rejects with the reason, having created nothing.
+   * Make the chosen folder a project — write its settings, named after the
+   * folder — and open it. Rejects with the reason, having written nothing,
+   * when the folder already has a `biblecompose.toml`.
    */
-  createProject(parent: string, name: string, language: string): Promise<Project>;
+  createProject(root: string, language: string): Promise<Project>;
+  /** What a folder holds before it becomes a project. Changes nothing. */
+  checkProjectFolder(root: string): Promise<FolderCheck>;
   /**
    * Write a starter `FRT.usfm` — a title page and a copyright page — into a
    * project that has no front matter, and reread it. Rejects, having written
@@ -502,8 +513,8 @@ export const tauriBackend: Backend = {
   applyPreset: (root, id) => invoke("apply_preset", { root, id }),
   recentProjects: () => invoke("recent_projects"),
   forgetProject: (root) => invoke("forget_project", { root }),
-  createProject: (parent, name, language) =>
-    invoke("create_project", { parent, name, language }),
+  createProject: (root, language) => invoke("create_project", { root, language }),
+  checkProjectFolder: (root) => invoke("check_project_folder", { root }),
   addFrontMatter: (root) => invoke("add_front_matter", { root }),
   makeCover: (root) => invoke("make_cover", { root }),
   coverPreview: (root, guides) => invoke("cover_preview", { root, guides }),

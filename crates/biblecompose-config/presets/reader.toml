@@ -27,6 +27,13 @@ font_size = "10.5pt"
 leading = "15pt"
 justify = true
 
+# Each chapter opens like a poem in a collection: its number alone and
+# centred above, the first letter of the text dropped three lines below it.
+[contents]
+drop_caps = true
+drop_cap_of = "first_letter"
+drop_cap_lines = 3
+
 [numbering]
 show_chapter_numbers = true
 show_verse_numbers = false
@@ -36,15 +43,15 @@ show_chapter_labels = true
 show_footnotes = false
 show_cross_references = false
 
-# The book, and the page number. No reference range: there are no verse numbers
-# on the page for it to point at.
+# The book, centred, and the page number centred at the foot. No reference
+# range: there are no verse numbers on the page for it to point at.
 [headers.left_page]
-header_left = "{Book}"
-header_center = ""
+header_left = ""
+header_center = "{Book}"
 header_right = ""
 footer_center = "{Page}"
 [headers.right_page]
-header_left = "{Book}"
-header_center = ""
+header_left = ""
+header_center = "{Book}"
 header_right = ""
 footer_center = "{Page}"

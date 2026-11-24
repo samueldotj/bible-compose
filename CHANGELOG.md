@@ -2,6 +2,19 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+* **Templates now come with a look.** Five templates now set styles too:
+  Standard two-column, Reader's edition, Journaling Bible, Study Bible and
+  Reference. Choosing one writes its headings, drop cap, chapter and verse
+  numbers, running head and accent colour into the project's `styles.toml`,
+  as well as its page into `biblecompose.toml`. The Reference template is
+  red-letter. Two templates are new: **Modern**, one column set ragged right
+  with blue numbers and bold headings, and **Illuminated**, a gift edition
+  with a framed chapter number, a dropped initial and red headings. A style
+  you set before choosing a template is kept unless the template sets it
+  too, and no template changes your font.
+
 ## 0.5.0
 
 * **BibleCompose can update itself, when you ask.** The start screen has a

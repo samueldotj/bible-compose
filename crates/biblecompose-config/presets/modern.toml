@@ -1,0 +1,51 @@
+# A modern edition: the "Modern side-heads" design.
+#
+# One column, ragged right, on the common 6x9in trim — the page of a
+# contemporary book rather than of a traditional Bible. Ragged right because
+# an even right edge is bought with uneven word spacing, and a page that
+# wants to look like the books around it does not pay that.
+#
+# The type is a step larger than the single-column page and the leading
+# opens with it: a modern page is read on its own terms, and air between
+# the lines is most of what makes it feel that way.
+
+[page]
+size = "6x9in"
+columns = 1
+margin_inner = "0.85in"
+margin_outer = "0.7in"
+margin_top = "0.75in"
+margin_bottom = "0.8in"
+
+[typography]
+font_size = "10.5pt"
+leading = "14.5pt"
+justify = false
+
+[contents]
+show_section_headings = true
+drop_caps = true
+drop_cap_of = "chapter_number"
+drop_cap_lines = 3
+
+[numbering]
+show_chapter_numbers = true
+show_verse_numbers = true
+hide_first_verse_number = true
+
+[notes]
+show_footnotes = true
+show_cross_references = false
+
+# The range at the inner corner and the page number at the outer, and a foot
+# left empty: the head carries everything the page needs to be found again.
+[headers.left_page]
+header_left = "{Page}"
+header_center = ""
+header_right = "{Range}"
+footer_center = ""
+[headers.right_page]
+header_left = "{Range}"
+header_center = ""
+header_right = "{Page}"
+footer_center = ""

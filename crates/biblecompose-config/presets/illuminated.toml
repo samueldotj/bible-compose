@@ -1,0 +1,52 @@
+# An illuminated edition: the "Illuminated" design.
+#
+# A gift Bible, set to be handsome before it is set to be dense. One
+# generous column of 11pt on the 6x9in trim, justified, with each chapter
+# opening on a framed number centred above a dropped initial — the
+# rubricated page of a lectern Bible, in a form a typesetter can make.
+#
+# No cross-references: a reference letter is machinery, and this page is
+# made to be read aloud from. The footnotes stay, because they are the
+# translation's own words about its text.
+
+[page]
+size = "6x9in"
+columns = 1
+margin_inner = "0.9in"
+margin_outer = "0.8in"
+margin_top = "0.85in"
+margin_bottom = "0.9in"
+
+[typography]
+font_size = "11pt"
+leading = "15.5pt"
+justify = true
+
+[contents]
+show_section_headings = true
+drop_caps = true
+drop_cap_of = "first_letter"
+drop_cap_lines = 3
+
+[numbering]
+show_chapter_numbers = true
+show_verse_numbers = true
+hide_first_verse_number = true
+show_chapter_labels = true
+
+[notes]
+show_footnotes = true
+show_cross_references = false
+
+# The book centred over every page and the page number centred under it, as
+# the rubricated head and foot of a lectern Bible are.
+[headers.left_page]
+header_left = ""
+header_center = "{Book}"
+header_right = ""
+footer_center = "{Page}"
+[headers.right_page]
+header_left = ""
+header_center = "{Book}"
+header_right = ""
+footer_center = "{Page}"

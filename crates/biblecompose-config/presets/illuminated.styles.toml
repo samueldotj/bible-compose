@@ -1,0 +1,55 @@
+# The illuminated edition's look.
+#
+# Rubrication: red for everything that orders the text — the chapter number,
+# the headings, the verse numbers, the head and the folio — and black for the
+# text itself. The chapter number stands on its own line, centred and framed
+# in a red rule, above the dropped initial the settings ask for.
+#
+# The design this comes from also draws a double rule round every page;
+# this release has no page border, so the frame is the one round the number.
+
+[chapter]
+font_size = "18pt"
+weight = 600
+color = "#9e2a1f"
+own_line = true
+align = "center"
+border = true
+border_width = "0.8pt"
+space_above = "12pt"
+space_below = "10pt"
+
+[heading.s1]
+font_size = "9.4pt"
+weight = 600
+smallcaps = true
+align = "center"
+color = "#9e2a1f"
+space_above = "12pt"
+space_below = "4pt"
+
+[heading.s2]
+font_size = "9pt"
+weight = 600
+smallcaps = true
+align = "center"
+color = "#9e2a1f"
+space_above = "8pt"
+space_below = "3pt"
+
+[heading.d1]
+align = "center"
+italic = true
+
+[verse]
+weight = 700
+color = "#9e2a1f"
+
+[head]
+italic = false
+smallcaps = true
+weight = 600
+color = "#9e2a1f"
+
+[folio]
+color = "#9e2a1f"

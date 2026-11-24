@@ -1,0 +1,35 @@
+# The journaling edition's look: the "Journaling margin" design.
+#
+# Warm and spare, so the reader's own hand is the loudest thing on the page.
+# One accent, an ochre, on the chapter figure, the verse numbers and the
+# section headings; the headings are small capitals in that colour rather
+# than bold black, so they mark the way without shouting over a margin note.
+
+[chapter]
+font_size = "26pt"
+weight = 700
+color = "#8a5212"
+
+[heading.s1]
+font_size = "8.4pt"
+weight = 600
+smallcaps = true
+color = "#8a5212"
+space_above = "9pt"
+space_below = "2pt"
+
+[heading.s2]
+font_size = "8.2pt"
+weight = 600
+smallcaps = true
+color = "#8a5212"
+space_above = "6pt"
+space_below = "2pt"
+
+[verse]
+weight = 600
+color = "#8a5212"
+
+[head]
+italic = false
+smallcaps = true

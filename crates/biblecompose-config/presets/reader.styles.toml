@@ -1,0 +1,50 @@
+# The reader's edition's look: the "Reader's edition poetry" design.
+#
+# Set like a book of verse. Each chapter opens with its number alone on a
+# line, large, centred and in italic, the way a collection of poems numbers
+# them, with the first letter of the text dropped beneath it. Green is the one
+# colour, and only the number carries it.
+
+[chapter]
+font_size = "30pt"
+weight = 400
+italic = true
+align = "center"
+color = "#3f5b3a"
+space_above = "14pt"
+space_below = "10pt"
+
+# A psalm's title — "A Psalm of David." — is part of the text, centred under
+# the number as an epigraph rather than set as a heading.
+[heading.d1]
+align = "center"
+italic = true
+space_above = "2pt"
+space_below = "8pt"
+
+[heading.s1]
+font_size = "9.6pt"
+weight = 400
+smallcaps = true
+align = "center"
+space_above = "10pt"
+space_below = "4pt"
+
+# Poetry hangs: the first line of a verse at the margin, its continuation a
+# step in, so a long line that wraps still reads as one line.
+[poetry.q1]
+indent = "0pt"
+
+[poetry.q2]
+indent = "16pt"
+
+[poetry.q3]
+indent = "32pt"
+
+[head]
+italic = false
+smallcaps = true
+align = "center"
+
+[folio]
+italic = true

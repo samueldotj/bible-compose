@@ -1,0 +1,46 @@
+# The modern edition's look.
+#
+# One accent, a deep blue, on everything that is a number — the dropped
+# chapter figure and every verse — and on the section headings, which are
+# bold and flush left at a size that stands clear of the text. The design
+# this comes from hangs the headings in a column of their own beside the
+# text; this release sets headings in the text column, so they are given the
+# colour and weight to do the same work.
+
+[chapter]
+weight = 700
+color = "#1e4d7a"
+
+[heading.s1]
+font_size = "11pt"
+weight = 700
+color = "#1e4d7a"
+space_above = "12pt"
+space_below = "3pt"
+
+[heading.s2]
+font_size = "10pt"
+weight = 700
+color = "#1e4d7a"
+space_above = "8pt"
+space_below = "2pt"
+
+# `\sr` — the range under a heading, quieter than the heading it belongs to.
+[heading.sr1]
+font_size = "8pt"
+italic = false
+color = "#5e6670"
+space_above = "0pt"
+space_below = "4pt"
+
+[verse]
+weight = 700
+color = "#1e4d7a"
+
+[head]
+italic = false
+smallcaps = true
+weight = 600
+
+[folio]
+weight = 600

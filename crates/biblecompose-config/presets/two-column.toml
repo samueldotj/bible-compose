@@ -8,7 +8,9 @@
 #
 # What it does add over the defaults is the two lines nobody would think to
 # write and everybody wants: the first verse of a chapter goes unnumbered,
-# because the chapter figure beside it already says which verse it is.
+# because the chapter figure beside it already says which verse it is. And
+# the classic page's furniture — the figure dropped into the text, the head
+# indexing the page — with its look in `two-column.styles.toml`.
 
 [page]
 size = "6x9in"
@@ -19,6 +21,14 @@ font_size = "9.2pt"
 leading = "11.2pt"
 justify = true
 
+# The chapter figure dropped two lines into the text, as the classic page
+# sets it, rather than standing at the start of the line with the text
+# running on after it. Its colour is in `two-column.styles.toml`.
+[contents]
+drop_caps = true
+drop_cap_of = "chapter_number"
+drop_cap_lines = 2
+
 [numbering]
 show_chapter_numbers = true
 show_verse_numbers = true
@@ -28,3 +38,16 @@ hide_first_verse_number = true
 show_footnotes = true
 show_cross_references = true
 cross_reference_placement = "note_area"
+
+# The classic head: the page's first reference at the left, its last at the
+# right and the page number between them, so the foot is left clear.
+[headers.left_page]
+header_left = "{FirstReference}"
+header_center = "{Page}"
+header_right = "{LastReference}"
+footer_center = ""
+[headers.right_page]
+header_left = "{FirstReference}"
+header_center = "{Page}"
+header_right = "{LastReference}"
+footer_center = ""

@@ -78,6 +78,14 @@ fn build_with(preset_id: &str) -> (tempfile::TempDir, Utf8PathBuf, Vec<Line>, Pd
     let complaints = preset::apply(&mut file, chosen);
     assert!(complaints.is_empty(), "{preset_id}: {complaints:?}");
     file.save().expect("write the settings");
+    // And the edition's look, into the style sheet, the way the window
+    // writes it — so the page measured is the page a publisher gets.
+    if chosen.styles.is_some() {
+        let mut sheet = TomlFile::create(root.join("styles.toml"), &TomlFile::styles_header());
+        let complaints = preset::apply_styles(&mut sheet, chosen);
+        assert!(complaints.is_empty(), "{preset_id}: {complaints:?}");
+        sheet.save().expect("write the styles");
+    }
     // Genesis alone. What is measured here is the preset's page of
     // Scripture; the built-in front matter a project is given — a title
     // page, a copyright page, a contents page and the blank that makes them
@@ -211,8 +219,17 @@ fn the_readers_edition_has_no_apparatus() {
     assert!(!text.replace(' ', "").contains("amightywind"));
     assert!(!text.replace(' ', "").contains("John1:5"));
 
-    // But the Scripture is, and so are the anchors.
-    assert!(text.replace(' ', "").contains("Inthebeginning"));
+    // But the Scripture is, and so are the anchors. The edition opens each
+    // chapter on a dropped initial, so the `I` is a mark of its own, set
+    // large, and the line beside it reads on from the second letter.
+    assert!(text.replace(' ', "").contains("nthebeginning"));
+    assert!(
+        lines
+            .iter()
+            .flat_map(|l| &l.marks)
+            .any(|m| m.text == "I" && m.size > 20.0),
+        "the chapter opens on a dropped initial"
+    );
     let raw = std::fs::read(root.join("out.pdf").as_std_path()).expect("the PDF");
     assert!(
         Pdf::destinations(&raw).iter().any(|d| d == "GEN.1"),

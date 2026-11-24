@@ -23,6 +23,13 @@ font_size = "9pt"
 leading = "12pt"
 justify = true
 
+# A dropped first letter opens each chapter; its number stands on the line
+# above it, in the accent `journaling.styles.toml` gives it.
+[contents]
+drop_caps = true
+drop_cap_of = "first_letter"
+drop_cap_lines = 3
+
 [numbering]
 show_chapter_numbers = true
 show_verse_numbers = true
@@ -32,13 +39,16 @@ hide_first_verse_number = true
 show_footnotes = false
 show_cross_references = false
 
+# Page and range together at the outer corner, where the wide margin is, so
+# the head sits over the space the reader writes in and the inner side of the
+# page stays quiet.
 [headers.left_page]
-header_left = "{Book}"
+header_left = "{Page}  ·  {Range}"
 header_center = ""
-header_right = "{Range}"
-footer_center = "{Page}"
+header_right = ""
+footer_center = ""
 [headers.right_page]
-header_left = "{Book}"
+header_left = ""
 header_center = ""
-header_right = "{Range}"
-footer_center = "{Page}"
+header_right = "{Range}  ·  {Page}"
+footer_center = ""

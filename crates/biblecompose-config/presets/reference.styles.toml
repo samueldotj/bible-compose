@@ -1,0 +1,33 @@
+# The reference edition's look: the "Reference Bible" design.
+#
+# Dense and black, with one exception: the words of Christ in red. A red-
+# letter edition is a reference edition's oldest convenience — it says, at a
+# glance across a column, who is speaking.
+#
+# Verse numbers are bold figures on the line rather than raised and small:
+# in a page that is looked things up in, the number is the thing looked for.
+
+[character.wj]
+color = "#a12a22"
+
+[chapter]
+font_size = "24pt"
+weight = 400
+
+[verse]
+font_size = "7pt"
+weight = 700
+raise = "0pt"
+
+[heading.s1]
+font_size = "8.6pt"
+weight = 600
+smallcaps = true
+align = "center"
+space_above = "6pt"
+space_below = "2pt"
+
+[head]
+italic = false
+smallcaps = true
+weight = 600

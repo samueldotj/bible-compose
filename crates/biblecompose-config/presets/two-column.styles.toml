@@ -1,0 +1,45 @@
+# The conventional page's look: the "Classic two-column" design.
+#
+# A Bible that has been printed this way for three centuries — black ink, one
+# colour, used sparingly. The chapter figure is the one thing in it, dropped
+# two lines into the text in a deep red; everything else is set in the body's
+# ink and told apart by size and posture rather than by weight.
+#
+# Section headings are centred and not bold. In two narrow columns a bold
+# heading flush left reads as the start of a new book; a centred one in the
+# text's own weight reads as a pause in the one already open.
+
+[chapter]
+weight = 500
+color = "#7a1f1f"
+
+[heading.s1]
+font_size = "9.6pt"
+weight = 400
+italic = true
+align = "center"
+space_above = "8pt"
+space_below = "3pt"
+
+[heading.s2]
+font_size = "9.2pt"
+weight = 400
+italic = true
+align = "center"
+space_above = "6pt"
+space_below = "2pt"
+
+# Grey rather than black, so the eye reads past them; the size is the
+# built-in one, which is what a conventional page is measured against.
+[verse]
+font_size = "6.4pt"
+color = "#5c564c"
+
+# The running head in small capitals, upright: a head in italic beside
+# italic section headings would be one voice saying two things.
+[head]
+italic = false
+smallcaps = true
+
+[folio]
+smallcaps = true

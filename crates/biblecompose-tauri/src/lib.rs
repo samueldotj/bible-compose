@@ -1401,7 +1401,8 @@ fn head_fields() -> Vec<WireHeadField> {
         .collect()
 }
 
-/// Write a preset's settings into the project's file.
+/// Write a preset's settings into the project's file, and its look into the
+/// project's style sheet.
 #[tauri::command]
 fn apply_preset(
     session: tauri::State<'_, Arc<Session>>,
@@ -1431,7 +1432,26 @@ pub fn write_preset(root: &Utf8Path, id: &str) -> Result<WireProject, Vec<WireDi
     if complaints.has_blocking() {
         return Err(wire_all(&complaints));
     }
+
+    // The edition's look, when it has one, goes into the style sheet. Both
+    // files are made ready before either is written, so a look that cannot
+    // be applied leaves the settings as they were rather than half a preset.
+    let styles = match preset.styles {
+        Some(_) => {
+            let mut sheet = open_styles_file(root).map_err(|d| vec![WireDiagnostic::from(&d)])?;
+            let complaints = biblecompose_config::preset::apply_styles(&mut sheet, preset);
+            if complaints.has_blocking() {
+                return Err(wire_all(&complaints));
+            }
+            Some(sheet)
+        }
+        None => None,
+    };
+
     file.save().map_err(|d| vec![WireDiagnostic::from(&d)])?;
+    if let Some(sheet) = styles {
+        sheet.save().map_err(|d| vec![WireDiagnostic::from(&d)])?;
+    }
     Ok(project_at(root))
 }
 

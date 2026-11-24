@@ -1,0 +1,45 @@
+# The study edition's look: the "Study Bible" design.
+#
+# A working page, so the hierarchy is plain: bold headings in black, the
+# parallel-passage line under them in italic, and one accent — a deep green
+# — on the chapter figure and the verse numbers, which are what a reader
+# going back and forth between text and notes needs to find again.
+
+[chapter]
+weight = 700
+color = "#2e5e4e"
+
+[heading.s1]
+font_size = "11pt"
+weight = 700
+space_above = "9pt"
+space_below = "1pt"
+
+[heading.s2]
+font_size = "9.8pt"
+weight = 700
+space_above = "6pt"
+space_below = "1pt"
+
+# `\r` — "Parallel: Luke 6:20–23" under the heading.
+[heading.r1]
+font_size = "7.8pt"
+italic = true
+space_above = "0pt"
+space_below = "4pt"
+
+[verse]
+color = "#2e5e4e"
+
+# The notes are half the page here; set them a step larger than the
+# built-in apparatus so they read as text and not as small print.
+[note.f]
+font_size = "7.8pt"
+
+[reference]
+font_size = "7.6pt"
+
+[head]
+italic = false
+smallcaps = true
+weight = 600

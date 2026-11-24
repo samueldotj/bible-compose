@@ -23,10 +23,15 @@ font_size = "9.5pt"
 leading = "12pt"
 justify = true
 
+# The chapter figure dropped two lines, in the accent colour, so it can be
+# found again from the notes below.
 [contents]
 show_book_introductions = true
 show_introductory_outlines = true
 show_section_headings = true
+drop_caps = true
+drop_cap_of = "chapter_number"
+drop_cap_lines = 2
 
 [numbering]
 show_chapter_numbers = true
@@ -41,16 +46,18 @@ footnote_callers = "numbers"
 cross_reference_callers = "letters"
 restart_numbering = "per_chapter"
 
+# The page number at the outer corner and the range at the inner, swapping
+# sides with the spread, and nothing at the foot: the foot is the notes'.
 [headers.left_page]
-header_left = "{Book}"
+header_left = "{Page}"
 header_center = ""
 header_right = "{Range}"
-footer_center = "{Page}"
+footer_center = ""
 [headers.right_page]
-header_left = "{Book}"
+header_left = "{Range}"
 header_center = ""
-header_right = "{Range}"
-footer_center = "{Page}"
+header_right = "{Page}"
+footer_center = ""
 
 # A study edition is quoted by verse, so every verse is a destination.
 [output]

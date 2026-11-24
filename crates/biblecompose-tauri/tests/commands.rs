@@ -999,3 +999,40 @@ fn a_cover_title_keeps_its_line_break_through_the_form() {
     let title = p.settings.iter().find(|s| s.key == "cover.title").unwrap();
     assert_eq!(title.value, "The Holy\nBible");
 }
+
+// ------------------------------------------------- P6.2: preset looks
+
+use biblecompose_tauri_lib::write_preset;
+
+/// An edition with a look writes it into `styles.toml` as well as its
+/// settings into `biblecompose.toml`, and keeps a style the publisher set.
+#[test]
+fn applying_an_edition_writes_its_look() {
+    let (_dir, root) = project(None);
+    write_style(&root, "poetry.q1", "indent", "20pt").expect("a length");
+
+    write_preset(&root, "reference").expect("the reference edition applies");
+
+    let settings =
+        std::fs::read_to_string(root.join("biblecompose.toml").as_std_path()).expect("settings");
+    assert!(settings.contains("columns = 2"), "{settings}");
+
+    let styles = std::fs::read_to_string(root.join("styles.toml").as_std_path()).expect("styles");
+    assert!(
+        styles.contains("[character.wj]"),
+        "red letter missing: {styles}"
+    );
+    assert!(styles.contains("#a12a22"), "{styles}");
+    assert!(
+        styles.contains("indent = \"20pt\""),
+        "the publisher's style went: {styles}"
+    );
+}
+
+/// An edition that is only a page writes no style sheet at all.
+#[test]
+fn an_edition_without_a_look_leaves_the_sheet_alone() {
+    let (_dir, root) = project(None);
+    write_preset(&root, "large-print").expect("large print applies");
+    assert!(!root.join("styles.toml").exists());
+}

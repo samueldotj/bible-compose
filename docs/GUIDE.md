@@ -54,21 +54,26 @@ Click the path on the bar to open it in your usual PDF reader.
 
 ### Start from a template
 
-The **Template** section offers eight to start from:
+The **Template** section offers ten to start from:
 
 | | |
 |---|---|
-| **Standard two-column** | The conventional Bible page |
+| **Standard two-column** | The conventional Bible page; the chapter number dropped two lines in deep red, centred italic headings, the page's first and last reference in the head |
 | **Single column** | The same page in one column, with slightly larger type |
-| **Reader's edition** | One column, no verse numbers, no apparatus — set like a novel |
+| **Reader's edition** | One column, no verse numbers, no apparatus — set like a novel; each chapter's number centred above a dropped initial, psalm titles centred |
 | **Large print** | 14pt in one column, ragged right |
-| **Reference** | Two dense columns on a 5.5×8.5in page; the head gives the page's first and last reference; every verse is a PDF destination |
-| **Study Bible** | 7×10in with introductions, outlines, headings, footnotes and cross-references all on |
+| **Reference** | Two dense columns on a 5.5×8.5in page; the words of Christ in red; the head gives the page's first and last reference; every verse is a PDF destination |
+| **Study Bible** | 7×10in with introductions, outlines, headings, footnotes and cross-references all on; bold headings, green chapter and verse numbers |
 | **Pocket Bible** | 4.25×6.75in, small type in one column, cross-references left out |
-| **Journaling Bible** | One column beside a two-inch outer margin left empty for notes |
+| **Journaling Bible** | One column beside a two-inch outer margin left empty for notes; a dropped initial and ochre small-capital headings |
+| **Modern** | One column set ragged right on 6×9in, with bold headings and the chapter and verse numbers in blue |
+| **Illuminated** | A gift edition: one column of 11pt, a framed chapter number above a dropped initial, headings and numbers in red |
 
-Choosing one **writes its settings into your project**, where you can then
-change them one at a time. It is a starting point, not a mode: after you apply
+Choosing one **writes its settings into your project**, and — for the
+templates that have a look of their own — **its styles into `styles.toml`**,
+where you can then change them one at a time. A style you had already set
+that the template does not mention is kept. No template names a font: the
+body font is yours to choose for your Scripture's script. It is a starting point, not a mode: after you apply
 one there is no preset any more, only settings — which is why nothing in the
 window claims you are "in" large print.
 
@@ -98,7 +103,7 @@ back.
 | Section | |
 |---|---|
 | **Books** | Which books, and in what order; the front matter |
-| **Template** | Eight kinds of book to start from |
+| **Template** | Ten kinds of book to start from |
 | **Contents** | What appears — introductions, headings, chapter and verse numbers — and where books, chapters and verses start |
 | **Paragraph** | How a paragraph is set: justification, poetry indents, quotations, drop caps |
 | **Notes** | Footnotes and cross-references: whether, their marks, where they go |

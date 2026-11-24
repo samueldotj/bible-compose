@@ -29,7 +29,7 @@ It also cost 9 MB per installer for a second copy of Tauri, WebView bindings and
 
 - **Book only.** A window offers no New, Open or Open Recent, and the plugin refuses to open any path other than the book the window was opened on, whatever the page asks. File ends in Close, not Exit, because Exit would quit BibleCompose.
 - **Its own recovery.** Snapshots and locks live in `editor-recovery/` in this application's data folder, apart from easy-usfm's.
-- **No update check.** The plugin's `updater` feature is left off. This application promises no network code but the font download (ARCHITECTURE §7.6).
+- **No update check of its own.** The plugin's `updater` feature is left off. The editor is part of this application, so it is updated with it, by the one click-to-check [ADR-008](008-click-to-update.md) adds.
 - **Its own permissions.** Editor windows get `capabilities/editor.json`: the plugin's commands, the dialogs, setting their title, closing themselves, and handing a link to the operating system. This application's own commands are declared in `build.rs` and granted to `main` alone, so an editor window, which renders a book's text, can't start a build or fetch a font.
 - **Menus.** Windows and Linux give each editor window its own menu bar. macOS has one menu bar per application: the editor's goes up while an editor is in front, and the default goes back when `main` is.
 - **Closing.** Closing the main window asks each editor to close. Each editor's unsaved-changes guard runs, and an editor kept open by its answer keeps the application running.

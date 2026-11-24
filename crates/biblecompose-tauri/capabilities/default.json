@@ -38,6 +38,8 @@
     "allow-apply-preset",
     "allow-start-build",
     "allow-cancel-build",
-    "allow-is-building"
+    "allow-is-building",
+    "allow-check-for-update",
+    "allow-install-update"
   ]
 }

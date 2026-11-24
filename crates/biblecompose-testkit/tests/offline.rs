@@ -24,6 +24,11 @@
 //! needs no network" stays a property of the graph. The tests below hold that
 //! arrangement in place — one client, named, reached from one module.
 //!
+//! And since ADR-008 there is a second request, "Check for updates", which
+//! goes through Tauri's updater plugin and so through the framework's own
+//! `reqwest` rather than a client of ours. It is held the same way: named in
+//! one module, which pins the address it asks, and granted to no window.
+//!
 //! Read from `Cargo.lock`, which is committed, so this is a fact about the
 //! versions actually built and not about what a resolver might pick.
 
@@ -194,6 +199,58 @@ fn the_client_is_reached_from_one_module() {
          is the module that refuses any host but the font catalogue's, and a \
          request made around it is a request nobody checked"
     );
+}
+
+/// The updater plugin, the second way out (ADR-008).
+const THE_UPDATER: &str = "tauri_plugin_updater";
+
+/// **The update check is reached from one module, too.** `lib.rs` registers
+/// the plugin and nothing else; `update.rs` is where the address it asks is
+/// pinned and every download it names is checked. A call made around that
+/// module is an update nobody checked the source of.
+///
+/// And no window is granted the plugin's own commands, so the webview cannot
+/// reach it except through the two commands `update.rs` sits behind.
+#[test]
+fn the_updater_is_reached_from_one_module() {
+    let src = repo_root().join("crates/biblecompose-tauri/src");
+    for entry in std::fs::read_dir(src.as_std_path()).expect("the shell has sources") {
+        let path = entry.expect("readable entry").path();
+        let name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or_default()
+            .to_owned();
+        if !name.ends_with(".rs") {
+            continue;
+        }
+        let text = std::fs::read_to_string(&path).expect("readable source");
+        let uses: Vec<&str> = text
+            .lines()
+            .filter(|l| l.contains(THE_UPDATER))
+            .map(str::trim)
+            .collect();
+        match name.as_str() {
+            "update.rs" => {}
+            "lib.rs" => assert_eq!(
+                uses,
+                vec![".plugin(tauri_plugin_updater::Builder::new().build())"],
+                "lib.rs registers the updater and does nothing else with it"
+            ),
+            _ => assert!(uses.is_empty(), "{name} reaches the updater: {uses:?}"),
+        }
+    }
+
+    let dir = repo_root().join("crates/biblecompose-tauri/capabilities");
+    for entry in std::fs::read_dir(dir.as_std_path()).expect("capabilities exist") {
+        let path = entry.expect("readable entry").path();
+        let text = std::fs::read_to_string(&path).expect("readable capability");
+        assert!(
+            !text.contains("updater:") && !text.contains("process:"),
+            "{} grants the window the updater's own commands",
+            path.display()
+        );
+    }
 }
 
 /// And the window itself is fenced, so a compromised frontend cannot fetch

@@ -41,6 +41,7 @@ const BUILD_EVENT: &str = "build";
 mod download;
 pub mod editor;
 pub mod preview;
+mod update;
 
 // ---------------------------------------------------------------- wire types
 
@@ -1636,6 +1637,49 @@ fn is_building(session: tauri::State<'_, Arc<Session>>) -> bool {
         .is_some()
 }
 
+/// Ask whether a newer release has been published (ADR-008).
+///
+/// Only ever called because somebody clicked "Check for updates": nothing in
+/// the window calls it on its own, and nothing here schedules it.
+#[tauri::command]
+async fn check_for_update(
+    app: tauri::AppHandle,
+    pending: tauri::State<'_, update::Pending>,
+) -> Result<update::WireUpdate, String> {
+    update::check(&app, &pending).await
+}
+
+/// Install what [`check_for_update`] found, and restart into it.
+///
+/// **Refused while anything would be lost by the restart.** A build in flight
+/// is minutes of somebody's waiting, and an editor window may hold unsaved
+/// changes its own guard would never get the chance to ask about — so both
+/// are asked to finish first, rather than being closed underneath.
+#[tauri::command]
+async fn install_update(
+    app: tauri::AppHandle,
+    session: tauri::State<'_, Arc<Session>>,
+    pending: tauri::State<'_, update::Pending>,
+) -> Result<(), String> {
+    let building = session
+        .running
+        .lock()
+        .expect("the session lock is not poisoned")
+        .is_some();
+    if building {
+        return Err(
+            "a build is running — let it finish, or cancel it, then install the update".to_owned(),
+        );
+    }
+    if !tauri_plugin_easy_usfm::editor_labels(&app).is_empty() {
+        return Err(
+            "close the editor windows first, so nothing unsaved is lost when BibleCompose restarts"
+                .to_owned(),
+        );
+    }
+    update::install(&app, &pending).await
+}
+
 // ---------------------------------------------------------------- plumbing
 
 /// The project's settings file, opened for editing — created if the project
@@ -2047,6 +2091,10 @@ pub fn run() {
         // that hands a link in a document to the operating system.
         .plugin(tauri_plugin_opener::init())
         .plugin(editor::plugin())
+        // Registered for its Rust half only (ADR-008): no capability grants
+        // the window its own commands, so the only way to an update is the two
+        // commands below, which check what they are asked to fetch.
+        .plugin(tauri_plugin_updater::Builder::new().build())
         // **An editor closes with the window that opened it.** Asked as the
         // main window is asked to close, so each editor's unsaved-changes
         // guard runs while there is still someone looking — and one kept open
@@ -2061,6 +2109,7 @@ pub fn run() {
         .register_asynchronous_uri_scheme_protocol(preview::SCHEME, serve_page)
         .setup(|app| {
             app.manage(Arc::new(Session::default()));
+            app.manage(update::Pending::default());
             // What 0.3.0 to 0.4.3 unpacked to run the editor as a program.
             // Off the main thread: it is a directory delete nobody waits on.
             std::thread::spawn(editor::forget_unpacked_editor);
@@ -2105,6 +2154,8 @@ pub fn run() {
             start_build,
             cancel_build,
             is_building,
+            check_for_update,
+            install_update,
         ])
         .run(tauri::generate_context!())
         .expect("the desktop shell failed to start");

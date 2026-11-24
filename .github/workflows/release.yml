@@ -348,6 +348,12 @@ jobs:
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      # The updater's key (ADR-008). The private half signs what "Check for
+      # updates" will install; the public half is a repository *variable*
+      # rather than a secret because it is compiled into every copy anyway.
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      TAURI_UPDATER_PUBKEY: ${{ vars.TAURI_UPDATER_PUBKEY }}
     strategy:
       fail-fast: false
       matrix:
@@ -465,6 +471,32 @@ jobs:
           '
           echo "TAURI_EXTRA_CONFIG=sign.json" >> "$GITHUB_ENV"
 
+      # **Updates are signed with their own key, not the platform's.** With
+      # one, the bundler writes a `.sig` beside each installer and the copy
+      # being built carries the public half, so it can check what it is later
+      # offered. Without one, nothing changes: the installers are built as
+      # before and say "cannot update itself" when asked (ADR-008).
+      #
+      # Merged into whatever the Windows signing step wrote, since `--config`
+      # takes one file.
+      - name: sign updates, if there is a key
+        if: env.TAURI_SIGNING_PRIVATE_KEY != ''
+        shell: bash
+        run: |
+          [ -n "$TAURI_UPDATER_PUBKEY" ] || {
+            echo "::error::TAURI_SIGNING_PRIVATE_KEY is set but the TAURI_UPDATER_PUBKEY variable is not — every copy would refuse every update"
+            exit 1
+          }
+          node -e '
+            const fs = require("fs");
+            const from = process.env.TAURI_EXTRA_CONFIG;
+            const c = from ? JSON.parse(fs.readFileSync(from, "utf8")) : {};
+            c.bundle = { ...c.bundle, createUpdaterArtifacts: true };
+            c.plugins = { ...c.plugins, updater: { pubkey: process.env.TAURI_UPDATER_PUBKEY } };
+            fs.writeFileSync("extra.json", JSON.stringify(c));
+          '
+          echo "TAURI_EXTRA_CONFIG=extra.json" >> "$GITHUB_ENV"
+
       # macOS wants the certificate in a keychain, because that is what
       # `codesign` reads. A temporary one, unlocked for this job and thrown
       # away with the runner.
@@ -508,10 +540,14 @@ jobs:
           #
           # So: anything empty is removed before the bundler sees it, and
           # absent means absent.
-          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD                       APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD                       APPLE_TEAM_ID WINDOWS_CERT_THUMBPRINT; do
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD                       APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD                       APPLE_TEAM_ID WINDOWS_CERT_THUMBPRINT TAURI_SIGNING_PRIVATE_KEY; do
             eval "value=\${$name:-}"
             [ -n "$value" ] || unset "$name"
           done
+          # The key's password is the exception: a key made without one is
+          # read with an empty password, and an absent variable makes the
+          # signer prompt for it — in a job nobody can type into.
+          [ -n "${TAURI_SIGNING_PRIVATE_KEY:-}" ] || unset TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 
           if [ -n "${TAURI_EXTRA_CONFIG:-}" ]; then
             npx tauri build --features embedded-sile --config "$TAURI_EXTRA_CONFIG"
@@ -564,15 +600,36 @@ jobs:
           done
           [ "$signed" = "1" ] || echo "::warning::these artefacts are UNSIGNED"
 
+      # The macOS update is the `.app` itself, tarred, and the bundler names
+      # it `BibleCompose.app.tar.gz` — no version, no architecture. Both are
+      # added, the architecture asked of the runner as the CLI's is, so the
+      # manifest can tell which Mac it is for.
+      - name: name the macOS update for its architecture
+        if: runner.os == 'macOS' && env.TAURI_SIGNING_PRIVATE_KEY != ''
+        run: |
+          version=$(node -p 'require("./crates/biblecompose-tauri/tauri.conf.json").version')
+          arch=$(uname -m); [ "$arch" = arm64 ] && arch=aarch64
+          cd target/release/bundle/macos
+          for f in *.app.tar.gz *.app.tar.gz.sig; do
+            mv "$f" "${f/.app.tar.gz/_${version}_${arch}.app.tar.gz}"
+          done
+          ls -la
+
       - uses: actions/upload-artifact@v4
         with:
           name: installers-${{ matrix.os }}
           path: |
             target/release/bundle/msi/*.msi
+            target/release/bundle/msi/*.msi.sig
             target/release/bundle/nsis/*.exe
+            target/release/bundle/nsis/*.exe.sig
             target/release/bundle/dmg/*.dmg
+            target/release/bundle/macos/*.app.tar.gz
+            target/release/bundle/macos/*.app.tar.gz.sig
             target/release/bundle/deb/*.deb
+            target/release/bundle/deb/*.deb.sig
             target/release/bundle/appimage/*.AppImage
+            target/release/bundle/appimage/*.AppImage.sig
           if-no-files-found: error
 
   windows-smoke:
@@ -634,8 +691,13 @@ jobs:
           mkdir -p release
           find incoming -type f \
             \( -name 'biblecompose-cli-*' -o -name '*.msi' -o -name '*.exe' \
-               -o -name '*.dmg' -o -name '*.deb' -o -name '*.AppImage' \) \
+               -o -name '*.dmg' -o -name '*.deb' -o -name '*.AppImage' \
+               -o -name '*.app.tar.gz' -o -name '*.sig' \) \
             -exec cp {} release/ ";"
+          # What "Check for updates" reads (ADR-008). Before the checksums, so
+          # they cover it; and nothing at all when the release was not signed
+          # for updating, which the script says.
+          node scripts/update-manifest.mjs release "${GITHUB_REF_NAME#v}" "$GITHUB_REPOSITORY"
           cd release
           # Checksums matter more the less signed the artefacts are: with no
           # certificate they are the only way a publisher can tell that what

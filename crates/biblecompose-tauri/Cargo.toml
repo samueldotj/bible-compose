@@ -39,8 +39,8 @@ tauri-plugin-dialog = "2.7.2"
 # Not a program this application starts but a plugin it registers, so there
 # is one binary, nothing to unpack, and nothing to close but a window. The
 # plugin's update check stays compiled out — its `updater` feature is not
-# asked for — because this application promises no network code but the font
-# download beside it (ARCHITECTURE §7.6).
+# asked for — because the editor is part of this application and is updated
+# with it, by the one check a person clicks for (ADR-008).
 tauri-plugin-easy-usfm.workspace = true
 # A link inside a document is handed to the operating system and never opened
 # in the editor's webview (easy-usfm SECURITY 2), and that is this plugin.
@@ -53,6 +53,14 @@ tauri-plugin-opener = "2.5.4"
 # intention (ARCHITECTURE section 7.6, NFR-004). Pure Rust TLS, so a release
 # does not pick up whatever OpenSSL the build machine had.
 ureq = { version = "3", default-features = false, features = ["rustls"] }
+
+# Checking for, and installing, a newer release (ADR-008) — the second request
+# this application can make, and like the first only when somebody clicks for
+# it. Its client is the framework's own `reqwest`, which the shell reached
+# already, so this adds a reason to use it rather than a new way out. Reached
+# from `update.rs` alone, which pins the one address asked and refuses a
+# download from anywhere but this project's releases.
+tauri-plugin-updater = "2.12.0"
 
 # The preview (GUI-008): pages of the built PDF drawn into the window. hayro
 # because it is pure Rust and forbids `unsafe`, so the renderer travels inside

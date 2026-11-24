@@ -1,12 +1,13 @@
-//! The one place this application opens a socket (FONT-006).
+//! The one place this application opens a socket for a font (FONT-006).
 //!
 //! BibleCompose composes offline and says so on its own installer. That
 //! remains true of everything it does with a project: loading, validating,
 //! composing and writing a PDF reach the network nowhere (NFR-004), and the
 //! offline end-to-end test is what keeps it true rather than this comment.
 //!
-//! Fetching a font is the single exception, and it is an exception a person
-//! asks for by clicking a button about a named family. So the egress is here
+//! Fetching a font is one of two exceptions, and it is an exception a person
+//! asks for by clicking a button about a named family. (The other is "Check
+//! for updates", in `update.rs`, fenced the same way — ADR-008.) So the egress is here
 //! — in the shell, which is already the layer that owns dialogs, the
 //! filesystem and the browser — rather than in `biblecompose-app`, where an
 //! HTTP client would sit in the same crate as the build. That is why

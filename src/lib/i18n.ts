@@ -54,6 +54,13 @@ export interface Chrome {
   readonly noLongerThere: string;
   readonly open: string;
   readonly contract: string;
+  // Check for updates (ADR-008).
+  readonly checkForUpdates: string;
+  readonly checkingForUpdates: string;
+  readonly upToDate: string;
+  readonly updateUnavailable: string;
+  readonly installUpdate: string;
+  readonly updatePrivacy: string;
   readonly projectFolder: string;
   readonly alreadyAProject: string;
   readonly openInstead: string;
@@ -313,6 +320,10 @@ export interface Phrases {
   readonly moveLater: (code: string) => string;
   readonly resetSetting: (label: string) => string;
   readonly forgetProject: (name: string) => string;
+  /** `BibleCompose 0.5.0 is available.` */
+  readonly updateAvailable: (version: string) => string;
+  /** While the new version downloads and installs. */
+  readonly installingUpdate: (version: string) => string;
   /** A head or foot slot's accessible name: which side, which line, which slot. */
   readonly headerSlot: (side: string, slot: string) => string;
   readonly footerSlot: (side: string, slot: string) => string;
@@ -609,6 +620,13 @@ export const EN: Catalogue = {
     noLongerThere: "no longer there",
     open: "Open",
     contract: "contract",
+    checkForUpdates: "Check for updates",
+    checkingForUpdates: "Checking for updates…",
+    upToDate: "This is the latest version.",
+    updateUnavailable:
+      "This copy cannot update itself. New versions are on the BibleCompose releases page.",
+    installUpdate: "Install and restart",
+    updatePrivacy: "Asks GitHub for the latest release. Nothing about you or your projects is sent.",
     projectFolder: "Project folder",
     alreadyAProject:
       "This folder already has a biblecompose.toml — it is a project. Open it instead, or choose a different folder.",
@@ -859,6 +877,8 @@ export const EN: Catalogue = {
     moveLater: (code) => `Move ${code} later`,
     resetSetting: (label) => `Reset ${label}`,
     forgetProject: (name) => `Forget ${name}`,
+    updateAvailable: (version) => `BibleCompose ${version} is available.`,
+    installingUpdate: (version) => `Installing BibleCompose ${version}… it will restart on its own.`,
     headerSlot: (side, slot) => `${side} page, header ${slot}`,
     footerSlot: (side, slot) => `${side} page, footer ${slot}`,
     startFromTemplate: (title) => `Start from “${title}”?`,

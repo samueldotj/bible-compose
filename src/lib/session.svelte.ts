@@ -23,6 +23,7 @@ import {
   type Preset,
   type Project,
   type Severity,
+  type UpdateCheck,
 } from "./services/backend";
 
 export interface LogLine {
@@ -54,8 +55,20 @@ const LOG_LIMIT = 5000;
  */
 const WATCH_INTERVAL = 2000;
 
+/**
+ * Where "Check for updates" stands (ADR-008). `idle` until somebody clicks:
+ * nothing here asks on its own.
+ */
+export type UpdateStatus =
+  | { readonly state: "idle" }
+  | { readonly state: "checking" }
+  | UpdateCheck
+  | { readonly state: "installing"; readonly version: string }
+  | { readonly state: "failed"; readonly message: string };
+
 export class Session {
   versions = $state<{ app: string; contract: string; backend: string } | null>(null);
+  update = $state<UpdateStatus>({ state: "idle" });
   project = $state<Project | null>(null);
   /** Shown until a project is open, so the panes are never blank. */
   defaults = $state<Defaults | null>(null);
@@ -426,6 +439,33 @@ export class Session {
       this.fault = asDiagnostics(e)
         .map((d) => d.message)
         .join(" ");
+    }
+  }
+
+  /** Never rejects: the answer, or the failure, is shown where the button was. */
+  async checkForUpdate(): Promise<void> {
+    this.update = { state: "checking" };
+    try {
+      this.update = await backend().checkForUpdate();
+    } catch (e: unknown) {
+      this.update = { state: "failed", message: String(e) };
+    }
+  }
+
+  /**
+   * Install the update the last check found. On success the application
+   * restarts, so there is nothing after the await to run.
+   */
+  async installUpdate(): Promise<void> {
+    if (this.update.state !== "available") return;
+    const found = this.update;
+    this.update = { state: "installing", version: found.version };
+    try {
+      await backend().installUpdate();
+    } catch (e: unknown) {
+      // "Close the editor first" is a refusal meant to be answered by trying
+      // again, and the failed state offers the check again to do it with.
+      this.update = { state: "failed", message: String(e) };
     }
   }
 

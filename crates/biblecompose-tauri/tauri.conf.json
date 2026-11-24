@@ -62,5 +62,13 @@
         "installMode": "perMachine"
       }
     }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

@@ -4,6 +4,14 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## Unreleased
 
+* **BibleCompose can update itself, when you ask.** The start screen has a
+  Check for updates button. It asks this project's GitHub releases whether a
+  newer version has been published and, if one has, offers to install it and
+  restart. It never checks on its own, and it sends nothing about you or your
+  projects. It won't install while a build is running or an editor is open.
+  Only releases signed for updating can be installed this way; a copy built
+  without that key says it cannot update itself.
+
 * **The editor opens inside BibleCompose.** Double-clicking a book opens it
   in an easy-usfm window of this application's own, rather than starting a
   separate program that had to be unpacked first. The editor opens the book

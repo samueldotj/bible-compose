@@ -46,6 +46,8 @@ const COMMANDS: &[&str] = &[
     "start_build",
     "cancel_build",
     "is_building",
+    "check_for_update",
+    "install_update",
 ];
 
 fn main() {

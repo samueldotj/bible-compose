@@ -150,6 +150,55 @@ The acceptance criterion is *no security warning on first launch*, and the only
 way to know is to launch it on a machine that has never run a development
 build.
 
+## Updates
+
+"Check for updates" on the start screen asks the latest *published* release
+for `latest.json`, and installs what it names if the signature matches the key
+the running copy was built with ([ADR-008](adr/008-click-to-update.md)). That
+key is separate from the platform certificates above, and free: it is made
+here, not bought.
+
+### Making the key, once
+
+```bash
+npx tauri signer generate -w ~/.tauri/biblecompose-updater.key
+```
+
+It asks for a password, and you should give it one. Then, in the repository's
+**Settings → Secrets and variables → Actions**:
+
+| Name | Kind | Value |
+|---|---|---|
+| `TAURI_SIGNING_PRIVATE_KEY` | secret | The contents of `biblecompose-updater.key` |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | secret | Its password |
+| `TAURI_UPDATER_PUBKEY` | **variable** | The contents of `biblecompose-updater.key.pub` |
+
+The public key is a variable, not a secret, because it is compiled into every
+copy anyway. The workflow refuses a run that has the private key and not the
+public one, because that would produce copies that refuse every update.
+
+**Keep a copy of the private key and its password somewhere other than GitHub.**
+GitHub will not show a secret back to you. And if the key is lost, every copy
+already installed will refuse every later update for good. The only fix then is
+for each person to reinstall by hand.
+
+### What it changes in a release
+
+With the key set, the installer jobs write a `.sig` beside the `-setup.exe`,
+the `.msi`, the AppImage and the macOS `.app.tar.gz`. The release job then
+writes `latest.json` from them with `scripts/update-manifest.mjs`. Without the
+key, none of this happens and the release is as it was. Copies of it answer
+"this copy cannot update itself" and send nothing.
+
+Copies already out there see a release **when the draft is published**, not
+before, because `releases/latest` skips drafts. Publishing is the step that
+ships the update, so the install-it-once check in the list below is what
+stands between a broken build and every installed copy.
+
+The first release made with the key can't update anything. The copies already
+installed were built without a key, so they can't check. Updates start working
+from the release after that.
+
 ## Cutting a release
 
 1. Update `version` in `crates/biblecompose-tauri/Cargo.toml` and in
@@ -179,6 +228,7 @@ still work" is a question that can be asked without publishing an answer.
 |---|---|
 | `biblecompose-linux-x86_64`, `-macos-*`, `-windows-x86_64.exe` | The command line, one file, typesetter included |
 | `.msi`, `-setup.exe`, `.dmg`, `.deb`, `.AppImage` | The window, installed |
+| `.sig`, `.app.tar.gz`, `latest.json` | What "Check for updates" reads and installs, when the release was signed for it |
 | `SHA256SUMS` | Every file above |
 
 The staged runtimes are intermediates and are kept for a day, not released:

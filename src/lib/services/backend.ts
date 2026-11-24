@@ -347,6 +347,24 @@ export interface PreviewDocument {
   readonly pages: readonly (readonly [number, number])[];
 }
 
+/**
+ * What asking for a newer release found (ADR-008).
+ *
+ * `unavailable` is a copy built without the key an update is checked against
+ * — a development build, or a release cut without one — and it means the
+ * question was not asked at all.
+ */
+export type UpdateCheck =
+  | { readonly state: "unavailable" }
+  | { readonly state: "current"; readonly version: string }
+  | {
+      readonly state: "available";
+      readonly version: string;
+      readonly current: string;
+      /** The release's own notes, as plain text. */
+      readonly notes: string | null;
+    };
+
 export interface Backend {
   /** Application and typesetting-backend versions, for the about box and the log. */
   versions(): Promise<{ app: string; contract: string; backend: string }>;
@@ -477,6 +495,19 @@ export interface Backend {
    */
   installFont(root: string, family: string): Promise<PackagedFont>;
   /**
+   * Ask this project's releases whether there is a newer version (ADR-008).
+   *
+   * The second call that waits on something outside the machine, and like
+   * the first it is only ever made because somebody clicked for it. Rejects
+   * with a sentence.
+   */
+  checkForUpdate(): Promise<UpdateCheck>;
+  /**
+   * Install what {@link checkForUpdate} found, and restart into it. Refused —
+   * with a sentence — while a build is running or an editor is open.
+   */
+  installUpdate(): Promise<void>;
+  /**
    * Returns as soon as the build is handed to a thread (GUI-012). Every
    * build is the whole publication, typeset afresh.
    */
@@ -528,6 +559,8 @@ export const tauriBackend: Backend = {
   fonts: (root) => invoke("fonts", { root }),
   fontSuggestions: (root, language) => invoke("font_suggestions", { root, language }),
   installFont: (root, family) => invoke("install_font", { root, family }),
+  checkForUpdate: () => invoke("check_for_update"),
+  installUpdate: () => invoke("install_update"),
   startBuild: (root) => invoke("start_build", { root }),
   cancelBuild: () => invoke("cancel_build"),
   onBuildEvent: async (handler) => {

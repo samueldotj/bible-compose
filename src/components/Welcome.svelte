@@ -53,6 +53,36 @@
         biblecompose {session.versions.app} · {t("contract")} {session.versions.contract}
       </p>
     {/if}
+    <!-- ADR-008: asked only from here, and only when clicked. -->
+    <div class="update" aria-live="polite">
+      {#if session.update.state === "available"}
+        <span>{phrases().updateAvailable(session.update.version)}</span>
+        <button type="button" class="btn small primary" onclick={() => void session.installUpdate()}>
+          {t("installUpdate")}
+        </button>
+      {:else if session.update.state === "installing"}
+        <span>{phrases().installingUpdate(session.update.version)}</span>
+      {:else if session.update.state === "checking"}
+        <span class="muted">{t("checkingForUpdates")}</span>
+      {:else}
+        <button
+          type="button"
+          class="btn small"
+          data-search-key="action:check-updates"
+          title={t("updatePrivacy")}
+          onclick={() => void session.checkForUpdate()}
+        >
+          {t("checkForUpdates")}
+        </button>
+        {#if session.update.state === "current"}
+          <span class="muted">{t("upToDate")}</span>
+        {:else if session.update.state === "unavailable"}
+          <span class="muted">{t("updateUnavailable")}</span>
+        {:else if session.update.state === "failed"}
+          <span class="muted">{session.update.message}</span>
+        {/if}
+      {/if}
+    </div>
   </section>
 
   <section class="recent">
@@ -176,6 +206,14 @@
     margin: auto 0 0;
     padding-block-start: 40px;
     color: var(--mut);
+  }
+  .update {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px 12px;
+    margin-block-start: 8px;
+    font-size: 13px;
   }
 
   .recent {

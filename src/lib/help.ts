@@ -63,6 +63,8 @@ export const EN_HELP: Readonly<Record<string, string>> = {
   "action:restore-canonical": "Put the books back in the order the canon gives them, leaving the selection alone.",
   "action:new-project": "Make a folder with a settings file in it, for a translation that has no USFM yet.",
   "action:open-project": "Choose a folder of USFM files.",
+  "action:check-updates":
+    "Ask GitHub whether a newer BibleCompose has been published, and offer to install it. Only ever when you click.",
 
   // ------------------------------------------------------------ settings
   "project.name": "The publication's name: the PDF's title, and its file name unless one is set.",

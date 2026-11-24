@@ -12,7 +12,9 @@ Decisions and their rejected alternatives live in the ADRs:
 [003 GUI and preview](adr/003-gui.md) ·
 [004 no layout crate](adr/004-no-layout-crate.md) ·
 [005 provenance](adr/005-provenance.md) ·
-[006 single binary](adr/006-single-binary.md)
+[006 single binary](adr/006-single-binary.md) ·
+[007 editor in process](adr/007-editor-in-process.md) ·
+[008 click to update](adr/008-click-to-update.md)
 
 ---
 
@@ -302,7 +304,7 @@ The script comes from the Scripture's own codepoints where there are any and fro
 
 **The catalogue is generated, not written.** `scripts/font-catalogue.mjs` fetches every file from one pinned commit of `google/fonts` and emits `biblecompose-app/src/typeface/catalogue.rs` with a byte count and a SHA-256 per file. Those are not values a reviewer can check by reading, and a table of fifty hand-copied digests has a typo in it. The generator also refuses to write a row it cannot stand behind: a font whose `name` table disagrees with the family the catalogue would resolve, one whose `cmap` has no glyph for a script it is being offered for, or a variable font whose default instance is not the weight a page should be set in — a project font crosses to the backend by path, so it is pinned to that instance, and that last check is why no Noto Serif CJK build is in the catalogue.
 
-**The egress is in the shell, and there is one of it.** `biblecompose-app` takes fetched bytes and never a URL, so the build path and the CLI contain no HTTP client at all — which is what makes NFR-004 a fact about the dependency graph rather than a promise about intent. `biblecompose-tauri::download` is the only module in the workspace that opens a socket; it refuses any URL that is not on the catalogue's host, before connecting.
+**The egress is in the shell, and there is one of it.** `biblecompose-app` takes fetched bytes and never a URL, so the build path and the CLI contain no HTTP client at all — which is what makes NFR-004 a fact about the dependency graph rather than a promise about intent. `biblecompose-tauri::download` is the only module in the workspace that opens a socket for a font; it refuses any URL that is not on the catalogue's host, before connecting. (The other is `update`, for "Check for updates", which is fenced the same way — [ADR-008](adr/008-click-to-update.md).)
 
 **Nothing is written until everything verifies.** Length, then digest, then a parse, then the family name, then a glyph for each script claimed — and on any failure, no file at all. A half-packaged family is a project that resolves a font whose bold is missing, which is a worse place to be than one that resolved nothing.
 
@@ -439,6 +441,6 @@ SRS §15 as written, with the mechanism named for each clause.
 
 Scripture and configuration cannot inject Lua because they are XML text nodes, not command syntax (§8). SILE is invoked with an argument array through the process API; nothing is concatenated into a shell string. Asset references resolve inside the project directory, and a path escaping it is a diagnostic rather than a silent read — checked after canonicalization, so `..` and symlinks are both covered. Temporary directories come from the OS API and are removed unless `keep_intermediates` is set.
 
-Nothing leaves the machine on any path a project takes: no telemetry, ever, and no network call in loading, validating, composing or writing a PDF — the offline end-to-end test (NFR-004) is what keeps that true. There is exactly one request this application can make, and a person has to ask for it by clicking a button about a named font (§7.6, FONT-006). It goes to one host, which `biblecompose-tauri::download` checks before connecting; it carries no query string and nothing identifying; the response is bytes that go to a checksum. It lives in the shell rather than in `biblecompose-app` so that the sentence before this one is enforced by the dependency graph: the crate that composes a page has no HTTP client linked into it, and neither has the CLI.
+Nothing leaves the machine on any path a project takes: no telemetry, ever, and no network call in loading, validating, composing or writing a PDF — the offline end-to-end test (NFR-004) is what keeps that true. There are exactly two requests this application can make, and a person has to click for each: fetching a named font (§7.6, FONT-006), and "Check for updates" on the start screen ([ADR-008](adr/008-click-to-update.md)). The font request goes to one host, which `biblecompose-tauri::download` checks before connecting; the update check asks one fixed file on this project's GitHub releases, and `biblecompose-tauri::update` refuses a download from anywhere but those releases before the updater verifies its signature. Neither carries a query string or anything identifying, and nothing asks on its own — not at start-up, not on a timer. Both live in the shell rather than in `biblecompose-app` so that "a build needs no network" is enforced by the dependency graph: the crate that composes a page has no HTTP client linked into it, and neither has the CLI.
 
 One addition. The preview renders a PDF that BibleCompose itself produced, but pdf.js runs in the webview, so its JavaScript execution and external-link handling are disabled in the viewer configuration — the cost of being wrong about "we generated it" is too high for the saving.

@@ -2,7 +2,7 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
-## Unreleased
+## 0.5.0
 
 * **BibleCompose can update itself, when you ask.** The start screen has a
   Check for updates button. It asks this project's GitHub releases whether a

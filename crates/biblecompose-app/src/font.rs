@@ -94,6 +94,55 @@ pub fn resolve(
 }
 
 fn lookup(family: &str, dir: Option<&Utf8Path>, system: bool) -> Option<ResolvedFont> {
+    lookup_face(family, fontdb::Style::Normal, 400, dir, system)
+}
+
+/// The face of `family` nearest to a style and weight, by the same search
+/// order as [`resolve`].
+///
+/// **Nearest, not exact, and that is the point.** fontdb substitutes the way
+/// fontconfig does: a family with no italic answers an italic request with its
+/// regular face, which is also what SILE then sets. So the face this returns is
+/// the face the page gets, and a family whose italic is a different file from
+/// its regular returns that file.
+fn resolve_face(
+    family: &str,
+    italic: bool,
+    weight: u16,
+    project_root: &Utf8Path,
+    backend_dirs: &[Utf8PathBuf],
+) -> Option<ResolvedFont> {
+    let wanted = family.trim();
+    if wanted.is_empty() {
+        return None;
+    }
+    let style = if italic {
+        fontdb::Style::Italic
+    } else {
+        fontdb::Style::Normal
+    };
+    let project_dir = project_root.join(PROJECT_FONTS);
+    if let Some(found) = lookup_face(wanted, style, weight, Some(&project_dir), false) {
+        return Some(ResolvedFont {
+            from_project: true,
+            ..found
+        });
+    }
+    for dir in backend_dirs {
+        if let Some(found) = lookup_face(wanted, style, weight, Some(dir), false) {
+            return Some(found);
+        }
+    }
+    lookup_face(wanted, style, weight, None, true)
+}
+
+fn lookup_face(
+    family: &str,
+    style: fontdb::Style,
+    weight: u16,
+    dir: Option<&Utf8Path>,
+    system: bool,
+) -> Option<ResolvedFont> {
     let mut db = fontdb::Database::new();
     match dir {
         Some(dir) if dir.exists() => db.load_fonts_dir(dir.as_std_path()),
@@ -104,11 +153,15 @@ fn lookup(family: &str, dir: Option<&Utf8Path>, system: bool) -> Option<Resolved
         db.load_system_fonts();
     }
 
-    // By family name only. Weight and style are the backend's to pick from the
-    // family, and asking here for a face this document may never use would
-    // reject a family over a bold it does not need.
+    // [`resolve`] asks for the regular face only. Weight and style are the
+    // backend's to pick from the family, and asking there for a face this
+    // document may never use would reject a family over a bold it does not
+    // need. [`resolve_face`] asks for one face because a style is known to use
+    // it.
     let id = db.query(&fontdb::Query {
         families: &[fontdb::Family::Name(family)],
+        style,
+        weight: fontdb::Weight(weight),
         ..Default::default()
     })?;
     let face = db.face(id)?;
@@ -559,6 +612,179 @@ pub fn preflight(
             None
         }
     }
+}
+
+/// Whether the face the running head is set in can draw what the head prints
+/// (FONT-002).
+///
+/// **The head is the one place the book's own script is set in a face nobody
+/// checked.** The body check reads the body's regular face against the
+/// Scripture's text. The built-in sheet sets the head in italic, the book name
+/// is in the book's script, and a family's italic is often a different file
+/// that covers less: Times New Roman's regular draws Arabic and its italic does
+/// not. A Romans in Arabic built in Times New Roman passed every check and
+/// printed its book name on every page as a row of empty boxes.
+///
+/// So this asks for the face the head's style resolves to — its family or the
+/// body's, its italic, its weight — and checks it against what the head
+/// templates print: the book names the templates name, and their literal text.
+/// The references are digits and punctuation, which any face that draws the
+/// book name draws too, and the check does not pretend to know which verses
+/// land on which page.
+///
+/// An error, as the body's is. A page with a tofu head is no more publishable
+/// than one with a tofu body, and it is the same failure: the backend sets
+/// `.notdef` and reports success.
+pub fn preflight_head(
+    settings: &biblecompose_config::Settings,
+    body: Option<&ResolvedFont>,
+    styles: &biblecompose_config::ResolvedStyles,
+    doc: &ScriptureDocument,
+    project_root: &Utf8Path,
+    backend_dirs: &[Utf8PathBuf],
+    diagnostics: &mut Diagnostics,
+) {
+    let style = styles
+        .get(biblecompose_config::StyleSelector::RunningHead)
+        .style;
+    let family = style
+        .font_family
+        .as_deref()
+        .unwrap_or(&settings.typography.font_family);
+    // A family nobody has is FONT-001's, said once already.
+    let Some(regular) = resolve(family, project_root, backend_dirs) else {
+        return;
+    };
+    let italic = style.italic.unwrap_or(false);
+    let weight = style.weight.unwrap_or(400);
+    // A project font reaches the backend as a file, and a file is one face:
+    // asking SILE for its italic gets that same file. Only a family looked up
+    // by name gets the face this asks fontdb for.
+    let face = if regular.from_project {
+        regular
+    } else {
+        resolve_face(family, italic, weight, project_root, backend_dirs).unwrap_or(regular)
+    };
+
+    // Said once already when the head is set in the body's own face and that
+    // face cannot draw the book: the body's error names the script.
+    let same_as_body = body.is_some_and(|b| b.path == face.path && b.index == face.index);
+    if same_as_body && diagnostics.iter().any(|d| d.code == code::MISSING_COVERAGE) {
+        return;
+    }
+
+    // The head's three slots on each side. The foot's are the folio's, in a
+    // style of their own, and print numbers.
+    let headers = &settings.headers;
+    let (fields, literal) = template_parts(&[
+        headers.left_page.header_left.as_str(),
+        headers.left_page.header_center.as_str(),
+        headers.left_page.header_right.as_str(),
+        headers.right_page.header_left.as_str(),
+        headers.right_page.header_center.as_str(),
+        headers.right_page.header_right.as_str(),
+    ]);
+    let mut names: Vec<&str> = Vec::new();
+    for book in &doc.books {
+        if fields.iter().any(|f| f == "book") {
+            names.extend(book.names.for_running_head());
+        }
+        if fields.iter().any(|f| f == "altbook") {
+            names.extend(book.names.for_alternate_head());
+        }
+    }
+    names.sort_unstable();
+    names.dedup();
+
+    let characters: std::collections::BTreeSet<char> = names
+        .iter()
+        .flat_map(|n| n.chars())
+        .chain(literal.chars())
+        .filter(|c| !c.is_whitespace() && !c.is_control())
+        .collect();
+    if characters.is_empty() {
+        return;
+    }
+
+    let Ok(data) = std::fs::read(face.path.as_std_path()) else {
+        return;
+    };
+    let Ok(parsed) = ttf_parser::Face::parse(&data, face.index) else {
+        return;
+    };
+    let missing: Vec<char> = characters
+        .iter()
+        .copied()
+        .filter(|c| parsed.glyph_index(*c).is_none())
+        .collect();
+    if missing.is_empty() {
+        return;
+    }
+
+    // The face as a person would name it, from what was asked for: the file's
+    // own name for it is a PostScript name nobody types.
+    let mut described = family.to_owned();
+    if weight >= 600 {
+        described.push_str(" bold");
+    }
+    if italic && !face.from_project {
+        described.push_str(" italic");
+    }
+    let worst = names
+        .iter()
+        .find(|n| n.chars().any(|c| missing.contains(&c)))
+        .map(|n| format!(" — the book name {n:?} would be set as empty boxes"))
+        .unwrap_or_default();
+    let mut help = String::from("choose a family for `[head]` in styles.toml whose ");
+    help.push_str(if italic { "italic" } else { "face" });
+    help.push_str(" covers this script");
+    if italic {
+        help.push_str(
+            ", or set `italic = false` under `[head]` if the upright face covers it — \
+             many scripts are not set in italic at all",
+        );
+    }
+    let shown: Vec<String> = missing.iter().take(5).map(|c| describe(*c)).collect();
+
+    diagnostics.push(
+        Diagnostic::error(
+            code::MISSING_COVERAGE,
+            format!(
+                "the running head is set in {described}, which cannot draw {} character{} \
+                 it prints{worst}",
+                missing.len(),
+                if missing.len() == 1 { "" } else { "s" },
+            ),
+        )
+        .at(SourceLoc::file(face.path.clone()))
+        .help(help)
+        .detail(format!("missing from {}: {}", face.path, shown.join(", "))),
+    );
+}
+
+/// The fields a set of head templates name, lower-case and without
+/// underscores as the class compares them, and every literal character
+/// between them.
+fn template_parts(templates: &[&str]) -> (Vec<String>, String) {
+    let mut fields = Vec::new();
+    let mut literal = String::new();
+    for template in templates {
+        let mut chars = template.chars().peekable();
+        while let Some(c) = chars.next() {
+            match c {
+                '{' | '}' if chars.peek() == Some(&c) => {
+                    chars.next();
+                    literal.push(c);
+                }
+                '{' => {
+                    let name: String = chars.by_ref().take_while(|c| *c != '}').collect();
+                    fields.push(name.replace('_', "").to_lowercase());
+                }
+                _ => literal.push(c),
+            }
+        }
+    }
+    (fields, literal)
 }
 
 /// Resolve every font a style names, and report the ones nobody has.

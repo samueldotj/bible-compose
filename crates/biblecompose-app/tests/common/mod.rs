@@ -139,6 +139,16 @@ pub fn attempt(
     overrides: &str,
     fonts: &[&camino::Utf8Path],
 ) -> (tempfile::TempDir, biblecompose_app::BuildReport) {
+    attempt_styled(doc, overrides, "", fonts)
+}
+
+/// The same, with a project style sheet over the built-in one.
+pub fn attempt_styled(
+    doc: &biblecompose_scripture::ScriptureDocument,
+    overrides: &str,
+    styles: &str,
+    fonts: &[&camino::Utf8Path],
+) -> (tempfile::TempDir, biblecompose_app::BuildReport) {
     let guard = tempfile::tempdir().expect("temp dir");
     let root = Utf8PathBuf::from_path_buf(guard.path().to_path_buf()).expect("UTF-8 temp path");
     biblecompose_testkit::place_fixture_assets(&root);
@@ -153,7 +163,21 @@ pub fn attempt(
     let mut request = BuildRequest::new(root.clone(), root.join("out.pdf"));
     request.sile_path = vec![biblecompose_testkit::repo_root().join("sile")];
     request.settings = settings(overrides);
-    request.styles = cascade::resolve(None, false).0;
+    request.styles = if styles.is_empty() {
+        cascade::resolve(None, false).0
+    } else {
+        let sheet = ConfigDocument::parse("styles.toml", styles.to_owned()).expect("valid TOML");
+        let (resolved, diagnostics) = cascade::resolve(Some(&sheet), false);
+        assert!(
+            diagnostics.is_empty(),
+            "the test's own styles are not valid: {:?}",
+            diagnostics
+                .iter()
+                .map(|d| d.to_string())
+                .collect::<Vec<_>>()
+        );
+        resolved
+    };
 
     let (mut reporter, _events) = BuildReporter::new();
     let report = build(doc, &request, &CancelToken::new(), &mut reporter);

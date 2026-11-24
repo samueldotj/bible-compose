@@ -261,6 +261,18 @@ pub fn build_with(
         &backend.font_dirs(),
         &mut diagnostics,
     );
+    // And the running head, which prints the book's name in the book's script
+    // in a face of its own — italic, by default — that the body check never
+    // reads (FONT-002).
+    font::preflight_head(
+        &request.settings,
+        body_font.as_ref(),
+        &request.styles,
+        doc,
+        &request.project_root,
+        &backend.font_dirs(),
+        &mut diagnostics,
+    );
     // FONT-004, and for the same reason as the font check: the backend will
     // hyphenate a script that does not hyphenate and say nothing.
     let hyphenation = hyphenation::decide(

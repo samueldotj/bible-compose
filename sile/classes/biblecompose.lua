@@ -1159,6 +1159,36 @@ local function field_value (name)
    return nil
 end
 
+--- The fields whose value is a number or a reference rather than a name.
+--
+-- **Each is set in a box of its own, because the head is one line and the
+-- bidi algorithm reads it as one paragraph.** A reference has no direction of
+-- its own — digits, a colon, a dash — so as text it takes one from its
+-- neighbours, and in a book whose name is Arabic or Hebrew its neighbour is
+-- the book name. After an Arabic letter the digits become Arabic numbers, the
+-- dash between two of them resolves right to left, and the range was
+-- reordered run by run: Romans 6:12–7:23 printed as `-6:127:23` and Nehemiah
+-- 5:16–6:19 as `-5:16:19`, in every reader, because that is the order the
+-- glyphs were placed in.
+--
+-- A box is shaped where it is made and is one object to the line it goes in:
+-- the bidi pass sees a neutral, places it, and does not reach inside. So the
+-- reference reads left to right, the direction both scripts write digits in,
+-- and the book name beside it is still text and still set in its own
+-- direction. The Unicode isolates (U+2068, U+2069) say the same thing in the
+-- text and were tried first; the shaper sets each as a space glyph, and the
+-- head's text layer read " 1 " where the page said "1".
+local BOXED_FIELDS = {
+   page = true,
+   range = true,
+   firstreference = true,
+   lastreference = true,
+   firstchapter = true,
+   firstverse = true,
+   lastchapter = true,
+   lastverse = true,
+}
+
 --- What one slot puts on the page: its template, with each field replaced by
 -- what it reads here.
 --
@@ -1170,39 +1200,56 @@ end
 -- resolver has already refused a template that names no real field or leaves
 -- a brace open, so this reads what it is given.
 function slot_content (template)
-   local out, any_field, any_value = {}, false, false
+   -- Runs of text, and boxed values between them, in template order.
+   local pieces, text, any_field, any_value = {}, {}, false, false
+   local function flush ()
+      if #text > 0 then
+         pieces[#pieces + 1] = { text = table.concat(text) }
+         text = {}
+      end
+   end
    local i, n = 1, #template
    while i <= n do
       local c = template:sub(i, i)
       local following = template:sub(i + 1, i + 1)
       if (c == "{" or c == "}") and following == c then
          -- A doubled brace is a brace of the publisher's own.
-         out[#out + 1] = c
+         text[#text + 1] = c
          i = i + 2
       elseif c == "{" then
          local close = template:find("}", i, true)
          if not close then
-            out[#out + 1] = template:sub(i)
+            text[#text + 1] = template:sub(i)
             break
          end
-         local v = field_value(template:sub(i + 1, close - 1))
+         local name = template:sub(i + 1, close - 1)
+         local v = field_value(name)
          any_field = true
          if v then
             any_value = true
-            out[#out + 1] = v
+            if BOXED_FIELDS[name:gsub("_", ""):lower()] then
+               flush()
+               pieces[#pieces + 1] = { text = v, boxed = true }
+            else
+               text[#text + 1] = v
+            end
          end
          i = close + 1
       else
-         out[#out + 1] = c
+         text[#text + 1] = c
          i = i + 1
       end
    end
+   flush()
    if any_field and not any_value then
       return
    end
-   local text = table.concat(out)
-   if text ~= "" then
-      SILE.typesetter:typeset(text)
+   for _, piece in ipairs(pieces) do
+      if piece.boxed then
+         SILE.call("hbox", {}, { piece.text })
+      elseif piece.text ~= "" then
+         SILE.typesetter:typeset(piece.text)
+      end
    end
 end
 

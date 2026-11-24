@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-remove-invalid-settings"
+description = "Enables the remove_invalid_settings command without any pre-configured scope."
+commands.allow = ["remove_invalid_settings"]
+
+[[permission]]
+identifier = "deny-remove-invalid-settings"
+description = "Denies the remove_invalid_settings command without any pre-configured scope."
+commands.deny = ["remove_invalid_settings"]

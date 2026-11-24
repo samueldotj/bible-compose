@@ -675,6 +675,24 @@ export class Session {
     }
   }
 
+  /**
+   * Take every unusable key out of the project's files at once: the keys a
+   * newer or older release wrote, misspellings, and values that cannot be
+   * read. Each falls back to its built-in value.
+   */
+  async removeInvalidSettings(): Promise<void> {
+    if (!this.project) return;
+    try {
+      this.project = await backend().removeInvalidSettings(this.project.root);
+      this.changes = null;
+      this.fieldErrors = {};
+    } catch (e: unknown) {
+      this.fault = asDiagnostics(e)
+        .map((d) => d.message)
+        .join(" ");
+    }
+  }
+
   async resetSetting(key: string): Promise<void> {
     if (!this.project) return;
     try {

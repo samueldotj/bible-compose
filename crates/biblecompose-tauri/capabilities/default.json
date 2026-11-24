@@ -36,6 +36,7 @@
     "allow-presets",
     "allow-head-fields",
     "allow-apply-preset",
+    "allow-remove-invalid-settings",
     "allow-start-build",
     "allow-cancel-build",
     "allow-is-building",

@@ -135,6 +135,24 @@
     >{copied === "done" ? t("copiedProblems") : copied === "failed" ? t("copyFailed") : t("copyProblems")}</button>
   </div>
 
+  {#if (session.project?.invalidKeys.length ?? 0) > 0}
+    {@const invalid = session.project?.invalidKeys ?? []}
+    <div class="invalid" role="status">
+      <span>
+        {phrases().invalidKeys(invalid.length)}
+        {#each invalid as k, i (k.file + k.key)}
+          <code class="mono" title={k.file}>{k.key}</code>{i < invalid.length - 1 ? ", " : ""}
+        {/each}
+      </span>
+      <button
+        type="button"
+        class="remove"
+        title={t("removeInvalidHint")}
+        onclick={() => session.removeInvalidSettings()}
+      >{t("removeInvalid")}</button>
+    </div>
+  {/if}
+
   <div class="table">
     <div class="thead">
       <span>{t("severity")}</span><span>{t("whereColumn")}</span><span>{t("message")}</span><span>{t("fixIn")}</span>
@@ -166,6 +184,26 @@
 </section>
 
 <style>
+  .invalid {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--warn);
+    background: var(--warn-bg);
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  .invalid span {
+    flex: 1;
+    min-inline-size: 0;
+  }
+  .invalid code {
+    font-size: 12px;
+  }
+  .invalid .remove {
+    flex: none;
+  }
   .build {
     display: flex;
     flex-direction: column;

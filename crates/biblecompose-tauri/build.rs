@@ -43,6 +43,7 @@ const COMMANDS: &[&str] = &[
     "presets",
     "head_fields",
     "apply_preset",
+    "remove_invalid_settings",
     "start_build",
     "cancel_build",
     "is_building",

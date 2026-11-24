@@ -67,8 +67,9 @@ const KNOWN: &[Known] = &[
         needle: "undeclared class option",
         code: code::CLASS_VERSION_MISMATCH,
         message: "the typesetting class and this application are different versions",
-        help: "reinstall BibleCompose — the class it ships with and the one it \
-               found are not the same release",
+        help: "the typesetter loaded a class from another release of \
+               BibleCompose — reinstall BibleCompose; when running it from \
+               source, set BIBLECOMPOSE_SILE_PATH to the source tree's sile folder",
     },
     Known {
         needle: "could not find requested font",

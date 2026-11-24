@@ -311,6 +311,20 @@ export interface Project {
   readonly geometry: Geometry;
   readonly output: string;
   readonly blocked: boolean;
+  /**
+   * Keys in the project's two files this release cannot use — not recognised,
+   * or holding a value it cannot read — which the Problems list offers to
+   * remove all at once.
+   */
+  readonly invalidKeys: readonly InvalidKey[];
+}
+
+/** One key the window can offer to remove. */
+export interface InvalidKey {
+  /** `biblecompose.toml` or `styles.toml`. */
+  readonly file: string;
+  /** The dotted key, `page.gribble` or `heading.s1.shimmer`. */
+  readonly key: string;
 }
 
 /**
@@ -434,6 +448,11 @@ export interface Backend {
    * inspector as having come from the publisher's own file.
    */
   applyPreset(root: string, id: string): Promise<Project>;
+  /**
+   * Remove every key the project's settings and style sheet hold that this
+   * release cannot use, so those settings fall back to their built-in values.
+   */
+  removeInvalidSettings(root: string): Promise<Project>;
   /** The projects this machine has opened, most recent first. */
   recentProjects(): Promise<readonly Recent[]>;
   /** Drop one from that list. The folder is not touched. */
@@ -542,6 +561,7 @@ export const tauriBackend: Backend = {
   presets: () => invoke("presets"),
   headFields: () => invoke("head_fields"),
   applyPreset: (root, id) => invoke("apply_preset", { root, id }),
+  removeInvalidSettings: (root) => invoke("remove_invalid_settings", { root }),
   recentProjects: () => invoke("recent_projects"),
   forgetProject: (root) => invoke("forget_project", { root }),
   createProject: (root, language) => invoke("create_project", { root, language }),

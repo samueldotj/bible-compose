@@ -377,6 +377,19 @@ The common ones:
 | A font cannot draw your Scripture | The message names the character and a verse it appears in |
 | A figure's file is not there | Add it, fix the path, or set `assets.missing_figure = "omit"` while you work |
 | `biblecompose.toml` will not parse | The message gives the line and column |
+| A setting or style this version cannot use | **Remove them**, above the Problems list — see below |
+
+### Settings this version cannot use
+
+A file written by another version of BibleCompose, or edited by hand, can
+hold keys this version does not know — a setting added later, a misspelled
+style property — or a value it cannot read, such as `columns = "two"`. Each
+is listed on the Problems list, and the line above it names them all.
+**Remove them** deletes exactly those keys from `biblecompose.toml` and
+`styles.toml`, and nothing else: your comments and every other setting stay,
+and each removed setting goes back to its built-in value. A file of a
+different `schema_version` is not touched, because every key in it would look
+unknown.
 
 ### The typesetter failed
 

@@ -1036,3 +1036,76 @@ fn an_edition_without_a_look_leaves_the_sheet_alone() {
     write_preset(&root, "large-print").expect("large print applies");
     assert!(!root.join("styles.toml").exists());
 }
+
+// ------------------------------------- removing what this release cannot use
+
+use biblecompose_tauri_lib::remove_invalid_keys;
+
+/// The project lists the keys it cannot use, from both files, and removing
+/// them leaves a project with nothing to complain about and its good settings
+/// intact.
+#[test]
+fn invalid_keys_are_listed_and_removed() {
+    let (_dir, root) = project(Some(
+        "schema_version = 1\n[project]\nname = \"Kept\"\n[page]\ncolumns = \"two\"\nshimmer = 1\n",
+    ));
+    std::fs::write(
+        root.join("styles.toml").as_std_path(),
+        "[verse]\ncolor = \"#123456\"\nsparkle = true\n[chaptr]\nfont_size = \"20pt\"\n",
+    )
+    .expect("styles");
+
+    let before = project_at(&root);
+    let mut listed: Vec<(String, String)> = before
+        .invalid_keys
+        .iter()
+        .map(|k| (k.file.clone(), k.key.clone()))
+        .collect();
+    listed.sort();
+    assert_eq!(
+        listed,
+        [
+            ("biblecompose.toml".to_owned(), "page.columns".to_owned()),
+            ("biblecompose.toml".to_owned(), "page.shimmer".to_owned()),
+            ("styles.toml".to_owned(), "chaptr".to_owned()),
+            ("styles.toml".to_owned(), "verse.sparkle".to_owned()),
+        ]
+    );
+
+    let after = remove_invalid_keys(&root).expect("removed");
+    assert!(after.invalid_keys.is_empty(), "{:?}", after.invalid_keys);
+    assert!(
+        after
+            .diagnostics
+            .iter()
+            .all(|d| !d.code.starts_with("CFG") && !d.code.starts_with("STY")),
+        "{:?}",
+        after
+            .diagnostics
+            .iter()
+            .map(|d| &d.code)
+            .collect::<Vec<_>>()
+    );
+    let settings =
+        std::fs::read_to_string(root.join("biblecompose.toml").as_std_path()).expect("settings");
+    assert!(settings.contains("name = \"Kept\""), "{settings}");
+    let styles = std::fs::read_to_string(root.join("styles.toml").as_std_path()).expect("styles");
+    assert!(styles.contains("color = \"#123456\""), "{styles}");
+}
+
+/// A project with nothing wrong offers nothing, and removing nothing writes
+/// nothing.
+#[test]
+fn a_clean_project_has_nothing_to_remove() {
+    let (_dir, root) = project(Some("schema_version = 1\n[page]\ncolumns = 1\n"));
+    assert!(project_at(&root).invalid_keys.is_empty());
+    let path = root.join("biblecompose.toml");
+    let modified = std::fs::metadata(path.as_std_path())
+        .and_then(|m| m.modified())
+        .expect("mtime");
+    remove_invalid_keys(&root).expect("nothing to do");
+    let again = std::fs::metadata(path.as_std_path())
+        .and_then(|m| m.modified())
+        .expect("mtime");
+    assert_eq!(modified, again, "the file was rewritten");
+}

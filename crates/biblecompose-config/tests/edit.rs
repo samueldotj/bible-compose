@@ -259,3 +259,94 @@ fn a_list_is_written_as_an_array() {
     assert!(file.to_toml().contains(r#"order = ["MAT", "JHN"]"#));
     assert_eq!(*resolve(&file.to_toml()).books.order, ["MAT", "JHN"]);
 }
+
+// ------------------------------------------------ removing what cannot be used
+
+/// **Everything the reader complains about goes, and nothing else does**: a
+/// key this release does not know, a whole table it does not know, and a
+/// value it cannot use. The comment, the good keys and the version stay.
+#[test]
+fn removing_invalid_settings_keeps_everything_that_was_fine() {
+    let text = "\
+# My edition.
+schema_version = 1
+
+[project]
+name = \"My Bible\"
+
+[page]
+columns = \"two\"
+margin_top = \"0.8in\"
+gribble = 3
+
+[gribble]
+a = 1
+";
+    let doc = ConfigDocument::parse("biblecompose.toml", text.to_owned()).expect("valid TOML");
+    let (_, diagnostics) = biblecompose_config::resolve(Some(&doc));
+    let mut keys = biblecompose_config::invalid_keys(&doc, &diagnostics);
+    keys.sort();
+    assert_eq!(keys, ["gribble", "page.columns", "page.gribble"]);
+
+    let mut file = TomlFile::new(doc);
+    let removed = biblecompose_config::remove_invalid(&mut file, &diagnostics);
+    assert_eq!(removed.len(), 3);
+    let after = file.to_toml();
+    assert!(after.contains("# My edition."), "{after}");
+    assert!(after.contains("schema_version = 1"), "{after}");
+    assert!(after.contains("name = \"My Bible\""), "{after}");
+    assert!(after.contains("margin_top = \"0.8in\""), "{after}");
+    assert!(!after.contains("gribble"), "{after}");
+    assert!(!after.contains("\"two\""), "{after}");
+
+    // And what is left resolves without a word.
+    let doc = ConfigDocument::parse("biblecompose.toml", after).expect("still valid TOML");
+    let (_, diagnostics) = biblecompose_config::resolve(Some(&doc));
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+}
+
+/// The same for a style sheet: an element nothing styles, a property no
+/// element has, and a value a property cannot take.
+#[test]
+fn removing_invalid_styles_keeps_everything_that_was_fine() {
+    let text = "\
+[heading.s1]
+align = \"center\"
+shimmer = true
+font_size = \"large\"
+
+[chaptr]
+font_size = \"20pt\"
+
+[verse]
+color = \"#123456\"
+";
+    let doc = ConfigDocument::parse("styles.toml", text.to_owned()).expect("valid TOML");
+    let (_, diagnostics) = biblecompose_config::cascade::resolve(Some(&doc), false);
+    let mut keys = biblecompose_config::invalid_keys(&doc, &diagnostics);
+    keys.sort();
+    assert_eq!(
+        keys,
+        ["chaptr", "heading.s1.font_size", "heading.s1.shimmer"]
+    );
+
+    let mut file = TomlFile::new(doc);
+    biblecompose_config::remove_invalid(&mut file, &diagnostics);
+    let after = file.to_toml();
+    assert!(after.contains("align = \"center\""), "{after}");
+    assert!(after.contains("color = \"#123456\""), "{after}");
+    let doc = ConfigDocument::parse("styles.toml", after).expect("still valid TOML");
+    let (_, diagnostics) = biblecompose_config::cascade::resolve(Some(&doc), false);
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+}
+
+/// A file of the wrong version is not tidied: every key in it would look
+/// unknown, and removing them would delete a newer release's settings.
+#[test]
+fn a_file_of_another_version_is_left_alone() {
+    let text = "schema_version = 99\n[page]\ncolumns = 1\n";
+    let doc = ConfigDocument::parse("biblecompose.toml", text.to_owned()).expect("valid TOML");
+    let (_, diagnostics) = biblecompose_config::resolve(Some(&doc));
+    assert!(!diagnostics.is_empty());
+    assert!(biblecompose_config::invalid_keys(&doc, &diagnostics).is_empty());
+}

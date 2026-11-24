@@ -317,3 +317,65 @@ fn split(key: &str) -> (Vec<&str>, &str) {
     let leaf = parts.pop().expect("a key has at least one segment");
     (parts, leaf)
 }
+
+/// The keys of `doc` that `diagnostics` complain about, as dotted paths.
+///
+/// What "invalid" means is left to the reader that produced the diagnostics:
+/// a key it did not recognise, a style selector or property it has no element
+/// for, or a value it could not use. Each of those is reported *at* the key it
+/// is about, so a key is invalid exactly when a diagnostic points at it. No
+/// second list of what is legal, which would be one more thing to keep in step
+/// with the reader.
+///
+/// A table that is itself the complaint — `[gribble]` — is returned whole and
+/// not descended into. `schema_version` is never returned: a file whose
+/// version is wrong is a different file, not one with a bad line in it, and
+/// removing the version would make it a worse one.
+pub fn invalid_keys(doc: &ConfigDocument, diagnostics: &Diagnostics) -> Vec<String> {
+    let flagged: Vec<&SourceLoc> = diagnostics
+        .iter()
+        .filter_map(|d| d.location.as_ref())
+        .collect();
+    let mut out = Vec::new();
+
+    fn walk(table: &crate::document::Table<'_>, flagged: &[&SourceLoc], out: &mut Vec<String>) {
+        for name in table.names() {
+            let Some(node) = table.get(name) else {
+                continue;
+            };
+            let path = node.dotted_path().to_owned();
+            if path == "schema_version" {
+                continue;
+            }
+            let here = node.loc();
+            if flagged.iter().any(|loc| **loc == here) {
+                out.push(path);
+                continue;
+            }
+            if let Ok(inner) = node.table() {
+                walk(&inner, flagged, out);
+            }
+        }
+    }
+
+    if let Ok(root) = doc.root().table() {
+        walk(&root, &flagged, &mut out);
+    }
+    out
+}
+
+/// Remove every key [`invalid_keys`] names from `file`, returning them.
+///
+/// Through [`TomlFile::reset`], so the rest of the file — its comments, its
+/// order, every key that was fine — is exactly as it was.
+pub fn remove_invalid(file: &mut TomlFile, diagnostics: &Diagnostics) -> Vec<String> {
+    let doc = match ConfigDocument::parse(file.path().to_owned(), file.to_toml()) {
+        Ok(doc) => doc,
+        Err(_) => return Vec::new(),
+    };
+    let keys = invalid_keys(&doc, diagnostics);
+    for key in &keys {
+        file.reset(key);
+    }
+    keys
+}

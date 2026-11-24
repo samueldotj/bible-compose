@@ -4,6 +4,17 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## Unreleased
 
+* **Settings this version cannot use can be removed in one step.** When
+  `biblecompose.toml` or `styles.toml` holds keys this version does not
+  recognise, or values it cannot read, the Problems list names them and a
+  **Remove them** button deletes exactly those keys, keeping your comments
+  and every other setting. A file of another `schema_version` is left alone.
+
+* Running BibleCompose from its source tree now typesets with that tree's
+  own class, so a class option added in the source is no longer refused as
+  SILE-006 by an older class found beside an installed SILE. The SILE-006
+  message now says how to fix it either way.
+
 * **Templates now come with a look.** Five templates now set styles too:
   Standard two-column, Reader's edition, Journaling Bible, Study Bible and
   Reference. Choosing one writes its headings, drop cap, chapter and verse

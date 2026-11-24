@@ -339,6 +339,21 @@ pub struct WireProject {
     pub output: String,
     /// Whether a build can start at all (DIA-002).
     pub blocked: bool,
+    /// The keys in the project's two files that this release cannot use —
+    /// not recognised, or holding a value it cannot read — so the window can
+    /// offer to remove them all at once.
+    #[serde(rename = "invalidKeys")]
+    pub invalid_keys: Vec<WireInvalidKey>,
+}
+
+/// One key the window can offer to remove.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct WireInvalidKey {
+    /// `biblecompose.toml` or `styles.toml`.
+    pub file: String,
+    /// The dotted key: `page.gribble`, `heading.s1.shimmer`, `[chaptr]`'s
+    /// `chaptr`.
+    pub key: String,
 }
 
 /// What the application is configured to do before any project says otherwise.
@@ -1455,6 +1470,106 @@ pub fn write_preset(root: &Utf8Path, id: &str) -> Result<WireProject, Vec<WireDi
     Ok(project_at(root))
 }
 
+/// The source tree's own class directory, in a debug build that has one.
+///
+/// A release build typesets with the class bundled beside its own SILE, which
+/// is the class of the same release. A debug build run from the source tree
+/// usually has no bundle, and finds a SILE elsewhere — on the `PATH`, or the
+/// runtime an installed release unpacked — whose class is that release's, not
+/// this tree's. A class option added since is then refused as undeclared
+/// (SILE-006) though nothing is wrong with the project. The tree's `sile/`
+/// directory goes on the class path, last, so it outranks the one beside the
+/// executable: the same arrangement the tests use.
+fn source_class_dirs() -> Vec<Utf8PathBuf> {
+    if !cfg!(debug_assertions) {
+        return Vec::new();
+    }
+    let dir = Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../sile");
+    if dir.join("classes/biblecompose.lua").exists() {
+        vec![dir]
+    } else {
+        Vec::new()
+    }
+}
+
+/// Every key in the project's settings and style sheet that this release
+/// cannot use, in file order: the settings first.
+///
+/// Read off the same diagnostics the project shows, so a key is offered for
+/// removal exactly when the window is already complaining about it. A file
+/// that does not parse offers nothing — there are no keys to point at — and
+/// its parse error stays on the Problems list.
+fn invalid_keys_at(root: &Utf8Path) -> Vec<WireInvalidKey> {
+    let mut out = Vec::new();
+    let settings_path = root.join(project::SETTINGS_FILE);
+    let mut strict = false;
+    if let Ok(doc) = ConfigDocument::read(&settings_path) {
+        let (settings, diagnostics) = biblecompose_config::resolve(Some(&doc));
+        strict = *settings.strict;
+        out.extend(
+            biblecompose_config::invalid_keys(&doc, &diagnostics)
+                .into_iter()
+                .map(|key| WireInvalidKey {
+                    file: project::SETTINGS_FILE.to_owned(),
+                    key,
+                }),
+        );
+    }
+    let styles_path = root.join(project::STYLES_FILE);
+    if let Ok(doc) = ConfigDocument::read(&styles_path) {
+        let (_, diagnostics) = biblecompose_config::cascade::resolve(Some(&doc), strict);
+        out.extend(
+            biblecompose_config::invalid_keys(&doc, &diagnostics)
+                .into_iter()
+                .map(|key| WireInvalidKey {
+                    file: project::STYLES_FILE.to_owned(),
+                    key,
+                }),
+        );
+    }
+    out
+}
+
+/// Remove every setting and style this release cannot use, so the build can
+/// go ahead on the built-in values for those keys.
+#[tauri::command]
+fn remove_invalid_settings(
+    session: tauri::State<'_, Arc<Session>>,
+    root: String,
+) -> Result<WireProject, Vec<WireDiagnostic>> {
+    let root = Utf8PathBuf::from(root);
+    let project = remove_invalid_keys(&root)?;
+    forget_changes(&session, &root);
+    Ok(project)
+}
+
+/// [`remove_invalid_settings`] without the Tauri binding.
+///
+/// Each file is saved only if something was removed from it, so a file with
+/// nothing wrong is not rewritten — not even with the same bytes, which a
+/// folder watcher would still report as a change.
+pub fn remove_invalid_keys(root: &Utf8Path) -> Result<WireProject, Vec<WireDiagnostic>> {
+    let settings_path = root.join(project::SETTINGS_FILE);
+    let mut strict = false;
+    if let Ok(doc) = ConfigDocument::read(&settings_path) {
+        let (settings, diagnostics) = biblecompose_config::resolve(Some(&doc));
+        strict = *settings.strict;
+        let mut file = TomlFile::new(doc);
+        if !biblecompose_config::remove_invalid(&mut file, &diagnostics).is_empty() {
+            file.save().map_err(|d| vec![WireDiagnostic::from(&d)])?;
+        }
+    }
+    let styles_path = root.join(project::STYLES_FILE);
+    if let Ok(doc) = ConfigDocument::read(&styles_path) {
+        let (_, diagnostics) = biblecompose_config::cascade::resolve(Some(&doc), strict);
+        let mut file = TomlFile::new(doc);
+        if !biblecompose_config::remove_invalid(&mut file, &diagnostics).is_empty() {
+            file.save().map_err(|d| vec![WireDiagnostic::from(&d)])?;
+        }
+    }
+    Ok(project_at(root))
+}
+
 /// Remove one setting, so the built-in value applies again (CFG-007).
 #[tauri::command]
 fn reset_setting(
@@ -1596,7 +1711,8 @@ fn start_build(
         let mut request = BuildRequest::new(root, opened.output())
             .keeping_intermediates(*opened.settings.output.keep_intermediates)
             .with_settings(opened.settings.clone())
-            .with_styles(opened.styles.clone());
+            .with_styles(opened.styles.clone())
+            .with_sile_path(source_class_dirs());
         // Handed to the build rather than only announced, so a project that
         // cannot be opened cannot be built (SRS §16.2 scenario H).
         request.prior = opened.diagnostics.clone();
@@ -1909,6 +2025,7 @@ fn wire_project(root: &Utf8Path, opened: project::Opened) -> WireProject {
         styles: wire_styles(&opened.styles),
         output: opened.output().to_string(),
         blocked: opened.blocked(),
+        invalid_keys: invalid_keys_at(root),
     }
 }
 
@@ -2175,6 +2292,7 @@ pub fn run() {
             presets,
             head_fields,
             apply_preset,
+            remove_invalid_settings,
             start_build,
             cancel_build,
             is_building,

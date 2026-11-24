@@ -338,7 +338,9 @@ fn each_edition_draws_its_furniture() {
         "two-column has a head rule and a foot rule"
     );
     assert!(
-        rules.iter().any(|r| r.is_vertical() && r.length() < height * 0.9),
+        rules
+            .iter()
+            .any(|r| r.is_vertical() && r.length() < height * 0.9),
         "two-column has a gutter rule"
     );
 
@@ -362,5 +364,8 @@ fn each_edition_draws_its_furniture() {
 
     // And the reader's edition carries no furniture at all.
     let (rules, _measure, _height) = rules_of("reader");
-    assert!(rules.is_empty(), "the reader's edition is unruled: {rules:?}");
+    assert!(
+        rules.is_empty(),
+        "the reader's edition is unruled: {rules:?}"
+    );
 }

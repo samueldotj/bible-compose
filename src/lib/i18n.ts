@@ -246,6 +246,9 @@ export interface Chrome {
   readonly fixIn: string;
   readonly nothingToReport: string;
   readonly nothingMatchesFilter: string;
+  /** The button that takes every unusable key out of the project's files. */
+  readonly removeInvalid: string;
+  readonly removeInvalidHint: string;
   /** The button that puts the problems list, grouped, on the clipboard. */
   readonly copyProblems: string;
   readonly copyProblemsHint: string;
@@ -353,6 +356,8 @@ export interface Phrases {
   /** `page 41 of about 88`. */
   readonly pagesSoFar: (done: number, expected: number | null) => string;
   readonly errorsMustBeFixed: (count: number) => string;
+  /** `2 settings in your files can't be used by this version`. */
+  readonly invalidKeys: (count: number) => string;
   readonly inheritedFrom: (name: string) => string;
   /** `3 files have changed on disk`. */
   readonly changedOnDisk: (count: number) => string;
@@ -825,6 +830,9 @@ export const EN: Catalogue = {
     fixIn: "Fix in",
     nothingToReport: "Nothing to report.",
     nothingMatchesFilter: "Nothing matches the filter.",
+    removeInvalid: "Remove them",
+    removeInvalidHint:
+      "Delete these keys from the project's files. Each setting goes back to its built-in value; everything else in the files is kept.",
     copyProblems: "Copy",
     copyProblemsHint:
       "Copy the problems shown, each distinct one once with how often and where it happened.",
@@ -909,6 +917,10 @@ export const EN: Catalogue = {
     textBlock: (page, block) => `${page} · text block ${block}`,
     pagesSoFar: (done, expected) =>
       expected ? `page ${done} of about ${expected}` : `page ${done}`,
+    invalidKeys: (count) =>
+      count === 1
+        ? "1 setting in your files can't be used by this version:"
+        : `${count} settings in your files can't be used by this version:`,
     errorsMustBeFixed: (count) =>
       `${count} error${count === 1 ? "" : "s"} must be fixed before a build can run.`,
     inheritedFrom: (name) => `inherited from ${name}`,

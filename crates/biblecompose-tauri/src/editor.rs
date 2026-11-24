@@ -225,6 +225,31 @@ mod tests {
         );
     }
 
+    /// **The editor does no update check of its own here** (ADR-008).
+    ///
+    /// easy-usfm's own application turns the plugin's `updater` feature on and
+    /// asks its user on first run; inside BibleCompose the editor is updated
+    /// with this application, by the one check a person clicks for, and must
+    /// not ask a second question or make a second request. Two locks, both
+    /// asserted: the feature is off in the graph this crate is actually built
+    /// with — so a dependency that turned it on through feature unification
+    /// fails here, not in a publisher's window — and the editor window is
+    /// denied the command even so.
+    #[test]
+    fn the_editor_brings_no_update_check_of_its_own() {
+        assert!(
+            !tauri_plugin_easy_usfm::updates::updates_possible(),
+            "tauri-plugin-easy-usfm was built with its `updater` feature on — \
+             something in this workspace enabled it, and the editor would offer \
+             BibleCompose's users a second update check"
+        );
+        let editor = include_str!("../capabilities/editor.json");
+        assert!(
+            editor.contains("\"easy-usfm:deny-check-for-update\""),
+            "the editor window should be denied easy-usfm's update check"
+        );
+    }
+
     /// **The old editor goes and the typesetter stays.** They share the cache
     /// folder, and removing the wrong one costs a publisher an unpack.
     #[test]

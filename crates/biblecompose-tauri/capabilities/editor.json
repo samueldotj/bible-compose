@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "editor",
-  "description": "What an editor window — easy-usfm, opened on one of the project's books (ADR-007) — is permitted to do. The editor's own shell commands (`easy-usfm:default`), which open only the book the window was opened on and save it through easy-usfm's save ladder; the dialogs Save As, Insert Image and the unsaved-changes guard need; setting its own title and closing itself; and handing a link to the operating system. None of BibleCompose's own commands: an editor renders a book's text and has no reason to start a build, fetch a font or open a project.",
+  "description": "What an editor window — easy-usfm, opened on one of the project's books (ADR-007) — is permitted to do. The editor's own shell commands (`easy-usfm:default`), which open only the book the window was opened on and save it through easy-usfm's save ladder; the dialogs Save As, Insert Image and the unsaved-changes guard need; setting its own title and closing itself; and handing a link to the operating system. None of BibleCompose's own commands: an editor renders a book's text and has no reason to start a build, fetch a font or open a project. And not easy-usfm's own update check, which `easy-usfm:default` would grant: BibleCompose updates the editor with itself (ADR-008), and the check is also compiled out of the plugin here, so the deny is the second of two locks.",
   "windows": [
     "editor-*"
   ],
@@ -10,6 +10,7 @@
     "core:window:allow-set-title",
     "core:window:allow-destroy",
     "easy-usfm:default",
+    "easy-usfm:deny-check-for-update",
     "dialog:allow-open",
     "dialog:allow-save",
     "dialog:allow-ask",

@@ -5,8 +5,8 @@
 # text itself. The chapter number stands on its own line, centred and framed
 # in a red rule, above the dropped initial the settings ask for.
 #
-# The design this comes from also draws a double rule round every page;
-# this release has no page border, so the frame is the one round the number.
+# The page itself is framed in a double red rule; that is a page setting, in
+# `illuminated.toml`.
 
 [chapter]
 font_size = "18pt"
@@ -53,3 +53,14 @@ color = "#9e2a1f"
 
 [folio]
 color = "#9e2a1f"
+
+[paragraph.p]
+first_line_indent = "14pt"
+
+# The dropped initial boxed in a red rule and set in red, as the rubricated
+# initial of a manuscript.
+[initial]
+weight = 700
+color = "#9e2a1f"
+border = true
+border_width = "0.8pt"

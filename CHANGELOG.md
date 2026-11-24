@@ -15,6 +15,28 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   you set before choosing a template is kept unless the template sets it
   too, and no template changes your font.
 
+* **Rules, a page frame and note lines.** A new Rules & frame section can
+  draw a rule under the running head, over the foot line and down the gutter
+  between columns, a single or double frame round every page, and ruled lines
+  in the outer margin for notes. All of them share one colour, and none is
+  drawn unless you ask.
+
+* **Paragraphs can indent their first line.** `paragraph.p` has a first-line
+  indent. A paragraph that opens a chapter or follows a heading is set flush
+  whatever it says. Headings are no longer indented, and neither is the line
+  that opens a chapter, which was indented by one line of leading before.
+
+* **The dropped initial has a style of its own**, `initial`: its face,
+  weight, colour and an optional box round it.
+
+* **The foot line is set in its own style.** It used the running head's face
+  before. Head and foot now each take their own style's colour as well.
+
+* The templates use all of this: the classic two-column page has its head,
+  foot and gutter rules and indented paragraphs; the journaling page rules its
+  margin for writing; the illuminated page is framed in a double red rule,
+  with a boxed red initial.
+
 ## 0.5.0
 
 * **BibleCompose can update itself, when you ask.** The start screen has a

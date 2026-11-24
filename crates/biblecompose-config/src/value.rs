@@ -528,6 +528,18 @@ spelled! {
 }
 
 spelled! {
+    /// A rule drawn round every page of the book, inside the trim.
+    PageFrame {
+        /// No frame.
+        None => "none",
+        /// One rule.
+        Single => "single",
+        /// Two rules of one weight, a little apart, as a lectern Bible's.
+        Double => "double",
+    }
+}
+
+spelled! {
     /// Where a book begins, relative to the one before it.
     BookStart {
         /// Where the previous book ended, with no break at all.

@@ -43,3 +43,6 @@ font_size = "7.6pt"
 italic = false
 smallcaps = true
 weight = 600
+
+[paragraph.p]
+first_line_indent = "10pt"

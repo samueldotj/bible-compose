@@ -48,3 +48,12 @@ align = "center"
 
 [folio]
 italic = true
+
+[paragraph.p]
+first_line_indent = "12pt"
+
+# The dropped initial in the chapter number's green, so the two read as one
+# opening.
+[initial]
+weight = 500
+color = "#3f5b3a"

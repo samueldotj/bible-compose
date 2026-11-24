@@ -55,6 +55,9 @@ pub enum StyleSelector {
     ListItem(ListStyle, u8),
     /// The chapter number where it is set, not the chapter as a division.
     Chapter,
+    /// The chapter's dropped initial letter, when `contents.drop_caps` drops
+    /// the letter rather than the number.
+    Initial,
     Verse,
     Note(NoteKind),
     /// A cross-reference. Its own selector rather than a kind of note, for the
@@ -79,6 +82,7 @@ impl StyleSelector {
             StyleSelector::Character(_) => "character",
             StyleSelector::ListItem(..) => "list",
             StyleSelector::Chapter => "chapter",
+            StyleSelector::Initial => "initial",
             StyleSelector::Verse => "verse",
             StyleSelector::Note(_) => "note",
             StyleSelector::Reference => "reference",
@@ -101,6 +105,7 @@ impl StyleSelector {
             StyleSelector::Note(NoteKind::Footnote) => Some("f".to_owned()),
             StyleSelector::Note(NoteKind::Endnote) => Some("fe".to_owned()),
             StyleSelector::Chapter
+            | StyleSelector::Initial
             | StyleSelector::Verse
             | StyleSelector::Reference
             | StyleSelector::Figure
@@ -147,6 +152,7 @@ impl StyleSelector {
             ("note", Some("f")) => Some(StyleSelector::Note(NoteKind::Footnote)),
             ("note", Some("fe")) => Some(StyleSelector::Note(NoteKind::Endnote)),
             ("chapter", None) => Some(StyleSelector::Chapter),
+            ("initial", None) => Some(StyleSelector::Initial),
             ("verse", None) => Some(StyleSelector::Verse),
             ("reference", None) => Some(StyleSelector::Reference),
             ("figure", None) => Some(StyleSelector::Figure),
@@ -197,6 +203,7 @@ impl StyleSelector {
         }
         out.extend([
             StyleSelector::Chapter,
+            StyleSelector::Initial,
             StyleSelector::Verse,
             StyleSelector::Note(NoteKind::Footnote),
             StyleSelector::Note(NoteKind::Endnote),

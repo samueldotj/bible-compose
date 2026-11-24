@@ -55,6 +55,7 @@ const INDENT: PropertyRow = { name: "indent", label: "Indent", kind: "length" };
 const RAISE: PropertyRow = { name: "raise", label: "Raise", kind: "length" };
 const ALIGN: PropertyRow = { name: "align", label: "Alignment", kind: "align" };
 const COLOR: PropertyRow = { name: "color", label: "Colour", kind: "color" };
+const FIRST_LINE: PropertyRow = { name: "first_line_indent", label: "First-line indent", kind: "length" };
 
 // The chapter number's own decisions: where it sits, whether it takes a
 // line, what surrounds it. Where a chapter *opens* is a Contents setting.
@@ -99,6 +100,7 @@ export const ALL_PROPERTIES: readonly PropertyRow[] = [
   OWN_LINE,
   GAP_BEFORE,
   GAP_AFTER,
+  FIRST_LINE,
 ];
 
 export const STYLE_GROUPS: readonly StyleGroup[] = [
@@ -117,7 +119,7 @@ export const STYLE_GROUPS: readonly StyleGroup[] = [
     id: "paragraphs",
     title: "Paragraphs",
     rows: [
-      { selector: "paragraph.p", label: "Body", properties: [ABOVE, BELOW, INDENT, ALIGN] },
+      { selector: "paragraph.p", label: "Body", properties: [FIRST_LINE, ABOVE, BELOW, INDENT, ALIGN] },
       { selector: "paragraph.pc", label: "Centred", properties: [ABOVE, BELOW, ALIGN] },
       { selector: "paragraph.ip", label: "Introduction", properties: [SIZE, ITALIC, ABOVE, BELOW] },
     ],
@@ -157,6 +159,11 @@ export const STYLE_GROUPS: readonly StyleGroup[] = [
           BORDER_WIDTH,
         ],
       },
+      {
+        selector: "initial",
+        label: "Dropped initial",
+        properties: [FACE, WEIGHT, ITALIC, COLOR, BORDER, BORDER_WIDTH],
+      },
       { selector: "verse", label: "Verse number", properties: [SIZE, WEIGHT, RAISE, COLOR] },
     ],
   },
@@ -185,8 +192,8 @@ export const STYLE_GROUPS: readonly StyleGroup[] = [
     id: "furniture",
     title: "Page furniture",
     rows: [
-      { selector: "head", label: "Running head", properties: [SIZE, ITALIC] },
-      { selector: "folio", label: "Page number", properties: [SIZE, ITALIC] },
+      { selector: "head", label: "Running head", properties: [SIZE, WEIGHT, ITALIC, SMALLCAPS, COLOR] },
+      { selector: "folio", label: "Foot line", properties: [SIZE, WEIGHT, ITALIC, SMALLCAPS, COLOR] },
       { selector: "caption", label: "Figure caption", properties: [SIZE, ITALIC] },
     ],
   },

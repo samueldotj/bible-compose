@@ -26,8 +26,8 @@ use crate::document::{ConfigDocument, Located, Node};
 use crate::provenance::{Provenance, Sourced};
 use crate::value::{
     self, Anchors, BookStart, CallerStyle, ChapterStart, Color, CoverBinding, CoverBorder,
-    CoverPaper, DropCap, HeadTemplate, Length, MissingAsset, NumberPlacement, PageSize, QuoteHang,
-    QuoteStart, ReferencePlacement, RestartNumbering, VerseStart,
+    CoverPaper, DropCap, HeadTemplate, Length, MissingAsset, NumberPlacement, PageFrame, PageSize,
+    QuoteHang, QuoteStart, ReferencePlacement, RestartNumbering, VerseStart,
 };
 
 /// The settings vocabulary this release speaks.
@@ -120,6 +120,24 @@ pub struct Page {
     pub column_gap: Sourced<Length>,
     pub header_gap: Sourced<Length>,
     pub footer_gap: Sourced<Length>,
+    /// A rule down the middle of the gutter between columns; zero for none.
+    pub column_rule: Sourced<Length>,
+    /// A rule under the running head, across the text block; zero for none.
+    pub header_rule: Sourced<Length>,
+    /// A rule over the foot line, likewise.
+    pub footer_rule: Sourced<Length>,
+    /// The ink of every rule above, of the frame and of the note lines.
+    pub rule_color: Sourced<Color>,
+    /// A rule round the whole page, inside the trim.
+    pub frame: Sourced<PageFrame>,
+    /// How thick each of the frame's rules is.
+    pub frame_width: Sourced<Length>,
+    /// How far in from the trim the frame is drawn.
+    pub frame_inset: Sourced<Length>,
+    /// Ruled lines in the outer margin, for the reader's own notes.
+    pub note_lines: Sourced<bool>,
+    /// The distance between those lines.
+    pub note_line_spacing: Sourced<Length>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -672,6 +690,15 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             column_gap: r.value("page.column_gap", value::length_or_zero),
             header_gap: r.value("page.header_gap", value::length_or_zero),
             footer_gap: r.value("page.footer_gap", value::length_or_zero),
+            column_rule: r.value("page.column_rule", value::length_or_zero),
+            header_rule: r.value("page.header_rule", value::length_or_zero),
+            footer_rule: r.value("page.footer_rule", value::length_or_zero),
+            rule_color: r.value("page.rule_color", value::color),
+            frame: r.value("page.frame", |n| value::choice(n, PageFrame::NAMES)),
+            frame_width: r.value("page.frame_width", value::length_or_zero),
+            frame_inset: r.value("page.frame_inset", value::length_or_zero),
+            note_lines: r.value("page.note_lines", |n| n.boolean()),
+            note_line_spacing: r.value("page.note_line_spacing", value::length),
         },
         typography: Typography {
             font_family: r.value("typography.font_family", |n| n.string()),

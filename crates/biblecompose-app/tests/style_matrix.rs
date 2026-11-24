@@ -20,13 +20,14 @@ use camino::Utf8PathBuf;
 /// Checked against the schema below rather than trusted: a class added to
 /// `StyleSelector` and forgotten here would leave a whole kind of element
 /// untested.
-const ONE_PER_CLASS: [&str; 14] = [
+const ONE_PER_CLASS: [&str; 15] = [
     "paragraph.p",
     "poetry.q1",
     "heading.s1",
     "character.bd",
     "list.li1",
     "chapter",
+    "initial",
     "verse",
     "note.f",
     "reference",
@@ -42,10 +43,11 @@ const ONE_PER_CLASS: [&str; 14] = [
 /// The levelled families are deliberately absent: `poetry.q1` has three
 /// descendants and changing it *should* move them, which is the test below
 /// this one.
-const LEAVES: [&str; 8] = [
+const LEAVES: [&str; 9] = [
     "paragraph.p",
     "character.bd",
     "chapter",
+    "initial",
     "verse",
     "note.f",
     "reference",
@@ -83,7 +85,8 @@ fn every_property() -> String {
      border_width = \"0.75pt\"\n\
      own_line = true\n\
      gap_before = \"2pt\"\n\
-     gap_after = \"6pt\"\n"
+     gap_after = \"6pt\"\n\
+     first_line_indent = \"11pt\"\n"
         .to_owned()
 }
 

@@ -100,6 +100,10 @@ pub struct Style {
     pub gap_before: Option<Length>,
     /// And after it.
     pub gap_after: Option<Length>,
+    /// The indent of a paragraph's first line, as a book sets one — not the
+    /// whole block, which is `indent`. A paragraph that opens a chapter or
+    /// follows a heading is set flush whatever this says, as a book sets it.
+    pub first_line_indent: Option<Length>,
 }
 
 impl Style {
@@ -131,6 +135,7 @@ impl Style {
             own_line: other.own_line.or(self.own_line),
             gap_before: other.gap_before.or(self.gap_before),
             gap_after: other.gap_after.or(self.gap_after),
+            first_line_indent: other.first_line_indent.or(self.first_line_indent),
         }
     }
 }
@@ -143,7 +148,7 @@ pub const INHERITS: &str = "inherits";
 ///
 /// Used to read a style and to detect a misspelled property, so the two
 /// cannot disagree about what is legal.
-pub const PROPERTIES: [&str; 16] = [
+pub const PROPERTIES: [&str; 17] = [
     "font_family",
     "font_size",
     "weight",
@@ -160,6 +165,7 @@ pub const PROPERTIES: [&str; 16] = [
     "own_line",
     "gap_before",
     "gap_after",
+    "first_line_indent",
 ];
 
 /// One selector's entry in a sheet: what it says, what it inherits from, and
@@ -406,6 +412,10 @@ fn read_into(
     });
     read("gap_after", &mut |n| {
         style.gap_after = Some(value::length_or_zero(n)?.value);
+        Ok(())
+    });
+    read("first_line_indent", &mut |n| {
+        style.first_line_indent = Some(value::length_or_zero(n)?.value);
         Ok(())
     });
 

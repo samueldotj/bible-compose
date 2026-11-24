@@ -403,9 +403,11 @@ fn d_footnote() {
     // The caller is on the same page as the verse that called it, and above
     // the note — which is what "remains associated with its caller" means once
     // it is a page rather than a model.
+    // A word of the verse rather than a phrase: where its lines break moves
+    // with the measure, and a phrase can straddle two.
     let verse = lines
         .iter()
-        .find(|l| l.text().replace(' ', "").contains("Nowtheearthwas"))
+        .find(|l| l.text().replace(' ', "").contains("formless"))
         .expect("the verse that called it");
     assert_eq!(verse.page, note.page, "the note left its caller's page");
     assert!(note.y < verse.y, "the note should be below the text");
@@ -428,10 +430,21 @@ fn e_cross_reference() {
         // Not the running head, which on the Genesis page reads
         // `Genesis 1:1-1:2` and would match anything looking for the
         // reference's text.
+        //
+        // The start of the book's name rather than the whole reference:
+        // inline, the reference runs in the text, and its line may break
+        // after the name or hyphenate inside it.
+        // And John's page alone: the contents page names Genesis too.
+        let john = lines
+            .iter()
+            .find(|l| l.text().replace(' ', "").contains("Throughhim"))
+            .expect("John's page")
+            .page;
         let reference = lines
             .iter()
-            .filter(|l| l.sizes() != vec![8.2])
-            .find(|l| l.text().replace(' ', "").contains("Genesis1:1"))
+            .filter(|l| l.page == john)
+            .filter(|l| !l.sizes().contains(&8.2) && !l.sizes().contains(&16.0))
+            .find(|l| l.text().replace(' ', "").contains("Gene"))
             .unwrap_or_else(|| panic!("the reference should be on the page for {placement}"));
 
         // In the note area it is set apart at the foot; inline it is in the

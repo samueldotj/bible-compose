@@ -1785,6 +1785,10 @@ fn wire_style_properties(resolved: &biblecompose_config::ResolvedStyle) -> Vec<W
         ("own_line", s.own_line.map(|b| b.to_string())),
         ("gap_before", s.gap_before.map(|l| l.to_string())),
         ("gap_after", s.gap_after.map(|l| l.to_string())),
+        (
+            "first_line_indent",
+            s.first_line_indent.map(|l| l.to_string()),
+        ),
     ];
 
     values

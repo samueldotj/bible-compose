@@ -260,6 +260,7 @@ fn take(into: &mut ResolvedStyle, from: &Style, origin: impl Fn(&'static str) ->
         own_line = "own_line",
         gap_before = "gap_before",
         gap_after = "gap_after",
+        first_line_indent = "first_line_indent",
     }
 }
 

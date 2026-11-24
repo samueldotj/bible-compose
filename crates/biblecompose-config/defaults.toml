@@ -53,6 +53,26 @@ column_gap = "0.21in"    # was 3.5%pw
 header_gap = "0.36in"    # was 4%ph
 footer_gap = "0.27in"    # was 3%ph
 
+# Rules: one down the gutter, one under the running head and one over the foot
+# line, each as thick as it says — zero is no rule, which is the built-in
+# page. They and the frame and the note lines below share one ink.
+column_rule = "0pt"
+header_rule = "0pt"
+footer_rule = "0pt"
+rule_color = "#000000"
+
+# A rule round every page, `frame_inset` in from the trim: "none", "single",
+# or "double" — two rules of `frame_width` each, a little apart.
+frame = "none"
+frame_width = "0.6pt"
+frame_inset = "0.3in"
+
+# Ruled lines across the outer margin, for a journaling edition's notes: from
+# the head of the text block to its foot, `note_line_spacing` apart, between
+# the column and the frame or trim.
+note_lines = false
+note_line_spacing = "18pt"
+
 [typography]
 font_family = "DejaVu Serif"
 font_size = "9.2pt"

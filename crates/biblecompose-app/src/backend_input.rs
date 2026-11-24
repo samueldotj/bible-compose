@@ -78,6 +78,16 @@ pub fn class_options_with(
     put("gutter", s.page.column_gap.to_sile());
     put("headsep", s.page.header_gap.to_sile());
     put("footsep", s.page.footer_gap.to_sile());
+    // The page's furniture, drawn by the class at the end of each page.
+    put("columnrule", s.page.column_rule.to_sile());
+    put("headerrule", s.page.header_rule.to_sile());
+    put("footerrule", s.page.footer_rule.to_sile());
+    put("rulecolor", s.page.rule_color.to_string());
+    put("frame", s.page.frame.to_string());
+    put("framewidth", s.page.frame_width.to_sile());
+    put("frameinset", s.page.frame_inset.to_sile());
+    put("notelines", flag(*s.page.note_lines));
+    put("notelinespacing", s.page.note_line_spacing.to_sile());
 
     // Typography.
     // **Not quoted**, unlike the path below it. A family name is handed to
@@ -316,6 +326,10 @@ fn properties_of(
     put("own_line", s.own_line.map(flag));
     put("gap_before", s.gap_before.map(|l| l.to_sile()));
     put("gap_after", s.gap_after.map(|l| l.to_sile()));
+    put(
+        "first_line_indent",
+        s.first_line_indent.map(|l| l.to_sile()),
+    );
 
     debug_assert!(
         out.len() <= PROPERTIES.len(),

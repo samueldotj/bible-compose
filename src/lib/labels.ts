@@ -38,6 +38,23 @@ export const GROUPS: readonly Group[] = [
   },
   // What a figure with no file does to the build.
   { id: "figures", title: "Figures", keys: ["assets.missing_figure"] },
+  // The rules drawn on every page, the frame round it, and the ruled margin
+  // of a journaling edition: furniture, in one ink.
+  {
+    id: "rules",
+    title: "Rules and frame",
+    keys: [
+      "page.header_rule",
+      "page.footer_rule",
+      "page.column_rule",
+      "page.rule_color",
+      "page.frame",
+      "page.frame_width",
+      "page.frame_inset",
+      "page.note_lines",
+      "page.note_line_spacing",
+    ],
+  },
   // A setting, but one about how the numbers *look*, so it sits with their
   // styles rather than with the switches that say whether they show.
   { id: "margin_numbers", title: "Numbers in the margin", keys: ["numbering.margin_gap"] },
@@ -265,6 +282,7 @@ export const TABS: readonly Tab[] = [
   { id: "notes", title: "Notes", nav: "text", canvas: "spread", settingGroups: [], example: "notes" },
   { id: "page", title: "Trim & margins", nav: "page", canvas: "spread", settingGroups: [], trim: true },
   { id: "headers", title: "Headers & footers", nav: "page", canvas: "spread", settingGroups: [], headers: true },
+  { id: "rules", title: "Rules & frame", nav: "page", canvas: "spread", settingGroups: ["rules"] },
   { id: "figures", title: "Figures", nav: "page", canvas: "spread", settingGroups: ["figures"] },
   { id: "styles", title: "Styles", nav: "type", canvas: "spread", settingGroups: [], styles: true },
   { id: "metadata", title: "PDF metadata", nav: "output", canvas: "spread", settingGroups: ["metadata"] },

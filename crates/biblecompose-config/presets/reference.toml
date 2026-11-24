@@ -17,6 +17,12 @@ margin_outer = "0.45in"
 margin_top = "0.65in"
 margin_bottom = "0.7in"
 column_gap = "0.2in"
+# A heavy rule under the head, as a reference Bible's, a light one over the
+# notes, and one between the columns.
+header_rule = "1.2pt"
+footer_rule = "0.5pt"
+column_rule = "0.5pt"
+rule_color = "#1b1a17"
 
 [typography]
 font_size = "8.5pt"

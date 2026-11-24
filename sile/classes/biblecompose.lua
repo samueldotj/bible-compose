@@ -99,6 +99,21 @@ local OPTIONS = {
    { key = "margininner", kind = "string", default = "11%pw" },
    { key = "marginouter", kind = "string", default = "8%pw" },
    { key = "headsep", kind = "string", default = "4%ph" },
+   -- The page's rules: down the gutter, under the head, over the foot. Each
+   -- is a thickness, "0pt" for none. One ink for all of them, the frame and
+   -- the note lines.
+   { key = "columnrule", kind = "string", default = "0pt" },
+   { key = "headerrule", kind = "string", default = "0pt" },
+   { key = "footerrule", kind = "string", default = "0pt" },
+   { key = "rulecolor", kind = "string", default = "#000000" },
+   -- A frame round every page, `frameinset` in from the trim: none, single,
+   -- double.
+   { key = "frame", kind = "string", default = "none" },
+   { key = "framewidth", kind = "string", default = "0.6pt" },
+   { key = "frameinset", kind = "string", default = "0.3in" },
+   -- Ruled lines across the outer margin, for the reader's own notes.
+   { key = "notelines", kind = "boolean", default = false },
+   { key = "notelinespacing", kind = "string", default = "18pt" },
    { key = "footsep", kind = "string", default = "3%ph" },
    -- Typography.
    { key = "fontfamily", kind = "string", default = "DejaVu Serif" },
@@ -332,6 +347,7 @@ end
 -- below with the rest of the quotation hang. A Lua upvalue is bound where
 -- the closure is written, so a later `local` would leave that a nil global.
 local quote_hang_lines
+local page_rules, page_frame
 
 function class:_init (options)
    -- Parse options and install the frameset BEFORE plain._init, because that
@@ -752,10 +768,16 @@ function class:endPage ()
       local side = (self.oddPage and self:oddPage()) and "recto" or "verso"
       set_line(SILE.getFrame("runningHead"), {
          o[side .. "headerleft"], o[side .. "headercenter"], o[side .. "headerright"],
-      })
+      }, "head")
       set_line(SILE.getFrame("folio"), {
          o[side .. "footerleft"], o[side .. "footercenter"], o[side .. "footerright"],
-      })
+      }, "folio")
+      page_rules(o, side == "recto")
+   end
+   -- The frame goes round every page that is not left blank, front matter
+   -- included: a title page inside the book's frame is the same book.
+   if not blank then
+      page_frame(o)
    end
    -- **After the head, not before.** The head for this page is built from the
    -- references collected on it; this records the last of them so that the
@@ -1259,7 +1281,7 @@ end
 -- left one starts at the margin, the right one ends at it, and the middle one
 -- lands between them wherever they leave it. An empty slot contributes
 -- nothing but its glue, so two empties and a centre still centre.
-function set_line (frame, slots)
+function set_line (frame, slots, selector)
    if not frame then
       return
    end
@@ -1278,18 +1300,157 @@ function set_line (frame, slots)
       SILE.settings:set("document.lskip", SILE.types.node.glue())
       SILE.settings:set("document.rskip", SILE.types.node.glue())
       SILE.settings:set("typesetter.parfillskip", SILE.types.node.glue())
-      SILE.call("font", face(style("head")) or {}, function ()
+      -- Each line in its own style — the head in `head`, the foot in
+      -- `folio` — and in its colour as well as its face: a rubricated head
+      -- is red.
+      local s = style(selector or "head")
+      local function line ()
          for i, slot in ipairs(slots) do
             if i > 1 then
                SILE.call("hfill")
             end
             slot_content(slot)
          end
+      end
+      SILE.call("font", face(s) or {}, function ()
+         if s.color then
+            SILE.call("color", { color = s.color }, line)
+         else
+            line()
+         end
       end)
       SILE.call("par")
    end)
 end
 
+
+--- A thickness option as points; zero, absent or unreadable is no rule.
+local function thickness (value)
+   if not value or value == "" then
+      return 0
+   end
+   local ok, m = pcall(SILE.types.measurement, value)
+   if not ok then
+      return 0
+   end
+   return m:tonumber()
+end
+
+--- Draw `body`'s rules in the page's rule ink.
+local function in_rule_ink (o, body)
+   local ok, color = pcall(SILE.types.color, o.rulecolor or "#000000")
+   if ok and color then
+      SILE.outputter:pushColor(color)
+      body()
+      SILE.outputter:popColor()
+   else
+      body()
+   end
+end
+
+--- The text block's edges on this page: left, right, top and bottom, in
+--- points from the page's top left. The bottom is the note area's, which is
+--- fixed, so a page with notes and one without put the foot rule in one place.
+local function text_block ()
+   local a = SILE.getFrame("contentA")
+   local ok, b = pcall(SILE.getFrame, "contentB")
+   local right = (ok and b) and b:right():tonumber() or a:right():tonumber()
+   local notes = SILE.getFrame("footnotes")
+   local bottom = notes and notes:bottom():tonumber() or a:bottom():tonumber()
+   return a:left():tonumber(), right, a:top():tonumber(), bottom
+end
+
+--- The rules a body page carries: under the head, over the foot, down the
+--- gutter, and the note lines in the outer margin.
+--
+-- Drawn at the end of the page, when every frame's place is final, straight
+-- to the outputter. They are furniture: nothing typeset moves to make room
+-- for them, and the gaps the settings already give the head and the foot are
+-- where they go.
+function page_rules (o, recto)
+   local left, right, top, bottom = text_block()
+   local width = right - left
+   in_rule_ink(o, function ()
+      local head = thickness(o.headerrule)
+      local frame = SILE.getFrame("runningHead")
+      if head > 0 and frame then
+         -- A little over halfway down the head's gap: below the line of the
+         -- head, with room still between the rule and the text.
+         local htop = frame:top():tonumber()
+         local y = htop + (top - htop) * 0.55
+         SILE.outputter:drawRule(left, y, width, head)
+      end
+
+      local foot = thickness(o.footerrule)
+      local folio = SILE.getFrame("folio")
+      if foot > 0 and folio then
+         local ftop = folio:top():tonumber()
+         local y = bottom + (ftop - bottom) * 0.35
+         SILE.outputter:drawRule(left, y, width, foot)
+      end
+
+      local gutter_rule = thickness(o.columnrule)
+      local ok, gutter = pcall(SILE.getFrame, "gutter")
+      if gutter_rule > 0 and ok and gutter and (o.columns or 1) >= 2 then
+         local a = SILE.getFrame("contentA")
+         local x = (gutter:left():tonumber() + gutter:right():tonumber()) / 2 - gutter_rule / 2
+         local y1, y2 = a:top():tonumber(), a:bottom():tonumber()
+         SILE.outputter:drawRule(x, y1, gutter_rule, y2 - y1)
+      end
+
+      if o.notelines then
+         -- From the column's outer edge, a gap out, to a gap short of the
+         -- frame or the trim; from the top of the text block to its foot.
+         local paper = SILE.documentState.paperSize[1]
+         local gap = 10
+         local start, stop = gap, paper - gap
+         if o.frame == "single" or o.frame == "double" then
+            local inset = thickness(o.frameinset)
+            start, stop = inset + gap, paper - inset - gap
+         end
+         local x1, x2
+         if recto then
+            x1, x2 = right + gap, stop
+         else
+            x1, x2 = start, left - gap
+         end
+         local spacing = thickness(o.notelinespacing)
+         if spacing > 2 and x2 - x1 > 12 then
+            local y = top + spacing
+            while y <= bottom do
+               SILE.outputter:drawRule(x1, y, x2 - x1, 0.4)
+               y = y + spacing
+            end
+         end
+      end
+   end)
+end
+
+--- A frame round the page, inside the trim: one rule, or two a little apart.
+function page_frame (o)
+   if o.frame ~= "single" and o.frame ~= "double" then
+      return
+   end
+   local w = thickness(o.framewidth)
+   if w <= 0 then
+      return
+   end
+   local inset = thickness(o.frameinset)
+   local pw, ph = SILE.documentState.paperSize[1], SILE.documentState.paperSize[2]
+   local function box (x, y, width, height)
+      SILE.outputter:drawRule(x, y, width, w)
+      SILE.outputter:drawRule(x, y + height - w, width, w)
+      SILE.outputter:drawRule(x, y, w, height)
+      SILE.outputter:drawRule(x + width - w, y, w, height)
+   end
+   in_rule_ink(o, function ()
+      box(inset, inset, pw - 2 * inset, ph - 2 * inset)
+      if o.frame == "double" then
+         local gap = w * 2 + 2
+         box(inset + gap, inset + gap, pw - 2 * (inset + gap), ph - 2 * (inset + gap))
+      end
+   end)
+end
 
 local function styled (selector, body)
    local s = style(selector)
@@ -2557,6 +2718,10 @@ function class:registerXmlCommands ()
       local s = style(selector)
       SILE.call("goodbreak")
       skip(s.space_above)
+      -- A heading is never indented: a centred one would sit off centre by
+      -- the indent, and a flush one would not be flush.
+      SILE.call("noindent")
+      scratch().flush_next = true
       local align = alignment(s)
       styled(selector, function ()
          if align then
@@ -2594,6 +2759,26 @@ function class:registerXmlCommands ()
       local s = style(selector)
       scratch().verses_in_paragraph = 0
       skip(s.space_above)
+      -- The first line's indent, when the style gives one. A paragraph that
+      -- opens a chapter, or follows a heading, is set flush, as a book sets
+      -- it: the indent marks a new paragraph, and those already have a mark.
+      local flush = scratch().flush_next
+      scratch().flush_next = false
+      if type(content) == "table" then
+         for _, child in ipairs(content) do
+            if type(child) == "table" then
+               if child.command == "chapter" then
+                  flush = true
+               end
+               break
+            end
+         end
+      end
+      if flush then
+         SILE.call("noindent")
+      elseif s.first_line_indent then
+         SILE.settings:set("current.parindent", SILE.types.node.glue(s.first_line_indent))
+      end
       SILE.settings:temporarily(function ()
          if s.indent then
             SILE.settings:set("document.lskip", SILE.types.node.glue(s.indent))
@@ -2847,8 +3032,29 @@ function class:registerXmlCommands ()
       -- for a letter that is the start of its word; the standoff applies to
       -- the lines below it.
       local lines = tonumber(self._bcopts.dropcaplines) or 3
+      -- In the `initial` style's face and colour; its size is the package's,
+      -- which sets the size that spans the lines. A border, when it asks for
+      -- one, is drawn round the letter at that size.
+      local s = style("initial")
+      local opts = { lines = lines, join = true }
+      for key, value in pairs(face(s) or {}) do
+         if key ~= "size" then
+            opts[key] = value
+         end
+      end
+      if s.color then
+         opts.color = s.color
+      end
+      local letter = content
+      if SU.boolean(s.border, false) then
+         letter = function ()
+            bordered(s.border_width or "0.5pt", function ()
+               SILE.process(content)
+            end)
+         end
+      end
       dropped(function ()
-         SILE.call("dropcap", { lines = lines, join = true }, content)
+         SILE.call("dropcap", opts, letter)
       end)
       -- For the padding above: this paragraph has to run to that many lines.
       scratch().initial_lines = lines

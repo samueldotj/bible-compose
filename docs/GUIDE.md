@@ -109,6 +109,7 @@ back.
 | **Notes** | Footnotes and cross-references: whether, their marks, where they go |
 | **Trim & margins** | Trim size, columns, margins and the head and foot gaps, drawn as guides on the spread, in inches, millimetres or points |
 | **Headers & footers** | The six slots on each side of the spread, on the page itself — see below |
+| **Rules & frame** | Rules under the head, over the foot and down the gutter; a frame round the page; ruled note lines in the outer margin |
 | **Figures** | What a figure with no file does to the build |
 | **Styles** | Typography, and every marker's appearance, with the chosen element outlined on the page |
 | **PDF metadata** | The publication's name and language, publisher, subject, the file's name, how far its bookmarks reach |
@@ -319,6 +320,35 @@ style, in the file or in the window:
 | `own_line` | The number takes a line of its own, with `space_above` and `space_below` around it |
 | `gap_before`, `gap_after` | Horizontal space either side of the number when it sits in the text (after: 4pt unless set) |
 | `border`, `border_width` | A rule around the number, and how thick |
+
+### Rules, frame and note lines
+
+**Rules & frame** draws furniture on every page, all in one ink
+(`page.rule_color`). Each rule is a thickness, and `0pt` draws none, which is
+the built-in page:
+
+| Key | What it draws |
+|---|---|
+| `header_rule` | A rule under the running head, across the text block |
+| `footer_rule` | A rule over the foot line; on a page with notes it sets them off from the text |
+| `column_rule` | A rule down the middle of the gutter, in two columns |
+| `frame` | `none`, `single` or `double`: a rule round every page, `frame_inset` in from the trim, each line `frame_width` thick. Front-matter pages are framed too; a page left blank is not |
+| `note_lines` | Ruled lines across the outer margin, `note_line_spacing` apart, for a journaling edition |
+
+### Paragraphs and the dropped initial
+
+`paragraph.p`'s **first-line indent** (`first_line_indent`) indents the first
+line of each paragraph, not the whole block, which is what `indent` does. A
+paragraph that opens a chapter or follows a heading is set flush however it
+is styled, as a book sets it, and a heading itself is never indented.
+
+When `contents.drop_caps` drops the first letter, the **`initial`** style
+decides how it looks: its face, weight, colour, and a box round it with
+`border` and `border_width`. Its size comes from the number of lines it
+spans.
+
+The **running head** and the **foot line** are each set in their own style,
+`head` and `folio`, colour included.
 
 ### Styles
 

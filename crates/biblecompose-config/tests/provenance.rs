@@ -39,6 +39,15 @@ margin_outer = \"1in\"
 column_gap = \"0.2in\"
 header_gap = \"0.3in\"
 footer_gap = \"0.3in\"
+column_rule = \"0.4pt\"
+header_rule = \"0.5pt\"
+footer_rule = \"0.5pt\"
+rule_color = \"#333333\"
+frame = \"double\"
+frame_width = \"0.8pt\"
+frame_inset = \"0.25in\"
+note_lines = true
+note_line_spacing = \"20pt\"
 
 [typography]
 font_family = \"Gentium Plus\"

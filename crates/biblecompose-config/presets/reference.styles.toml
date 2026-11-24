@@ -31,3 +31,6 @@ space_below = "2pt"
 italic = false
 smallcaps = true
 weight = 600
+
+[paragraph.p]
+first_line_indent = "9pt"

@@ -17,6 +17,12 @@ margin_outer = "0.7in"
 margin_top = "0.85in"
 margin_bottom = "1.1in"
 column_gap = "0.25in"
+# A rule under the head, a heavier one setting the notes off from the text
+# above them, and one down the gutter, all in the accent.
+header_rule = "0.6pt"
+footer_rule = "1pt"
+column_rule = "0.4pt"
+rule_color = "#2e5e4e"
 
 [typography]
 font_size = "9.5pt"

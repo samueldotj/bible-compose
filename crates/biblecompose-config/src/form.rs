@@ -15,8 +15,8 @@ use crate::provenance::Origin;
 use crate::settings::Settings;
 use crate::value::{
     Anchors, BookStart, CallerStyle, ChapterStart, CoverBinding, CoverBorder, CoverPaper, DropCap,
-    MissingAsset, NumberPlacement, QuoteHang, QuoteStart, ReferencePlacement, RestartNumbering,
-    VerseStart,
+    MissingAsset, NumberPlacement, PageFrame, QuoteHang, QuoteStart, ReferencePlacement,
+    RestartNumbering, VerseStart,
 };
 
 /// What kind of control a key needs, and how its text is to be read back.
@@ -206,6 +206,43 @@ impl Settings {
         push("page.column_gap", Length, self.page.column_gap.to_string());
         push("page.header_gap", Length, self.page.header_gap.to_string());
         push("page.footer_gap", Length, self.page.footer_gap.to_string());
+        push(
+            "page.column_rule",
+            Length,
+            self.page.column_rule.to_string(),
+        );
+        push(
+            "page.header_rule",
+            Length,
+            self.page.header_rule.to_string(),
+        );
+        push(
+            "page.footer_rule",
+            Length,
+            self.page.footer_rule.to_string(),
+        );
+        push("page.rule_color", Color, self.page.rule_color.to_string());
+        push(
+            "page.frame",
+            Choice(PageFrame::SPELLINGS),
+            self.page.frame.to_string(),
+        );
+        push(
+            "page.frame_width",
+            Length,
+            self.page.frame_width.to_string(),
+        );
+        push(
+            "page.frame_inset",
+            Length,
+            self.page.frame_inset.to_string(),
+        );
+        push("page.note_lines", Boolean, self.page.note_lines.to_string());
+        push(
+            "page.note_line_spacing",
+            Length,
+            self.page.note_line_spacing.to_string(),
+        );
 
         push(
             "typography.font_family",

@@ -311,3 +311,56 @@ fn two_column_is_the_conventional_page() {
         "verse 1 should be unnumbered under its chapter figure: {numbers:?}"
     );
 }
+
+/// **Each edition's furniture is on its page**: the rules, the frame and the
+/// ruled margin its settings ask for, measured as drawn rules in the PDF.
+#[test]
+fn each_edition_draws_its_furniture() {
+    if !have_backend() {
+        return;
+    }
+    let rules_of = |id: &str| -> (Vec<biblecompose_testkit::pdf::Rule>, Measure, f64) {
+        let (_g, root, _lines, pdf, measure) = build_with(id);
+        let raw = std::fs::read(root.join("out.pdf").as_std_path()).expect("the PDF");
+        let height = pdf.page_sizes.first().map(|s| s.1).unwrap_or(0.0);
+        (Pdf::rules(&raw), measure, height)
+    };
+
+    // The classic page: rules across the text block, and down the gutter.
+    let (rules, measure, height) = rules_of("two-column");
+    let width = measure.page_width - measure.inner - measure.outer;
+    assert!(
+        rules
+            .iter()
+            .filter(|r| r.is_horizontal() && (r.length() - width).abs() < 1.0)
+            .count()
+            >= 2,
+        "two-column has a head rule and a foot rule"
+    );
+    assert!(
+        rules.iter().any(|r| r.is_vertical() && r.length() < height * 0.9),
+        "two-column has a gutter rule"
+    );
+
+    // The illuminated page is framed: rules nearly the page's height.
+    let (rules, _measure, height) = rules_of("illuminated");
+    assert!(
+        rules
+            .iter()
+            .filter(|r| r.is_vertical() && r.length() > height * 0.8)
+            .count()
+            >= 4,
+        "illuminated has a double frame"
+    );
+
+    // The journaling page rules its outer margin for writing.
+    let (rules, _measure, _height) = rules_of("journaling");
+    assert!(
+        rules.iter().filter(|r| r.is_horizontal()).count() > 10,
+        "journaling has note lines"
+    );
+
+    // And the reader's edition carries no furniture at all.
+    let (rules, _measure, _height) = rules_of("reader");
+    assert!(rules.is_empty(), "the reader's edition is unruled: {rules:?}");
+}

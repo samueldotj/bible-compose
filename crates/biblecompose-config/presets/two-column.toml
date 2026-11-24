@@ -15,6 +15,12 @@
 [page]
 size = "6x9in"
 columns = 2
+# The classic page's rules: a firm one under the head, a light one over the
+# foot, and one down the gutter between the columns.
+header_rule = "0.6pt"
+footer_rule = "0.4pt"
+column_rule = "0.4pt"
+rule_color = "#3a3530"
 
 [typography]
 font_size = "9.2pt"

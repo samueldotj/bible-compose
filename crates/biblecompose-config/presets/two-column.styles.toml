@@ -43,3 +43,9 @@ smallcaps = true
 
 [folio]
 smallcaps = true
+
+# Paragraphs open with an indent, as a book's do; the one that opens a
+# chapter and the one under a heading are set flush, which is the class's
+# rule and not something to write here.
+[paragraph.p]
+first_line_indent = "10pt"

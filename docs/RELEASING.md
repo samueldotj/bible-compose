@@ -197,14 +197,28 @@ once, the unpacked one is under the cache directory:
 
 ```bash
 node scripts/stage-backend.mjs <runtime> stage
-node scripts/stage-editor.mjs ../easy-usfm editor-stage
-BIBLECOMPOSE_SILE_BUNDLE="$PWD/stage" \
-  BIBLECOMPOSE_EDITOR_BUNDLE="$PWD/editor-stage" \
-  npx tauri build --features embedded-sile,embedded-editor
+node scripts/stage-editor.mjs ../easy-usfm
+BIBLECOMPOSE_SILE_BUNDLE="$PWD/stage" npx tauri build --features embedded-sile
 ```
 
 Without `--features embedded-sile` the window is a shell that expects to find
 SILE on the machine, which is right for development and wrong for a publisher.
+
+**The editor is staged, not built in by a feature** ([ADR-007](adr/007-editor-in-process.md)).
+easy-usfm runs as a window of this application: its native half is the
+`tauri-plugin-easy-usfm` crate, at the revision `Cargo.toml` pins beside
+`usfm-core`, and its interface is easy-usfm's static frontend build, which
+`stage-editor.mjs` copies into `public/editor/`. The script checks out nothing
+itself and refuses a checkout whose HEAD is not the revision `Cargo.lock`
+resolved the plugin to, because the page and the plugin must agree on every
+command. Without a stage, double-clicking a book reports that this build does
+not carry the editor.
+
+The checkout needs `npm ci` first, and `npm run build` there needs `wasm-pack`
+and the `wasm32-unknown-unknown` target, since the editor compiles its engine
+to WebAssembly.
+
+<details><summary>Before ADR-007: the bundled executable</summary>
 
 `embedded-editor` is the same bargain for easy-usfm, which the window opens a
 book's USFM in. Without it, double-clicking a book reports that this build
@@ -225,3 +239,5 @@ Checking for `devUrl` instead looks like the obvious test and does not work:
 `generate_context!` compiles the whole of `tauri.conf.json` into every build,
 so `localhost:1420` is in a correct production binary too. Both of those
 mistakes were made while this was written, the second one three times.
+
+</details>

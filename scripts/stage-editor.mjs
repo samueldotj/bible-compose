@@ -1,62 +1,47 @@
 /**
- * Build easy-usfm and turn it into a bundle stage.
+ * Build easy-usfm's interface and stage it where this application serves it.
  *
- * The stage is what `BIBLECOMPOSE_EDITOR_BUNDLE` points at when the
- * application is built with `--features embedded-editor` — the editor and
- * nothing else, carried inside the executable so that opening a book's USFM
- * needs nothing installed.
+ *     node scripts/stage-editor.mjs <easy-usfm checkout>
+ *     node scripts/stage-editor.mjs --verify
  *
- *     node scripts/stage-editor.mjs <easy-usfm checkout> <stage>
- *     node scripts/stage-editor.mjs --verify <stage>
+ * The editor is a window in this process (ADR-007): its native half is the
+ * `tauri-plugin-easy-usfm` crate this workspace depends on, and its interface
+ * is the static build of easy-usfm's frontend, copied into `public/editor/`.
+ * Vite serves that folder as it is in development and copies it into `dist/`
+ * for a release, where Tauri compiles it into the executable with everything
+ * else. `editor::open` opens `editor/index.html`.
  *
- * The sibling of `stage-backend.mjs`, and it does the same job for the other
- * thing this application carries.
+ * # The two halves come from one revision
  *
- * # `tauri build`, and never `cargo build`
+ * **This is the check the script exists for.** The interface calls the
+ * plugin's commands by name with arguments of a shape, and the two are only
+ * known to agree when they come from the same commit. So the checkout's HEAD
+ * is compared with the revision `Cargo.lock` resolved the plugin to, and a
+ * stage from any other commit is refused. A workspace patched onto a local
+ * checkout (a `[patch]` to a path) has no revision to compare and is told so.
  *
- * **This is the whole reason the script exists rather than a `cp`.** A Tauri
- * application decides where its interface comes from at build time, and only
- * the Tauri CLI switches it to the bundled assets: `cargo build --release`
- * leaves it pointing at `devUrl`, which on easy-usfm is
- * `http://localhost:1420`. The executable runs, opens a window, takes the file
- * it was given — and shows *"Hmmm… can't reach this page"*, because nothing is
- * serving that port on anybody's machine but a developer's.
+ * # `npm run build`, not `tauri build`
  *
- * That is not a guess. A `cargo build --release` of the editor was staged by
- * hand while this feature was being written, and it did exactly that; the same
- * mistake made three separate attempts to verify the feature report failure
- * when the feature was fine. Staged into a release it would have shipped a
- * 9 MB editor that cannot draw itself, on every machine.
- *
- * `--no-bundle`, because the installers are not wanted: this stage is embedded
- * in another application's executable, and a `.msi` of the editor inside a
- * `.msi` of BibleCompose is a thing nobody asked for.
- *
- * # Three shapes go in
- *
- * Windows lands a single `easy-usfm-tauri.exe`. macOS lands an
- * `easy-usfm.app` directory, which is the program on that platform and has to
- * travel whole. Linux lands a bare executable. Whatever it is, it is copied
- * into the stage with the layout `editor::locate` expects: the executable at
- * the top, named `easy-usfm-tauri` (`.exe` on Windows), and anything it needs
- * beside it.
+ * Only the interface is wanted. The editor's own Tauri application — its
+ * executable, its installers — is easy-usfm's and nothing here carries it.
+ * `npm run build` compiles the engine to WebAssembly (`wasm-pack`, so the
+ * `wasm32-unknown-unknown` target has to be installed) and builds the page.
  */
 
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { platform } from "node:os";
 
 const WINDOWS = platform() === "win32";
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-/** What `editor::locate` looks for inside the stage. */
-const EXE_NAME = WINDOWS ? "easy-usfm-tauri.exe" : "easy-usfm-tauri";
+/** Where the interface is staged, and so where `editor::EDITOR_PAGE` points. */
+const STAGE = join(ROOT, join("public", "editor"));
 
-/** Where the Tauri CLI leaves a `--no-bundle` release build. */
-const BUILT = join("target", "release", EXE_NAME);
-
-/** The macOS application directory, when there is one. */
-const APP = join("target", "release", "bundle", "macos", "easy-usfm.app");
+/** The crate whose revision the interface must match. */
+const PLUGIN = "tauri-plugin-easy-usfm";
 
 function die(message) {
   console.error(message);
@@ -71,128 +56,115 @@ function* walk(dir) {
   }
 }
 
-function bytes(dir) {
-  let total = 0;
-  for (const file of walk(dir)) total += statSync(file).size;
-  return total;
-}
-
 function mb(n) {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
 /**
- * Build the editor, with the CLI and not with cargo.
- *
- * `npm ci` is not run here: a checkout that cannot build is the caller's
- * problem to notice, and a script that installs dependencies into somebody
- * else's repository on their behalf is a script that surprises them.
+ * The revision `Cargo.lock` resolved the plugin to, or `null` when the
+ * workspace builds it from a path.
  */
+function lockedRevision() {
+  const lock = readFileSync(join(ROOT, "Cargo.lock"), "utf8");
+  const entry = lock
+    .split("[[package]]")
+    .find((block) => block.includes(`name = "${PLUGIN}"`));
+  if (!entry) die(`stage-editor: ${PLUGIN} is not in Cargo.lock — build the workspace once first`);
+  const source = /source = "git\+[^"#]*#([0-9a-f]{40})"/.exec(entry);
+  return source ? source[1] : null;
+}
+
+function headOf(checkout) {
+  try {
+    return execFileSync("git", ["rev-parse", "HEAD"], { cwd: checkout, encoding: "utf8" }).trim();
+  } catch {
+    die(`stage-editor: ${checkout} is not a git checkout`);
+  }
+}
+
 function build(checkout) {
   if (!existsSync(join(checkout, "package.json"))) {
     die(`${checkout} does not look like an easy-usfm checkout: no package.json`);
   }
-  console.log(`stage-editor: building the editor in ${checkout}`);
+  if (!existsSync(join(checkout, "crates", PLUGIN))) {
+    die(
+      `stage-editor: ${checkout} has no crates/${PLUGIN}.\n` +
+        "  It predates the editor running inside BibleCompose; check out the\n" +
+        "  revision Cargo.lock names instead.",
+    );
+  }
+
+  const locked = lockedRevision();
+  const head = headOf(checkout);
+  if (locked === null) {
+    console.warn(
+      `stage-editor: ${PLUGIN} is built from a path, so there is no revision to check.\n` +
+        `  Staging ${checkout} at ${head.slice(0, 12)} as it stands.`,
+    );
+  } else if (locked !== head) {
+    die(
+      `stage-editor: ${checkout} is at ${head.slice(0, 12)} but Cargo.lock builds ` +
+        `${PLUGIN} from ${locked.slice(0, 12)}.\n` +
+        "  The interface and the plugin must come from one revision — check that one out.",
+    );
+  }
+
+  // `npm ci` is not run here: a checkout that cannot build is the caller's
+  // problem to notice, and a script that installs dependencies into somebody
+  // else's repository on their behalf is a script that surprises them.
+  console.log(`stage-editor: building the editor's interface in ${checkout}`);
   try {
-    // Through npm so the repository's own pinned CLI is the one that runs,
-    // rather than whatever `tauri` happens to be on the PATH.
-    execFileSync("npm", ["run", "tauri", "--", "build", "--no-bundle"], {
-      cwd: checkout,
-      stdio: "inherit",
-      shell: WINDOWS,
-    });
+    execFileSync("npm", ["run", "build"], { cwd: checkout, stdio: "inherit", shell: WINDOWS });
   } catch {
-    die("stage-editor: the editor did not build");
+    die("stage-editor: the editor's interface did not build");
   }
 }
 
-function stage(checkout, into) {
+function stage(checkout) {
   build(checkout);
-
-  rmSync(into, { recursive: true, force: true });
-  mkdirSync(into, { recursive: true });
-
-  const app = join(checkout, APP);
-  if (existsSync(app)) {
-    // macOS: the `.app` is the program. Copied whole, and the executable
-    // inside it is what `editor::locate` will find once the stage is walked.
-    cpSync(app, join(into, "easy-usfm.app"), { recursive: true });
-    console.log(`stage-editor: staged easy-usfm.app (${mb(bytes(into))})`);
-    return;
+  const dist = join(checkout, "dist");
+  if (!existsSync(join(dist, "index.html"))) {
+    die(`stage-editor: ${dist} has no index.html after a build`);
   }
-
-  const exe = join(checkout, BUILT);
-  if (!existsSync(exe)) {
-    die(
-      `stage-editor: ${exe} is not there after a build.\n` +
-        "  The Tauri CLI leaves a --no-bundle build at target/release/ — if this\n" +
-        "  checkout names its binary something else, this script needs to know.",
-    );
-  }
-  cpSync(exe, join(into, EXE_NAME));
-  console.log(`stage-editor: staged ${EXE_NAME} (${mb(bytes(into))})`);
+  rmSync(STAGE, { recursive: true, force: true });
+  mkdirSync(STAGE, { recursive: true });
+  cpSync(dist, STAGE, { recursive: true });
 }
 
 /**
- * Check a stage before it is embedded.
+ * Check a stage before it is built in.
  *
- * Cheap, and the alternative is finding out from a publisher. The two things
- * worth asserting are that the executable is there under the name the Rust
- * looks for, and that this is not a `cargo build` wearing a release's clothes.
+ * Cheap, and the alternative is finding out from a publisher. A page, the
+ * script the page loads, and the engine the worker runs.
  */
-function verify(into) {
-  if (!existsSync(into)) die(`stage-editor: ${into} does not exist`);
-
-  const found = [...walk(into)];
-  if (found.length === 0) die(`stage-editor: ${into} is empty`);
-
-  const exe = found.find((p) => p.endsWith(EXE_NAME));
-  if (!exe) {
-    die(
-      `stage-editor: no ${EXE_NAME} anywhere in ${into}.\n` +
-        `  editor::locate looks for exactly that name.`,
-    );
+function verify() {
+  if (!existsSync(join(STAGE, "index.html"))) {
+    die(`stage-editor: no editor staged at ${STAGE} — run with an easy-usfm checkout`);
   }
-
-  // **The interface has to be inside the executable**, and this is how to tell.
-  //
-  // A production build compiles `dist` in, so the hashed name Vite gave the
-  // entry chunk — `assets/index-<hash>.js`, out of `dist/index.html` — is a
-  // string in the binary. A `cargo build` embeds no assets and the name is
-  // nowhere in it. Measured on both: two hits against none.
-  //
-  // **Looking for `devUrl` instead does not work, which is worth writing down
-  // because it is the obvious check.** `generate_context!` compiles the whole
-  // of `tauri.conf.json` into every build, `devUrl` with it, so
-  // `localhost:1420` is in a correct production binary as well. That check was
-  // written first and rejected a perfectly good stage.
-  const blob = readFileSync(exe);
-  if (!blob.includes(Buffer.from("assets/index-"))) {
-    die(
-      `stage-editor: ${exe} does not carry an interface.\n` +
-        "  It was built with `cargo build` rather than `tauri build`, so its\n" +
-        "  assets are not in it and it will try to reach a development server.\n" +
-        "  Embedded, it shows \"Hmmm… can't reach this page\" on every machine\n" +
-        "  that is not a developer's.",
-    );
+  const files = [...walk(STAGE)];
+  const page = readFileSync(join(STAGE, "index.html"), "utf8");
+  if (!/assets\/index-[^"']+\.js/.test(page)) {
+    die(`stage-editor: ${STAGE}/index.html loads no built script — is this a production build?`);
   }
-
-  console.log(`stage-editor: ${into} looks like an editor (${mb(bytes(into))})`);
+  if (!files.some((f) => f.endsWith(".wasm"))) {
+    die(`stage-editor: ${STAGE} carries no WebAssembly — the editor would have no engine`);
+  }
+  const bytes = files.reduce((total, f) => total + statSync(f).size, 0);
+  console.log(`stage-editor: ${STAGE} looks like an editor (${files.length} files, ${mb(bytes)})`);
 }
 
 const args = process.argv.slice(2);
 if (args[0] === "--verify") {
-  if (args.length !== 2) {
-    console.error("usage: node scripts/stage-editor.mjs --verify <stage>");
+  if (args.length !== 1) {
+    console.error("usage: node scripts/stage-editor.mjs --verify");
     process.exit(2);
   }
-  verify(resolve(args[1]));
+  verify();
 } else {
-  if (args.length !== 2) {
-    console.error("usage: node scripts/stage-editor.mjs <easy-usfm checkout> <stage>");
+  if (args.length !== 1) {
+    console.error("usage: node scripts/stage-editor.mjs <easy-usfm checkout>");
     process.exit(2);
   }
-  const into = resolve(args[1]);
-  stage(resolve(args[0]), into);
-  verify(into);
+  stage(resolve(args[0]));
+  verify();
 }

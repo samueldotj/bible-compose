@@ -135,6 +135,174 @@
           "type": "object",
           "allOf": [
             {
+              "if": {
+                "properties": {
+                  "identifier": {
+                    "anyOf": [
+                      {
+                        "description": "This permission set allows opening `mailto:`, `tel:`, `https://` and `http://` urls using their default application\nas well as reveal file in directories using default file explorer\n#### This default permission set includes:\n\n- `allow-open-url`\n- `allow-reveal-item-in-dir`\n- `allow-default-urls`",
+                        "type": "string",
+                        "const": "opener:default",
+                        "markdownDescription": "This permission set allows opening `mailto:`, `tel:`, `https://` and `http://` urls using their default application\nas well as reveal file in directories using default file explorer\n#### This default permission set includes:\n\n- `allow-open-url`\n- `allow-reveal-item-in-dir`\n- `allow-default-urls`"
+                      },
+                      {
+                        "description": "This enables opening `mailto:`, `tel:`, `https://` and `http://` urls using their default application.",
+                        "type": "string",
+                        "const": "opener:allow-default-urls",
+                        "markdownDescription": "This enables opening `mailto:`, `tel:`, `https://` and `http://` urls using their default application."
+                      },
+                      {
+                        "description": "Enables the open_path command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "opener:allow-open-path",
+                        "markdownDescription": "Enables the open_path command without any pre-configured scope."
+                      },
+                      {
+                        "description": "Enables the open_url command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "opener:allow-open-url",
+                        "markdownDescription": "Enables the open_url command without any pre-configured scope."
+                      },
+                      {
+                        "description": "Enables the reveal_item_in_dir command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "opener:allow-reveal-item-in-dir",
+                        "markdownDescription": "Enables the reveal_item_in_dir command without any pre-configured scope."
+                      },
+                      {
+                        "description": "Denies the open_path command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "opener:deny-open-path",
+                        "markdownDescription": "Denies the open_path command without any pre-configured scope."
+                      },
+                      {
+                        "description": "Denies the open_url command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "opener:deny-open-url",
+                        "markdownDescription": "Denies the open_url command without any pre-configured scope."
+                      },
+                      {
+                        "description": "Denies the reveal_item_in_dir command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "opener:deny-reveal-item-in-dir",
+                        "markdownDescription": "Denies the reveal_item_in_dir command without any pre-configured scope."
+                      }
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "allow": {
+                    "items": {
+                      "title": "OpenerScopeEntry",
+                      "description": "Opener scope entry.",
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "url"
+                          ],
+                          "properties": {
+                            "app": {
+                              "description": "An application to open this url with, for example: firefox.",
+                              "allOf": [
+                                {
+                                  "$ref": "#/definitions/Application"
+                                }
+                              ]
+                            },
+                            "url": {
+                              "description": "A URL that can be opened by the webview when using the Opener APIs.\n\nWildcards can be used following the UNIX glob pattern.\n\nExamples:\n\n- \"https://*\" : allows all HTTPS origin\n\n- \"https://*.github.com/tauri-apps/tauri\": allows any subdomain of \"github.com\" with the \"tauri-apps/api\" path\n\n- \"https://myapi.service.com/users/*\": allows access to any URLs that begins with \"https://myapi.service.com/users/\"",
+                              "type": "string"
+                            }
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "required": [
+                            "path"
+                          ],
+                          "properties": {
+                            "app": {
+                              "description": "An application to open this path with, for example: xdg-open.",
+                              "allOf": [
+                                {
+                                  "$ref": "#/definitions/Application"
+                                }
+                              ]
+                            },
+                            "path": {
+                              "description": "A path that can be opened by the webview when using the Opener APIs.\n\nThe pattern can start with a variable that resolves to a system base directory. The variables are: `$AUDIO`, `$CACHE`, `$CONFIG`, `$DATA`, `$LOCALDATA`, `$DESKTOP`, `$DOCUMENT`, `$DOWNLOAD`, `$EXE`, `$FONT`, `$HOME`, `$PICTURE`, `$PUBLIC`, `$RUNTIME`, `$TEMPLATE`, `$VIDEO`, `$RESOURCE`, `$APP`, `$LOG`, `$TEMP`, `$APPCONFIG`, `$APPDATA`, `$APPLOCALDATA`, `$APPCACHE`, `$APPLOG`.",
+                              "type": "string"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "deny": {
+                    "items": {
+                      "title": "OpenerScopeEntry",
+                      "description": "Opener scope entry.",
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "url"
+                          ],
+                          "properties": {
+                            "app": {
+                              "description": "An application to open this url with, for example: firefox.",
+                              "allOf": [
+                                {
+                                  "$ref": "#/definitions/Application"
+                                }
+                              ]
+                            },
+                            "url": {
+                              "description": "A URL that can be opened by the webview when using the Opener APIs.\n\nWildcards can be used following the UNIX glob pattern.\n\nExamples:\n\n- \"https://*\" : allows all HTTPS origin\n\n- \"https://*.github.com/tauri-apps/tauri\": allows any subdomain of \"github.com\" with the \"tauri-apps/api\" path\n\n- \"https://myapi.service.com/users/*\": allows access to any URLs that begins with \"https://myapi.service.com/users/\"",
+                              "type": "string"
+                            }
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "required": [
+                            "path"
+                          ],
+                          "properties": {
+                            "app": {
+                              "description": "An application to open this path with, for example: xdg-open.",
+                              "allOf": [
+                                {
+                                  "$ref": "#/definitions/Application"
+                                }
+                              ]
+                            },
+                            "path": {
+                              "description": "A path that can be opened by the webview when using the Opener APIs.\n\nThe pattern can start with a variable that resolves to a system base directory. The variables are: `$AUDIO`, `$CACHE`, `$CONFIG`, `$DATA`, `$LOCALDATA`, `$DESKTOP`, `$DOCUMENT`, `$DOWNLOAD`, `$EXE`, `$FONT`, `$HOME`, `$PICTURE`, `$PUBLIC`, `$RUNTIME`, `$TEMPLATE`, `$VIDEO`, `$RESOURCE`, `$APP`, `$LOG`, `$TEMP`, `$APPCONFIG`, `$APPDATA`, `$APPLOCALDATA`, `$APPCACHE`, `$APPLOG`.",
+                              "type": "string"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "properties": {
+                "identifier": {
+                  "description": "Identifier of the permission or permission set.",
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/Identifier"
+                    }
+                  ]
+                }
+              }
+            },
+            {
               "properties": {
                 "identifier": {
                   "description": "Identifier of the permission or permission set.",
@@ -176,6 +344,366 @@
     "Identifier": {
       "description": "Permission identifier",
       "oneOf": [
+        {
+          "description": "Enables the add_front_matter command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-add-front-matter",
+          "markdownDescription": "Enables the add_front_matter command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the apply_preset command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-apply-preset",
+          "markdownDescription": "Enables the apply_preset command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the cancel_build command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-cancel-build",
+          "markdownDescription": "Enables the cancel_build command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the changed_files command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-changed-files",
+          "markdownDescription": "Enables the changed_files command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the close_preview command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-close-preview",
+          "markdownDescription": "Enables the close_preview command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the close_project command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-close-project",
+          "markdownDescription": "Enables the close_project command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the cover_preview command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-cover-preview",
+          "markdownDescription": "Enables the cover_preview command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the create_project command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-create-project",
+          "markdownDescription": "Enables the create_project command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the defaults command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-defaults",
+          "markdownDescription": "Enables the defaults command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the font_suggestions command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-font-suggestions",
+          "markdownDescription": "Enables the font_suggestions command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the fonts command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-fonts",
+          "markdownDescription": "Enables the fonts command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the forget_project command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-forget-project",
+          "markdownDescription": "Enables the forget_project command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the head_fields command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-head-fields",
+          "markdownDescription": "Enables the head_fields command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the install_font command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-install-font",
+          "markdownDescription": "Enables the install_font command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the is_building command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-is-building",
+          "markdownDescription": "Enables the is_building command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the make_cover command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-make-cover",
+          "markdownDescription": "Enables the make_cover command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the open_folder command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-open-folder",
+          "markdownDescription": "Enables the open_folder command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the open_in_editor command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-open-in-editor",
+          "markdownDescription": "Enables the open_in_editor command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the open_pdf command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-open-pdf",
+          "markdownDescription": "Enables the open_pdf command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the open_preview command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-open-preview",
+          "markdownDescription": "Enables the open_preview command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the open_project command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-open-project",
+          "markdownDescription": "Enables the open_project command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the open_url command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-open-url",
+          "markdownDescription": "Enables the open_url command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the presets command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-presets",
+          "markdownDescription": "Enables the presets command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the recent_projects command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-recent-projects",
+          "markdownDescription": "Enables the recent_projects command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the reset_setting command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-reset-setting",
+          "markdownDescription": "Enables the reset_setting command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the reset_style command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-reset-style",
+          "markdownDescription": "Enables the reset_style command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_setting command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-setting",
+          "markdownDescription": "Enables the set_setting command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_style command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-style",
+          "markdownDescription": "Enables the set_style command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the start_build command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-start-build",
+          "markdownDescription": "Enables the start_build command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the versions command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-versions",
+          "markdownDescription": "Enables the versions command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the add_front_matter command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-add-front-matter",
+          "markdownDescription": "Denies the add_front_matter command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the apply_preset command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-apply-preset",
+          "markdownDescription": "Denies the apply_preset command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the cancel_build command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-cancel-build",
+          "markdownDescription": "Denies the cancel_build command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the changed_files command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-changed-files",
+          "markdownDescription": "Denies the changed_files command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the close_preview command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-close-preview",
+          "markdownDescription": "Denies the close_preview command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the close_project command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-close-project",
+          "markdownDescription": "Denies the close_project command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the cover_preview command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-cover-preview",
+          "markdownDescription": "Denies the cover_preview command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the create_project command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-create-project",
+          "markdownDescription": "Denies the create_project command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the defaults command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-defaults",
+          "markdownDescription": "Denies the defaults command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the font_suggestions command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-font-suggestions",
+          "markdownDescription": "Denies the font_suggestions command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the fonts command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-fonts",
+          "markdownDescription": "Denies the fonts command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the forget_project command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-forget-project",
+          "markdownDescription": "Denies the forget_project command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the head_fields command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-head-fields",
+          "markdownDescription": "Denies the head_fields command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the install_font command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-install-font",
+          "markdownDescription": "Denies the install_font command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the is_building command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-is-building",
+          "markdownDescription": "Denies the is_building command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the make_cover command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-make-cover",
+          "markdownDescription": "Denies the make_cover command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the open_folder command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-open-folder",
+          "markdownDescription": "Denies the open_folder command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the open_in_editor command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-open-in-editor",
+          "markdownDescription": "Denies the open_in_editor command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the open_pdf command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-open-pdf",
+          "markdownDescription": "Denies the open_pdf command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the open_preview command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-open-preview",
+          "markdownDescription": "Denies the open_preview command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the open_project command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-open-project",
+          "markdownDescription": "Denies the open_project command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the open_url command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-open-url",
+          "markdownDescription": "Denies the open_url command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the presets command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-presets",
+          "markdownDescription": "Denies the presets command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the recent_projects command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-recent-projects",
+          "markdownDescription": "Denies the recent_projects command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the reset_setting command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-reset-setting",
+          "markdownDescription": "Denies the reset_setting command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the reset_style command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-reset-style",
+          "markdownDescription": "Denies the reset_style command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_setting command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-setting",
+          "markdownDescription": "Denies the set_setting command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_style command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-style",
+          "markdownDescription": "Denies the set_style command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the start_build command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-start-build",
+          "markdownDescription": "Denies the start_build command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the versions command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-versions",
+          "markdownDescription": "Denies the versions command without any pre-configured scope."
+        },
         {
           "description": "Default core plugins set.\n#### This default permission set includes:\n\n- `core:path:default`\n- `core:event:default`\n- `core:window:default`\n- `core:webview:default`\n- `core:app:default`\n- `core:image:default`\n- `core:resources:default`\n- `core:menu:default`\n- `core:tray:default`",
           "type": "string",
@@ -2257,6 +2785,276 @@
           "type": "string",
           "const": "dialog:deny-save",
           "markdownDescription": "Denies the save command without any pre-configured scope."
+        },
+        {
+          "description": "Everything an editor window needs. Granted to editor windows only: none of\nthese is a general filesystem permission -- each command touches a path a\nperson chose in a native picker, the path a host opened the window on, or a\ndocument the window already holds.\n\n#### This default permission set includes:\n\n- `allow-engine-version`\n- `allow-shell-profile`\n- `allow-launched-with`\n- `allow-set-recent-files`\n- `allow-new-document`\n- `allow-open-document`\n- `allow-save-document`\n- `allow-close-document`\n- `allow-read-figure`\n- `allow-snapshot-document`\n- `allow-clear-recovery`\n- `allow-examine-document`\n- `allow-take-lock`\n- `allow-release-lock`\n- `allow-watch-document`\n- `allow-unwatch-document`\n- `allow-updates-possible`\n- `allow-check-for-update`",
+          "type": "string",
+          "const": "easy-usfm:default",
+          "markdownDescription": "Everything an editor window needs. Granted to editor windows only: none of\nthese is a general filesystem permission -- each command touches a path a\nperson chose in a native picker, the path a host opened the window on, or a\ndocument the window already holds.\n\n#### This default permission set includes:\n\n- `allow-engine-version`\n- `allow-shell-profile`\n- `allow-launched-with`\n- `allow-set-recent-files`\n- `allow-new-document`\n- `allow-open-document`\n- `allow-save-document`\n- `allow-close-document`\n- `allow-read-figure`\n- `allow-snapshot-document`\n- `allow-clear-recovery`\n- `allow-examine-document`\n- `allow-take-lock`\n- `allow-release-lock`\n- `allow-watch-document`\n- `allow-unwatch-document`\n- `allow-updates-possible`\n- `allow-check-for-update`"
+        },
+        {
+          "description": "Enables the check_for_update command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-check-for-update",
+          "markdownDescription": "Enables the check_for_update command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the clear_recovery command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-clear-recovery",
+          "markdownDescription": "Enables the clear_recovery command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the close_document command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-close-document",
+          "markdownDescription": "Enables the close_document command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the engine_version command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-engine-version",
+          "markdownDescription": "Enables the engine_version command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the examine_document command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-examine-document",
+          "markdownDescription": "Enables the examine_document command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the launched_with command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-launched-with",
+          "markdownDescription": "Enables the launched_with command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the new_document command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-new-document",
+          "markdownDescription": "Enables the new_document command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the open_document command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-open-document",
+          "markdownDescription": "Enables the open_document command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the read_figure command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-read-figure",
+          "markdownDescription": "Enables the read_figure command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the release_lock command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-release-lock",
+          "markdownDescription": "Enables the release_lock command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the save_document command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-save-document",
+          "markdownDescription": "Enables the save_document command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_recent_files command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-set-recent-files",
+          "markdownDescription": "Enables the set_recent_files command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the shell_profile command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-shell-profile",
+          "markdownDescription": "Enables the shell_profile command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the snapshot_document command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-snapshot-document",
+          "markdownDescription": "Enables the snapshot_document command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the take_lock command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-take-lock",
+          "markdownDescription": "Enables the take_lock command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the unwatch_document command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-unwatch-document",
+          "markdownDescription": "Enables the unwatch_document command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the updates_possible command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-updates-possible",
+          "markdownDescription": "Enables the updates_possible command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the watch_document command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:allow-watch-document",
+          "markdownDescription": "Enables the watch_document command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the check_for_update command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-check-for-update",
+          "markdownDescription": "Denies the check_for_update command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the clear_recovery command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-clear-recovery",
+          "markdownDescription": "Denies the clear_recovery command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the close_document command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-close-document",
+          "markdownDescription": "Denies the close_document command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the engine_version command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-engine-version",
+          "markdownDescription": "Denies the engine_version command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the examine_document command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-examine-document",
+          "markdownDescription": "Denies the examine_document command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the launched_with command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-launched-with",
+          "markdownDescription": "Denies the launched_with command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the new_document command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-new-document",
+          "markdownDescription": "Denies the new_document command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the open_document command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-open-document",
+          "markdownDescription": "Denies the open_document command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the read_figure command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-read-figure",
+          "markdownDescription": "Denies the read_figure command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the release_lock command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-release-lock",
+          "markdownDescription": "Denies the release_lock command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the save_document command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-save-document",
+          "markdownDescription": "Denies the save_document command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_recent_files command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-set-recent-files",
+          "markdownDescription": "Denies the set_recent_files command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the shell_profile command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-shell-profile",
+          "markdownDescription": "Denies the shell_profile command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the snapshot_document command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-snapshot-document",
+          "markdownDescription": "Denies the snapshot_document command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the take_lock command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-take-lock",
+          "markdownDescription": "Denies the take_lock command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the unwatch_document command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-unwatch-document",
+          "markdownDescription": "Denies the unwatch_document command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the updates_possible command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-updates-possible",
+          "markdownDescription": "Denies the updates_possible command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the watch_document command without any pre-configured scope.",
+          "type": "string",
+          "const": "easy-usfm:deny-watch-document",
+          "markdownDescription": "Denies the watch_document command without any pre-configured scope."
+        },
+        {
+          "description": "This permission set allows opening `mailto:`, `tel:`, `https://` and `http://` urls using their default application\nas well as reveal file in directories using default file explorer\n#### This default permission set includes:\n\n- `allow-open-url`\n- `allow-reveal-item-in-dir`\n- `allow-default-urls`",
+          "type": "string",
+          "const": "opener:default",
+          "markdownDescription": "This permission set allows opening `mailto:`, `tel:`, `https://` and `http://` urls using their default application\nas well as reveal file in directories using default file explorer\n#### This default permission set includes:\n\n- `allow-open-url`\n- `allow-reveal-item-in-dir`\n- `allow-default-urls`"
+        },
+        {
+          "description": "This enables opening `mailto:`, `tel:`, `https://` and `http://` urls using their default application.",
+          "type": "string",
+          "const": "opener:allow-default-urls",
+          "markdownDescription": "This enables opening `mailto:`, `tel:`, `https://` and `http://` urls using their default application."
+        },
+        {
+          "description": "Enables the open_path command without any pre-configured scope.",
+          "type": "string",
+          "const": "opener:allow-open-path",
+          "markdownDescription": "Enables the open_path command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the open_url command without any pre-configured scope.",
+          "type": "string",
+          "const": "opener:allow-open-url",
+          "markdownDescription": "Enables the open_url command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the reveal_item_in_dir command without any pre-configured scope.",
+          "type": "string",
+          "const": "opener:allow-reveal-item-in-dir",
+          "markdownDescription": "Enables the reveal_item_in_dir command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the open_path command without any pre-configured scope.",
+          "type": "string",
+          "const": "opener:deny-open-path",
+          "markdownDescription": "Denies the open_path command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the open_url command without any pre-configured scope.",
+          "type": "string",
+          "const": "opener:deny-open-url",
+          "markdownDescription": "Denies the open_url command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the reveal_item_in_dir command without any pre-configured scope.",
+          "type": "string",
+          "const": "opener:deny-reveal-item-in-dir",
+          "markdownDescription": "Denies the reveal_item_in_dir command without any pre-configured scope."
         }
       ]
     },
@@ -2351,6 +3149,23 @@
           "enum": [
             "iOS"
           ]
+        }
+      ]
+    },
+    "Application": {
+      "description": "Opener scope application.",
+      "anyOf": [
+        {
+          "description": "Open in default application.",
+          "type": "null"
+        },
+        {
+          "description": "If true, allow open with any application.",
+          "type": "boolean"
+        },
+        {
+          "description": "Allow specific application to open with.",
+          "type": "string"
         }
       ]
     }

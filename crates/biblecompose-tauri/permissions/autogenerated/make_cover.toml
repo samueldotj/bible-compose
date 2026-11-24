@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-make-cover"
+description = "Enables the make_cover command without any pre-configured scope."
+commands.allow = ["make_cover"]
+
+[[permission]]
+identifier = "deny-make-cover"
+description = "Denies the make_cover command without any pre-configured scope."
+commands.deny = ["make_cover"]

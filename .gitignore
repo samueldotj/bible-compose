@@ -40,3 +40,6 @@ tests/out/
 node_modules/
 dist/
 .claude/
+
+# The editor's interface, staged from easy-usfm by scripts/stage-editor.mjs (ADR-007)
+public/editor/

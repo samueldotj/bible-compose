@@ -4,6 +4,14 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## Unreleased
 
+* **The editor opens inside BibleCompose.** Double-clicking a book opens it
+  in an easy-usfm window of this application's own, rather than starting a
+  separate program that had to be unpacked first. The editor opens the book
+  it was asked for and only that book. Asking for a book that is already open
+  brings its window forward, and closing BibleCompose asks each editor to
+  close, so unsaved work is still offered for saving. Installers are about
+  8 MB smaller.
+
 * **The built PDF can be read inside the window.** After a build, the Output
   tab shows the pages, one at a time or as facing spreads, with zoom and a
   page box. A build that succeeds opens on its pages; one that fails opens on

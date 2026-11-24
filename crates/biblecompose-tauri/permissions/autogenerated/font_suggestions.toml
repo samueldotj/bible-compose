@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-font-suggestions"
+description = "Enables the font_suggestions command without any pre-configured scope."
+commands.allow = ["font_suggestions"]
+
+[[permission]]
+identifier = "deny-font-suggestions"
+description = "Denies the font_suggestions command without any pre-configured scope."
+commands.deny = ["font_suggestions"]

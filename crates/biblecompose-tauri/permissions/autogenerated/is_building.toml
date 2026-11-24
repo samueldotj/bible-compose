@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-is-building"
+description = "Enables the is_building command without any pre-configured scope."
+commands.allow = ["is_building"]
+
+[[permission]]
+identifier = "deny-is-building"
+description = "Denies the is_building command without any pre-configured scope."
+commands.deny = ["is_building"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-changed-files"
+description = "Enables the changed_files command without any pre-configured scope."
+commands.allow = ["changed_files"]
+
+[[permission]]
+identifier = "deny-changed-files"
+description = "Denies the changed_files command without any pre-configured scope."
+commands.deny = ["changed_files"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-add-front-matter"
+description = "Enables the add_front_matter command without any pre-configured scope."
+commands.allow = ["add_front_matter"]
+
+[[permission]]
+identifier = "deny-add-front-matter"
+description = "Denies the add_front_matter command without any pre-configured scope."
+commands.deny = ["add_front_matter"]

@@ -1,12 +1,42 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "What the main window is permitted to do. Deliberately small: every addition here widens what a compromised frontend could reach, and BibleCompose's frontend renders content that arrived by email. `dialog:allow-open` is the folder picker and nothing else -- not save, not message, not ask -- because choosing a project is the one thing the window needs the filesystem for.",
+  "description": "What the main window is permitted to do. Deliberately small: every addition here widens what a compromised frontend could reach, and BibleCompose's frontend renders content that arrived by email. `dialog:allow-open` is the folder picker and nothing else -- not save, not message, not ask -- because choosing a project is the one thing the window needs the filesystem for. Its own commands are granted by name (`allow-…`), because they are declared in build.rs so that the editor windows (capabilities/editor.json) are refused them.",
   "windows": [
     "main"
   ],
   "permissions": [
     "core:default",
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "allow-versions",
+    "allow-defaults",
+    "allow-open-project",
+    "allow-changed-files",
+    "allow-set-setting",
+    "allow-reset-setting",
+    "allow-set-style",
+    "allow-reset-style",
+    "allow-fonts",
+    "allow-font-suggestions",
+    "allow-install-font",
+    "allow-recent-projects",
+    "allow-forget-project",
+    "allow-create-project",
+    "allow-add-front-matter",
+    "allow-make-cover",
+    "allow-cover-preview",
+    "allow-close-project",
+    "allow-open-folder",
+    "allow-open-pdf",
+    "allow-open-preview",
+    "allow-close-preview",
+    "allow-open-in-editor",
+    "allow-open-url",
+    "allow-presets",
+    "allow-head-fields",
+    "allow-apply-preset",
+    "allow-start-build",
+    "allow-cancel-build",
+    "allow-is-building"
   ]
 }

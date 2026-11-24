@@ -29,14 +29,6 @@ on:
     tags: ["v*"]
 
 env:
-  # **Which easy-usfm the installers carry.** The window opens a book's USFM
-  # in that editor and ships it (ADR-001 shares the engine between the two,
-  # not a release schedule), so a build has to say which one. `main` means
-  # the editor in an installer is whatever main was on the day — pin this to
-  # a tag for a release, the way `usfm3`, the SILE revision and the font
-  # catalogue's commit are all pinned, and for the same reason: a user
-  # reporting a bug should be reporting it about something nameable.
-  EASY_USFM_REF: v0.2.0
   CARGO_TERM_COLOR: always
   SILE_REF: ${{ inputs.sile_ref || 'v0.15.13' }}
 
@@ -362,8 +354,8 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
-      # `wasm32` and `wasm-pack` because the editor staged below builds its
-      # own interface before Tauri is handed it. They belong to *this* job:
+      # `wasm32` and `wasm-pack` because the editor's interface, staged
+      # below, compiles the engine for its worker before Tauri is handed it. They belong to *this* job:
       # putting them on `bundle`, which stages no editor, is how the first
       # attempt at this release failed on all three platforms at once with
       # `wasm-pack: not found`.
@@ -394,27 +386,40 @@ jobs:
 
       # ------------------------------------------------------------- editor
       #
+      # **Which easy-usfm the installers carry is the revision Cargo.lock
+      # names.** The editor's native half is a crate of this workspace
+      # (ADR-007), pinned in Cargo.toml beside the engine; its interface has
+      # to come from the same commit, and `stage-editor.mjs` refuses any
+      # other. Read from the lock rather than written here a second time, so
+      # there is one pin and nothing to forget to move.
+      - name: which easy-usfm
+        id: easy_usfm
+        shell: bash
+        run: |
+          rev=$(grep -A2 '^name = "tauri-plugin-easy-usfm"$' Cargo.lock | sed -n 's/.*#\([0-9a-f]\{40\}\)".*/\1/p')
+          [ -n "$rev" ] || { echo "::error::Cargo.lock names no git revision for the editor"; exit 1; }
+          echo "rev=$rev" >> "$GITHUB_OUTPUT"
+
       # A second checkout rather than a submodule: the two repositories share
-      # a crate (ADR-001) and not a history, and a submodule would tie every
-      # commit here to one there.
+      # crates (ADR-001, ADR-007) and not a history, and a submodule would tie
+      # every commit here to one there.
       - uses: actions/checkout@v4
         with:
           repository: samueldotj/easy-usfm
-          ref: ${{ env.EASY_USFM_REF }}
+          ref: ${{ steps.easy_usfm.outputs.rev }}
           path: easy-usfm
 
       - name: the editor's own dependencies
         working-directory: easy-usfm
         run: npm ci
 
-      # **`tauri build`, never `cargo build`** — the reason is written over
-      # `scripts/stage-editor.mjs`, and the script refuses a stage built the
-      # wrong way rather than letting it ship.
-      - name: stage the editor
-        run: node scripts/stage-editor.mjs easy-usfm editor-stage
+      # Into `public/editor/`, which the frontend build copies into `dist/`
+      # and Tauri compiles into the executable with the rest of the window.
+      - name: stage the editor's interface
+        run: node scripts/stage-editor.mjs easy-usfm
 
-      - name: the staged editor carries its own interface
-        run: node scripts/stage-editor.mjs --verify editor-stage
+      - name: the staged editor has a page and an engine
+        run: node scripts/stage-editor.mjs --verify
 
       # **The checkout goes once the editor is staged.** `tauri build` finds
       # its app by walking the working tree for a `tauri.conf.json`, and the
@@ -422,8 +427,8 @@ jobs:
       # reaches first is the filesystem's order: 0.3.1 got ours everywhere,
       # and 0.4.0's Linux job got the editor's — `the package
       # 'easy-usfm-tauri' does not contain these features: embedded-editor,
-      # embedded-sile`. The stage is a binary and carries no config, so with
-      # the checkout gone there is one app to find.
+      # embedded-sile`. The stage is static files and carries no config, so
+      # with the checkout gone there is one app to find.
       - name: the editor's checkout goes, so tauri build finds only ours
         shell: bash
         run: rm -rf easy-usfm
@@ -485,21 +490,14 @@ jobs:
         shell: bash
         env:
           BIBLECOMPOSE_SILE_BUNDLE: ${{ github.workspace }}/stage
-          # **Here, on the step that builds the window.** It was on `bundle`'s
-          # step, which builds the command line and stages no editor, so every
-          # installer from 0.3.0 to 0.4.1 carried the placeholder and answered
-          # a double-click on a book with "this build was compiled to carry
-          # the editor but without an editor to carry". The editor was staged
-          # three steps above and never pointed at.
-          BIBLECOMPOSE_EDITOR_BUNDLE: ${{ github.workspace }}/editor-stage
         run: |
           # Both stages, or no build. An unset variable is not an error to
           # rust-embed — the build script points it at a placeholder so the
-          # features type-check without a stage — so an installer missing
-          # either one builds, installs and runs, and fails only when used.
-          for stage in "${BIBLECOMPOSE_SILE_BUNDLE:?}" "${BIBLECOMPOSE_EDITOR_BUNDLE:?}"; do
-            [ -d "$stage" ] || { echo "::error::no stage at $stage"; exit 1; }
-          done
+          # feature type-checks without a stage — and a missing editor page is
+          # not an error to Vite, so an installer missing either one builds,
+          # installs and runs, and fails only when used.
+          [ -d "${BIBLECOMPOSE_SILE_BUNDLE:?}" ] || { echo "::error::no stage at $BIBLECOMPOSE_SILE_BUNDLE"; exit 1; }
+          [ -f public/editor/index.html ] || { echo "::error::no editor staged in public/editor"; exit 1; }
 
           # **An empty variable is not an absent one, and the bundler cannot
           # tell.** The signing secrets are lifted to the job's environment so
@@ -516,9 +514,9 @@ jobs:
           done
 
           if [ -n "${TAURI_EXTRA_CONFIG:-}" ]; then
-            npx tauri build --features embedded-sile,embedded-editor --config "$TAURI_EXTRA_CONFIG"
+            npx tauri build --features embedded-sile --config "$TAURI_EXTRA_CONFIG"
           else
-            npx tauri build --features embedded-sile,embedded-editor
+            npx tauri build --features embedded-sile
           fi
 
       # Notarization is run here rather than left to the bundler, because what

@@ -432,9 +432,6 @@ pub struct Session {
     /// What the open project looked like on disk when it was last read
     /// (FUN-007).
     watched: Mutex<Option<(Utf8PathBuf, Fingerprint)>>,
-    /// The editors this window started, so closing it closes them (the
-    /// reasoning is over `editor::close_started`).
-    editors: editor::Started,
     /// The distinct characters the open Scripture sets, kept so the font
     /// picker can check three hundred families against them without reading
     /// the books again (GUI-003).
@@ -649,9 +646,9 @@ fn open_folder(path: String) -> Result<(), Vec<WireDiagnostic>> {
 /// safe today and is one refactor away from not being.
 /// Open one book's USFM in easy-usfm (GUI-009's neighbour).
 ///
-/// The editor this application carries, started on that file — see
-/// [`editor`] for where it comes from and why the launching lives in the
-/// shell rather than in the crate that composes a page.
+/// easy-usfm, in a window of this application's own on that file — see
+/// [`editor`] for how, and why it lives in the shell rather than in the crate
+/// that composes a page.
 ///
 /// The path is checked against the open project rather than trusted. It comes
 /// from this application's own book list today, but a command reachable from
@@ -660,6 +657,7 @@ fn open_folder(path: String) -> Result<(), Vec<WireDiagnostic>> {
 /// publication's text might one day contain.
 #[tauri::command]
 fn open_in_editor(
+    app: tauri::AppHandle,
     path: String,
     session: tauri::State<'_, Arc<Session>>,
 ) -> Result<(), Vec<WireDiagnostic>> {
@@ -669,7 +667,7 @@ fn open_in_editor(
         "open a project before editing one of its books",
         "only the books of the open project can be opened for editing",
     )?;
-    editor::open(&path, &session.editors).map_err(|e| vec![WireDiagnostic::from(&e)])
+    editor::open(&app, &path).map_err(|e| vec![WireDiagnostic::from(&e)])
 }
 
 /// `path`, if it lies inside the project the window has open.
@@ -2018,6 +2016,21 @@ fn resize_between(app: &tauri::AppHandle, from: f64, to: f64) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        // The editor's own two (ADR-007): easy-usfm's shell, and the opener
+        // that hands a link in a document to the operating system.
+        .plugin(tauri_plugin_opener::init())
+        .plugin(editor::plugin())
+        // **An editor closes with the window that opened it.** Asked as the
+        // main window is asked to close, so each editor's unsaved-changes
+        // guard runs while there is still someone looking — and one kept open
+        // by its answer keeps the application running with it.
+        .on_window_event(|window, event| {
+            if window.label() == "main"
+                && matches!(event, tauri::WindowEvent::CloseRequested { .. })
+            {
+                editor::close_all(window.app_handle());
+            }
+        })
         .register_asynchronous_uri_scheme_protocol(preview::SCHEME, serve_page)
         .setup(|app| {
             app.manage(Arc::new(Session::default()));
@@ -2062,20 +2075,8 @@ pub fn run() {
             cancel_build,
             is_building,
         ])
-        .build(tauri::generate_context!())
-        .expect("the desktop shell failed to start")
-        // **An editor this window opened closes with it.** Built and then
-        // run, rather than `run` alone, because that is what it takes to see
-        // the application leaving. `Exit` and not `ExitRequested`: the latter
-        // can be stopped, and asking a publisher's editors to close over a
-        // shutdown that was then called off would be closing them for nothing.
-        .run(|handle, event| {
-            if matches!(event, tauri::RunEvent::Exit) {
-                if let Some(session) = handle.try_state::<Arc<Session>>() {
-                    editor::close_started(&session.editors);
-                }
-            }
-        });
+        .run(tauri::generate_context!())
+        .expect("the desktop shell failed to start");
 }
 
 #[cfg(test)]

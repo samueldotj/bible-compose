@@ -23,10 +23,6 @@ crate-type = ["lib", "cdylib", "staticlib"]
 # expects to find SILE on the machine, which is the right thing for a
 # developer and the wrong thing for a publisher.
 embedded-sile = ["biblecompose-app/embedded-sile"]
-# And the editor, on the same terms and for the same reason: a shipped build
-# carries easy-usfm so that opening a book's USFM needs nothing installed, and
-# a dev build does not carry 9 MB it can find next to its own executable.
-embedded-editor = ["dep:rust-embed"]
 
 [dependencies]
 biblecompose-scripture.workspace = true
@@ -39,6 +35,17 @@ serde_json.workspace = true
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2.7.2"
 
+# The editor a book opens in (ADR-007): easy-usfm's shell, in this process.
+# Not a program this application starts but a plugin it registers, so there
+# is one binary, nothing to unpack, and nothing to close but a window. The
+# plugin's update check stays compiled out — its `updater` feature is not
+# asked for — because this application promises no network code but the font
+# download beside it (ARCHITECTURE §7.6).
+tauri-plugin-easy-usfm.workspace = true
+# A link inside a document is handed to the operating system and never opened
+# in the editor's webview (easy-usfm SECURITY 2), and that is this plugin.
+tauri-plugin-opener = "2.5.4"
+
 # The only HTTP client in the workspace, and it is here rather than in the app
 # crate on purpose: the shell is the layer that already owns privileged I/O,
 # and keeping egress out of `biblecompose-app` is what lets the build path and
@@ -46,15 +53,6 @@ tauri-plugin-dialog = "2.7.2"
 # intention (ARCHITECTURE section 7.6, NFR-004). Pure Rust TLS, so a release
 # does not pick up whatever OpenSSL the build machine had.
 ureq = { version = "3", default-features = false, features = ["rustls"] }
-
-# Carries easy-usfm, under `embedded-editor`. The same two features the
-# typesetter's embed needs: `interpolate-folder-path` so the folder can come
-# from the environment, and `debug-embed` so a debug build embeds rather than
-# reading the stage off disk at run time, which is the opposite of the point.
-rust-embed = { version = "8", optional = true, features = [
-    "interpolate-folder-path",
-    "debug-embed",
-] }
 
 # The preview (GUI-008): pages of the built PDF drawn into the window. hayro
 # because it is pure Rust and forbids `unsafe`, so the renderer travels inside

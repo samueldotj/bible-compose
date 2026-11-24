@@ -26,7 +26,12 @@ biblecompose-testkit = { path = "crates/biblecompose-testkit" }
 #
 # Pinned to a revision, not a branch: a branch would let the parser move
 # underneath a golden-file test and turn a red build into a mystery.
-usfm-core = { git = "https://github.com/samueldotj/easy-usfm.git", rev = "44c31171c8f81ade2241753b2b72b0de3524bcae" }
+usfm-core = { git = "https://github.com/samueldotj/easy-usfm.git", rev = "c4c01b0bc06e02874dbe09bb149b5517e3761782" }
+# The editor (ADR-007): easy-usfm's desktop shell, as a Tauri plugin, opened
+# as a window in this process on one of a project's books. The same revision
+# as the engine, always — one pin for the parser, the save ladder and (through
+# `scripts/stage-editor.mjs`, which checks it) the interface the window shows.
+tauri-plugin-easy-usfm = { git = "https://github.com/samueldotj/easy-usfm.git", rev = "c4c01b0bc06e02874dbe09bb149b5517e3761782" }
 
 quick-xml = "0.37"
 serde = { version = "1", features = ["derive"] }

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-cover-preview"
+description = "Enables the cover_preview command without any pre-configured scope."
+commands.allow = ["cover_preview"]
+
+[[permission]]
+identifier = "deny-cover-preview"
+description = "Denies the cover_preview command without any pre-configured scope."
+commands.deny = ["cover_preview"]

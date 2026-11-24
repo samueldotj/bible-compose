@@ -654,15 +654,21 @@ fn creating_a_project_writes_its_settings_into_the_chosen_folder() {
 fn a_folder_of_usfm_becomes_a_project_in_place() {
     let dir = tempfile::tempdir().expect("temp dir");
     let root = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("UTF-8 temp path");
-    std::fs::write(root.join("JHN.usfm").as_std_path(), "\\id JHN\n\\c 1\n\\v 1 In\n")
-        .expect("write");
+    std::fs::write(
+        root.join("JHN.usfm").as_std_path(),
+        "\\id JHN\n\\c 1\n\\v 1 In\n",
+    )
+    .expect("write");
 
     let check = app_project::check_folder(&root);
     assert!(!check.is_project);
     assert!(check.other_files.is_empty(), "{:?}", check.other_files);
 
     app_project::create(&root, "en").expect("a new project");
-    assert!(root.join("JHN.usfm").exists(), "nothing of theirs was touched");
+    assert!(
+        root.join("JHN.usfm").exists(),
+        "nothing of theirs was touched"
+    );
     let p = project_at(&root);
     assert!(p.books.iter().any(|b| b.code == "JHN"), "{:?}", p.books);
 }
@@ -679,7 +685,10 @@ fn a_folder_that_is_already_a_project_is_refused() {
     assert!(app_project::check_folder(&root).is_project);
     let refused = app_project::create(&root, "en").expect_err("already a project");
     assert_eq!(refused.code.as_str(), "PRJ-005");
-    assert!(refused.help.as_deref().is_some_and(|h| h.contains("open it")));
+    assert!(refused
+        .help
+        .as_deref()
+        .is_some_and(|h| h.contains("open it")));
     assert_eq!(
         std::fs::read_to_string(settings.as_std_path()).unwrap(),
         "schema_version = 1\n",
@@ -693,7 +702,14 @@ fn a_folder_that_is_already_a_project_is_refused() {
 fn files_other_than_usfm_are_counted() {
     let dir = tempfile::tempdir().expect("temp dir");
     let root = Utf8PathBuf::from_path_buf(dir.path().to_path_buf()).expect("UTF-8 temp path");
-    for name in ["GEN.usfm", "MAT.SFM", "notes.txt", "cover.png", ".DS_Store", "desktop.ini"] {
+    for name in [
+        "GEN.usfm",
+        "MAT.SFM",
+        "notes.txt",
+        "cover.png",
+        ".DS_Store",
+        "desktop.ini",
+    ] {
         std::fs::write(root.join(name).as_std_path(), "x").expect("write");
     }
     std::fs::create_dir(root.join("drafts").as_std_path()).expect("mkdir");
@@ -702,7 +718,11 @@ fn files_other_than_usfm_are_counted() {
     std::fs::write(root.join("output/bible.pdf").as_std_path(), "x").expect("write");
 
     let check = app_project::check_folder(&root);
-    let mut names: Vec<&str> = check.other_files.iter().filter_map(|p| p.file_name()).collect();
+    let mut names: Vec<&str> = check
+        .other_files
+        .iter()
+        .filter_map(|p| p.file_name())
+        .collect();
     names.sort_unstable();
     assert_eq!(names, ["cover.png", "notes.txt", "old.docx"]);
 }

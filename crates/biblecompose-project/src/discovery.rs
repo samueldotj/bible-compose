@@ -223,8 +223,8 @@ pub fn other_files(root: &Utf8Path) -> Vec<Utf8PathBuf> {
                 }
                 continue;
             }
-            let system = name.starts_with('.')
-                || SYSTEM_FILES.iter().any(|s| name.eq_ignore_ascii_case(s));
+            let system =
+                name.starts_with('.') || SYSTEM_FILES.iter().any(|s| name.eq_ignore_ascii_case(s));
             if !system && !is_scripture(&path) {
                 out.push(path);
             }

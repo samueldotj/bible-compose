@@ -167,14 +167,19 @@ pub fn create(root: &Utf8Path, language: &str) -> Result<Utf8PathBuf, Diagnostic
         .help("open it instead, or choose a different folder"));
     }
 
-    let Some(name) = root.file_name().map(str::to_owned).filter(|n| !n.trim().is_empty())
+    let Some(name) = root
+        .file_name()
+        .map(str::to_owned)
+        .filter(|n| !n.trim().is_empty())
     else {
         return Err(Diagnostic::error(
             biblecompose_diagnostics::code::COULD_NOT_CREATE,
             format!("{root} cannot be a project"),
         )
         .at(SourceLoc::file(root.clone()))
-        .help("choose a folder rather than the top of a drive; the publication is named after it"));
+        .help(
+            "choose a folder rather than the top of a drive; the publication is named after it",
+        ));
     };
 
     std::fs::create_dir_all(root.as_std_path()).map_err(|e| {

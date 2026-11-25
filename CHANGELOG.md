@@ -24,13 +24,25 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   with blue numbers and bold headings, and **Illuminated**, a gift edition
   with a framed chapter number, a dropped initial and red headings. A style
   you set before choosing a template is kept unless the template sets it
-  too, and no template changes your font.
+  too. Only Standard two-column sets a font.
 
 * **Rules, a page frame and note lines.** A new Rules & frame section can
   draw a rule under the running head, over the foot line and down the gutter
   between columns, a single or double frame round every page, and ruled lines
-  in the outer margin for notes. All of them share one colour, and none is
-  drawn unless you ask.
+  in the outer margin for notes. None is drawn unless you ask. Each rule has
+  its own thickness and colour. A thickness can be a length or a named
+  weight: `hairline`, `thin`, `medium` or `thick`. The head and foot rules
+  each have a gap to the text you can set.
+
+* **Standard two-column now matches its design.** It is set in EB Garamond,
+  which BibleCompose now ships, with small-capital running heads, a light
+  gutter rule and foot rule under a dark head rule, the design's leading,
+  sizes and spacing, and a foot line.
+
+* **A dropped chapter number now sits under the chapter's heading**, beside
+  the first paragraph. Before, it dropped beside the heading itself, in the
+  heading's italic. It now also stands `gap_after` clear of every line beside
+  it; before, the text touched it.
 
 * **Paragraphs can indent their first line.** `paragraph.p` has a first-line
   indent. A paragraph that opens a chapter or follows a heading is set flush

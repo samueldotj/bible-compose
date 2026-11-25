@@ -552,6 +552,8 @@ impl Pdf {
             let text = String::from_utf8_lossy(&content);
             let mut stack: Vec<&str> = Vec::new();
             let mut thickness = 1.0f64;
+            let mut color = (0.0f64, 0.0f64, 0.0f64);
+            let mut saved: Vec<(f64, (f64, f64, f64))> = Vec::new();
             let mut from: Option<(f64, f64)> = None;
             let mut to: Option<(f64, f64)> = None;
             for token in (Tokens { rest: &text }) {
@@ -559,6 +561,43 @@ impl Pdf {
                     "w" => {
                         if let [width] = tail(&stack, 1) {
                             thickness = width.parse().unwrap_or(thickness);
+                        }
+                    }
+                    "q" => saved.push((thickness, color)),
+                    "Q" => {
+                        if let Some((t, c)) = saved.pop() {
+                            thickness = t;
+                            color = c;
+                        }
+                    }
+                    "RG" => {
+                        if let [r, g, b] = tail(&stack, 3) {
+                            if let (Ok(r), Ok(g), Ok(b)) = (r.parse(), g.parse(), b.parse()) {
+                                color = (r, g, b);
+                            }
+                        }
+                    }
+                    "G" => {
+                        if let [g] = tail(&stack, 1) {
+                            if let Ok(g) = g.parse::<f64>() {
+                                color = (g, g, g);
+                            }
+                        }
+                    }
+                    "K" => {
+                        if let [c, m, y, k] = tail(&stack, 4) {
+                            if let (Ok(c), Ok(m), Ok(y), Ok(k)) = (
+                                c.parse::<f64>(),
+                                m.parse::<f64>(),
+                                y.parse::<f64>(),
+                                k.parse::<f64>(),
+                            ) {
+                                color = (
+                                    (1.0 - c) * (1.0 - k),
+                                    (1.0 - m) * (1.0 - k),
+                                    (1.0 - y) * (1.0 - k),
+                                );
+                            }
                         }
                     }
                     "m" | "l" => {
@@ -581,6 +620,7 @@ impl Pdf {
                                 x2,
                                 y2,
                                 thickness,
+                                color,
                             });
                         }
                         from = None;
@@ -638,6 +678,9 @@ pub struct Rule {
     pub x2: f64,
     pub y2: f64,
     pub thickness: f64,
+    /// The stroke colour it was drawn in, as RGB from 0 to 1: black when the
+    /// stream never set one.
+    pub color: (f64, f64, f64),
 }
 
 impl Rule {

@@ -8,18 +8,28 @@
 # Section headings are centred and not bold. In two narrow columns a bold
 # heading flush left reads as the start of a new book; a centred one in the
 # text's own weight reads as a pause in the one already open.
+#
+# Sizes and spaces are the design's, at its own scale: its 15px body is 9.2pt
+# here, so a pixel of it is about 0.61pt.
 
+# Medium rather than bold, and a few points clear of the text beside it.
 [chapter]
 weight = 500
 color = "#7a1f1f"
+gap_after = "5pt"
+
+# The book's title in the medium, not the bold: large enough to say so.
+[heading.mt1]
+font_size = "26pt"
+weight = 500
 
 [heading.s1]
-font_size = "9.6pt"
+font_size = "9.2pt"
 weight = 400
 italic = true
 align = "center"
-space_above = "8pt"
-space_below = "3pt"
+space_above = "6pt"
+space_below = "3.7pt"
 
 [heading.s2]
 font_size = "9.2pt"
@@ -27,25 +37,31 @@ weight = 400
 italic = true
 align = "center"
 space_above = "6pt"
-space_below = "2pt"
+space_below = "3pt"
 
-# Grey rather than black, so the eye reads past them; the size is the
-# built-in one, which is what a conventional page is measured against.
+# Small and grey, in the semibold, so the eye reads past them and still finds
+# them when it looks.
 [verse]
-font_size = "6.4pt"
+font_size = "5.7pt"
+weight = 600
 color = "#5c564c"
 
 # The running head in small capitals, upright: a head in italic beside
 # italic section headings would be one voice saying two things.
 [head]
+font_size = "8pt"
 italic = false
 smallcaps = true
+color = "#1c1a17"
 
+# The foot line quieter than the head, in the verse numbers' grey.
 [folio]
+font_size = "7.4pt"
 smallcaps = true
+color = "#5c564c"
 
 # Paragraphs open with an indent, as a book's do; the one that opens a
 # chapter and the one under a heading are set flush, which is the class's
 # rule and not something to write here.
 [paragraph.p]
-first_line_indent = "10pt"
+first_line_indent = "8.6pt"

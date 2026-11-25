@@ -80,8 +80,13 @@ pub fn class_options_with(
     put("footsep", s.page.footer_gap.to_sile());
     // The page's furniture, drawn by the class at the end of each page.
     put("columnrule", s.page.column_rule.to_sile());
+    put("columnrulecolor", s.page.column_rule_color.to_string());
     put("headerrule", s.page.header_rule.to_sile());
+    put("headerrulecolor", s.page.header_rule_color.to_string());
+    put("headerrulegap", s.page.header_rule_gap.to_sile());
     put("footerrule", s.page.footer_rule.to_sile());
+    put("footerrulecolor", s.page.footer_rule_color.to_string());
+    put("footerrulegap", s.page.footer_rule_gap.to_sile());
     put("rulecolor", s.page.rule_color.to_string());
     put("frame", s.page.frame.to_string());
     put("framewidth", s.page.frame_width.to_sile());

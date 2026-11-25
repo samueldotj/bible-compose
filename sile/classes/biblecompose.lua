@@ -100,11 +100,17 @@ local OPTIONS = {
    { key = "marginouter", kind = "string", default = "8%pw" },
    { key = "headsep", kind = "string", default = "4%ph" },
    -- The page's rules: down the gutter, under the head, over the foot. Each
-   -- is a thickness, "0pt" for none. One ink for all of them, the frame and
-   -- the note lines.
+   -- is a thickness, "0pt" for none, in its own ink; the head's and the
+   -- foot's stand their gap off the text block. `rulecolor` is the frame's
+   -- and the note lines'.
    { key = "columnrule", kind = "string", default = "0pt" },
+   { key = "columnrulecolor", kind = "string", default = "#000000" },
    { key = "headerrule", kind = "string", default = "0pt" },
+   { key = "headerrulecolor", kind = "string", default = "#000000" },
+   { key = "headerrulegap", kind = "string", default = "10pt" },
    { key = "footerrule", kind = "string", default = "0pt" },
+   { key = "footerrulecolor", kind = "string", default = "#000000" },
+   { key = "footerrulegap", kind = "string", default = "6pt" },
    { key = "rulecolor", kind = "string", default = "#000000" },
    -- A frame round every page, `frameinset` in from the trim: none, single,
    -- double.
@@ -1336,9 +1342,9 @@ local function thickness (value)
    return m:tonumber()
 end
 
---- Draw `body`'s rules in the page's rule ink.
-local function in_rule_ink (o, body)
-   local ok, color = pcall(SILE.types.color, o.rulecolor or "#000000")
+--- Draw `body`'s rules in `ink`, or the page's rule ink without one.
+local function in_rule_ink (o, body, ink)
+   local ok, color = pcall(SILE.types.color, ink or o.rulecolor or "#000000")
    if ok and color then
       SILE.outputter:pushColor(color)
       body()
@@ -1370,34 +1376,42 @@ end
 function page_rules (o, recto)
    local left, right, top, bottom = text_block()
    local width = right - left
-   in_rule_ink(o, function ()
-      local head = thickness(o.headerrule)
-      local frame = SILE.getFrame("runningHead")
-      if head > 0 and frame then
-         -- A little over halfway down the head's gap: below the line of the
-         -- head, with room still between the rule and the text.
-         local htop = frame:top():tonumber()
-         local y = htop + (top - htop) * 0.55
+
+   -- The head's rule its gap above the text block, never above the head's
+   -- own frame; the foot's its gap below the text block, never below the
+   -- foot line's top.
+   local head = thickness(o.headerrule)
+   local frame = SILE.getFrame("runningHead")
+   if head > 0 and frame then
+      local htop = frame:top():tonumber()
+      local y = math.max(htop, top - thickness(o.headerrulegap) - head)
+      in_rule_ink(o, function ()
          SILE.outputter:drawRule(left, y, width, head)
-      end
+      end, o.headerrulecolor)
+   end
 
-      local foot = thickness(o.footerrule)
-      local folio = SILE.getFrame("folio")
-      if foot > 0 and folio then
-         local ftop = folio:top():tonumber()
-         local y = bottom + (ftop - bottom) * 0.35
+   local foot = thickness(o.footerrule)
+   local folio = SILE.getFrame("folio")
+   if foot > 0 and folio then
+      local ftop = folio:top():tonumber()
+      local y = math.min(ftop - foot, bottom + thickness(o.footerrulegap))
+      in_rule_ink(o, function ()
          SILE.outputter:drawRule(left, y, width, foot)
-      end
+      end, o.footerrulecolor)
+   end
 
-      local gutter_rule = thickness(o.columnrule)
-      local ok, gutter = pcall(SILE.getFrame, "gutter")
-      if gutter_rule > 0 and ok and gutter and (o.columns or 1) >= 2 then
-         local a = SILE.getFrame("contentA")
-         local x = (gutter:left():tonumber() + gutter:right():tonumber()) / 2 - gutter_rule / 2
-         local y1, y2 = a:top():tonumber(), a:bottom():tonumber()
+   local gutter_rule = thickness(o.columnrule)
+   local ok, gutter = pcall(SILE.getFrame, "gutter")
+   if gutter_rule > 0 and ok and gutter and (o.columns or 1) >= 2 then
+      local a = SILE.getFrame("contentA")
+      local x = (gutter:left():tonumber() + gutter:right():tonumber()) / 2 - gutter_rule / 2
+      local y1, y2 = a:top():tonumber(), a:bottom():tonumber()
+      in_rule_ink(o, function ()
          SILE.outputter:drawRule(x, y1, gutter_rule, y2 - y1)
-      end
+      end, o.columnrulecolor)
+   end
 
+   in_rule_ink(o, function ()
       if o.notelines then
          -- From the column's outer edge, a gap out, to a gap short of the
          -- frame or the trim; from the top of the text block to its foot.
@@ -2001,6 +2015,22 @@ local function dropped (body)
    for i = #anchors, 1, -1 do
       SILE.typesetter:pushHorizontal(anchors[i])
    end
+end
+
+--- `content` with the chapter figure a heading held back put in front of it,
+--- so it drops into this paragraph's first lines.
+local function with_pending_drop (content)
+   local drop = scratch().pending_drop
+   scratch().pending_drop = nil
+   local out = {
+      function ()
+         dropped(drop)
+      end,
+   }
+   for _, child in ipairs(content) do
+      out[#out + 1] = child
+   end
+   return out
 end
 
 --- Set `body` inside a rule of the given thickness, a little padding between.
@@ -2723,6 +2753,7 @@ function class:registerXmlCommands ()
       SILE.call("noindent")
       scratch().flush_next = true
       local align = alignment(s)
+      scratch().in_heading = true
       styled(selector, function ()
          if align then
             SILE.call(align, {}, function ()
@@ -2732,6 +2763,7 @@ function class:registerXmlCommands ()
             SILE.process(content)
          end
       end)
+      scratch().in_heading = false
       -- A heading is not left standing at the foot of a column (SCR-011), and
       -- the order of these five calls is the whole of how that is arranged.
       --
@@ -2774,6 +2806,10 @@ function class:registerXmlCommands ()
             end
          end
       end
+      if scratch().pending_drop then
+         flush = true
+         content = with_pending_drop(content)
+      end
       if flush then
          SILE.call("noindent")
       elseif s.first_line_indent then
@@ -2805,6 +2841,9 @@ function class:registerXmlCommands ()
       local selector = "poetry." .. (options.style or "q") .. (options.level or "1")
       local s = style(selector)
       scratch().verses_in_paragraph = 0
+      if scratch().pending_drop then
+         content = with_pending_drop(content)
+      end
       skip(s.space_above or "1pt")
       local align = alignment(s)
       -- An indent on a poetry line is a first-line indent of the whole line,
@@ -2977,8 +3016,18 @@ function class:registerXmlCommands ()
          -- package as font options and its size does not: the package sets
          -- the size that spans the lines, and a `\font` inside with the
          -- style's own size would undo that.
-         dropped(function ()
-            local opts = { lines = tonumber(self._bcopts.dropcaplines) or 3, join = false }
+         -- The gap between the figure and the text is the style's
+         -- `gap_after`. The package without `join` hangs the text hard
+         -- against the figure; with it, every line but the first stands
+         -- `standoff` off, and a kern of the same width gives the first
+         -- line the same gap.
+         local gap = s.gap_after or "4pt"
+         local drop = function ()
+            local opts = {
+               lines = tonumber(self._bcopts.dropcaplines) or 3,
+               join = true,
+               standoff = gap,
+            }
             for key, value in pairs(face(s) or {}) do
                if key ~= "size" then
                   opts[key] = value
@@ -2988,7 +3037,17 @@ function class:registerXmlCommands ()
                opts.color = s.color
             end
             SILE.call("dropcap", opts, content)
-         end)
+            SILE.call("kern", { width = gap })
+         end
+         -- A chapter that opens on a heading carries its number inside the
+         -- heading; dropped there it would hang beside the heading, in the
+         -- heading's face. It waits for the first paragraph instead, as the
+         -- printed page has it: the heading, then the figure in the text.
+         if scratch().in_heading then
+            scratch().pending_drop = drop
+            return
+         end
+         dropped(drop)
          return
       end
 

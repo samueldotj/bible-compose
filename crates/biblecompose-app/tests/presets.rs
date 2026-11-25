@@ -288,7 +288,7 @@ fn two_column_is_the_conventional_page() {
 
     assert_eq!(pdf.uniform_page_size_inches(), Some((6.0, 9.0)));
     assert!(
-        lines.iter().any(|l| l.sizes().contains(&6.4)),
+        lines.iter().any(|l| l.sizes().contains(&5.7)),
         "the conventional page has verse numbers"
     );
     assert!(
@@ -302,7 +302,7 @@ fn two_column_is_the_conventional_page() {
     let numbers: Vec<String> = lines
         .iter()
         .flat_map(|l| &l.marks)
-        .filter(|m| m.size == 6.4)
+        .filter(|m| m.size == 5.7)
         .map(|m| m.text.clone())
         .collect();
     assert!(numbers.iter().any(|n| n == "2"), "{numbers:?}");

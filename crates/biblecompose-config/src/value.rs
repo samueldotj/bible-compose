@@ -761,6 +761,53 @@ pub fn color(node: &Node) -> Result<Located<Color>, Diagnostic> {
     }
 }
 
+/// The weights a rule can be named by instead of measured: the steps a
+/// designer reaches for, so a page can say "a hairline" and mean the same
+/// thing in every edition.
+pub const RULE_WEIGHTS: &[(&str, f64)] = &[
+    ("none", 0.0),
+    ("hairline", 0.25),
+    ("thin", 0.5),
+    ("medium", 0.8),
+    ("thick", 1.2),
+];
+
+/// A rule's thickness: a length, zero for no rule, or one of
+/// [`RULE_WEIGHTS`] by name.
+pub fn rule_weight(node: &Node) -> Result<Located<Length>, Diagnostic> {
+    let text = node.string()?;
+    let given = text.value.trim();
+    if let Some((_, points)) = RULE_WEIGHTS
+        .iter()
+        .find(|(name, _)| name.eq_ignore_ascii_case(given))
+    {
+        return Ok(Located {
+            value: Length {
+                points: *points,
+                unit: Unit::Pt,
+            },
+            loc: text.loc,
+        });
+    }
+    if split_unit(given).is_none() {
+        let names: Vec<&str> = RULE_WEIGHTS.iter().map(|(n, _)| *n).collect();
+        return Err(Diagnostic::error(
+            code::INVALID_VALUE,
+            format!(
+                "`{}` is {:?}, which is neither a thickness nor a rule weight",
+                node.dotted_path(),
+                given
+            ),
+        )
+        .at(text.loc)
+        .help(format!(
+            "write a thickness such as `0.5pt`, or one of {}",
+            names.join(", ")
+        )));
+    }
+    length_or_zero(node)
+}
+
 /// One of a fixed set of spellings.
 ///
 /// The allowed values are listed in the diagnostic, and the nearest one is

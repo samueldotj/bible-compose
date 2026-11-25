@@ -15,16 +15,27 @@
 [page]
 size = "6x9in"
 columns = 2
-# The classic page's rules: a firm one under the head, a light one over the
-# foot, and one down the gutter between the columns.
+column_gap = "18pt"
+# The classic page's rules, each in its own weight and ink: a firm dark one
+# under the head, and light warm-grey ones over the foot and down the gutter,
+# so the eye reads past the two that run beside the text.
+header_gap = "24pt"
 header_rule = "0.6pt"
-footer_rule = "0.4pt"
-column_rule = "0.4pt"
-rule_color = "#3a3530"
+header_rule_color = "#1c1a17"
+header_rule_gap = "11pt"
+footer_gap = "14pt"
+footer_rule = "0.6pt"
+footer_rule_color = "#cfc6b5"
+footer_rule_gap = "6pt"
+column_rule = "0.6pt"
+column_rule_color = "#cfc6b5"
 
+# EB Garamond, which the application ships, at the design's measure: a
+# generous half-line of leading between the lines.
 [typography]
+font_family = "EB Garamond"
 font_size = "9.2pt"
-leading = "11.2pt"
+leading = "13.8pt"
 justify = true
 
 # The chapter figure dropped two lines into the text, as the classic page
@@ -46,14 +57,14 @@ show_cross_references = true
 cross_reference_placement = "note_area"
 
 # The classic head: the page's first reference at the left, its last at the
-# right and the page number between them, so the foot is left clear.
+# right and the page number between them; the foot names the book it is.
 [headers.left_page]
-header_left = "{FirstReference}"
+header_left = "{Book} {FirstReference}"
 header_center = "{Page}"
-header_right = "{LastReference}"
-footer_center = ""
+header_right = "{Book} {LastReference}"
+footer_center = "the holy bible"
 [headers.right_page]
-header_left = "{FirstReference}"
+header_left = "{Book} {FirstReference}"
 header_center = "{Page}"
-header_right = "{LastReference}"
-footer_center = ""
+header_right = "{Book} {LastReference}"
+footer_center = "the holy bible"

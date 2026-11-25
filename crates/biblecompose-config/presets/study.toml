@@ -20,9 +20,11 @@ column_gap = "0.25in"
 # A rule under the head, a heavier one setting the notes off from the text
 # above them, and one down the gutter, all in the accent.
 header_rule = "0.6pt"
+header_rule_color = "#2e5e4e"
 footer_rule = "1pt"
+footer_rule_color = "#2e5e4e"
 column_rule = "0.4pt"
-rule_color = "#2e5e4e"
+column_rule_color = "#2e5e4e"
 
 [typography]
 font_size = "9.5pt"

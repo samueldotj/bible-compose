@@ -372,26 +372,50 @@ mod tests {
         }
     }
 
-    /// No preset names a font: it is chosen before the Scripture's script is
-    /// known, and a face that cannot set that script blocks the build.
+    /// A preset names only a font the application ships, so choosing it can
+    /// never ask for a face the machine does not have. Which faces those are
+    /// is read off the bundled folder rather than listed twice.
     #[test]
-    fn no_preset_names_a_font() {
+    fn a_preset_names_only_a_font_the_application_ships() {
+        let fonts = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fonts");
+        let shipped: Vec<String> = std::fs::read_dir(&fonts)
+            .expect("the bundled fonts")
+            .filter_map(|e| e.ok())
+            .map(|e| {
+                e.file_name()
+                    .to_string_lossy()
+                    .to_lowercase()
+                    .replace([' ', '-', '_'], "")
+            })
+            .collect();
+        let ships = |family: &str| {
+            let squashed = family.to_lowercase().replace(' ', "");
+            shipped.iter().any(|f| f.starts_with(&squashed))
+        };
         for preset in ALL {
-            let keys = preset.style_settings().expect("parses");
-            assert!(
-                keys.iter().all(|(k, _)| !k.ends_with("font_family")),
-                "{} names a font",
-                preset.id
-            );
-            assert!(
+            let mut named: Vec<(String, SettingValue)> = preset
+                .style_settings()
+                .expect("parses")
+                .into_iter()
+                .filter(|(k, _)| k.ends_with("font_family"))
+                .collect();
+            named.extend(
                 preset
                     .settings()
                     .expect("parses")
-                    .iter()
-                    .all(|(k, _)| k != "typography.font_family"),
-                "{} names a body font",
-                preset.id
+                    .into_iter()
+                    .filter(|(k, _)| k == "typography.font_family"),
             );
+            for (key, value) in named {
+                let SettingValue::Str(family) = value else {
+                    panic!("{} sets `{key}` to something other than a name", preset.id)
+                };
+                assert!(
+                    ships(&family),
+                    "{} names `{family}` at `{key}`, which the application does not ship",
+                    preset.id
+                );
+            }
         }
     }
 

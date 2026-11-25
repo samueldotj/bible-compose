@@ -236,6 +236,156 @@ fn rules_under_the_head_over_the_foot_and_down_the_gutter() {
     );
 }
 
+/// **Each rule has its own weight, ink and distance from the text**: a named
+/// weight is its thickness, each is drawn in its own colour, and the head and
+/// foot rules stand their gap off the text block.
+#[test]
+fn each_rule_has_its_own_weight_ink_and_gap() {
+    if !have_backend() {
+        return;
+    }
+    let b = built(
+        PARAGRAPHS,
+        "[page]\ncolumns = 2\n\
+         header_rule = \"thick\"\nheader_rule_color = \"#ff0000\"\nheader_rule_gap = \"12pt\"\n\
+         footer_rule = \"hairline\"\nfooter_rule_color = \"#00ff00\"\nfooter_rule_gap = \"3pt\"\n\
+         column_rule = \"thin\"\ncolumn_rule_color = \"#0000ff\"\n",
+        "",
+    );
+    let rules = rules_on(&b, 1);
+    let across: Vec<_> = rules
+        .iter()
+        .filter(|r| r.is_horizontal() && (r.length() - (b.right - b.left)).abs() < 1.0)
+        .collect();
+    assert_eq!(across.len(), 2, "{rules:?}");
+    // PDF space runs up the page: the head rule is the higher one.
+    let (head, foot) = if across[0].y1 > across[1].y1 {
+        (across[0], across[1])
+    } else {
+        (across[1], across[0])
+    };
+    assert!((head.thickness - 1.2).abs() < 0.05, "thick: {head:?}");
+    assert!((foot.thickness - 0.25).abs() < 0.05, "hairline: {foot:?}");
+    assert_eq!(head.color, (1.0, 0.0, 0.0), "{head:?}");
+    assert_eq!(foot.color, (0.0, 1.0, 0.0), "{foot:?}");
+    let gutter = rules
+        .iter()
+        .find(|r| r.is_vertical())
+        .expect("a gutter rule");
+    assert!((gutter.thickness - 0.5).abs() < 0.05, "thin: {gutter:?}");
+    assert_eq!(gutter.color, (0.0, 0.0, 1.0), "{gutter:?}");
+
+    // The gaps, measured against the text block's own edges — which is where
+    // the gutter rule runs from and to.
+    let top = gutter.y1.max(gutter.y2);
+    let gap_above = head.y1 - head.thickness / 2.0 - top;
+    assert!(
+        (gap_above - 12.0).abs() < 0.3,
+        "head rule to text: {gap_above}"
+    );
+
+    // Moving the gap moves the rule by as much.
+    let nearer = built(
+        PARAGRAPHS,
+        "[page]\ncolumns = 2\nheader_rule = \"thick\"\nheader_rule_gap = \"4pt\"\n",
+        "",
+    );
+    let head_near = rules_on(&nearer, 1)
+        .into_iter()
+        .find(|r| r.is_horizontal())
+        .expect("a head rule");
+    assert!(
+        (head.y1 - head_near.y1 - 8.0).abs() < 0.3,
+        "{} then {}",
+        head.y1,
+        head_near.y1
+    );
+}
+
+/// A chapter that opens on a heading, as most modern translations' do.
+const HEADED: &str = concat!(
+    "\\id GEN\n\\h Genesis\n\\c 1\n\\s1 The Creation\n\\p\n",
+    "\\v 1 In the beginning God created the heaven and the earth. And the ",
+    "earth was without form, and void; and darkness was upon the face of ",
+    "the deep. And the Spirit of God moved upon the face of the waters.\n",
+    "\\v 2 And God said, Let there be light: and there was light. And God ",
+    "saw the light, that it was good: and God divided the light from the ",
+    "darkness.\n",
+);
+
+/// **A dropped chapter number drops into the paragraph, not the heading**,
+/// and stands the `chapter` style's `gap_after` off every line beside it —
+/// the first included, which the drop-cap package would otherwise set hard
+/// against the figure.
+#[test]
+fn a_dropped_chapter_number_sits_under_its_heading_with_its_gap() {
+    if !have_backend() {
+        return;
+    }
+    const DROP: &str = "[page]\ncolumns = 1\n[contents]\ndrop_caps = true\n\
+                        drop_cap_of = \"chapter_number\"\ndrop_cap_lines = 2\n";
+    let at = |gap: &str| {
+        let b = built(HEADED, DROP, &format!("[chapter]\ngap_after = \"{gap}\"\n"));
+        let number = b
+            .lines
+            .iter()
+            .flat_map(|l| &l.marks)
+            .find(|m| m.text == "1" && m.size > BODY * 1.5)
+            .cloned()
+            .expect("the dropped figure");
+        let heading = b
+            .lines
+            .iter()
+            .find(|l| l.text().replace(' ', "") == "TheCreation")
+            .expect("the heading")
+            .y;
+        // The body lines beside the figure: the first two at the body size.
+        let beside: Vec<(f64, f64)> = b
+            .lines
+            .iter()
+            .filter(|l| l.page == 1 && l.sizes().contains(&BODY) && l.y < heading)
+            .take(2)
+            .map(|l| {
+                let x = l
+                    .marks
+                    .iter()
+                    .filter(|m| (m.size - BODY).abs() < 0.05)
+                    .map(|m| m.x)
+                    .fold(f64::INFINITY, f64::min);
+                (x, l.y)
+            })
+            .collect();
+        (number, heading, beside)
+    };
+
+    let (number, heading, near) = at("2pt");
+    assert!(
+        number.y < heading,
+        "the figure is below its heading: {} vs {heading}",
+        number.y
+    );
+    assert_eq!(near.len(), 2, "two lines beside the figure: {near:?}");
+    // Two lines deep: the figure stands on the second line of the paragraph,
+    // not on the line after the heading's.
+    assert!(
+        (number.y - near[1].1).abs() < 1.0,
+        "the figure's baseline is the second line's: {} vs {:?}",
+        number.y,
+        near
+    );
+    assert!(
+        near.iter().all(|(x, _)| *x > number.x + 1.0),
+        "both lines stand right of the figure: {near:?} vs {}",
+        number.x
+    );
+
+    // Eight points more gap moves both lines eight points right.
+    let (_, _, far) = at("10pt");
+    for ((a, _), (b, _)) in near.iter().zip(&far) {
+        assert!((b - a - 8.0).abs() < 0.3, "{near:?} then {far:?}");
+    }
+}
+
 /// **A double frame is two boxes inside the trim**, on every page.
 #[test]
 fn a_double_frame_is_drawn_inside_the_trim() {

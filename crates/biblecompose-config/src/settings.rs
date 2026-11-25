@@ -121,12 +121,23 @@ pub struct Page {
     pub header_gap: Sourced<Length>,
     pub footer_gap: Sourced<Length>,
     /// A rule down the middle of the gutter between columns; zero for none.
+    /// Written as a thickness or as one of the named rule weights.
     pub column_rule: Sourced<Length>,
+    /// Its ink.
+    pub column_rule_color: Sourced<Color>,
     /// A rule under the running head, across the text block; zero for none.
     pub header_rule: Sourced<Length>,
+    /// Its ink.
+    pub header_rule_color: Sourced<Color>,
+    /// The space between that rule and the first line of text below it.
+    pub header_rule_gap: Sourced<Length>,
     /// A rule over the foot line, likewise.
     pub footer_rule: Sourced<Length>,
-    /// The ink of every rule above, of the frame and of the note lines.
+    /// Its ink.
+    pub footer_rule_color: Sourced<Color>,
+    /// The space between the foot of the text block and that rule.
+    pub footer_rule_gap: Sourced<Length>,
+    /// The ink of the frame and of the note lines.
     pub rule_color: Sourced<Color>,
     /// A rule round the whole page, inside the trim.
     pub frame: Sourced<PageFrame>,
@@ -690,12 +701,17 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             column_gap: r.value("page.column_gap", value::length_or_zero),
             header_gap: r.value("page.header_gap", value::length_or_zero),
             footer_gap: r.value("page.footer_gap", value::length_or_zero),
-            column_rule: r.value("page.column_rule", value::length_or_zero),
-            header_rule: r.value("page.header_rule", value::length_or_zero),
-            footer_rule: r.value("page.footer_rule", value::length_or_zero),
+            column_rule: r.value("page.column_rule", value::rule_weight),
+            column_rule_color: r.value("page.column_rule_color", value::color),
+            header_rule: r.value("page.header_rule", value::rule_weight),
+            header_rule_color: r.value("page.header_rule_color", value::color),
+            header_rule_gap: r.value("page.header_rule_gap", value::length_or_zero),
+            footer_rule: r.value("page.footer_rule", value::rule_weight),
+            footer_rule_color: r.value("page.footer_rule_color", value::color),
+            footer_rule_gap: r.value("page.footer_rule_gap", value::length_or_zero),
             rule_color: r.value("page.rule_color", value::color),
             frame: r.value("page.frame", |n| value::choice(n, PageFrame::NAMES)),
-            frame_width: r.value("page.frame_width", value::length_or_zero),
+            frame_width: r.value("page.frame_width", value::rule_weight),
             frame_inset: r.value("page.frame_inset", value::length_or_zero),
             note_lines: r.value("page.note_lines", |n| n.boolean()),
             note_line_spacing: r.value("page.note_line_spacing", value::length),

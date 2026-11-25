@@ -55,10 +55,20 @@ footer_gap = "0.27in"    # was 3%ph
 
 # Rules: one down the gutter, one under the running head and one over the foot
 # line, each as thick as it says — zero is no rule, which is the built-in
-# page. They and the frame and the note lines below share one ink.
+# page. A thickness is a length or a weight by name: "none", "hairline"
+# (0.25pt), "thin" (0.5pt), "medium" (0.8pt) or "thick" (1.2pt). Each has
+# its own ink, and the head and foot rules a gap to the text: from the rule
+# under the head down to the first line, and from the foot of the text down
+# to the rule over the foot.
 column_rule = "0pt"
+column_rule_color = "#000000"
 header_rule = "0pt"
+header_rule_color = "#000000"
+header_rule_gap = "10pt"
 footer_rule = "0pt"
+footer_rule_color = "#000000"
+footer_rule_gap = "6pt"
+# The ink of the frame and of the note lines below.
 rule_color = "#000000"
 
 # A rule round every page, `frame_inset` in from the trim: "none", "single",

@@ -19,8 +19,9 @@ margin_bottom = "0.8in"
 # Hairlines in a cool grey under the head and over the foot: the page is
 # divided, not decorated.
 header_rule = "0.5pt"
+header_rule_color = "#b9c0c8"
 footer_rule = "0.5pt"
-rule_color = "#b9c0c8"
+footer_rule_color = "#b9c0c8"
 
 [typography]
 font_size = "10.5pt"

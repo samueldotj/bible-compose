@@ -80,10 +80,18 @@ export const EN_HELP: Readonly<Record<string, string>> = {
   "page.margin_inner": "The margin at the spine — on the left of a right-hand page, the right of a left-hand one.",
   "page.margin_outer": "The margin at the outer edge, where a thumb goes.",
   "page.column_gap": "The space between the two columns.",
-  "page.header_rule": "How thick the rule under the running head is. 0pt draws none.",
-  "page.footer_rule": "How thick the rule over the foot line is. 0pt draws none.",
-  "page.column_rule": "How thick the rule down the middle of the gutter is. 0pt draws none.",
-  "page.rule_color": "The ink of the rules, the frame and the note lines.",
+  "page.header_rule":
+    "How thick the rule under the running head is: a length, or hairline, thin, medium or thick. 0pt or none draws none.",
+  "page.header_rule_color": "The ink of the rule under the running head.",
+  "page.header_rule_gap": "From the rule under the head down to the first line of text.",
+  "page.footer_rule":
+    "How thick the rule over the foot line is: a length, or hairline, thin, medium or thick. 0pt or none draws none.",
+  "page.footer_rule_color": "The ink of the rule over the foot line.",
+  "page.footer_rule_gap": "From the foot of the text down to the rule over the foot line.",
+  "page.column_rule":
+    "How thick the rule down the middle of the gutter is: a length, or hairline, thin, medium or thick. 0pt or none draws none.",
+  "page.column_rule_color": "The ink of the rule between the columns.",
+  "page.rule_color": "The ink of the frame and the note lines.",
   "page.frame": "A rule round every page, inside the trim: none, single, or double.",
   "page.frame_width": "How thick each of the frame's rules is.",
   "page.frame_inset": "How far in from the trim the frame is drawn.",

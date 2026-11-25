@@ -72,8 +72,12 @@ The **Template** section offers ten to start from:
 Choosing one **writes its settings into your project**, and — for the
 templates that have a look of their own — **its styles into `styles.toml`**,
 where you can then change them one at a time. A style you had already set
-that the template does not mention is kept. No template names a font: the
-body font is yours to choose for your Scripture's script. It is a starting point, not a mode: after you apply
+that the template does not mention is kept. Standard two-column sets its
+body in **EB Garamond**, which BibleCompose ships, with regular, medium,
+semibold and italic faces, small capitals and old-style figures. It covers
+Latin, Greek and Cyrillic: for any other script, choose your own font after
+applying the template. The other templates leave the font alone. A template
+is a starting point, not a mode: after you apply
 one there is no preset any more, only settings — which is why nothing in the
 window claims you are "in" large print.
 
@@ -318,22 +322,38 @@ style, in the file or in the window:
 |---|---|
 | `align` | Where the number sits on its line, when it has one: `start`, `center`, `end` |
 | `own_line` | The number takes a line of its own, with `space_above` and `space_below` around it |
-| `gap_before`, `gap_after` | Horizontal space either side of the number when it sits in the text (after: 4pt unless set) |
+| `gap_before`, `gap_after` | Horizontal space either side of the number when it sits in the text (after: 4pt unless set). When the number is dropped, `gap_after` is the space between it and every line beside it |
 | `border`, `border_width` | A rule around the number, and how thick |
 
 ### Rules, frame and note lines
 
-**Rules & frame** draws furniture on every page, all in one ink
-(`page.rule_color`). Each rule is a thickness, and `0pt` draws none, which is
-the built-in page:
+**Rules & frame** draws furniture on every page. Each rule is a thickness,
+and `0pt` draws none, which is the built-in page. A thickness is a length
+such as `0.6pt` or one of five weights by name:
+
+| Weight | Thickness |
+|---|---|
+| `none` | no rule |
+| `hairline` | 0.25pt |
+| `thin` | 0.5pt |
+| `medium` | 0.8pt |
+| `thick` | 1.2pt |
+
+Each rule has its own colour, so a page can have a firm dark rule under the
+head and lighter ones beside the text. The head and foot rules also have a
+gap to the text:
 
 | Key | What it draws |
 |---|---|
-| `header_rule` | A rule under the running head, across the text block |
-| `footer_rule` | A rule over the foot line; on a page with notes it sets them off from the text |
-| `column_rule` | A rule down the middle of the gutter, in two columns |
+| `header_rule`, `header_rule_color` | A rule under the running head, across the text block |
+| `header_rule_gap` | From that rule down to the first line of text (10pt unless set) |
+| `footer_rule`, `footer_rule_color` | A rule over the foot line; on a page with notes it sets them off from the text |
+| `footer_rule_gap` | From the foot of the text down to that rule (6pt unless set) |
+| `column_rule`, `column_rule_color` | A rule down the middle of the gutter, in two columns |
 | `frame` | `none`, `single` or `double`: a rule round every page, `frame_inset` in from the trim, each line `frame_width` thick. Front-matter pages are framed too; a page left blank is not |
 | `note_lines` | Ruled lines across the outer margin, `note_line_spacing` apart, for a journaling edition |
+
+The frame and the note lines are drawn in `rule_color`.
 
 ### Paragraphs and the dropped initial
 
@@ -431,7 +451,7 @@ leaves your machine, and it never fetches anything without being asked.
 
 ### The italics are not italic
 
-The font BibleCompose ships with has a regular and a bold face and no italic,
+The built-in font, DejaVu Serif, has a regular and a bold face and no italic,
 so styles asking for italic are set in the regular face. The build warns about
 this (`FONT-005`) and names the styles. Choose a family that has an italic, or
 put the font file in `assets/fonts/` inside your project.

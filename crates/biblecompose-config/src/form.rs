@@ -207,19 +207,44 @@ impl Settings {
         push("page.header_gap", Length, self.page.header_gap.to_string());
         push("page.footer_gap", Length, self.page.footer_gap.to_string());
         push(
-            "page.column_rule",
-            Length,
-            self.page.column_rule.to_string(),
-        );
-        push(
             "page.header_rule",
             Length,
             self.page.header_rule.to_string(),
         );
         push(
+            "page.header_rule_color",
+            Color,
+            self.page.header_rule_color.to_string(),
+        );
+        push(
+            "page.header_rule_gap",
+            Length,
+            self.page.header_rule_gap.to_string(),
+        );
+        push(
             "page.footer_rule",
             Length,
             self.page.footer_rule.to_string(),
+        );
+        push(
+            "page.footer_rule_color",
+            Color,
+            self.page.footer_rule_color.to_string(),
+        );
+        push(
+            "page.footer_rule_gap",
+            Length,
+            self.page.footer_rule_gap.to_string(),
+        );
+        push(
+            "page.column_rule",
+            Length,
+            self.page.column_rule.to_string(),
+        );
+        push(
+            "page.column_rule_color",
+            Color,
+            self.page.column_rule_color.to_string(),
         );
         push("page.rule_color", Color, self.page.rule_color.to_string());
         push(

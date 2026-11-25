@@ -45,8 +45,13 @@ export const GROUPS: readonly Group[] = [
     title: "Rules and frame",
     keys: [
       "page.header_rule",
+      "page.header_rule_color",
+      "page.header_rule_gap",
       "page.footer_rule",
+      "page.footer_rule_color",
+      "page.footer_rule_gap",
       "page.column_rule",
+      "page.column_rule_color",
       "page.rule_color",
       "page.frame",
       "page.frame_width",

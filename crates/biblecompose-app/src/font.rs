@@ -48,6 +48,39 @@ pub struct ResolvedFont {
     pub from_project: bool,
 }
 
+/// The optical-size axis of each font that has one, as the class reads it:
+/// `Family=min:max`, joined by `|`.
+///
+/// Only these fonts are given an optical size. Asking a font without the
+/// axis for one is not ignored but refused — SILE's instancer fails, and the
+/// build with it — so the class has to know which fonts can take one, and
+/// the range each can, before it asks.
+pub fn optical_axes<'a>(fonts: impl IntoIterator<Item = &'a ResolvedFont>) -> String {
+    let mut out: std::collections::BTreeMap<String, (f32, f32)> = std::collections::BTreeMap::new();
+    for font in fonts {
+        if out.contains_key(&font.family) {
+            continue;
+        }
+        let Ok(data) = std::fs::read(font.path.as_std_path()) else {
+            continue;
+        };
+        let Ok(face) = ttf_parser::Face::parse(&data, font.index) else {
+            continue;
+        };
+        if let Some(axis) = face
+            .variation_axes()
+            .into_iter()
+            .find(|a| a.tag == ttf_parser::Tag::from_bytes(b"opsz"))
+        {
+            out.insert(font.family.clone(), (axis.min_value, axis.max_value));
+        }
+    }
+    out.into_iter()
+        .map(|(family, (min, max))| format!("{family}={min}:{max}"))
+        .collect::<Vec<_>>()
+        .join("|")
+}
+
 /// One codepoint the font cannot draw.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Gap {

@@ -20,7 +20,7 @@ use camino::Utf8PathBuf;
 /// Checked against the schema below rather than trusted: a class added to
 /// `StyleSelector` and forgotten here would leave a whole kind of element
 /// untested.
-const ONE_PER_CLASS: [&str; 17] = [
+const ONE_PER_CLASS: [&str; 22] = [
     "paragraph.p",
     "poetry.q1",
     "heading.s1",
@@ -38,6 +38,11 @@ const ONE_PER_CLASS: [&str; 17] = [
     "cell",
     "head",
     "folio",
+    "sidebar",
+    "sidebar_category",
+    "sidebar_title",
+    "sidebar_subtitle",
+    "study_notes",
 ];
 
 /// Selectors nothing inherits from, so a change to one is a change to one.

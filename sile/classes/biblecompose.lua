@@ -221,6 +221,18 @@ local OPTIONS = {
    { key = "restartnotes", kind = "string", default = "per_chapter" },
    -- note_area, inline, end_of_paragraph.
    { key = "crossrefplacement", kind = "string", default = "note_area" },
+   -- Study notes (`\ef`), gathered and set after their passage: whether,
+   -- the label over them, how many columns, and the rule above the label.
+   { key = "studynotes", kind = "boolean", default = true },
+   { key = "studynoteslabel", kind = "string", default = "Study notes" },
+   { key = "studynotescolumns", kind = "string", default = "1" },
+   { key = "studynotesrule", kind = "string", default = "0pt" },
+   -- Sidebars (`\esb`), set as a box in the text.
+   { key = "sidebars", kind = "boolean", default = true },
+   -- Optical size: points of it per point of type (0, the font's default),
+   -- and which families have the axis, `Family=min:max|…`.
+   { key = "opticalsize", kind = "string", default = "0" },
+   { key = "opszaxes", kind = "string", default = "" },
    -- Six slots, three at the top of the page and three at the foot. Each
    -- holds one of: empty, page_number, reference_range, first_reference,
    -- last_reference, book_name, alt_book_name. Positions rather than
@@ -389,6 +401,7 @@ local quote_hang_lines
 local page_rules, page_frame
 local roman, chapter_caption, title_ornament, chapter_on_own_line
 local side_width, side_lead, side_heads_into
+local parallel_beside
 
 function class:_init (options)
    -- Parse options and install the frameset BEFORE plain._init, because that
@@ -495,6 +508,46 @@ function class:_init (options)
             end
          end
          return vboxes
+      end
+   end)
+
+   -- **Optical size, at every change of font.** A font with the axis is
+   -- given the cut for its size, `opticalsize` points of it per point of
+   -- type, within the range the font has; a font without it is given none,
+   -- rather than the last font's, which its instancer would refuse.
+   self:registerPostinit(function (self_)
+      local o = self_._bcopts
+      local ratio = tonumber(o.opticalsize) or 0
+      if ratio <= 0 then
+         return
+      end
+      local axes = {}
+      for family, min, max in (o.opszaxes or ""):gmatch("([^|=]+)=([%d.]+):([%d.]+)") do
+         axes[family] = { min = tonumber(min), max = tonumber(max) }
+      end
+      local font = SILE.Commands["font"]
+      SILE.Commands["font"] = function (options, content)
+         options = options or {}
+         if not options.variations and not options.filename then
+            local copy = {}
+            for k, v in pairs(options) do
+               copy[k] = v
+            end
+            local family = copy.family or SILE.settings:get("font.family")
+            local axis = axes[family]
+            if axis then
+               local size = copy.size and SILE.types.measurement(copy.size):tonumber()
+                  or SILE.settings:get("font.size")
+               local opsz = math.max(axis.min, math.min(axis.max, size * ratio))
+               -- To the half point: each cut is a font instanced to a file,
+               -- and a cut per fractional size would be a file per size.
+               copy.variations = ("opsz=%g"):format(math.floor(opsz * 2 + 0.5) / 2)
+            elseif copy.family then
+               copy.variations = ""
+            end
+            options = copy
+         end
+         return font(options, content)
       end
    end)
 
@@ -641,28 +694,6 @@ function class:_init (options)
       -- a note that does not fit it is to split it and end the page, which
       -- ends this column a few lines in.
       local capped = options.maxHeight < note_ceiling()
-      local has_caller = false
-      for k = i, 1, -1 do
-         if vboxlist[k].is_vbox then
-            has_caller = true
-            break
-         end
-      end
-      if has_caller and not capped then
-         return upstream_insertion(vboxlist, i, totalHeight, target)
-      end
-      -- **Only where moving the note can help.** The area is at its full
-      -- ceiling on every page `_note_headroom` has not capped — the first
-      -- column of one, which is where a note that moved lands — and a note
-      -- upstream cannot place in a whole ceiling it cannot place on any page
-      -- either. Moving that one is not a decision but a loop: the page ends,
-      -- the note arrives at the head of the next page, and nothing has
-      -- changed. Upstream splits it instead, which is what P4.1 asks of a note
-      -- that long, so an uncapped area is upstream's to answer. Found as a
-      -- backend suite that never finished rather than one that failed.
-      if options.maxHeight >= note_ceiling() then
-         return upstream_insertion(vboxlist, i, totalHeight, target)
-      end
       local area = self.thisPageInsertionBoxForClass(ins.class)
       -- The skip above a note, at its largest: `topBox` opens the area and
       -- `interInsertionSkip` divides the notes in it, both are set just above,
@@ -674,6 +705,55 @@ function class:_init (options)
       local ratio = options.stealFrom[SILE.typesetter.frame.id]
       local in_area = area.height:absolute() + area.depth:absolute() + needed <= options.maxHeight
       local on_page = not ratio or totalHeight + needed * ratio <= target
+      -- **A note is split only where a line of it fits.** Upstream splits a
+      -- note that does not fit into the part that does and the rest, and
+      -- when the room left on the page is less than the skip above the notes
+      -- and one line of the note, the part that "fits" is a line forced in
+      -- anyway — and the page is that much too full, the last line of text
+      -- over the first of the notes. Found on a Genesis page with 4.6pt left
+      -- and a 9.6pt skip. Such a note goes to the next page whole instead.
+      local first_line = 0
+      for _, node in ipairs(ins.nodes or {}) do
+         if node.is_vbox then
+            first_line = node.height:absolute():tonumber() + node.depth:absolute():tonumber()
+            break
+         end
+      end
+      local room = (target - totalHeight):tonumber()
+      local function carry ()
+         self._carried_notes = self._carried_notes or {}
+         table.insert(self._carried_notes, ins)
+         vboxlist[i] = SILE.types.node.vglue(SILE.types.length(0))
+         return target
+      end
+      local function upstream_split ()
+         if not (in_area and on_page) and ratio and room < lead:tonumber() + first_line then
+            return carry()
+         end
+         return upstream_insertion(vboxlist, i, totalHeight, target)
+      end
+      local has_caller = false
+      for k = i, 1, -1 do
+         if vboxlist[k].is_vbox then
+            has_caller = true
+            break
+         end
+      end
+      if has_caller and not capped then
+         return upstream_split()
+      end
+      -- **Only where moving the note can help.** The area is at its full
+      -- ceiling on every page `_note_headroom` has not capped — the first
+      -- column of one, which is where a note that moved lands — and a note
+      -- upstream cannot place in a whole ceiling it cannot place on any page
+      -- either. Moving that one is not a decision but a loop: the page ends,
+      -- the note arrives at the head of the next page, and nothing has
+      -- changed. Upstream splits it instead, which is what P4.1 asks of a note
+      -- that long, so an uncapped area is upstream's to answer. Found as a
+      -- backend suite that never finished rather than one that failed.
+      if options.maxHeight >= note_ceiling() then
+         return upstream_split()
+      end
       if in_area and on_page then
          return upstream_insertion(vboxlist, i, totalHeight, target)
       end
@@ -2892,6 +2972,394 @@ local function flush_pending_refs ()
    SILE.call("par")
 end
 
+-- ---------------------------------------------------------------------------
+-- Study notes and sidebars.
+--
+-- Both are set at a width of their own: a study note in a column of the
+-- notes block, a sidebar's label and its text in the two sides of its box.
+-- Each is set by SILE's `vbox` at that width, which breaks it into lines
+-- without placing them; the lines are then placed here, side by side.
+
+local function num (value)
+   if type(value) == "number" then
+      return value
+   end
+   return value and value:tonumber() or 0
+end
+
+--- The lines `body` sets at `width` points: lines and the glue between
+--- them, in order.
+local function lines_at (width, body)
+   local box = SILE.call("vbox", { width = width .. "pt" }, body)
+   local out = {}
+   for _, node in ipairs(box and box.nodes or {}) do
+      out[#out + 1] = node
+   end
+   return out
+end
+
+--- Whether a node is a line with something on it. A paragraph ended
+--- with nothing in it leaves an empty one, and the glue before it would
+--- otherwise count as the box's.
+local function a_line (node)
+   return node.is_vbox and (num(node.height) > 0 or num(node.depth) > 0)
+end
+
+--- The parallel-passage heading (`\r`) that follows the section heading
+--- being set, when its style puts it beside that heading rather than on a
+--- line of its own: the element and its selector, or nil.
+function parallel_beside ()
+   local s = scratch()
+   local items, index = s.book_items, s.book_index
+   if not items or not index then
+      return nil
+   end
+   for i = index + 1, #items do
+      local item = items[i]
+      if type(item) == "table" then
+         local o = item.options or {}
+         if item.command ~= "heading" or o.style ~= "r" then
+            return nil
+         end
+         local selector = "heading.r" .. (o.level or "1")
+         if SU.boolean(style(selector).own_line, true) then
+            return nil
+         end
+         return { item = item, selector = selector }
+      end
+   end
+   return nil
+end
+
+--- Put a block of a given height and depth on the page, drawn by its own
+--- `outputYourself`.
+--
+-- Its size is set after the node is made, not passed in: SILE's vbox
+-- works its height and depth out from its contents, and this has none, so
+-- a size passed in is replaced by zero — and the page builder, seeing a
+-- block of no height, fills the page as if it were not there.
+local function push_block (spec)
+   local node = SILE.types.node.vbox({})
+   node.height = spec.height
+   node.depth = spec.depth
+   node.outputYourself = spec.outputYourself
+   SILE.typesetter:pushVertical(node)
+   return node
+end
+
+--- How tall a run of lines and glue stands.
+local function stack_height (nodes)
+   local h, pending = 0, 0
+   local started = false
+   for _, node in ipairs(nodes) do
+      if a_line(node) then
+         h = h + pending + num(node.height) + num(node.depth)
+         pending = 0
+         started = true
+      elseif node.is_vglue and started then
+         pending = pending + num(node.height)
+      end
+   end
+   return h
+end
+
+--- Set a run of lines with its top at `top`, its lines starting at `x`.
+local function output_stack (typesetter, nodes, x, top)
+   local f = typesetter.frame
+   f.state.cursorY = SILE.types.measurement(top)
+   local started = false
+   for _, node in ipairs(nodes) do
+      if a_line(node) then
+         f.state.cursorX = SILE.types.measurement(x)
+         node:outputYourself(typesetter, node)
+         started = true
+      elseif node.is_vglue and started then
+         f:advancePageDirection(num(node.height))
+      end
+   end
+end
+
+--- The text block's left edge and width where the text runs, clear of any
+--- side-head column.
+local function measure_here ()
+   local frame = SILE.typesetter.frame
+   local lead = side_lead()
+   return frame:left():tonumber() + lead, frame:width():tonumber() - lead
+end
+
+--- The study notes gathered since the last heading, set after the passage.
+--
+-- Under a rule and a label, then the notes, each opening with its
+-- reference and running on. In two columns the notes are broken into lines
+-- at the column's width and the lines shared out, the first half down the
+-- left and the rest down the right, a row at a time — so a page can still
+-- break between rows, and both columns carry on over it.
+local function flush_study_notes ()
+   local s = scratch()
+   if s.in_note or s.in_sidebar or not s.study_notes or #s.study_notes == 0 then
+      return
+   end
+   local notes = s.study_notes
+   s.study_notes = {}
+   local o = SILE.documentState.documentClass._bcopts
+   local label_style = style("study_notes")
+   local x0, width = measure_here()
+   local columns = tonumber(o.studynotescolumns) or 1
+   local gap = label_style.gap_after and SILE.types.measurement(label_style.gap_after):tonumber() or 14
+
+   SILE.call("par")
+   skip(label_style.space_above or "12pt")
+
+   -- The rule, the measure wide, in the label's ink, `gap_before` above
+   -- the label's capitals.
+   --
+   -- Drawn from the label's own line rather than set as a line of its own
+   -- above it: between two lines the typesetter puts a line's leading, and
+   -- the gap under the rule came out three times what was asked for.
+   local ok, rule = pcall(SILE.types.measurement, o.studynotesrule or "0pt")
+   local thick = ok and rule:tonumber() or 0
+   local ink = label_style.color
+   local rule_gap = label_style.gap_before and SILE.types.measurement(label_style.gap_before):tonumber() or 3
+   local function draw_rule_at (y)
+      in_rule_ink(o, function ()
+         SILE.outputter:drawRule(x0, y - thick, width, thick)
+      end, ink)
+   end
+
+   local label = o.studynoteslabel or ""
+   if label ~= "" then
+      SILE.settings:temporarily(function ()
+         SILE.call("noindent")
+         styled("study_notes", function ()
+            if thick > 0 then
+               -- The capitals' top: a cap height under the font size.
+               local cap = SILE.settings:get("font.size") * 0.72
+               SILE.typesetter:pushHbox({
+                  width = SILE.types.length(0),
+                  height = SILE.types.length(cap + rule_gap + thick),
+                  depth = SILE.types.length(0),
+                  outputYourself = function (_, typesetter, _)
+                     draw_rule_at(typesetter.frame.state.cursorY:tonumber() - cap - rule_gap)
+                  end,
+               })
+            end
+            SILE.typesetter:typeset(label)
+         end)
+         SILE.call("par")
+      end)
+      skip(label_style.space_below or "3pt")
+   elseif thick > 0 then
+      push_block({
+         height = SILE.types.length(thick),
+         depth = SILE.types.length(0),
+         outputYourself = function (_, typesetter, _)
+            local y = typesetter.frame.state.cursorY:tonumber()
+            draw_rule_at(y + thick)
+            typesetter.frame:advancePageDirection(thick)
+         end,
+      })
+      SILE.typesetter:pushVglue({ height = SILE.types.length(rule_gap) })
+   end
+
+   local column = columns >= 2 and (width - gap) / 2 or width
+   local outer = s.in_note
+   s.in_note = true
+   -- Every line of every note, a baseline apart, noting where each note
+   -- starts. One spacing throughout, so the two columns' rows stay level.
+   local items, bs = {}, 0
+   SILE.settings:temporarily(function ()
+      -- No hang from a dropped initial, and none of the text's indents.
+      for _, key in ipairs({ "current.hangAfter", "current.hangIndent", "document.lskip" }) do
+         SILE.settings:set(key, SILE.settings.defaults[key])
+      end
+      styled("note.ef", function ()
+         bs = SILE.settings:get("font.size") * 1.45
+         SILE.settings:set("document.baselineskip", SILE.types.node.vglue(bs .. "pt"))
+         for _, note in ipairs(notes) do
+            local first = true
+            for _, node in ipairs(lines_at(column, function ()
+               SILE.call("noindent")
+               if note.origin and note.origin ~= "" then
+                  styled("character.fr", function ()
+                     SILE.typesetter:typeset(note.origin)
+                  end)
+                  SILE.call("kern", { width = "0.4em" })
+               end
+               elements(note.content)
+               SILE.call("par")
+            end)) do
+               if node.is_vbox then
+                  items[#items + 1] = { line = node, first = first }
+                  first = false
+               end
+            end
+         end
+      end)
+   end)
+   s.in_note = outer
+   local prev_depth
+   for _, item in ipairs(items) do
+      item.above = prev_depth and math.max(bs - prev_depth - num(item.line.height), 0) or 0
+      prev_depth = num(item.line.depth)
+   end
+
+   if columns < 2 then
+      for _, item in ipairs(items) do
+         if item.above > 0 then
+            SILE.typesetter:pushVglue({ height = SILE.types.length(item.above) })
+         end
+         SILE.typesetter:pushVertical(item.line)
+      end
+      return
+   end
+
+   -- Two columns, divided between notes: the note boundary nearest half
+   -- way, so no note is broken over the top of the second column — unless
+   -- there is only one note, which is then divided by lines.
+   local split = math.ceil(#items / 2)
+   local best
+   for i, item in ipairs(items) do
+      if item.first and i > 1 then
+         local d = math.abs((i - 1) - #items / 2)
+         if not best or d < best or (d == best and i - 1 >= #items - (i - 1)) then
+            best, split = d, i - 1
+         end
+      end
+   end
+   local left, right = {}, {}
+   for i, item in ipairs(items) do
+      if i <= split then
+         left[#left + 1] = item
+      else
+         right[#right + 1] = item
+      end
+   end
+   if right[1] then
+      right[1].above = left[1] and left[1].above or 0
+   end
+   -- A row is a line from each side; where one side has space before its
+   -- line, the row is that much taller and the other side's line moves down
+   -- with it, so the next row's baselines stay level.
+   for i = 1, math.max(#left, #right) do
+      local a, b = left[i], right[i]
+      local above_a, above_b = a and a.above or 0, b and b.above or 0
+      local h = math.max(
+         a and (above_a + num(a.line.height)) or 0,
+         b and (above_b + num(b.line.height)) or 0
+      )
+      local d = math.max(a and num(a.line.depth) or 0, b and num(b.line.depth) or 0)
+      push_block({
+         height = SILE.types.length(h),
+         depth = SILE.types.length(d),
+         outputYourself = function (_, typesetter, _)
+            local f = typesetter.frame
+            local top = f.state.cursorY:tonumber()
+            if a then
+               f.state.cursorY = SILE.types.measurement(top + h - num(a.line.height))
+               f.state.cursorX = SILE.types.measurement(x0)
+               a.line:outputYourself(typesetter, a.line)
+            end
+            if b then
+               f.state.cursorY = SILE.types.measurement(top + h - num(b.line.height))
+               f.state.cursorX = SILE.types.measurement(x0 + column + gap)
+               b.line:outputYourself(typesetter, b.line)
+            end
+            f.state.cursorY = SILE.types.measurement(top + h + d)
+            f:newLine()
+         end,
+      })
+   end
+end
+
+--- A sidebar: a box across the measure on a ground of its style's
+--- background colour, its category and headings at the left and the rest
+--- at the right. Kept whole: a box broken over a page is two boxes.
+local function sidebar (category, content)
+   local s = scratch()
+   local panel = style("sidebar")
+   local x0, width = measure_here()
+   local pad = panel.indent and SILE.types.measurement(panel.indent):tonumber() or 9
+   local gap = panel.gap_after and SILE.types.measurement(panel.gap_after):tonumber() or 12
+   local side = (width - 2 * pad) * 0.27
+   local main = width - 2 * pad - side - gap
+
+   local heads, body = {}, {}
+   for _, child in ipairs(content) do
+      if type(child) == "table" then
+         if child.command == "heading" then
+            heads[#heads + 1] = child
+         else
+            body[#body + 1] = child
+         end
+      end
+   end
+
+   SILE.call("par")
+   skip(panel.space_above or "12pt")
+
+   local outer = s.in_sidebar
+   s.in_sidebar = true
+   local left, right
+   SILE.settings:temporarily(function ()
+      for _, key in ipairs({ "current.hangAfter", "current.hangIndent", "document.lskip" }) do
+         SILE.settings:set(key, SILE.settings.defaults[key])
+      end
+      styled("sidebar", function ()
+         left = lines_at(side, function ()
+            SILE.call("noindent")
+            if category and category ~= "" then
+               styled("sidebar_category", function ()
+                  SILE.typesetter:typeset(category)
+               end)
+               SILE.call("par")
+            end
+            for i, head in ipairs(heads) do
+               SILE.call("noindent")
+               local selector = i == 1 and "sidebar_title" or "sidebar_subtitle"
+               local hs = style(selector)
+               skip(hs.space_above)
+               styled(selector, function ()
+                  local size = SILE.settings:get("font.size")
+                  SILE.settings:set("document.baselineskip", SILE.types.node.vglue((size * 1.25) .. "pt"))
+                  SILE.process(head)
+                  SILE.call("par")
+               end)
+            end
+         end)
+         right = lines_at(main, function ()
+            local size = SILE.settings:get("font.size")
+            SILE.settings:set("document.baselineskip", SILE.types.node.vglue((size * 1.5) .. "pt"))
+            elements(body)
+         end)
+      end)
+   end)
+   s.in_sidebar = outer
+
+   local h = math.max(stack_height(left), stack_height(right)) + 2 * pad
+   local fill = panel.background
+   push_block({
+      height = SILE.types.length(h),
+      depth = SILE.types.length(0),
+      outputYourself = function (_, typesetter, _)
+         local f = typesetter.frame
+         local top = f.state.cursorY:tonumber()
+         if fill then
+            local ok, ink = pcall(SILE.types.color, fill)
+            if ok and ink then
+               SILE.outputter:pushColor(ink)
+               SILE.outputter:drawRule(x0, top, width, h)
+               SILE.outputter:popColor()
+            end
+         end
+         output_stack(typesetter, left, x0 + pad, top + pad)
+         output_stack(typesetter, right, x0 + pad + side + gap, top + pad)
+         f.state.cursorY = SILE.types.measurement(top + h)
+         f:newLine()
+      end,
+   })
+   skip(panel.space_below or "12pt")
+end
+
 function class:registerXmlCommands ()
    -- The root. The version attribute is the compatibility contract (SILE-009);
    -- refusing an unknown one turns a mismatched install into one clear line
@@ -3055,6 +3523,8 @@ function class:registerXmlCommands ()
          end
       end
       s.book_items = nil
+      -- The last passage's study notes, before the next book's page.
+      flush_study_notes()
    end)
 
    -- The front matter: USFM's `FRT`, as the emitter writes it — **last**,
@@ -3200,6 +3670,13 @@ function class:registerXmlCommands ()
    self:registerCommand("heading", function (options, content)
       local selector = "heading." .. (options.style or "s") .. (options.level or "1")
       local s = style(selector)
+      -- Already set, at the end of the section heading's line.
+      if scratch().set_beside == content then
+         scratch().set_beside = nil
+         return
+      end
+      -- The passage above ends here, and its study notes are set under it.
+      flush_study_notes()
       -- A heading does not run round an initial: what is left of one the
       -- text above was too short for is made room for above the heading.
       if scratch().hang_carry and not scratch().in_note then
@@ -3263,20 +3740,41 @@ function class:registerXmlCommands ()
       scratch().flush_next = true
       local align = alignment(s)
       scratch().in_heading = true
+      -- **The parallel passage beside its heading**, when its style says it
+      -- is not on a line of its own (`own_line = false`): the section
+      -- heading at the left and "(Luke 6:20–23)" at the right of the same
+      -- line, as a study Bible sets them.
+      local beside = (options.style or "s") == "s" and parallel_beside() or nil
+      local function body ()
+         styled(selector, function ()
+            SILE.process(content)
+         end)
+         if beside then
+            scratch().set_beside = beside.item
+            SILE.call("hfill")
+            styled(beside.selector, function ()
+               SILE.process(beside.item)
+            end)
+         end
+      end
       -- The alignment outside the face and the ink, not inside them: a
       -- colour opens the paragraph with a node of its own, and a centring
       -- begun after it breaks the paragraph first — an empty line above
       -- every heading that is both centred and coloured.
-      if align then
-         SILE.call(align, {}, function ()
-            styled(selector, function ()
-               SILE.process(content)
-            end)
+      if beside then
+         -- The filler the only stretch on the line, so the passage goes to
+         -- the right edge: no ragged margin and no end-of-paragraph fill to
+         -- share the space with.
+         SILE.settings:temporarily(function ()
+            SILE.settings:set("document.rskip", SILE.types.node.glue())
+            SILE.settings:set("typesetter.parfillskip", SILE.types.node.glue())
+            body()
+            SILE.call("par")
          end)
+      elseif align then
+         SILE.call(align, {}, body)
       else
-         styled(selector, function ()
-            SILE.process(content)
-         end)
+         body()
       end
       scratch().in_heading = false
       -- A heading is not left standing at the foot of a column (SCR-011), and
@@ -3782,6 +4280,16 @@ function class:registerXmlCommands ()
    -- would number the notes that are printed 3, 7, 11 — which is not what
    -- "hidden" means anywhere else in this class.
    self:registerCommand("note", function (options, content)
+      -- A study note waits for the end of its passage, where it is set with
+      -- the others; it has no caller in the text.
+      if options.style == "ef" then
+         if self._bcopts.studynotes and not scratch().in_note then
+            local s = scratch()
+            s.study_notes = s.study_notes or {}
+            table.insert(s.study_notes, { origin = options.origin, content = content })
+         end
+         return
+      end
       if not self._bcopts.footnotes then
          return
       end
@@ -3830,6 +4338,13 @@ function class:registerXmlCommands ()
       insert_note("reference", mark, options.origin, function ()
          SILE.process(content)
       end)
+   end)
+
+   self:registerCommand("sidebar", function (options, content)
+      if not self._bcopts.sidebars or scratch().in_note then
+         return
+      end
+      sidebar(options.category, content)
    end)
 
    self:registerCommand("figure", function (options, content)

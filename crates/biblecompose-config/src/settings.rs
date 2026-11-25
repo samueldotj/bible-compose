@@ -170,6 +170,9 @@ pub struct Typography {
     /// every line flush, which some editions want and which is otherwise a
     /// style override per level.
     pub keep_poetry_indentation: Sourced<bool>,
+    /// Points of optical size per point of type, for a variable font with an
+    /// optical-size axis; 0 is the font's own default cut at every size.
+    pub optical_size: Sourced<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -267,6 +270,17 @@ pub struct Notes {
     /// answers to the same question.
     pub restart_numbering: Sourced<RestartNumbering>,
     pub cross_reference_placement: Sourced<ReferencePlacement>,
+    /// Study notes (`\ef`): set together after the passage they comment on,
+    /// under a label and a rule, rather than at the foot with a caller.
+    pub show_study_notes: Sourced<bool>,
+    /// The words over them — "Study notes" — or "" for none.
+    pub study_notes_label: Sourced<String>,
+    /// How many columns they are set in across the measure.
+    pub study_notes_columns: Sourced<u8>,
+    /// The rule above the label; zero for none. In the label style's colour.
+    pub study_notes_rule: Sourced<Length>,
+    /// Sidebars (`\esb`) such as word studies, set as a box in the text.
+    pub show_sidebars: Sourced<bool>,
 }
 
 /// The running head and the folio, one arrangement per side of the spread.
@@ -747,6 +761,10 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             hyphenation: r.value("typography.hyphenation", |n| n.boolean()),
             justify: r.value("typography.justify", |n| n.boolean()),
             keep_poetry_indentation: r.value("typography.keep_poetry_indentation", |n| n.boolean()),
+            optical_size: r.value("typography.optical_size", |n| match n.integer() {
+                Ok(v) => Ok(v.map(|v| v as f64)),
+                Err(_) => n.number(),
+            }),
         },
         numbering: Numbering {
             show_chapter_numbers: r.value("numbering.show_chapter_numbers", |n| n.boolean()),
@@ -810,6 +828,13 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             cross_reference_callers: r.value("notes.cross_reference_callers", caller_style),
             restart_numbering: r.value("notes.restart_numbering", restart),
             cross_reference_placement: r.value("notes.cross_reference_placement", placement),
+            show_study_notes: r.value("notes.show_study_notes", |n| n.boolean()),
+            study_notes_label: r.value("notes.study_notes_label", |n| n.string()),
+            study_notes_columns: r.value("notes.study_notes_columns", |n| {
+                value::integer_in(n, 1, 2).map(|l| l.map(|v| v as u8))
+            }),
+            study_notes_rule: r.value("notes.study_notes_rule", value::rule_weight),
+            show_sidebars: r.value("notes.show_sidebars", |n| n.boolean()),
         },
         headers: Headers {
             left_page: side(r, "headers.left_page"),

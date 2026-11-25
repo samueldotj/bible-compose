@@ -143,6 +143,12 @@ export const EN_HELP: Readonly<Record<string, string>> = {
   "notes.show_cross_references": "Whether cross-references appear, and what marks them.",
   "notes.cross_reference_callers": "What marks a cross-reference: figures, letters, symbols, or nothing.",
   "notes.cross_reference_placement": "Where cross-references go: the note area at the foot, in the text, or under the paragraph.",
+  "typography.optical_size": "For a font with an optical-size axis, such as Literata: points of optical size per point of type. 0 keeps the font's default cut; 1 is the cut for the printed size; larger is finer.",
+  "notes.show_study_notes": "Whether study notes (\\ef) appear. They are set together after the passage they comment on.",
+  "notes.study_notes_label": "The words over a passage's study notes. Empty for none.",
+  "notes.study_notes_columns": "How many columns the study notes are set in: 1 or 2.",
+  "notes.study_notes_rule": "The rule above the study notes' label, in the label's colour: a weight, or none, hairline, thin, medium or thick.",
+  "notes.show_sidebars": "Whether sidebars (\\esb), such as word studies, appear as a box in the text.",
   "notes.restart_numbering": "Where the marks start again from 1 or a: every chapter, every book, or never.",
   "assets.missing_figure": "A figure whose file is not there: stop the build and say so, or leave it out with a warning.",
   "tab:cover":

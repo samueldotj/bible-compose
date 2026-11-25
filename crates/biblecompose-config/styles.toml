@@ -255,6 +255,43 @@ font_size = "7.4pt"
 [note.fe]
 font_size = "7.4pt"
 
+# Study notes (`\ef`), set together after their passage under a small
+# label in small capitals.
+[note.ef]
+font_size = "8pt"
+
+[study_notes]
+font_size = "8pt"
+smallcaps = true
+weight = 600
+space_above = "10pt"
+space_below = "3pt"
+gap_after = "14pt"
+
+# ------------------------------------------------------------ sidebars
+
+# A sidebar (`\esb`), a word study say: a box on a light grey ground, its
+# padding the `indent` and the gap between its two sides `gap_after`.
+[sidebar]
+font_size = "8.4pt"
+background = "#f0f0ee"
+indent = "9pt"
+gap_after = "12pt"
+space_above = "10pt"
+space_below = "6pt"
+
+[sidebar_category]
+font_size = "7pt"
+smallcaps = true
+weight = 600
+
+[sidebar_title]
+font_size = "13pt"
+weight = 700
+
+[sidebar_subtitle]
+italic = true
+
 [reference]
 font_size = "7.4pt"
 italic = true

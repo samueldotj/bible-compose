@@ -29,6 +29,9 @@ font_family = "Literata"
 font_size = "9.5pt"
 leading = "14.7pt"
 justify = true
+# The design is a web page, where Literata is drawn in the cut for its
+# 15.5px: finer than the cut for 9.5pt, and the one the page should match.
+optical_size = 1.6
 
 [contents]
 show_book_introductions = true
@@ -50,6 +53,11 @@ cross_reference_placement = "note_area"
 footnote_callers = "numbers"
 cross_reference_callers = "letters"
 restart_numbering = "per_chapter"
+# The study notes after each passage, in two columns under a fine green
+# rule and their label.
+study_notes_label = "Study notes"
+study_notes_columns = 2
+study_notes_rule = "0.6pt"
 
 # The book and passage at the head's left, the page at its right; the
 # edition and the chapter at the foot.

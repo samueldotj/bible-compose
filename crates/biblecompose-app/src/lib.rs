@@ -354,11 +354,22 @@ pub fn build_with(
         sile_path: request.sile_path.clone(),
         project_root: request.project_root.clone(),
         class: "biblecompose".to_owned(),
-        class_options: backend_input::class_options_with(
-            &request.settings,
-            body_font.as_ref(),
-            Some(&hyphenation),
-        ),
+        class_options: {
+            let mut options = backend_input::class_options_with(
+                &request.settings,
+                body_font.as_ref(),
+                Some(&hyphenation),
+            );
+            // Which of the fonts this build uses can take an optical size,
+            // for `typography.optical_size`.
+            let axes = font::optical_axes(body_font.iter().chain(style_fonts.values()));
+            for (key, value) in options.iter_mut() {
+                if key == "opszaxes" {
+                    *value = format!("\"{axes}\"");
+                }
+            }
+            options
+        },
     };
 
     if cancel.is_cancelled() {

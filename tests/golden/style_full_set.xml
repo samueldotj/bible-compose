@@ -81,10 +81,16 @@
 <style for="verse" font_size="6.4pt" weight="600" raise="2.8pt"/>
 <style for="note.f" font_size="7.4pt"/>
 <style for="note.fe" font_size="7.4pt"/>
+<style for="note.ef" font_size="8pt"/>
 <style for="reference" font_size="7.4pt" italic="true"/>
 <style for="caption" font_size="7.6pt" italic="true"/>
 <style for="head" font_size="8.2pt" italic="true"/>
 <style for="folio" font_size="8.2pt"/>
+<style for="sidebar" font_size="8.4pt" space_above="10pt" space_below="6pt" indent="9pt" gap_after="12pt" background="#f0f0ee"/>
+<style for="sidebar_category" font_size="7pt" weight="600" smallcaps="true"/>
+<style for="sidebar_title" font_size="13pt" weight="700"/>
+<style for="sidebar_subtitle" italic="true"/>
+<style for="study_notes" font_size="8pt" weight="600" smallcaps="true" space_above="10pt" space_below="3pt" gap_after="14pt"/>
 </styles>
 <book code="JHN" name="John" altname="John" tocname="John">
 <heading style="s" level="1">The Beginning</heading>

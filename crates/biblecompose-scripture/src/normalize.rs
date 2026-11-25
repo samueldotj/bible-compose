@@ -214,6 +214,35 @@ impl Cx<'_> {
 
             NodeKind::Figure => blocks.push(Block::Figure(self.figure(node))),
 
+            // `\esb` — a sidebar. Its paragraphs are its own; an anchor
+            // waiting for a block belongs to the text before it, not inside
+            // the box.
+            NodeKind::Sidebar => {
+                if !pending.is_empty() {
+                    blocks.push(Block::Paragraph {
+                        style: ParaStyle::P,
+                        content: std::mem::take(pending),
+                    });
+                }
+                let category = node
+                    .attribute("category")
+                    .map(str::trim)
+                    .filter(|c| !c.is_empty())
+                    .map(str::to_owned);
+                let mut content = Vec::new();
+                let mut inside: Vec<Inline> = Vec::new();
+                for child in &node.children {
+                    self.top_level(child, names, &mut content, &mut inside);
+                }
+                if !inside.is_empty() {
+                    content.push(Block::Paragraph {
+                        style: ParaStyle::P,
+                        content: inside,
+                    });
+                }
+                blocks.push(Block::Sidebar { category, content });
+            }
+
             // `\periph` — a page of front matter. An anchor waiting for a
             // block is not this division's: it belongs to what came before.
             NodeKind::Periph => {
@@ -449,10 +478,10 @@ impl Cx<'_> {
             });
         }
 
-        let kind = if marker == "fe" {
-            NoteKind::Endnote
-        } else {
-            NoteKind::Footnote
+        let kind = match marker {
+            "fe" => NoteKind::Endnote,
+            "ef" => NoteKind::StudyNote,
+            _ => NoteKind::Footnote,
         };
         let (origin, content) = self.apparatus(&node.children, "fr");
 

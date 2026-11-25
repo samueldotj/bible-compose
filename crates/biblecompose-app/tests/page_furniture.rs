@@ -452,6 +452,106 @@ fn the_paragraph_after_a_one_line_opening_runs_round_the_figure() {
     );
 }
 
+/// A passage with two study notes (`\ef`) and a word study (`\esb`).
+const STUDIED: &str = concat!(
+    "\\id GEN\n\\h Genesis\n\\c 1\n\\s1 The Creation\n\\p\n",
+    "\\v 1 In the beginning God created the heavens and the earth.",
+    "\\ef - \\fr 1:1 \\fk In the beginning.\\fk* \\ft Alpha note, which runs on ",
+    "long enough to take more than one line of its column.\\ef*\n",
+    "\\v 2 Now the earth was formless and void.",
+    "\\ef - \\fr 1:2 \\fk formless.\\fk* \\ft Beta note, which also runs on long ",
+    "enough to take more than one line of its column.\\ef*\n",
+    "\\esb \\cat Word study\\cat*\n\\s1 Created\n\\r Hebrew bara\n",
+    "\\p Gamma, the explanation, set beside the word in the box.\n\\esbe\n",
+    "\\s1 The First Day\n\\p\n\\v 3 And God said, Let there be light.\n",
+);
+
+/// **A passage's study notes are set after it, under a rule and a label,
+/// and its word study is a box before them.** In the order the design has:
+/// the text, the box, the rule, the label, the notes, then the next
+/// heading; the box with its word at the left and the explanation at the
+/// right on its own ground; the notes in two columns, one note each.
+#[test]
+fn study_notes_and_a_word_study_follow_their_passage() {
+    if !have_backend() {
+        return;
+    }
+    let b = built(
+        STUDIED,
+        "[page]\ncolumns = 1\n[notes]\nstudy_notes_columns = 2\n\
+         study_notes_rule = \"1pt\"\nstudy_notes_label = \"Study notes\"\n",
+        "[sidebar]\nbackground = \"#ff0000\"\n",
+    );
+    let find = |needle: &str| {
+        b.lines
+            .iter()
+            .find(|l| {
+                let squash = |t: &str| t.replace(' ', "").to_lowercase();
+                l.page == 1 && squash(&l.text()).contains(&squash(needle))
+            })
+            .unwrap_or_else(|| panic!("no line with {needle:?}"))
+    };
+    let verse2 = find("formless and void");
+    let word = b
+        .lines
+        .iter()
+        .find(|l| l.page == 1 && l.text().trim() == "Created")
+        .expect("the word study's word, on a line of its own");
+    let gamma = find("Gamma");
+    let label = find("study notes");
+    let alpha = find("Alpha");
+    let beta = find("Beta");
+    let next = find("The First Day");
+
+    // PDF space runs up the page: each is lower than the one before.
+    assert!(verse2.y > word.y, "the box is under the text");
+    assert!(word.y > label.y, "the notes' label is under the box");
+    assert!(label.y > alpha.y, "the notes are under their label");
+    assert!(alpha.y > next.y, "and all of it before the next heading");
+
+    // The box: the word at the left, the explanation beside it, on red.
+    let x = |l: &&Line| l.marks.first().expect("a mark").x;
+    assert!(x(&word) < x(&gamma) - 40.0, "{} vs {}", x(&word), x(&gamma));
+    let middle = (b.left + b.right) / 2.0;
+    let rules = rules_on(&b, 1);
+    let ground: Vec<_> = rules
+        .iter()
+        .filter(|r| r.color == (1.0, 0.0, 0.0))
+        .collect();
+    assert_eq!(ground.len(), 1, "{rules:?}");
+    assert!(
+        ground[0].length() > (b.right - b.left) * 0.95,
+        "{:?}",
+        ground[0]
+    );
+
+    // The rule over the label, the measure wide, a point thick.
+    assert!(
+        rules.iter().any(|r| r.is_horizontal()
+            && (r.thickness - 1.0).abs() < 0.05
+            && r.length() > (b.right - b.left) * 0.95
+            && r.y1 > label.y
+            && r.y1 < word.y),
+        "{rules:?}"
+    );
+
+    // Two columns, a note in each.
+    // A row holds a line of each column, so the word, not the row's start.
+    let at = |l: &Line, word: &str| {
+        l.marks
+            .iter()
+            .find(|m| m.text.contains(word))
+            .unwrap_or_else(|| panic!("no {word:?} in {:?}", l.text()))
+            .x
+    };
+    assert!(
+        at(alpha, "Alpha") < middle,
+        "the first note is in the left column"
+    );
+    assert!(at(beta, "Beta") > middle, "the second is in the right");
+    assert!((alpha.y - beta.y).abs() < 0.5, "both start on the same row");
+}
+
 /// **In two columns the book's title spans both, with its ornament under
 /// it**, and the text starts below them. The ornament is two short rules
 /// and a diamond, centred on the text block rather than on the first column.

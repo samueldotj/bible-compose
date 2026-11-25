@@ -74,6 +74,16 @@ pub enum StyleSelector {
     RunningHead,
     /// The page number.
     Folio,
+    /// A sidebar's box (`\esb`): its face and the colour behind it.
+    Sidebar,
+    /// The kind of box, from `\cat` — "Word study" — set above its title.
+    SidebarCategory,
+    /// A sidebar's first heading: the word a word study is about.
+    SidebarTitle,
+    /// Its other headings: the original word and its transliteration.
+    SidebarSubtitle,
+    /// The label over a passage's study notes, and the rule above it.
+    StudyNotes,
 }
 
 impl StyleSelector {
@@ -97,6 +107,11 @@ impl StyleSelector {
             StyleSelector::TableCell => "cell",
             StyleSelector::RunningHead => "head",
             StyleSelector::Folio => "folio",
+            StyleSelector::Sidebar => "sidebar",
+            StyleSelector::SidebarCategory => "sidebar_category",
+            StyleSelector::SidebarTitle => "sidebar_title",
+            StyleSelector::SidebarSubtitle => "sidebar_subtitle",
+            StyleSelector::StudyNotes => "study_notes",
         }
     }
 
@@ -110,6 +125,7 @@ impl StyleSelector {
             StyleSelector::ListItem(s, level) => Some(format!("{}{level}", s.marker())),
             StyleSelector::Note(NoteKind::Footnote) => Some("f".to_owned()),
             StyleSelector::Note(NoteKind::Endnote) => Some("fe".to_owned()),
+            StyleSelector::Note(NoteKind::StudyNote) => Some("ef".to_owned()),
             StyleSelector::BookTitle
             | StyleSelector::Chapter
             | StyleSelector::ChapterCaption
@@ -120,7 +136,12 @@ impl StyleSelector {
             | StyleSelector::Caption
             | StyleSelector::TableCell
             | StyleSelector::RunningHead
-            | StyleSelector::Folio => None,
+            | StyleSelector::Folio
+            | StyleSelector::Sidebar
+            | StyleSelector::SidebarCategory
+            | StyleSelector::SidebarTitle
+            | StyleSelector::SidebarSubtitle
+            | StyleSelector::StudyNotes => None,
         }
     }
 
@@ -159,6 +180,7 @@ impl StyleSelector {
             }
             ("note", Some("f")) => Some(StyleSelector::Note(NoteKind::Footnote)),
             ("note", Some("fe")) => Some(StyleSelector::Note(NoteKind::Endnote)),
+            ("note", Some("ef")) => Some(StyleSelector::Note(NoteKind::StudyNote)),
             ("book", None) => Some(StyleSelector::BookTitle),
             ("chapter", None) => Some(StyleSelector::Chapter),
             ("chapter_caption", None) => Some(StyleSelector::ChapterCaption),
@@ -170,6 +192,11 @@ impl StyleSelector {
             ("cell", None) => Some(StyleSelector::TableCell),
             ("head", None) => Some(StyleSelector::RunningHead),
             ("folio", None) => Some(StyleSelector::Folio),
+            ("sidebar", None) => Some(StyleSelector::Sidebar),
+            ("sidebar_category", None) => Some(StyleSelector::SidebarCategory),
+            ("sidebar_title", None) => Some(StyleSelector::SidebarTitle),
+            ("sidebar_subtitle", None) => Some(StyleSelector::SidebarSubtitle),
+            ("study_notes", None) => Some(StyleSelector::StudyNotes),
             _ => None,
         }
     }
@@ -219,12 +246,18 @@ impl StyleSelector {
             StyleSelector::Verse,
             StyleSelector::Note(NoteKind::Footnote),
             StyleSelector::Note(NoteKind::Endnote),
+            StyleSelector::Note(NoteKind::StudyNote),
             StyleSelector::Reference,
             StyleSelector::Figure,
             StyleSelector::Caption,
             StyleSelector::TableCell,
             StyleSelector::RunningHead,
             StyleSelector::Folio,
+            StyleSelector::Sidebar,
+            StyleSelector::SidebarCategory,
+            StyleSelector::SidebarTitle,
+            StyleSelector::SidebarSubtitle,
+            StyleSelector::StudyNotes,
         ]);
         out
     }

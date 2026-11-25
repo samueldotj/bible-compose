@@ -187,6 +187,11 @@ impl Settings {
 
         push("page.size", PageSize, self.page.size.to_string());
         push("page.columns", Integer, self.page.columns.to_string());
+        push(
+            "typography.optical_size",
+            Text,
+            self.typography.optical_size.to_string(),
+        );
         push("page.margin_top", Length, self.page.margin_top.to_string());
         push(
             "page.margin_bottom",
@@ -478,6 +483,31 @@ impl Settings {
             "notes.cross_reference_placement",
             Choice(ReferencePlacement::SPELLINGS),
             self.notes.cross_reference_placement.to_string(),
+        );
+        push(
+            "notes.show_study_notes",
+            Boolean,
+            self.notes.show_study_notes.to_string(),
+        );
+        push(
+            "notes.study_notes_label",
+            Text,
+            self.notes.study_notes_label.to_string(),
+        );
+        push(
+            "notes.study_notes_columns",
+            Integer,
+            self.notes.study_notes_columns.to_string(),
+        );
+        push(
+            "notes.study_notes_rule",
+            Length,
+            self.notes.study_notes_rule.to_string(),
+        );
+        push(
+            "notes.show_sidebars",
+            Boolean,
+            self.notes.show_sidebars.to_string(),
         );
 
         let (l, r) = (&self.headers.left_page, &self.headers.right_page);

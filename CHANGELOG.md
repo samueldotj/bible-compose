@@ -4,6 +4,33 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## Unreleased
 
+* **Optical size.** A variable font with an optical-size axis, such as
+  Literata, can be drawn in the cut for its size, set by
+  `typography.optical_size`. The Study Bible uses it to match the finer text
+  of its design.
+
+* **A parallel passage can sit beside its heading.** With `own_line = false`
+  in `heading.r1`, a section heading's `\r` line is set at the right end of
+  the heading's line. The Study Bible sets its headings this way.
+
+* **Text no longer runs over the footnotes on a crowded page.** When the
+  room left on a page could not hold even one line of a note, the
+  typesetter forced a line in anyway, and the page's last line of text was
+  printed over the first note. Such a note now opens the next page's notes.
+  A block of study notes or a word study is also measured properly when the
+  page is filled, so the text after it no longer overruns the page.
+
+* **Study notes and word studies.** USFM's extended footnotes (`\ef`) are now
+  set as study notes. A passage's notes are gathered and set together after
+  it, under a label and a rule, in one column or two. Sidebars
+  (`\esb … \esbe`) are now set as a box on a ground of colour: the `\cat`
+  label and the headings at the left, the text at the right, as a word study
+  is laid out. The Study Bible template sets both as its design has them. The
+  new settings are `notes.show_study_notes`, `notes.study_notes_label`,
+  `notes.study_notes_columns`, `notes.study_notes_rule` and
+  `notes.show_sidebars`. The new styles are `note.ef`, `study_notes`,
+  `sidebar`, `sidebar_category`, `sidebar_title` and `sidebar_subtitle`.
+
 * **Switching templates no longer leaves the old one's look behind.**
   Choosing a template now clears any setting or style another template
   gave a value and this one doesn't use, so a Study Bible chosen after

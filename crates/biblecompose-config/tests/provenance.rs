@@ -63,6 +63,7 @@ leading = \"13pt\"
 hyphenation = false
 justify = false
 keep_poetry_indentation = false
+optical_size = 1.5
 
 [contents]
 show_book_introductions = false
@@ -105,6 +106,11 @@ footnote_callers = \"symbols\"
 cross_reference_callers = \"none\"
 restart_numbering = \"per_book\"
 cross_reference_placement = \"inline\"
+show_study_notes = false
+study_notes_label = \"Notes\"
+study_notes_columns = 2
+study_notes_rule = \"thin\"
+show_sidebars = false
 
 [headers.left_page]
 header_left = \"alt_book_name\"

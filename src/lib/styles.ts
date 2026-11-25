@@ -181,6 +181,34 @@ export const STYLE_GROUPS: readonly StyleGroup[] = [
     rows: [
       { selector: "note.f", label: "Footnote", properties: [FACE, SIZE, ITALIC] },
       { selector: "reference", label: "Cross-reference", properties: [FACE, SIZE, ITALIC] },
+      { selector: "note.ef", label: "Study note", properties: [FACE, SIZE, ITALIC, COLOR] },
+      {
+        selector: "study_notes",
+        label: "Study notes label",
+        // Its colour is the rule's too, and its gap after is the gap between
+        // the notes' columns.
+        properties: [FACE, SIZE, WEIGHT, SMALLCAPS, UPPERCASE, LETTER_SPACING, COLOR, ABOVE, BELOW, GAP_AFTER],
+      },
+    ],
+  },
+  {
+    id: "sidebars",
+    title: "Sidebars",
+    rows: [
+      {
+        selector: "sidebar",
+        label: "Box",
+        // Its indent is the padding inside the box, and its gap after the
+        // gap between the box's two sides.
+        properties: [FACE, SIZE, COLOR, BACKGROUND, INDENT, GAP_AFTER, ABOVE, BELOW],
+      },
+      {
+        selector: "sidebar_category",
+        label: "Kind of box",
+        properties: [FACE, SIZE, WEIGHT, SMALLCAPS, UPPERCASE, LETTER_SPACING, COLOR],
+      },
+      { selector: "sidebar_title", label: "Word", properties: [FACE, SIZE, WEIGHT, ITALIC, COLOR, ABOVE] },
+      { selector: "sidebar_subtitle", label: "Original", properties: [FACE, SIZE, ITALIC, COLOR] },
     ],
   },
   {

@@ -490,6 +490,21 @@ fn emit_block(w: &mut Writer<Cursor<Vec<u8>>>, block: &Block, state: &mut EmitSt
             newline(w, state);
             write(w, Event::End(BytesEnd::new("division")), state);
         }
+        Block::Sidebar { category, content } => {
+            let mut el = BytesStart::new("sidebar");
+            if let Some(category) = category {
+                el.push_attribute(("category", category.as_str()));
+            }
+            write(w, Event::Start(el), state);
+            // A box is not the chapter's opening, however early it falls.
+            let awaiting = std::mem::replace(&mut state.awaiting_initial, false);
+            for block in content {
+                emit_block(w, block, state);
+            }
+            state.awaiting_initial = awaiting;
+            newline(w, state);
+            write(w, Event::End(BytesEnd::new("sidebar")), state);
+        }
     }
 }
 
@@ -672,6 +687,7 @@ fn emit_note_body(w: &mut Writer<Cursor<Vec<u8>>>, note: &Note, state: &mut Emit
         match note.kind {
             NoteKind::Footnote => "f",
             NoteKind::Endnote => "fe",
+            NoteKind::StudyNote => "ef",
         },
     ));
     el.push_attribute(("caller", note.caller.as_str()));

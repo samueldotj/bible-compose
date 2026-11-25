@@ -227,6 +227,13 @@ pub enum Block {
         title: String,
         content: Vec<Block>,
     },
+    /// `\esb` … `\esbe` — a sidebar: a box of study material set apart from
+    /// the text, such as a word study. Its blocks are the box's; `\cat`
+    /// names what kind of box it is ("Word study"), and the page shows it.
+    Sidebar {
+        category: Option<String>,
+        content: Vec<Block>,
+    },
 }
 
 impl Block {
@@ -251,7 +258,7 @@ impl Block {
                     }
                 }
             }
-            Block::Division { content, .. } => {
+            Block::Division { content, .. } | Block::Sidebar { content, .. } => {
                 for block in content {
                     block.each_inline(f);
                 }
@@ -278,7 +285,7 @@ impl Block {
                     out.push_str(caption);
                 }
             }
-            Block::Division { content, .. } => {
+            Block::Division { content, .. } | Block::Sidebar { content, .. } => {
                 for block in content {
                     block.write_text(out);
                 }
@@ -300,7 +307,7 @@ impl Block {
                     }
                 }
             }
-            Block::Division { content, .. } => {
+            Block::Division { content, .. } | Block::Sidebar { content, .. } => {
                 for block in content {
                     block.collect_unsupported(found);
                 }
@@ -474,6 +481,9 @@ pub enum NoteKind {
     Footnote,
     /// `\fe`
     Endnote,
+    /// `\ef` — an extended footnote: a study note, set with the others for
+    /// its passage rather than at the foot of the page with a caller.
+    StudyNote,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -666,6 +676,9 @@ mod tests {
                     // Front matter has a fixture of its own; the kitchen
                     // sink is a book of Scripture.
                     Block::Division { .. } => "division",
+                    // Sidebars have tests of their own, with the study
+                    // notes they come with.
+                    Block::Sidebar { .. } => "sidebar",
                 });
                 collect_inline_kinds(block, &mut seen);
             }

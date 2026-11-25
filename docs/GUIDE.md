@@ -387,6 +387,22 @@ the text is written in, and space its letters with **`letter_spacing`** (a
 length, such as `1.5pt`). Together they set a running head or a label as a
 line of spaced capitals.
 
+### Optical size
+
+A variable font with an optical-size axis (Literata, Source Serif 4, Inter)
+has a cut for each size: sturdier and wider for small text, finer for large.
+**`typography.optical_size`** is how many points of optical size each point
+of type gets. 0 keeps the font's default cut at every size, and 1 gives the
+cut for the size printed. A web page draws its text finer than print, so a
+page matching a design made for the screen wants more: the Study Bible uses
+1.6. Fonts without the axis are left alone.
+
+### A parallel passage beside its heading
+
+A section heading's parallel passage (`\r`) goes on a line of its own under
+the heading. With **`own_line = false`** in `heading.r1`, it is set at the
+right end of the heading's line instead, as a study Bible sets it.
+
 ### The chapter's opening
 
 When the chapter number stands on a line of its own (the `chapter` style's
@@ -442,6 +458,48 @@ spans.
 
 The **running head** and the **foot line** are each set in their own style,
 `head` and `folio`, colour included.
+
+### Study notes and word studies
+
+**Study notes** are USFM's extended footnotes, `\ef … \ef*`. They have no
+mark in the text. A passage's notes are gathered and set together after it,
+before the next heading (or at the end of the book), under a label and a rule.
+Each note opens with its `\fr` reference, then its `\fk` keyword:
+
+```
+\v 1 In the beginning God created the heavens and the earth.\ef - \fr 1:1 \fk In the beginning.\fk* \ft The opening words give no date.\ef*
+```
+
+`notes.study_notes_label` is the label ("Study notes"; empty for none), and
+`notes.study_notes_rule` is the rule above it, in the label's colour.
+`notes.study_notes_columns` sets them in one column or two; in two, the
+columns divide between notes. Their look is the `note.ef` style. The label's
+look is the `study_notes` style, whose `gap_before` is the gap between the
+rule and the label and whose `gap_after` is the gap between the columns. `character.fr` and `character.fk` style the reference and the
+keyword. `notes.show_study_notes` turns them off.
+
+A **word study**, or any box of study material, is a sidebar, `\esb … \esbe`.
+Its `\cat` names the kind of box, and is set at the top of its left side. Its
+first heading is the word, and its other headings are set under it: the
+original word, say. Its paragraphs are set beside them, at the right:
+
+```
+\esb \cat Word study\cat*
+\s1 Created
+\r Hebrew bara’
+\p Used in the Old Testament only with God as its subject.
+\esbe
+```
+
+The box is the `sidebar` style. Its `background` is the box's ground, its
+`indent` the padding inside it, and its `gap_after` the gap between its two
+sides. `sidebar_category`, `sidebar_title` and `sidebar_subtitle` style the
+kind of box, the word and the lines under it. A box is kept whole, so one
+too tall for what is left of a page moves to the next.
+`notes.show_sidebars` turns them off.
+
+The Study Bible template sets both as its design has them: the box on a pale
+green ground, and the notes in two columns under a green rule.
 
 ### Styles
 

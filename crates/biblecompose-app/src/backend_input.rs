@@ -113,6 +113,10 @@ pub fn class_options_with(
         },
     );
     put("fontsize", s.typography.font_size.to_sile());
+    put("opticalsize", s.typography.optical_size.to_string());
+    // Which fonts can take an optical size: the body font's here, and the
+    // build adds the styles' fonts, which this does not see.
+    put("opszaxes", quoted(&crate::font::optical_axes(body_font)));
     put("leading", s.typography.leading.to_sile());
     put("language", s.project.language.to_string());
     // What pre-flight decided, not what the file asked for. The setting is
@@ -192,6 +196,11 @@ pub fn class_options_with(
         "crossrefplacement",
         s.notes.cross_reference_placement.to_string(),
     );
+    put("studynotes", flag(*s.notes.show_study_notes));
+    put("studynoteslabel", quoted(&s.notes.study_notes_label));
+    put("studynotescolumns", s.notes.study_notes_columns.to_string());
+    put("studynotesrule", s.notes.study_notes_rule.to_sile());
+    put("sidebars", flag(*s.notes.show_sidebars));
     // Twelve slots rather than four switches: where a thing goes is as much
     // a decision as whether it is there, and which side of the spread it is
     // on is part of where. The class picks a side by the page's parity.

@@ -31,8 +31,10 @@ align = "start"
 space_above = "6pt"
 space_below = "1pt"
 
-# The parallel passages, small and italic in grey, at the right.
+# The parallel passages, small and italic in grey, at the right end of
+# their section heading's line.
 [heading.r1]
+own_line = false
 font_family = "IBM Plex Sans"
 font_size = "7.3pt"
 italic = true
@@ -72,3 +74,61 @@ color = "#5a605d"
 [paragraph.p]
 first_line_indent = "0pt"
 space_above = "2.5pt"
+
+# The study notes after each passage: a green rule, a spaced label in the
+# sans, then the notes in two columns, 26px apart in the design (the label's
+# `gap_after`), each opening with its reference in green and its keyword in
+# bold.
+[study_notes]
+font_family = "IBM Plex Sans"
+font_size = "6.7pt"
+weight = 600
+uppercase = true
+letter_spacing = "0.9pt"
+color = "#2e5e4e"
+space_above = "8pt"
+space_below = "5pt"
+gap_before = "3pt"
+gap_after = "16pt"
+
+[note.ef]
+font_family = "IBM Plex Sans"
+font_size = "7.6pt"
+color = "#262a28"
+
+[character.fr]
+weight = 600
+color = "#2e5e4e"
+
+[character.fk]
+weight = 600
+
+# The word study: a box on a pale green ground, its padding the `indent`
+# and the gap between its two sides `gap_after`. The kind of box in spaced
+# green capitals, the word in Literata, the original under it in grey
+# italic, and the explanation beside them in the sans.
+[sidebar]
+font_family = "IBM Plex Sans"
+font_size = "7.6pt"
+background = "#eef4f1"
+indent = "9pt"
+gap_after = "12pt"
+space_above = "12pt"
+space_below = "4pt"
+
+[sidebar_category]
+font_size = "6.4pt"
+weight = 600
+uppercase = true
+letter_spacing = "0.9pt"
+color = "#2e5e4e"
+
+[sidebar_title]
+font_family = "Literata"
+font_size = "13.4pt"
+weight = 600
+space_above = "1pt"
+
+[sidebar_subtitle]
+italic = true
+color = "#4a504d"

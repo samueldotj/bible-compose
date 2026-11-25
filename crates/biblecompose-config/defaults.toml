@@ -101,6 +101,15 @@ leading = "11.2pt"
 
 justify = true
 keep_poetry_indentation = true
+
+# A variable font with an optical-size axis — Literata, Source Serif 4, Inter
+# — is drawn in a cut for each size: sturdier and wider for small text,
+# finer and higher in contrast for large. This is how many points of optical
+# size each point of type gets. 0 keeps the font's own default cut at every
+# size; 1 is the cut for the size printed; a web page at its usual reading
+# size is drawn at about 1.6, finer than print. Fonts without the axis are
+# untouched.
+optical_size = 0
 hyphenation = true
 
 # Which parts of a book are printed. Everything is in the document either way;
@@ -214,6 +223,22 @@ restart_numbering = "per_chapter"
 # brackets where it was called, or `end_of_paragraph` gathered under the
 # paragraph that called it (SCR-005). Centre-column is post-MVP.
 cross_reference_placement = "note_area"
+
+# Study notes, USFM's `\ef`: set together after the passage they comment on
+# (before the next heading), not at the foot of the page with a caller. Each
+# opens with its `\fr` reference and its `\fk` keyword. The label goes over
+# them, "" for none, under a rule of `study_notes_rule` in the label style's
+# colour: a weight, or none, hairline, thin, medium or thick. One column or
+# two across the measure.
+show_study_notes = true
+study_notes_label = "Study notes"
+study_notes_columns = 1
+study_notes_rule = "none"
+
+# Sidebars, USFM's `\esb` … `\esbe` — a word study, say: set as a box in the
+# text, its `\cat` category and headings at the left and its paragraphs
+# beside them. The box's look is the `sidebar` styles'.
+show_sidebars = true
 
 # Three slots at the top of the page and three at the foot, each holding one
 # text with fields in braces: {Book}, {AltBook}, {Page}, {Range},

@@ -184,6 +184,8 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   "page.margin_inner",
   "page.margin_outer",
   "page.column_gap",
+  "page.side_column",
+  "page.side_gap",
   "page.header_gap",
   "page.footer_gap",
   // Questions about the build you are about to run: on the Build inspector

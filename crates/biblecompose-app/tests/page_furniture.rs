@@ -562,6 +562,61 @@ fn a_verse_numbered_in_the_margin_starts_flush() {
     );
 }
 
+/// **Side-heads**: with a side column, a section heading leaves the text and
+/// is set in the column at its left, level with the first line of the
+/// paragraph it opens; the text stands clear of the column and its gap, and
+/// the note area does not.
+#[test]
+fn a_side_head_is_set_beside_its_paragraph() {
+    if !have_backend() {
+        return;
+    }
+    let b = built(
+        PARAGRAPHS,
+        "[page]\ncolumns = 1\nside_column = \"120pt\"\nside_gap = \"12pt\"\n",
+        "",
+    );
+    let heading = b
+        .lines
+        .iter()
+        .find(|l| l.page == 1 && l.text().replace(' ', "").contains("TheFirmament"))
+        .unwrap_or_else(|| {
+            panic!(
+                "no heading in {:?}",
+                b.lines.iter().map(|l| (l.y, l.text())).collect::<Vec<_>>()
+            )
+        });
+    // Its paragraph opens with verse 3, at the side column's far edge.
+    let three = b
+        .lines
+        .iter()
+        .flat_map(|l| &l.marks)
+        .find(|m| m.text == "3" && (m.size - 6.4).abs() < 0.05)
+        .expect("verse 3");
+    assert!(
+        (three.x - (b.left + 132.0)).abs() < 0.6,
+        "the text stands clear of the column: verse 3 at {}, the frame at {}",
+        three.x,
+        b.left
+    );
+    let head_right = heading.marks.iter().map(|m| m.x).fold(f64::MIN, f64::max);
+    assert!(head_right < three.x, "the heading is in the column");
+    assert!(heading.left() >= b.left - 0.5);
+    // Level with the paragraph's first line, give or take the difference in
+    // size between them.
+    let first = b
+        .lines
+        .iter()
+        .find(|l| l.marks.iter().any(|m| std::ptr::eq(m, three)))
+        .expect("verse 3's line");
+    assert!(
+        (heading.y - first.y).abs() < 3.0,
+        "the heading at {}, its paragraph's first line at {}",
+        heading.y,
+        first.y
+    );
+}
+
 /// **A double frame is two boxes inside the trim**, on every page.
 #[test]
 fn a_double_frame_is_drawn_inside_the_trim() {

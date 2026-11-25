@@ -130,6 +130,10 @@ local OPTIONS = {
    { key = "footerrulecolor", kind = "string", default = "#000000" },
    { key = "footerrulegap", kind = "string", default = "6pt" },
    { key = "rulecolor", kind = "string", default = "#000000" },
+   -- Side-heads: a column this wide at the left of the text block, and the
+   -- gap between it and the text. "0pt" is none.
+   { key = "sidecolumn", kind = "string", default = "0pt" },
+   { key = "sidegap", kind = "string", default = "14pt" },
    -- A frame round every page, `frameinset` in from the trim: none, single,
    -- double.
    { key = "frame", kind = "string", default = "none" },
@@ -383,6 +387,7 @@ end
 local quote_hang_lines
 local page_rules, page_frame
 local roman, chapter_caption, title_ornament, chapter_on_own_line
+local side_width, side_lead, side_heads_into
 
 function class:_init (options)
    -- Parse options and install the frameset BEFORE plain._init, because that
@@ -2284,6 +2289,89 @@ function title_ornament (o, s, kind)
    SILE.call("par")
 end
 
+--- The side-head column's width, in points; zero when there is none.
+function side_width ()
+   local o = SILE.documentState.documentClass._bcopts
+   local ok, m = pcall(SILE.types.measurement, o.sidecolumn or "0pt")
+   return ok and m:tonumber() or 0
+end
+
+--- How far the text stands in from the frame's left edge to clear the side
+--- column: the column and its gap, or nothing.
+function side_lead ()
+   local width = side_width()
+   -- A note's text is set across the note area, under the side column as
+   -- well as the text.
+   if width <= 0 or scratch().in_note then
+      return 0
+   end
+   local o = SILE.documentState.documentClass._bcopts
+   local ok, gap = pcall(SILE.types.measurement, o.sidegap or "0pt")
+   return width + (ok and gap:tonumber() or 0)
+end
+
+--- `content` with the side-heads waiting for it set beside its first line.
+--
+-- A zero-width box at the head of the paragraph. When the line it is on is
+-- output, it sets the headings into a frame of the side column's width at
+-- the frame's left edge, right-aligned, their first baseline on the line's
+-- — so a heading reads as the label of the paragraph beside it — and
+-- takes no room in the text at all.
+function side_heads_into (content)
+   local heads = scratch().side_heads
+   scratch().side_heads = nil
+   local width = side_width()
+   local body = SILE.settings:get("font.size")
+   local place = function ()
+      SILE.typesetter:pushHbox({
+         width = SILE.types.length(0),
+         height = SILE.types.length(0),
+         depth = SILE.types.length(0),
+         value = { side_heads = heads },
+         outputYourself = function (_, typesetter, _)
+            local frame = typesetter.frame
+            local x = frame:left():tonumber()
+            local y = typesetter.frame.state.cursorY:tonumber()
+            -- The first baseline of the side frame sits a line's ascent
+            -- below its top: start the frame that far above this baseline.
+            local first = heads[1] and style(heads[1].selector) or {}
+            local size = first.font_size and SILE.types.measurement(first.font_size):tonumber() or body
+            local side = SILE.newFrame({
+               id = "sideHead",
+               left = x .. "pt",
+               width = width .. "pt",
+               top = (y - size * 0.95) .. "pt",
+               height = "400pt",
+            })
+            SILE.typesetNaturally(side, function ()
+               SILE.settings:set("document.lskip", SILE.types.node.glue())
+               SILE.settings:set("document.parindent", SILE.types.node.glue())
+               SILE.settings:set("current.parindent", SILE.types.node.glue())
+               SILE.settings:set(
+                  "document.baselineskip",
+                  SILE.types.node.vglue(size * 1.3 .. "pt")
+               )
+               for _, head in ipairs(heads) do
+                  local s = style(head.selector)
+                  skip(s.gap_before)
+                  SILE.call("raggedleft", {}, function ()
+                     styled(head.selector, function ()
+                        SILE.process(head.content)
+                     end)
+                  end)
+                  SILE.call("par")
+               end
+            end)
+         end,
+      })
+   end
+   local out = { place }
+   for _, child in ipairs(content) do
+      out[#out + 1] = child
+   end
+   return out
+end
+
 --- Whether the chapter number is set on a line of its own: its style says
 --- so, or a dropped first letter has taken its corner.
 function chapter_on_own_line (o)
@@ -2407,13 +2495,20 @@ end
 local function book_title (o, name, entry)
    local s = style("book")
    local function body ()
-      SILE.call(alignment(s) or ALIGNMENT.center, {}, function ()
-         entry()
-         styled("book", function ()
-            SILE.typesetter:typeset(name)
+      SILE.settings:temporarily(function ()
+         -- With side-heads, a title set flush left starts where the text
+         -- does.
+         if side_lead() > 0 and s.align == "start" then
+            SILE.settings:set("document.lskip", SILE.types.node.glue(side_lead() .. "pt"))
+         end
+         SILE.call(alignment(s) or ALIGNMENT.center, {}, function ()
+            entry()
+            styled("book", function ()
+               SILE.typesetter:typeset(name)
+            end)
          end)
+         SILE.call("par")
       end)
-      SILE.call("par")
       title_ornament(o, s)
    end
    if (tonumber(o.columns) or 1) >= 2 and at_head_of_page() then
@@ -3089,6 +3184,29 @@ function class:registerXmlCommands ()
       -- before the heading, not inside its centring and its face: the
       -- chapter, then its first heading. A number that drops, or runs into
       -- the text, stays where it is and is handled where it is set.
+      -- **Side-heads.** With a side column, a section heading and the
+      -- references under it are not set in the text: they wait for the
+      -- paragraph they open and are set beside it. A chapter they carry is
+      -- set first, where it is — a dropped number still waits for the
+      -- paragraph, as it does under any heading.
+      local kind = options.style or "s"
+      if side_width() > 0 and (kind == "s" or kind == "r" or kind == "sr") then
+         local rest = {}
+         for _, child in ipairs(type(content) == "table" and content or {}) do
+            if type(child) == "table" and child.command == "chapter" then
+               scratch().in_heading = true
+               SILE.process({ child })
+               scratch().in_heading = false
+            else
+               rest[#rest + 1] = child
+            end
+         end
+         local waiting = scratch().side_heads or {}
+         waiting[#waiting + 1] = { selector = selector, content = rest }
+         scratch().side_heads = waiting
+         scratch().flush_next = true
+         return
+      end
       if type(content) == "table" and chapter_on_own_line(self._bcopts) then
          for i, child in ipairs(content) do
             if type(child) == "table" then
@@ -3158,7 +3276,13 @@ function class:registerXmlCommands ()
       local selector = "paragraph." .. (options.style or "p")
       local s = style(selector)
       scratch().verses_in_paragraph = 0
-      skip(s.space_above)
+      -- A note's text arrives as a paragraph of its own, after the note's
+      -- caller and reference on the same line. Space above it would end
+      -- that line and set the text under them.
+      local in_note = scratch().in_note
+      if not in_note then
+         skip(s.space_above)
+      end
       -- The first line's indent, when the style gives one. A paragraph that
       -- opens a chapter, or follows a heading, is set flush, as a book sets
       -- it: the indent marks a new paragraph, and those already have a mark.
@@ -3178,14 +3302,21 @@ function class:registerXmlCommands ()
          flush = true
          content = with_pending_drop(content)
       end
+      if scratch().side_heads then
+         content = side_heads_into(content)
+      end
       if flush then
          SILE.call("noindent")
       elseif s.first_line_indent then
          SILE.settings:set("current.parindent", SILE.types.node.glue(s.first_line_indent))
       end
       SILE.settings:temporarily(function ()
+         local lead = side_lead()
          if s.indent then
-            SILE.settings:set("document.lskip", SILE.types.node.glue(s.indent))
+            lead = lead + SILE.types.measurement(s.indent):tonumber()
+         end
+         if lead > 0 then
+            SILE.settings:set("document.lskip", SILE.types.node.glue(lead .. "pt"))
          end
          local align = alignment(s)
          styled(selector, function ()
@@ -3202,7 +3333,9 @@ function class:registerXmlCommands ()
       -- Before the space below, so a paragraph and the references it gathered
       -- stay one block rather than two separated by it.
       flush_pending_refs()
-      skip(s.space_below)
+      if not in_note then
+         skip(s.space_below)
+      end
    end)
 
    self:registerCommand("poetry", function (options, content)
@@ -3211,6 +3344,9 @@ function class:registerXmlCommands ()
       scratch().verses_in_paragraph = 0
       if scratch().pending_drop then
          content = with_pending_drop(content)
+      end
+      if scratch().side_heads then
+         content = side_heads_into(content)
       end
       skip(s.space_above or "1pt")
       local align = alignment(s)
@@ -3224,6 +3360,9 @@ function class:registerXmlCommands ()
       -- Inside `temporarily`, so the hang ends with this line: a setting
       -- left behind would hang every paragraph after it.
       SILE.settings:temporarily(function ()
+         if side_lead() > 0 then
+            SILE.settings:set("document.lskip", SILE.types.node.glue(side_lead() .. "pt"))
+         end
          if sc.hang_carry then
             SILE.settings:set("current.hangIndent", sc.hang_carry.indent)
             SILE.settings:set("current.hangAfter", -sc.hang_carry.lines)
@@ -3256,8 +3395,12 @@ function class:registerXmlCommands ()
       local s = style(selector)
       skip(s.space_above)
       SILE.settings:temporarily(function ()
+         local lead = side_lead()
          if s.indent then
-            SILE.settings:set("document.lskip", SILE.types.node.glue(s.indent))
+            lead = lead + SILE.types.measurement(s.indent):tonumber()
+         end
+         if lead > 0 then
+            SILE.settings:set("document.lskip", SILE.types.node.glue(lead .. "pt"))
          end
          -- No first-line indent on top of the left skip: an item's first line
          -- starts where the rest of it does.

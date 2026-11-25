@@ -1,51 +1,82 @@
-# The modern edition's look.
+# The modern edition's look: the "Modern side-heads" design.
 #
-# One accent, a deep blue, on everything that is a number — the dropped
-# chapter figure and every verse — and on the section headings, which are
-# bold and flush left at a size that stands clear of the text. The design
-# this comes from hangs the headings in a column of their own beside the
-# text; this release sets headings in the text column, so they are given the
-# colour and weight to do the same work.
+# A serif text, Source Serif 4, with everything that orders it — the book's
+# name, the headings, the numbers, the head and the foot — in a sans, Inter.
+# One accent, a deep blue, on the headings and the numbers; the rest is ink
+# and a cool grey.
 
+# The book's name large and heavy in the sans, set tight, flush left.
+[book]
+font_family = "Inter"
+font_size = "48pt"
+weight = 800
+letter_spacing = "-1.6pt"
+align = "start"
+space_below = "18pt"
+
+# The figure dropped three lines in the sans, heavy, in the blue.
 [chapter]
-weight = 700
+font_family = "Inter"
+weight = 800
 color = "#1e4d7a"
+gap_after = "9pt"
 
+# The side-heads: small, semibold, in the blue, right-aligned against the
+# text; the passage they cover under them in grey.
 [heading.s1]
-font_size = "11pt"
-weight = 700
+font_family = "Inter"
+font_size = "7.7pt"
+weight = 600
 color = "#1e4d7a"
-space_above = "12pt"
-space_below = "3pt"
 
 [heading.s2]
-font_size = "10pt"
-weight = 700
+font_family = "Inter"
+font_size = "7.4pt"
+weight = 600
 color = "#1e4d7a"
-space_above = "8pt"
-space_below = "2pt"
 
-# `\sr` — the range under a heading, quieter than the heading it belongs to.
-[heading.sr1]
-font_size = "8pt"
+[heading.r1]
+font_family = "Inter"
+font_size = "7.1pt"
+weight = 500
 italic = false
 color = "#5e6670"
-space_above = "0pt"
-space_below = "4pt"
+gap_before = "2pt"
 
+[heading.sr1]
+font_family = "Inter"
+font_size = "7.1pt"
+weight = 500
+italic = false
+color = "#5e6670"
+gap_before = "2pt"
+
+# The verse numbers in the sans, bold and blue, raised.
 [verse]
+font_family = "Inter"
+font_size = "6pt"
 weight = 700
+raise = "3pt"
 color = "#1e4d7a"
 
+# The head in spaced sans capitals; the foot in the sans, in grey.
 [head]
-italic = false
-smallcaps = true
+font_family = "Inter"
+font_size = "7.1pt"
 weight = 600
+italic = false
+smallcaps = false
+uppercase = true
+letter_spacing = "0.6pt"
 
 [folio]
-weight = 600
+font_family = "Inter"
+font_size = "7.1pt"
+weight = 500
+color = "#5e6670"
 
-# A modern page marks a paragraph with space rather than an indent.
+# Paragraphs open flush and stand apart by a little space, as a modern book
+# sets them.
 [paragraph.p]
 first_line_indent = "0pt"
-space_above = "5pt"
+space_above = "6.5pt"

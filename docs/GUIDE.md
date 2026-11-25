@@ -371,6 +371,15 @@ gap to the text:
 
 The frame and the note lines are drawn in `rule_color`.
 
+### Side-heads
+
+With **`page.side_column`** set wider than zero, section headings and the
+reference lines under them leave the text. They are set in a column of that
+width at the left of the text block, right-aligned and level with the first
+line of the paragraph they open. The text moves right by the column plus
+`page.side_gap`; the footnotes still run the full width. The Modern template
+uses this.
+
 ### Capitals and letter spacing
 
 Any style can set its text in capitals with **`uppercase`**, whatever case

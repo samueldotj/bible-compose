@@ -248,6 +248,12 @@ impl Settings {
         );
         push("page.rule_color", Color, self.page.rule_color.to_string());
         push(
+            "page.side_column",
+            Length,
+            self.page.side_column.to_string(),
+        );
+        push("page.side_gap", Length, self.page.side_gap.to_string());
+        push(
             "page.frame",
             Choice(PageFrame::SPELLINGS),
             self.page.frame.to_string(),

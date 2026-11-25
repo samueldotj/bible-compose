@@ -39,6 +39,17 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   gutter rule and foot rule under a dark head rule, the design's leading,
   sizes and spacing, and a foot line.
 
+* **Modern matches its design, with side-heads.** Its section headings sit
+  in a column at the left of the text, beside the paragraph each opens, set
+  by the new `page.side_column` and `page.side_gap` settings. Text is in
+  Source Serif 4, and headings and numbers in Inter, with a large tight
+  title, a dropped blue figure, and a 7x10in page.
+
+* `letter_spacing` can be negative, to set letters tighter.
+
+* Fixed footnotes in a template whose paragraphs have space above: each
+  note's number and text were on separate lines.
+
 * **The Reader's edition matches its design.** It is set in Cormorant
   Garamond, ragged right on a narrow measure. Verse numbers sit in the
   margin. Each chapter opens with a spaced "PSALM" or "CHAPTER" caption over

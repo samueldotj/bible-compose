@@ -432,7 +432,7 @@ fn read_into(
         Ok(())
     });
     read("letter_spacing", &mut |n| {
-        style.letter_spacing = Some(value::length_or_zero(n)?.value);
+        style.letter_spacing = Some(value::signed_length(n)?.value);
         Ok(())
     });
 

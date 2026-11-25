@@ -71,6 +71,13 @@ footer_rule_gap = "6pt"
 # The ink of the frame and of the note lines below.
 rule_color = "#000000"
 
+# Side-heads: a column this wide at the left of the text block, where the
+# section headings and their references are set, right-aligned, beside the
+# paragraph they open. The text moves right by the column and `side_gap`.
+# Zero is none, and the headings are set in the text.
+side_column = "0pt"
+side_gap = "14pt"
+
 # A rule round every page, `frame_inset` in from the trim: "none", "single",
 # or "double" — two rules of `frame_width` each, a little apart.
 frame = "none"

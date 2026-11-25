@@ -195,6 +195,21 @@ pub fn length(node: &Node) -> Result<Located<Length>, Diagnostic> {
 }
 
 /// A length that is allowed to be zero — a margin, a gap, a space above.
+/// A length that may be negative: letter spacing set tight is less than
+/// none.
+pub fn signed_length(node: &Node) -> Result<Located<Length>, Diagnostic> {
+    let text = node.string()?;
+    let (value, unit) =
+        split_unit(&text.value).ok_or_else(|| bad_unit(node, &text.value, "a length"))?;
+    Ok(Located {
+        value: Length {
+            points: value * unit.in_points(),
+            unit,
+        },
+        loc: text.loc,
+    })
+}
+
 pub fn length_or_zero(node: &Node) -> Result<Located<Length>, Diagnostic> {
     let text = node.string()?;
     let (value, unit) =

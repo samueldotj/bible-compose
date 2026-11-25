@@ -92,6 +92,9 @@ export const EN_HELP: Readonly<Record<string, string>> = {
     "How thick the rule down the middle of the gutter is: a length, or hairline, thin, medium or thick. 0pt or none draws none.",
   "page.column_rule_color": "The ink of the rule between the columns.",
   "page.rule_color": "The ink of the frame and the note lines.",
+  "page.side_column":
+    "A column at the left of the text for the section headings, set beside the paragraph they open. 0pt sets them in the text.",
+  "page.side_gap": "The space between the side-head column and the text.",
   "page.frame": "A rule round every page, inside the trim: none, single, or double.",
   "page.frame_width": "How thick each of the frame's rules is.",
   "page.frame_inset": "How far in from the trim the frame is drawn.",

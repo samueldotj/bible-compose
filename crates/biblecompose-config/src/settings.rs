@@ -140,6 +140,11 @@ pub struct Page {
     pub footer_rule_gap: Sourced<Length>,
     /// The ink of the frame and of the note lines.
     pub rule_color: Sourced<Color>,
+    /// A column at the left of the text block for the section headings —
+    /// side-heads — and the gap between it and the text. Zero is none: the
+    /// headings are set in the text.
+    pub side_column: Sourced<Length>,
+    pub side_gap: Sourced<Length>,
     /// A rule round the whole page, inside the trim.
     pub frame: Sourced<PageFrame>,
     /// How thick each of the frame's rules is.
@@ -724,6 +729,8 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             footer_rule_color: r.value("page.footer_rule_color", value::color),
             footer_rule_gap: r.value("page.footer_rule_gap", value::length_or_zero),
             rule_color: r.value("page.rule_color", value::color),
+            side_column: r.value("page.side_column", value::length_or_zero),
+            side_gap: r.value("page.side_gap", value::length_or_zero),
             frame: r.value("page.frame", |n| value::choice(n, PageFrame::NAMES)),
             frame_width: r.value("page.frame_width", value::rule_weight),
             frame_inset: r.value("page.frame_inset", value::length_or_zero),

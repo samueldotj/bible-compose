@@ -1,33 +1,36 @@
 # A modern edition: the "Modern side-heads" design.
 #
-# One column, ragged right, on the common 6x9in trim — the page of a
-# contemporary book rather than of a traditional Bible. Ragged right because
-# an even right edge is bought with uneven word spacing, and a page that
-# wants to look like the books around it does not pay that.
+# One column, ragged right, with the section headings out of the text in a
+# column of their own at its left — side-heads — so the text runs on
+# unbroken and a heading reads as the label of the paragraph beside it. A
+# wider trim than the traditional Bible's, 7x10in, to make room for that
+# column without narrowing the measure.
 #
-# The type is a step larger than the single-column page and the leading
-# opens with it: a modern page is read on its own terms, and air between
-# the lines is most of what makes it feel that way.
+# Measured off the design, whose 15.5px body is 10pt here: a pixel of it is
+# about 0.65pt.
 
 [page]
-size = "6x9in"
+size = "7x10in"
 columns = 1
-margin_inner = "0.85in"
-margin_outer = "0.7in"
-margin_top = "0.75in"
+margin_inner = "0.6in"
+margin_outer = "0.6in"
+margin_top = "0.85in"
 margin_bottom = "0.8in"
-# Hairlines in a cool grey under the head and over the foot: the page is
-# divided, not decorated.
-header_rule = "0.5pt"
-header_rule_color = "#b9c0c8"
-footer_rule = "0.5pt"
-footer_rule_color = "#b9c0c8"
+# The 148px side column and its 28px gap.
+side_column = "95pt"
+side_gap = "18pt"
+# A light rule over the foot line, and none under the head.
+footer_rule = "0.6pt"
+footer_rule_color = "#d9dde2"
+footer_rule_gap = "10pt"
 
 [typography]
-font_size = "10.5pt"
-leading = "14.5pt"
+font_family = "Source Serif 4"
+font_size = "10pt"
+leading = "16.2pt"
 justify = false
 
+# The chapter's figure dropped three lines, large, in the sans and the blue.
 [contents]
 show_section_headings = true
 drop_caps = true
@@ -43,15 +46,19 @@ hide_first_verse_number = true
 show_footnotes = true
 show_cross_references = false
 
-# The range at the inner corner and the page number at the outer, and a foot
-# left empty: the head carries everything the page needs to be found again.
+# The book and the passage at the left of the head, the page number at its
+# right; the book and chapter at the foot's right.
 [headers.left_page]
-header_left = "{Page}"
-header_center = ""
-header_right = "{Range}"
-footer_center = ""
-[headers.right_page]
-header_left = "{Range}"
+header_left = "{Book} {Range}"
 header_center = ""
 header_right = "{Page}"
+footer_left = ""
 footer_center = ""
+footer_right = "{Book} {FirstChapter}"
+[headers.right_page]
+header_left = "{Book} {Range}"
+header_center = ""
+header_right = "{Page}"
+footer_left = ""
+footer_center = ""
+footer_right = "{Book} {FirstChapter}"

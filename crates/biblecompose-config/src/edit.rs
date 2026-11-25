@@ -208,6 +208,24 @@ impl TomlFile {
         table.remove(leaf).is_some()
     }
 
+    /// Whether `key` is set, and set to `value`, compared as TOML values so
+    /// the spacing and comments around it do not count.
+    pub fn holds(&self, key: &str, value: &SettingValue) -> bool {
+        let (path, leaf) = split(key);
+        let mut table = self.doc.as_table();
+        for step in path {
+            match table.get(step).and_then(Item::as_table) {
+                Some(next) => table = next,
+                None => return false,
+            }
+        }
+        let wanted = value.clone().into_toml();
+        table
+            .get(leaf)
+            .and_then(Item::as_value)
+            .is_some_and(|v| v.to_string().trim() == wanted.to_string().trim())
+    }
+
     /// The file as it would be written.
     pub fn to_toml(&self) -> String {
         self.doc.to_string()

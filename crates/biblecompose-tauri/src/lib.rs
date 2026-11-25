@@ -1451,16 +1451,18 @@ pub fn write_preset(root: &Utf8Path, id: &str) -> Result<WireProject, Vec<WireDi
     // The edition's look, when it has one, goes into the style sheet. Both
     // files are made ready before either is written, so a look that cannot
     // be applied leaves the settings as they were rather than half a preset.
-    let styles = match preset.styles {
-        Some(_) => {
-            let mut sheet = open_styles_file(root).map_err(|d| vec![WireDiagnostic::from(&d)])?;
-            let complaints = biblecompose_config::preset::apply_styles(&mut sheet, preset);
-            if complaints.has_blocking() {
-                return Err(wire_all(&complaints));
-            }
-            Some(sheet)
+    // An edition with no look still clears another's, so a sheet that exists
+    // is always rewritten; one that does not is only made for a look.
+    let sheet_exists = root.join(project::STYLES_FILE).exists();
+    let styles = if preset.styles.is_some() || sheet_exists {
+        let mut sheet = open_styles_file(root).map_err(|d| vec![WireDiagnostic::from(&d)])?;
+        let complaints = biblecompose_config::preset::apply_styles(&mut sheet, preset);
+        if complaints.has_blocking() {
+            return Err(wire_all(&complaints));
         }
-        None => None,
+        Some(sheet)
+    } else {
+        None
     };
 
     file.save().map_err(|d| vec![WireDiagnostic::from(&d)])?;

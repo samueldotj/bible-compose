@@ -232,13 +232,21 @@ fn value_of(node: &crate::document::Node<'_>) -> Option<SettingValue> {
 /// Write a preset's settings into a project's file (CFG-006).
 ///
 /// Through [`TomlFile`], so a file that already had comments in it still has
-/// them afterwards, and a key the preset does not mention is left exactly as
-/// it was. Choosing "Reader's edition" changes what a reader's edition is
-/// about and does not reset the publication's name or its language.
+/// them afterwards. Choosing "Reader's edition" changes what a reader's
+/// edition is about and does not reset the publication's name, its language
+/// or its books — no edition names those.
+///
+/// **A key another edition sets and this one does not is reset**, so the
+/// built-in value applies again. Without that, switching from one edition to
+/// another kept whatever the first set and the second left unsaid — the
+/// two-column edition's diamond under the title, say, on a study Bible
+/// whose design has none — and the page looked like neither. A key no
+/// edition sets is the publisher's own, and is left exactly as it was.
 pub fn apply(file: &mut TomlFile, preset: &Preset) -> Diagnostics {
     let mut diagnostics = Diagnostics::new();
     match preset.settings() {
         Ok(settings) => {
+            clear_others(file, &settings, |p| p.settings().ok());
             for (key, value) in settings {
                 file.set(&key, value);
             }
@@ -252,13 +260,16 @@ pub fn apply(file: &mut TomlFile, preset: &Preset) -> Diagnostics {
 
 /// Write a preset's look into a project's style sheet.
 ///
-/// The same bargain as [`apply`], on the other file: every style the preset
-/// names is set, and every style it does not name is left as the publisher
-/// had it. A preset with no look writes nothing — not even an empty file.
+/// The same bargain as [`apply`], on the other file: every style property
+/// the preset names is set, every one another edition's look sets and this
+/// one does not is reset, and the publisher's own are left as they had them.
+/// A preset with no look clears the looks of the others, so choosing it
+/// gives the plain page it describes.
 pub fn apply_styles(file: &mut TomlFile, preset: &Preset) -> Diagnostics {
     let mut diagnostics = Diagnostics::new();
     match preset.style_settings() {
         Ok(styles) => {
+            clear_others(file, &styles, |p| p.style_settings().ok());
             for (key, value) in styles {
                 file.set(&key, value);
             }
@@ -266,6 +277,29 @@ pub fn apply_styles(file: &mut TomlFile, preset: &Preset) -> Diagnostics {
         Err(d) => diagnostics.push(d),
     }
     diagnostics
+}
+
+/// Reset every key another edition set that `keeping` does not name.
+///
+/// Only where the file still holds that edition's value: a key that holds
+/// something else was the publisher's choice, whichever edition also uses
+/// it, and is theirs to keep.
+fn clear_others(
+    file: &mut TomlFile,
+    keeping: &[(String, SettingValue)],
+    keys_of: impl Fn(&Preset) -> Option<Vec<(String, SettingValue)>>,
+) {
+    let kept: std::collections::BTreeSet<&str> = keeping.iter().map(|(k, _)| k.as_str()).collect();
+    let set_by_an_edition: Vec<String> = ALL
+        .iter()
+        .filter_map(&keys_of)
+        .flatten()
+        .filter(|(k, v)| !kept.contains(k.as_str()) && file.holds(k, v))
+        .map(|(k, _)| k)
+        .collect();
+    for key in set_by_an_edition {
+        file.reset(&key);
+    }
 }
 
 #[cfg(test)]
@@ -441,6 +475,54 @@ indent = \"20pt\"
             "the poetry indent went"
         );
         assert!(after.contains("own_line = true"), "the look did not apply");
+    }
+
+    /// Switching editions leaves nothing of the first one's look behind: the
+    /// two-column title diamond and italic headings are not the study
+    /// Bible's, and its own values all arrive.
+    #[test]
+    fn switching_editions_clears_what_the_first_set_and_the_second_does_not() {
+        let mut file = TomlFile::new(
+            ConfigDocument::parse(
+                "biblecompose.toml",
+                "schema_version = 1\n[books]\ninclude = [\"GEN\"]\n".to_owned(),
+            )
+            .expect("valid"),
+        );
+        let mut sheet = TomlFile::new(
+            ConfigDocument::parse("styles.toml", "[poetry.q3]\nindent = \"40pt\"\n".to_owned())
+                .expect("valid"),
+        );
+        let two = by_id("two-column").expect("two-column");
+        let study = by_id("study").expect("study");
+        assert!(apply(&mut file, two).is_empty());
+        assert!(apply_styles(&mut sheet, two).is_empty());
+        assert!(file.to_toml().contains("title_ornament"));
+        assert!(apply(&mut file, study).is_empty());
+        assert!(apply_styles(&mut sheet, study).is_empty());
+
+        let settings = file.to_toml();
+        assert!(!settings.contains("title_ornament"), "{settings}");
+        assert!(!settings.contains("column_rule"), "{settings}");
+        assert!(settings.contains("include = [\"GEN\"]"), "the books went");
+        assert!(
+            settings.contains("font_family = \"Literata\""),
+            "{settings}"
+        );
+
+        let styles = sheet.to_toml();
+        assert!(
+            !styles.contains("italic = true\nalign = \"start\""),
+            "{styles}"
+        );
+        assert!(
+            styles.contains("indent = \"40pt\""),
+            "the publisher's own style went"
+        );
+        for (key, _) in study.style_settings().expect("study's look") {
+            let leaf = key.rsplit('.').next().expect("a leaf");
+            assert!(styles.contains(leaf), "{key} did not arrive");
+        }
     }
 
     /// **Applying one leaves everything it did not mention alone** (CFG-006).

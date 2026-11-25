@@ -393,6 +393,65 @@ fn a_dropped_chapter_number_sits_under_its_heading_with_its_gap() {
     }
 }
 
+/// **A paragraph too short for the dropped figure hands the rest of it on**:
+/// the Berean Study Bible sets Genesis 1:1 as a paragraph of one line, and
+/// the paragraph after it ran into the figure's second line. It now stands
+/// off the figure as the first did, and the line after that is back at the
+/// margin.
+#[test]
+fn the_paragraph_after_a_one_line_opening_runs_round_the_figure() {
+    if !have_backend() {
+        return;
+    }
+    const SHORT: &str = concat!(
+        "\\id GEN\n\\h Genesis\n\\c 1\n\\s1 The Creation\n\\p\n",
+        "\\v 1 In the beginning God created the heavens.\n\\p\n",
+        "\\v 2 Now the earth was formless and void, and darkness was over the ",
+        "surface of the deep. And the Spirit of God was hovering over the ",
+        "surface of the waters, and God said, Let there be light.\n",
+    );
+    let b = built(
+        SHORT,
+        "[page]\ncolumns = 1\n[contents]\ndrop_caps = true\n\
+         drop_cap_of = \"chapter_number\"\ndrop_cap_lines = 2\n",
+        "[chapter]\ngap_after = \"4pt\"\n",
+    );
+    let number = b
+        .lines
+        .iter()
+        .flat_map(|l| &l.marks)
+        .find(|m| m.text == "1" && m.size > BODY * 1.5)
+        .cloned()
+        .expect("the dropped figure");
+    let starts: Vec<f64> = b
+        .lines
+        .iter()
+        .filter(|l| l.page == 1 && l.sizes().contains(&BODY) && l.y > number.y - 30.0)
+        .take(3)
+        .map(|l| {
+            l.marks
+                .iter()
+                .filter(|m| (m.size - BODY).abs() < 0.05)
+                .map(|m| m.x)
+                .fold(f64::INFINITY, f64::min)
+        })
+        .collect();
+    assert_eq!(starts.len(), 3, "three body lines: {starts:?}");
+    assert!(
+        starts[0] > number.x + 1.0 && starts[1] > number.x + 1.0,
+        "verse 1's line and verse 2's first stand right of the figure: {starts:?} vs {}",
+        number.x
+    );
+    assert!(
+        starts[1] >= starts[0] - 0.5 && starts[1] - starts[0] < 14.0,
+        "and at the same place, but for verse 2's number before its text          (verse 1's is hidden), with no paragraph indent on top: {starts:?}"
+    );
+    assert!(
+        starts[2] < starts[1] - 5.0,
+        "the line after the figure is back at the margin: {starts:?}"
+    );
+}
+
 /// **In two columns the book's title spans both, with its ornament under
 /// it**, and the text starts below them. The ornament is two short rules
 /// and a diamond, centred on the text block rather than on the first column.

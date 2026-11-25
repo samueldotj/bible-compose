@@ -4,6 +4,19 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## Unreleased
 
+* **Switching templates no longer leaves the old one's look behind.**
+  Choosing a template now clears any setting or style another template
+  gave a value and this one doesn't use, so a Study Bible chosen after
+  Standard two-column no longer keeps its diamond under the title or its
+  italic headings. A value you changed yourself is kept, and so are your
+  books, name and language.
+
+* **A dropped chapter number no longer collides with the next paragraph.**
+  When the paragraph it opens is shorter than the drop, as Genesis 1:1 is
+  in the Berean Study Bible, the next paragraph now wraps around the number
+  instead of running into it. A book title set flush left now starts at the
+  margin rather than a paragraph indent in from it.
+
 * **Settings this version cannot use can be removed in one step.** When
   `biblecompose.toml` or `styles.toml` holds keys this version does not
   recognise, or values it cannot read, the Problems list names them and a

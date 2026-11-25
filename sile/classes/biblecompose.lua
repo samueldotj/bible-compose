@@ -459,8 +459,9 @@ function class:_init (options)
          local s = SILE.scratch.biblecompose
          -- A footnote called from the opening paragraph is boxed up first,
          -- mid-paragraph, and is not the paragraph.
-         -- A line of poetry carrying an initial's hang counts its lines off.
-         if s and s.hang_carry and s.in_poetry and not s.in_note then
+         -- A line of poetry, or a paragraph, carrying an initial's hang
+         -- counts its lines off.
+         if s and s.hang_carry and (s.in_poetry or s.in_para) and not s.in_note then
             local got = 0
             for _, v in ipairs(vboxes) do
                if v.is_vbox then
@@ -481,9 +482,10 @@ function class:_init (options)
                   got = got + 1
                end
             end
-            -- In poetry a short line is not padded out: the lines after it
-            -- make room for the rest of the initial instead.
-            if s.in_poetry and got > 0 and got < want and s.initial_hang then
+            -- A short line of poetry, or a short paragraph, is not padded
+            -- out: the lines after it make room for the rest of the initial
+            -- instead, as the text runs on round it on a printed page.
+            if (s.in_poetry or s.in_para) and got > 0 and got < want and s.initial_hang then
                s.hang_carry = { indent = s.initial_hang, lines = want - got }
                got = want
             end
@@ -3018,6 +3020,10 @@ function class:registerXmlCommands ()
       -- content rather than before the page break that precedes it.
       s.code = options.code or ""
       s.chapter = ""
+      -- The destination and the bookmark open the title's paragraph, so
+      -- whatever indent it gets is decided here: none, or a title set flush
+      -- starts a paragraph's indent in from the margin.
+      SILE.call("noindent")
       destination(anchor(s.code), "chapter")
       if s.code ~= "" and o_anchors() ~= "none" then
          SILE.call("pdf:bookmark", { dest = anchor(s.code), title = named, level = 1 })
@@ -3194,6 +3200,13 @@ function class:registerXmlCommands ()
    self:registerCommand("heading", function (options, content)
       local selector = "heading." .. (options.style or "s") .. (options.level or "1")
       local s = style(selector)
+      -- A heading does not run round an initial: what is left of one the
+      -- text above was too short for is made room for above the heading.
+      if scratch().hang_carry and not scratch().in_note then
+         local bs = SILE.settings:get("document.baselineskip").height:tonumber()
+         SILE.typesetter:pushVglue((bs * scratch().hang_carry.lines) .. "pt")
+         scratch().hang_carry = nil
+      end
       -- **A chapter that opens on a heading arrives inside it**, as the
       -- heading's first child. Where its number is set on a line of its own
       -- — the caption, the number and the ornament — that opening belongs
@@ -3321,6 +3334,11 @@ function class:registerXmlCommands ()
       if scratch().side_heads then
          content = side_heads_into(content)
       end
+      -- Running round an initial is indent enough: a first-line indent on
+      -- top of it would set this line further in than the one above.
+      if scratch().hang_carry and not in_note then
+         flush = true
+      end
       if flush then
          SILE.call("noindent")
       elseif s.first_line_indent then
@@ -3334,6 +3352,13 @@ function class:registerXmlCommands ()
          if lead > 0 then
             SILE.settings:set("document.lskip", SILE.types.node.glue(lead .. "pt"))
          end
+         -- The rest of an initial the paragraph before was too short for.
+         local sc = scratch()
+         if sc.hang_carry and not in_note then
+            SILE.settings:set("current.hangIndent", sc.hang_carry.indent)
+            SILE.settings:set("current.hangAfter", -sc.hang_carry.lines)
+         end
+         sc.in_para = not in_note
          local align = alignment(s)
          styled(selector, function ()
             if align then
@@ -3345,6 +3370,7 @@ function class:registerXmlCommands ()
                SILE.call("par")
             end
          end)
+         sc.in_para = false
       end)
       -- Before the space below, so a paragraph and the references it gathered
       -- stay one block rather than two separated by it.
@@ -3599,8 +3625,9 @@ function class:registerXmlCommands ()
          -- line the same gap.
          local gap = s.gap_after or "4pt"
          local drop = function ()
+            local lines = tonumber(self._bcopts.dropcaplines) or 3
             local opts = {
-               lines = tonumber(self._bcopts.dropcaplines) or 3,
+               lines = lines,
                join = true,
                standoff = gap,
             }
@@ -3614,6 +3641,10 @@ function class:registerXmlCommands ()
             end
             SILE.call("dropcap", opts, content)
             SILE.call("kern", { width = gap })
+            -- As the letter initial does: the paragraph has to run to that
+            -- many lines, or the ones after it make room for the rest.
+            scratch().initial_lines = lines
+            scratch().initial_hang = SILE.settings:get("current.hangIndent")
          end
          -- A chapter that opens on a heading carries its number inside the
          -- heading; dropped there it would hang beside the heading, in the

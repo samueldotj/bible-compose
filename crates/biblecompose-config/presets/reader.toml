@@ -38,6 +38,7 @@ drop_cap_of = "first_letter"
 drop_cap_lines = 3
 chapter_ornament = "diamond"
 title_ornament_color = "#3f5b3a"
+ornament_rule_color = "#b9b2a4"
 
 [numbering]
 show_chapter_numbers = true

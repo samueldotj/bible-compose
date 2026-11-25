@@ -47,6 +47,7 @@ drop_cap_of = "chapter_number"
 drop_cap_lines = 2
 title_ornament = "diamond"
 title_ornament_color = "#7a1f1f"
+ornament_rule_color = "#1c1a17"
 
 [numbering]
 show_chapter_numbers = true

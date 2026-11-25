@@ -60,14 +60,14 @@ The **Template** section offers ten to start from:
 |---|---|
 | **Standard two-column** | The conventional Bible page; the chapter number dropped two lines in deep red, centred italic headings, the page's first and last reference in the head |
 | **Single column** | The same page in one column, with slightly larger type |
-| **Reader's edition** | One column, no verse numbers, no apparatus — set like a novel; each chapter's number centred above a dropped initial, psalm titles centred |
+| **Reader's edition** | One narrow column set like a book of verse, ragged right, the verse numbers in the margin and no apparatus; each chapter opens with a spaced "PSALM" or "CHAPTER" over a large italic number, an ornament and a dropped initial |
 | **Large print** | 14pt in one column, ragged right |
-| **Reference** | Two dense columns on a 5.5×8.5in page; the words of Christ in red; the head gives the page's first and last reference; every verse is a PDF destination |
-| **Study Bible** | 7×10in with introductions, outlines, headings, footnotes and cross-references all on; bold headings, green chapter and verse numbers |
+| **Reference** | Two dense columns of Libre Caslon on a 5.5×8.5in page; the words of Christ in red, bold verse numbers on the line, a large chapter figure dropped two lines; the head gives the page's first and last reference; every verse is a PDF destination |
+| **Study Bible** | One column of Literata on 7×10in with introductions, outlines, headings, footnotes and cross-references all on; large bold headings, the parallel passages at the right, green chapter and verse numbers, sans labels and notes |
 | **Pocket Bible** | 4.25×6.75in, small type in one column, cross-references left out |
-| **Journaling Bible** | One column beside a two-inch outer margin left empty for notes; a dropped initial and ochre small-capital headings |
-| **Modern** | One column set ragged right on 6×9in, with bold headings and the chapter and verse numbers in blue |
-| **Illuminated** | A gift edition: one column of 11pt, a framed chapter number above a dropped initial, headings and numbers in red |
+| **Journaling Bible** | One column beside a two-inch outer margin ruled for notes; spaced sans labels — the head, "CHAPTER 12", the headings — over a dropped amber initial |
+| **Modern** | One column set ragged right on 7×10in with side-heads — the headings in a column at the text's left — a large tight sans title, and the chapter and verse numbers in blue |
+| **Illuminated** | A gift edition in a double red frame: "CHAPTER II" in spaced capitals over a gold-and-red ornament, the first letter in cream on a block of red, headings and numbers in red |
 
 Choosing one **writes its settings into your project**, and — for the
 templates that have a look of their own — **its styles into `styles.toml`**,

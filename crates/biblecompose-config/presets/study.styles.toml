@@ -1,48 +1,74 @@
 # The study edition's look: the "Study Bible" design.
 #
-# A working page, so the hierarchy is plain: bold headings in black, the
-# parallel-passage line under them in italic, and one accent — a deep green
-# — on the chapter figure and the verse numbers, which are what a reader
-# going back and forth between text and notes needs to find again.
+# A working page, so the hierarchy is plain: the text in Literata, with
+# headings large and bold in black; everything that is apparatus or label —
+# the head, the verse numbers, the references, the notes, the foot — in IBM
+# Plex Sans; and one green for the figures that find a place.
 
+[book]
+font_size = "24pt"
+weight = 700
+align = "start"
+space_below = "10pt"
+
+# The chapter's figure dropped two lines, bold, in green.
 [chapter]
 weight = 700
 color = "#2e5e4e"
+gap_after = "6pt"
 
 [heading.s1]
-font_size = "11pt"
+font_size = "17pt"
 weight = 700
-space_above = "9pt"
-space_below = "1pt"
+align = "start"
+space_above = "8pt"
+space_below = "2pt"
 
 [heading.s2]
-font_size = "9.8pt"
+font_size = "12pt"
 weight = 700
+align = "start"
 space_above = "6pt"
 space_below = "1pt"
 
-# `\r` — "Parallel: Luke 6:20–23" under the heading.
+# The parallel passages, small and italic in grey, at the right.
 [heading.r1]
-font_size = "7.8pt"
+font_family = "IBM Plex Sans"
+font_size = "7.3pt"
 italic = true
+color = "#5a605d"
+align = "end"
 space_above = "0pt"
-space_below = "4pt"
+space_below = "6pt"
 
 [verse]
+font_family = "IBM Plex Sans"
+font_size = "5.7pt"
+weight = 600
 color = "#2e5e4e"
 
-# The notes are half the page here; set them a step larger than the
-# built-in apparatus so they read as text and not as small print.
 [note.f]
-font_size = "7.8pt"
-
-[reference]
+font_family = "IBM Plex Sans"
 font_size = "7.6pt"
 
+[reference]
+font_family = "IBM Plex Sans"
+font_size = "7.4pt"
+
 [head]
-italic = false
-smallcaps = true
+font_family = "IBM Plex Sans"
+font_size = "6.7pt"
 weight = 600
+italic = false
+smallcaps = false
+uppercase = true
+letter_spacing = "0.67pt"
+
+[folio]
+font_family = "IBM Plex Sans"
+font_size = "6.7pt"
+color = "#5a605d"
 
 [paragraph.p]
-first_line_indent = "10pt"
+first_line_indent = "0pt"
+space_above = "2.5pt"

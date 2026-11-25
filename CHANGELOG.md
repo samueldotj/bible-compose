@@ -39,6 +39,14 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   gutter rule and foot rule under a dark head rule, the design's leading,
   sizes and spacing, and a foot line.
 
+* **Study Bible and Reference match their designs.** The Study Bible is now
+  one column of Literata, as its design is. It has large bold headings, the
+  parallel passages at the right, and green numbers, with its labels, notes,
+  head and foot in IBM Plex Sans. Reference is set in Libre Caslon, with bold
+  verse numbers on the line and a large chapter figure dropped two lines. Its
+  head and foot are in Libre Franklin's spaced capitals, and the column rule
+  is lighter.
+
 * **Journaling Bible matches its design.** Text is in Crimson Pro, ragged
   right. Its labels are small spaced capitals in Josefin Sans: the head, a
   "CHAPTER 12" label over a dropped amber letter, the headings, the verse

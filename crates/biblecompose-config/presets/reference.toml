@@ -6,8 +6,8 @@
 # reader flipping to Isaiah 53 is looking for. The cross-references stay, at
 # the foot, because they are what a reference edition is for.
 #
-# Smaller than the standard page and denser on it. 8.5pt on 10.5pt is the low
-# end of what a printed Bible is set in, and this is where it is set that way.
+# Smaller than the standard page and denser on it: 8.5pt Libre Caslon, the low
+# end of what a printed Bible is set in, on the design's open leading.
 
 [page]
 size = "5.5x8.5in"
@@ -24,15 +24,21 @@ header_rule_color = "#1b1a17"
 footer_rule = "thin"
 footer_rule_color = "#1b1a17"
 column_rule = "thin"
-column_rule_color = "#1b1a17"
+column_rule_color = "#b9b2a6"
 
 [typography]
+font_family = "Libre Caslon Text"
 font_size = "8.5pt"
-leading = "10.5pt"
+leading = "12.4pt"
 justify = true
 
+# The chapter's figure dropped two lines, large and light, as the design's
+# opening sets it.
 [contents]
 show_section_headings = true
+drop_caps = true
+drop_cap_of = "chapter_number"
+drop_cap_lines = 2
 
 [numbering]
 show_chapter_numbers = true
@@ -49,15 +55,19 @@ restart_numbering = "per_chapter"
 # First reference at the left, last at the right, the page number between:
 # the head is an index of the page, and the foot is left to the notes.
 [headers.left_page]
-header_left = "{FirstReference}"
+header_left = "{Book} {FirstReference}"
 header_center = "{Page}"
-header_right = "{LastReference}"
+header_right = "{Book} {LastReference}"
+footer_left = "Reference Edition"
 footer_center = ""
+footer_right = "Words of Christ in red"
 [headers.right_page]
-header_left = "{FirstReference}"
+header_left = "{Book} {FirstReference}"
 header_center = "{Page}"
-header_right = "{LastReference}"
+header_right = "{Book} {LastReference}"
+footer_left = "Reference Edition"
 footer_center = ""
+footer_right = "Words of Christ in red"
 
 # Every verse can be linked into, which is the reference edition's other use.
 [output]

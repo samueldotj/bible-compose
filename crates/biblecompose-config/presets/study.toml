@@ -1,38 +1,35 @@
-# A study Bible.
+# A study Bible: the "Study Bible" design.
 #
 # Everything on: introductions, outlines, section headings, footnotes and
 # cross-references. A larger page — 7x10in, the common study trim — because
-# the apparatus takes room at the foot and the text is not what should give it
-# up; and two columns, because a study page is looked things up in as much as
-# read.
+# the apparatus takes room at the foot and the text is not what should give
+# it up. One column of text, as the design sets it, so each passage reads
+# whole above the notes that open it up.
 #
-# A little larger than standard type, with more leading, since a page that
-# carries this much needs the text block to be plainly the text.
+# Measured off the design, whose 15.5px body is 9.5pt here: a pixel of it is
+# about 0.61pt.
 
 [page]
 size = "7x10in"
-columns = 2
-margin_inner = "0.85in"
-margin_outer = "0.7in"
-margin_top = "0.85in"
-margin_bottom = "1.1in"
-column_gap = "0.25in"
-# A rule under the head, a heavier one setting the notes off from the text
-# above them, and one down the gutter, all in the accent.
+columns = 1
+margin_inner = "0.75in"
+margin_outer = "0.65in"
+margin_top = "0.8in"
+margin_bottom = "1in"
+# A firm rule under the head, a light one over the foot.
 header_rule = "0.6pt"
-header_rule_color = "#2e5e4e"
-footer_rule = "1pt"
-footer_rule_color = "#2e5e4e"
-column_rule = "0.4pt"
-column_rule_color = "#2e5e4e"
+header_rule_color = "#1a1c1b"
+header_rule_gap = "13pt"
+footer_rule = "0.6pt"
+footer_rule_color = "#c9d3ce"
+footer_rule_gap = "6pt"
 
 [typography]
+font_family = "Literata"
 font_size = "9.5pt"
-leading = "12pt"
+leading = "14.7pt"
 justify = true
 
-# The chapter figure dropped two lines, in the accent colour, so it can be
-# found again from the notes below.
 [contents]
 show_book_introductions = true
 show_introductory_outlines = true
@@ -54,19 +51,22 @@ footnote_callers = "numbers"
 cross_reference_callers = "letters"
 restart_numbering = "per_chapter"
 
-# The page number at the outer corner and the range at the inner, swapping
-# sides with the spread, and nothing at the foot: the foot is the notes'.
+# The book and passage at the head's left, the page at its right; the
+# edition and the chapter at the foot.
 [headers.left_page]
-header_left = "{Page}"
-header_center = ""
-header_right = "{Range}"
-footer_center = ""
-[headers.right_page]
-header_left = "{Range}"
+header_left = "{Book} {Range}"
 header_center = ""
 header_right = "{Page}"
+footer_left = "Study Edition"
 footer_center = ""
+footer_right = "{Book} {FirstChapter}"
+[headers.right_page]
+header_left = "{Book} {Range}"
+header_center = ""
+header_right = "{Page}"
+footer_left = "Study Edition"
+footer_center = ""
+footer_right = "{Book} {FirstChapter}"
 
-# A study edition is quoted by verse, so every verse is a destination.
 [output]
 anchors = "verse"

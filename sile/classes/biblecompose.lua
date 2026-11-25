@@ -554,15 +554,16 @@ function class:_init (options)
    -- document. Every full-Bible build died this way and a single book usually
    -- did not, which is what made it look like a size limit rather than a page.
    --
-   -- So that case is decided here instead. Nothing can be carried, so the note
+   -- So that case is decided here instead, and so is every note met below a
+   -- committed column, whether its caller is in the list or not. The note
    -- either fits the area as it stands — upstream's own test, after which
-   -- upstream places it — or the page ends before it and the next page takes it
-   -- whole. Splitting it is not offered and cannot be missed: the only list
-   -- that gets as far as moving the note is a later column's, where
-   -- `_note_headroom` has already capped the area at what the committed column
-   -- left beneath it — and no part of a note fits in nothing. A note at the
-   -- head of a *page* arrives with the ceiling back at `note_ceiling` and is
-   -- upstream's to place and split, exactly as before.
+   -- upstream places it — or it goes to the next page whole while the text
+   -- goes on filling this column. Splitting it is not offered and cannot be
+   -- missed: below a committed column `_note_headroom` has already capped the
+   -- area at what that column left beneath it, and no part of a note fits in
+   -- nothing. A note at the head of a *page* — a carried one included —
+   -- arrives with the ceiling back at `note_ceiling` and is upstream's to
+   -- place and split, exactly as before.
    local upstream_insertion = SILE.insertions.processInsertion
    SILE.insertions.processInsertion = function (vboxlist, i, totalHeight, target)
       local ins = vboxlist[i]
@@ -576,12 +577,24 @@ function class:_init (options)
       if ins.seen then
          return upstream_insertion(vboxlist, i, totalHeight, target)
       end
+      local options = SILE.scratch.insertions.classes[ins.class]
+      -- In a column the area is not capped for — the first of a page — the
+      -- caller can still be carried with its note, so that is upstream's.
+      -- Below a committed column it cannot, wherever the caller is: the
+      -- area there has only what that column left, and upstream's answer to
+      -- a note that does not fit it is to split it and end the page, which
+      -- ends this column a few lines in.
+      local capped = options.maxHeight < note_ceiling()
+      local has_caller = false
       for k = i, 1, -1 do
          if vboxlist[k].is_vbox then
-            return upstream_insertion(vboxlist, i, totalHeight, target)
+            has_caller = true
+            break
          end
       end
-      local options = SILE.scratch.insertions.classes[ins.class]
+      if has_caller and not capped then
+         return upstream_insertion(vboxlist, i, totalHeight, target)
+      end
       -- **Only where moving the note can help.** The area is at its full
       -- ceiling on every page `_note_headroom` has not capped — the first
       -- column of one, which is where a note that moved lands — and a note
@@ -608,10 +621,17 @@ function class:_init (options)
       if in_area and on_page then
          return upstream_insertion(vboxlist, i, totalHeight, target)
       end
-      -- -20000 is the penalty upstream inserts to break a page it has found
-      -- full; the page builder reads it back as the break as soon as this
-      -- returns, and the insertion is the first thing the next page sees.
-      table.insert(vboxlist, i, SILE.types.node.penalty(-20000))
+      -- **The note goes to the next page; the text does not.** Ending the
+      -- page here — upstream's answer, and this class's until it was seen on
+      -- a real book — leaves the rest of this column empty: a column of a few
+      -- lines and then a new page, wherever a note was called low on a page,
+      -- which in a translation with notes is most pages. So the text goes on
+      -- filling the column, and the note opens the next page's note area,
+      -- ahead of that page's own, in the order the notes were called. Its
+      -- caller stays where the text put it, a page before it.
+      self._carried_notes = self._carried_notes or {}
+      table.insert(self._carried_notes, ins)
+      vboxlist[i] = SILE.types.node.vglue(SILE.types.length(0))
       return target
    end
 
@@ -677,6 +697,16 @@ function class:newPage ()
    local options = SILE.scratch.insertions and SILE.scratch.insertions.classes[NOTES]
    if options then
       options.maxHeight = note_ceiling()
+   end
+   -- The notes a full area sent on, ahead of everything else this page will
+   -- set, so they open its note area in the order they were called.
+   local carried = self._carried_notes
+   if carried and #carried > 0 then
+      self._carried_notes = nil
+      local queue = SILE.typesetter.state.outputQueue
+      for k = #carried, 1, -1 do
+         table.insert(queue, 1, carried[k])
+      end
    end
    -- Kept off on every page, not only at the start. `open-spread` silences
    -- the folio package for the blank page it inserts with `nofoliothispage`,

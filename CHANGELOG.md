@@ -39,6 +39,13 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   gutter rule and foot rule under a dark head rule, the design's leading,
   sizes and spacing, and a foot line.
 
+* **Two-column pages with footnotes no longer end the right column early.**
+  A footnote called in the right column used to end the page when the
+  footnote area had no room left. The right column was then only a few
+  lines deep, on most pages of a book with notes. Now the text keeps filling
+  the column, and that footnote goes to the top of the next page's footnote
+  area.
+
 * **A dropped chapter number now sits under the chapter's heading**, beside
   the first paragraph. Before, it dropped beside the heading itself, in the
   heading's italic. It now also stands `gap_after` clear of every line beside

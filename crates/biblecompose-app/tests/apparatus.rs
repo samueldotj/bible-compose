@@ -17,7 +17,9 @@ use biblecompose_testkit::corpus;
 use biblecompose_testkit::pdf::Line;
 use camino::Utf8Path;
 
-use common::{attempt, body_lines, have_backend, note_lines, pages, typeset, NOTE, ONE_COLUMN};
+use common::{
+    attempt, body_lines, have_backend, note_lines, pages, typeset, BODY, NOTE, ONE_COLUMN,
+};
 
 /// Every caller in the body, in reading order.
 ///
@@ -389,4 +391,91 @@ leading = \"13pt\"
             .map(|d| d.to_string())
             .collect::<Vec<_>>()
     );
+}
+
+/// **A note called low in the second column does not end that column.**
+///
+/// Below a committed first column the note area holds only what that column
+/// left beneath it, so a note called in the second column rarely fits. The
+/// class used to answer by ending the page there, which left the second
+/// column a few lines deep wherever that happened — on most pages of Mark.
+/// The note now goes to the next page instead and the text fills the column.
+///
+/// Measured as: on every page but the book's last, the second column's last
+/// line is within three lines of the first column's. Three, not one, because
+/// a heading is kept with what follows it and may leave a column short by
+/// the heading and its space. A page before one that opens a chapter is let
+/// off: a chapter is not begun in a column's last lines, on purpose, and the
+/// space that leaves is that rule's and not a note's.
+#[test]
+fn a_note_called_in_the_second_column_does_not_end_it() {
+    if !have_backend() {
+        return;
+    }
+    let entry = corpus::books()
+        .into_iter()
+        .find(|e| e.book == "MRK")
+        .expect("Mark is in the corpus");
+    let source = corpus::read(&entry);
+    let code = BookCode::parse(&entry.book).expect("a book code");
+    let parsed = biblecompose_scripture::usfm::parse(entry.path.as_str(), source);
+    let (book, _) = normalize(code, Utf8Path::new(entry.path.as_str()), &parsed.document);
+    let doc = ScriptureDocument::new(vec![book]);
+
+    let (_g, report) = attempt(&doc, "[page]\ncolumns = 2\n", &[]);
+    let pdf = report.output.expect("Mark composes");
+    let raw = std::fs::read(pdf.as_std_path()).expect("the PDF");
+    let lines = biblecompose_testkit::pdf::Pdf::lines(&raw);
+    let width = biblecompose_testkit::pdf::Pdf::parse(&raw)
+        .page_sizes
+        .first()
+        .map(|s| s.0)
+        .expect("a page size");
+
+    let all = pages(&lines);
+    let last = *all.last().expect("pages");
+    let tolerance = 3.0 * 11.2 + 1.0;
+    let mut short = Vec::new();
+    // A chapter opens a page when its figure, many times the body size, is
+    // in the first lines of the page's text.
+    let opens_chapter = |page: usize| {
+        let top = lines
+            .iter()
+            .filter(|l| l.page == page && l.sizes().contains(&BODY))
+            .map(|l| l.y)
+            .fold(f64::MIN, f64::max);
+        lines.iter().any(|l| {
+            l.page == page && l.y > top - 40.0 && l.sizes().iter().any(|s| *s > BODY * 2.0)
+        })
+    };
+    for page in all
+        .into_iter()
+        .filter(|p| *p != last && !opens_chapter(p + 1))
+    {
+        // By mark, not by line: where the two columns share a baseline the
+        // page's lines run across both of them.
+        let body: Vec<_> = lines
+            .iter()
+            .filter(|l| l.page == page)
+            .flat_map(|l| &l.marks)
+            .filter(|m| (m.size - BODY).abs() < 0.05)
+            .collect();
+        let lowest = |right: bool| {
+            body.iter()
+                .filter(|m| (m.x > width / 2.0) == right)
+                .map(|m| m.y)
+                .reduce(f64::min)
+        };
+        if let (Some(a), Some(b)) = (lowest(false), lowest(true)) {
+            if b - a > tolerance {
+                short.push((page, (b - a).round()));
+            }
+        }
+    }
+    assert!(
+        short.is_empty(),
+        "the second column ends this many points above the first on these \
+         pages: {short:?}"
+    );
+    assert_notes_clear_the_body(&lines, "Mark in two columns");
 }

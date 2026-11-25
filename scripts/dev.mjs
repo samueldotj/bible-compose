@@ -58,42 +58,49 @@ function findRuntime() {
   return found[0] ? join(found[0].dir, exe) : null;
 }
 
+// `npm run app` is `dev`; any other command (`build`, `icon`, …) passes
+// through untouched, since only a dev window needs a backend found for it.
+const args = process.argv.slice(2).length ? process.argv.slice(2) : ["dev"];
 const env = { ...process.env };
-if (env.BIBLECOMPOSE_SILE) {
-  console.log(`dev: BIBLECOMPOSE_SILE is already set to ${env.BIBLECOMPOSE_SILE}`);
-} else {
-  const exe = findRuntime();
-  if (exe) {
-    env.BIBLECOMPOSE_SILE = exe;
-    console.log(`dev: using the unpacked backend at ${exe}`);
+if (args[0] === "dev") {
+  if (env.BIBLECOMPOSE_SILE) {
+    console.log(`dev: BIBLECOMPOSE_SILE is already set to ${env.BIBLECOMPOSE_SILE}`);
   } else {
+    const exe = findRuntime();
+    if (exe) {
+      env.BIBLECOMPOSE_SILE = exe;
+      console.log(`dev: using the unpacked backend at ${exe}`);
+    } else {
+      console.warn(
+        `dev: no unpacked backend under ${cacheRoot()} — builds will fail until one exists.\n` +
+          `dev: run a packaged build once, or set BIBLECOMPOSE_SILE yourself.`,
+      );
+    }
+  }
+
+  // The repository's own class and packages, ahead of the unpacked runtime's
+  // copy. SILE_PATH is last-wins, and this is the whole point of a dev window:
+  // editing sile/classes/biblecompose.lua must take effect without repacking.
+  env.BIBLECOMPOSE_SILE_PATH = join(repo, "sile");
+
+  // The editor a book opens in (ADR-007) is served from public/editor/, which
+  // only `stage-editor.mjs` fills. Without it the window still opens; a book
+  // does not, and the window says why.
+  if (!existsSync(join(repo, "public", "editor", "index.html"))) {
     console.warn(
-      `dev: no unpacked backend under ${cacheRoot()} — builds will fail until one exists.\n` +
-        `dev: run a packaged build once, or set BIBLECOMPOSE_SILE yourself.`,
+      "dev: the USFM editor is not staged — opening a book will say so.\n" +
+        "dev: run `node scripts/stage-editor.mjs ../easy-usfm` to stage it.",
     );
   }
 }
 
-// The repository's own class and packages, ahead of the unpacked runtime's
-// copy. SILE_PATH is last-wins, and this is the whole point of a dev window:
-// editing sile/classes/biblecompose.lua must take effect without repacking.
-env.BIBLECOMPOSE_SILE_PATH = join(repo, "sile");
-
-// The editor a book opens in (ADR-007) is served from public/editor/, which
-// only `stage-editor.mjs` fills. Without it the window still opens; a book
-// does not, and the window says why.
-if (!existsSync(join(repo, "public", "editor", "index.html"))) {
-  console.warn(
-    "dev: the USFM editor is not staged — opening a book will say so.\n" +
-      "dev: run `node scripts/stage-editor.mjs ../easy-usfm` to stage it.",
-  );
-}
-
-const npm = platform() === "win32" ? "npm.cmd" : "npm";
-const child = spawn(npm, ["run", "tauri", "dev", ...process.argv.slice(2)], {
+// The Tauri CLI itself, run by this Node rather than through `npm run tauri`,
+// because `npm run tauri` is this script: every `tauri` command goes through
+// here, so `npm run tauri dev` gets a backend as `npm run app` does.
+const cli = join(repo, "node_modules", "@tauri-apps", "cli", "tauri.js");
+const child = spawn(process.execPath, [cli, ...args], {
   cwd: repo,
   env,
   stdio: "inherit",
-  shell: platform() === "win32",
 });
 child.on("exit", (code) => process.exit(code ?? 0));

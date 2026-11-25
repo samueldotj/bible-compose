@@ -12,9 +12,9 @@
     "preview": "vite preview",
     "lint": "node scripts/lint-frontend.mjs && node scripts/lint-workflows.mjs",
     "check": "npm run lint && svelte-check --tsconfig ./tsconfig.json",
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri": "node scripts/dev.mjs",
+    "tauri:dev": "node scripts/dev.mjs dev",
+    "tauri:build": "node scripts/dev.mjs build"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.2.0",

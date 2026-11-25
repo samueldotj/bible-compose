@@ -30,12 +30,12 @@ footer_rule_gap = "6pt"
 column_rule = "0.6pt"
 column_rule_color = "#cfc6b5"
 
-# EB Garamond, which the application ships, at the design's measure: a
-# generous half-line of leading between the lines.
+# EB Garamond, which the application ships, at the design's density: its
+# line spacing measured against the page, not the column.
 [typography]
 font_family = "EB Garamond"
 font_size = "9.2pt"
-leading = "13.8pt"
+leading = "12.2pt"
 justify = true
 
 # The chapter figure dropped two lines into the text, as the classic page
@@ -45,6 +45,8 @@ justify = true
 drop_caps = true
 drop_cap_of = "chapter_number"
 drop_cap_lines = 2
+title_ornament = "diamond"
+title_ornament_color = "#7a1f1f"
 
 [numbering]
 show_chapter_numbers = true

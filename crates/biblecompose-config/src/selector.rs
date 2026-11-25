@@ -53,6 +53,8 @@ pub enum StyleSelector {
     /// `\\li1`, `\\lim2` — the family and the digit, for the same reason
     /// poetry carries both.
     ListItem(ListStyle, u8),
+    /// The book's name at its opening, as the page sets it.
+    BookTitle,
     /// The chapter number where it is set, not the chapter as a division.
     Chapter,
     /// The chapter's dropped initial letter, when `contents.drop_caps` drops
@@ -81,6 +83,7 @@ impl StyleSelector {
             StyleSelector::Heading(..) => "heading",
             StyleSelector::Character(_) => "character",
             StyleSelector::ListItem(..) => "list",
+            StyleSelector::BookTitle => "book",
             StyleSelector::Chapter => "chapter",
             StyleSelector::Initial => "initial",
             StyleSelector::Verse => "verse",
@@ -104,7 +107,8 @@ impl StyleSelector {
             StyleSelector::ListItem(s, level) => Some(format!("{}{level}", s.marker())),
             StyleSelector::Note(NoteKind::Footnote) => Some("f".to_owned()),
             StyleSelector::Note(NoteKind::Endnote) => Some("fe".to_owned()),
-            StyleSelector::Chapter
+            StyleSelector::BookTitle
+            | StyleSelector::Chapter
             | StyleSelector::Initial
             | StyleSelector::Verse
             | StyleSelector::Reference
@@ -151,6 +155,7 @@ impl StyleSelector {
             }
             ("note", Some("f")) => Some(StyleSelector::Note(NoteKind::Footnote)),
             ("note", Some("fe")) => Some(StyleSelector::Note(NoteKind::Endnote)),
+            ("book", None) => Some(StyleSelector::BookTitle),
             ("chapter", None) => Some(StyleSelector::Chapter),
             ("initial", None) => Some(StyleSelector::Initial),
             ("verse", None) => Some(StyleSelector::Verse),
@@ -202,6 +207,7 @@ impl StyleSelector {
             );
         }
         out.extend([
+            StyleSelector::BookTitle,
             StyleSelector::Chapter,
             StyleSelector::Initial,
             StyleSelector::Verse,

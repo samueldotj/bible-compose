@@ -77,6 +77,7 @@
 <style for="list.lim2" indent="27pt"/>
 <style for="list.lim3" indent="36pt"/>
 <style for="list.lim4" indent="45pt"/>
+<style for="book" font_family="Matrix Fixture Serif" font_size="13.5pt" weight="500" italic="true" smallcaps="true" space_above="3.5pt" space_below="2.5pt" indent="7.5pt" raise="1.5pt" align="center" color="#c81414" border="true" border_width="0.75pt" own_line="true" gap_before="2pt" gap_after="6pt" first_line_indent="11pt"/>
 <style for="chapter" font_family="Matrix Fixture Serif" font_size="13.5pt" weight="500" italic="true" smallcaps="true" space_above="3.5pt" space_below="2.5pt" indent="7.5pt" raise="1.5pt" align="center" color="#c81414" border="true" border_width="0.75pt" own_line="true" gap_before="2pt" gap_after="6pt" first_line_indent="11pt"/>
 <style for="initial" font_family="Matrix Fixture Serif" font_size="13.5pt" weight="500" italic="true" smallcaps="true" space_above="3.5pt" space_below="2.5pt" indent="7.5pt" raise="1.5pt" align="center" color="#c81414" border="true" border_width="0.75pt" own_line="true" gap_before="2pt" gap_after="6pt" first_line_indent="11pt"/>
 <style for="verse" font_family="Matrix Fixture Serif" font_size="13.5pt" weight="500" italic="true" smallcaps="true" space_above="3.5pt" space_below="2.5pt" indent="7.5pt" raise="1.5pt" align="center" color="#c81414" border="true" border_width="0.75pt" own_line="true" gap_before="2pt" gap_after="6pt" first_line_indent="11pt"/>

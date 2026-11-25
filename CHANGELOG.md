@@ -39,6 +39,19 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   gutter rule and foot rule under a dark head rule, the design's leading,
   sizes and spacing, and a foot line.
 
+* **The book title can span both columns, with an ornament under it.** In
+  two columns, a book that starts a page now has its title set across both
+  columns, with the columns starting below it. A new `book` style sets the
+  title's look. A new setting, `contents.title_ornament`, draws a short rule
+  or two rules with a diamond under the title. Standard two-column uses the
+  diamond in red, sets the title in 24pt medium, uses the design's 12.2pt
+  line spacing, and adds no extra space between poetry lines.
+
+* Fixed builds that sometimes failed with `Could not open TTF/dfont file`
+  when two books using a variable font were built at the same moment. Two
+  builds could pick the same temporary font file, and the first to finish
+  deleted it.
+
 * **Two-column pages with footnotes no longer end the right column early.**
   A footnote called in the right column used to end the page when the
   footnote area had no room left. The right column was then only a few

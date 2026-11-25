@@ -275,9 +275,11 @@ fn each_rule_has_its_own_weight_ink_and_gap() {
     assert!((gutter.thickness - 0.5).abs() < 0.05, "thin: {gutter:?}");
     assert_eq!(gutter.color, (0.0, 0.0, 1.0), "{gutter:?}");
 
-    // The gaps, measured against the text block's own edges — which is where
-    // the gutter rule runs from and to.
-    let top = gutter.y1.max(gutter.y2);
+    // The gap, measured from the top margin, where the text block starts —
+    // not from the gutter rule, which on this page starts lower, below the
+    // book's title spanning the columns. Rules are read top-down, like the
+    // marks, and the built-in top margin is 0.81in.
+    let top = -0.81 * 72.0;
     let gap_above = head.y1 - head.thickness / 2.0 - top;
     assert!(
         (gap_above - 12.0).abs() < 0.3,
@@ -384,6 +386,79 @@ fn a_dropped_chapter_number_sits_under_its_heading_with_its_gap() {
     for ((a, _), (b, _)) in near.iter().zip(&far) {
         assert!((b - a - 8.0).abs() < 0.3, "{near:?} then {far:?}");
     }
+}
+
+/// **In two columns the book's title spans both, with its ornament under
+/// it**, and the text starts below them. The ornament is two short rules
+/// and a diamond, centred on the text block rather than on the first column.
+#[test]
+fn the_book_title_spans_both_columns_with_its_ornament() {
+    if !have_backend() {
+        return;
+    }
+    let b = built(
+        HEADED,
+        "[page]\ncolumns = 2\n[contents]\ntitle_ornament = \"diamond\"\n",
+        "",
+    );
+    let middle = (b.left + b.right) / 2.0;
+    let title = b
+        .lines
+        .iter()
+        .find(|l| l.page == 1 && l.text() == "Genesis" && l.sizes() == vec![16.0])
+        .expect("the title, at the book style's built-in size");
+    let first = title.marks.first().expect("a mark").x;
+    // The title's width is not in the marks; its left edge is enough: in
+    // the first column alone it would start left of the text block's middle
+    // by less than half a column.
+    let column = (b.right - b.left) / 2.0;
+    assert!(
+        middle - first < column / 2.0 && first < middle,
+        "the title starts at {first}, the text block's middle is {middle}"
+    );
+
+    // The ornament: two short rules either side of the middle, below the
+    // title, and the diamond between them.
+    let rules: Vec<&Rule> = rules_on(&b, 1)
+        .into_iter()
+        .filter(|r| r.is_horizontal() && r.length() < column)
+        .collect();
+    assert_eq!(rules.len(), 2, "{rules:?}");
+    assert!(rules.iter().any(|r| r.x2 < middle) && rules.iter().any(|r| r.x1 > middle));
+    let diamond = b
+        .lines
+        .iter()
+        .flat_map(|l| &l.marks)
+        .find(|m| m.text == "◆")
+        .expect("the diamond");
+    assert!(
+        (diamond.x - middle).abs() < 4.0,
+        "{} vs {middle}",
+        diamond.x
+    );
+    assert!(diamond.y < title.y, "the ornament is under the title");
+
+    // The text below the ornament, in either column.
+    let body: Vec<_> = b
+        .lines
+        .iter()
+        .filter(|l| l.page == 1)
+        .flat_map(|l| &l.marks)
+        .filter(|m| (m.size - BODY).abs() < 0.05)
+        .collect();
+    let top_of = |right: bool| {
+        body.iter()
+            .filter(|m| (m.x > middle) == right)
+            .map(|m| m.y)
+            .fold(f64::MIN, f64::max)
+    };
+    let (a, c) = (top_of(false), top_of(true));
+    assert!(a < diamond.y && c < diamond.y, "{a} {c} {}", diamond.y);
+
+    // And with no ornament asked for, none is drawn.
+    let plain = built(HEADED, "[page]\ncolumns = 2\n", "");
+    assert!(rules_on(&plain, 1).is_empty(), "{:?}", rules_on(&plain, 1));
+    assert!(!plain.lines.iter().any(|l| l.text().contains('◆')));
 }
 
 /// **A double frame is two boxes inside the trim**, on every page.

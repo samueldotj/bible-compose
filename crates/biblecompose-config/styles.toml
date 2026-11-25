@@ -230,6 +230,14 @@ indent = "45pt"
 
 # ------------------------------------------------------ chapter and verse
 
+# The book's name where the book opens. In two columns it is set across
+# both, above them.
+[book]
+font_size = "16pt"
+weight = 600
+align = "center"
+space_below = "5pt"
+
 [chapter]
 font_size = "21pt"
 weight = 700

@@ -62,11 +62,29 @@ local plain = require("classes.plain")
 if package.config:sub(1, 1) == "\\" then
    local temp = os.getenv("TEMP") or os.getenv("TMP")
    if temp then
+      -- **And the process's own id in it.** Checking that a name is free is
+      -- not enough on its own: two processes started in the same second
+      -- count from the same number, so both see the first name free, both
+      -- write it, and the first to finish deletes it — `Could not open
+      -- TTF/dfont file` from the PDF writer in the other, which still needs
+      -- it. Seen as a test suite that failed one build in three once a
+      -- template set its text in a variable font. The id comes from the
+      -- kernel through LuaJIT's FFI; where that is not available, a random
+      -- number makes a collision unlikely rather than impossible.
+      local ok, pid = pcall(function ()
+         local ffi = require("ffi")
+         ffi.cdef("unsigned long GetCurrentProcessId(void);")
+         return tonumber(ffi.C.GetCurrentProcessId())
+      end)
+      if not ok then
+         math.randomseed(os.time() + math.floor(os.clock() * 1000000))
+         pid = math.random(1, 2 ^ 30)
+      end
       local stamp, nth = os.time(), 0
       os.tmpname = function ()
          while true do
             nth = nth + 1
-            local path = ("%s/biblecompose-%d-%d.tmp"):format(temp, stamp, nth)
+            local path = ("%s/biblecompose-%d-%d-%d.tmp"):format(temp, pid, stamp, nth)
             local taken = io.open(path, "rb")
             if not taken then
                return path
@@ -175,6 +193,9 @@ local OPTIONS = {
    -- For the auto starts: opening verses that must fit, or the start moves.
    { key = "startverses", kind = "string", default = "3" },
    { key = "dropcaplines", kind = "string", default = "3" },
+   -- Under each book's title: none, rule, diamond; and the diamond's ink.
+   { key = "titleornament", kind = "string", default = "none" },
+   { key = "titleornamentcolor", kind = "string", default = "#000000" },
    -- How a paragraph and a line of verse are set.
    { key = "justify", kind = "boolean", default = true },
    { key = "poetryindent", kind = "boolean", default = true },
@@ -1414,7 +1435,11 @@ function page_rules (o, recto)
    local frame = SILE.getFrame("runningHead")
    if head > 0 and frame then
       local htop = frame:top():tonumber()
-      local y = math.max(htop, top - thickness(o.headerrulegap) - head)
+      -- The head's own foot, which is where the text block begins on every
+      -- page but one opening a book in two columns, where the title spans
+      -- the columns and the text starts below it.
+      local textop = frame:bottom():tonumber()
+      local y = math.max(htop, textop - thickness(o.headerrulegap) - head)
       in_rule_ink(o, function ()
          SILE.outputter:drawRule(left, y, width, head)
       end, o.headerrulecolor)
@@ -2111,6 +2136,175 @@ local function skip (height)
 end
 
 -- ---------------------------------------------------------------------------
+-- The book's title.
+
+--- A rule `width` long, `lift` above the baseline, as a box on the line.
+local function ornament_rule (width, thick, lift)
+   SILE.typesetter:pushHbox({
+      width = SILE.types.length(width),
+      height = SILE.types.length(lift + thick),
+      depth = SILE.types.length(0),
+      outputYourself = function (node, typesetter, _)
+         local x = typesetter.frame.state.cursorX
+         local y = typesetter.frame.state.cursorY
+         SILE.outputter:drawRule(x, y - lift - thick / 2, width, thick)
+         typesetter.frame:advanceWritingDirection(node.width)
+      end,
+   })
+end
+
+--- What `contents.title_ornament` draws under the title, centred: a short
+--- rule, or two with a diamond between them in its own ink.
+local function title_ornament (o, s)
+   local kind = o.titleornament
+   if kind ~= "rule" and kind ~= "diamond" then
+      return
+   end
+   local body = SILE.settings:get("font.size")
+   local length = body * 4.2
+   local thick = 0.5
+   local function in_ink (color, fn)
+      if color then
+         SILE.call("color", { color = color }, fn)
+      else
+         fn()
+      end
+   end
+   skip("5pt")
+   SILE.call("noindent")
+   SILE.call("center", {}, function ()
+      -- The rules on the diamond's middle, so the three read as one line.
+      local diamond = SILE.typesetter:makeHbox(function ()
+         SILE.call("font", { family = "DejaVu Serif", size = body * 0.62 .. "pt" }, function ()
+            SILE.typesetter:typeset("◆")
+         end)
+      end)
+      local lift = (diamond.height:tonumber() - diamond.depth:tonumber()) / 2
+      if kind == "rule" then
+         in_ink(s.color, function ()
+            ornament_rule(length * 2, thick, lift)
+         end)
+         return
+      end
+      in_ink(s.color, function ()
+         ornament_rule(length, thick, lift)
+      end)
+      SILE.call("kern", { width = body * 0.6 .. "pt" })
+      in_ink(o.titleornamentcolor, function ()
+         SILE.call("font", { family = "DejaVu Serif", size = body * 0.62 .. "pt" }, function ()
+            SILE.typesetter:typeset("◆")
+         end)
+      end)
+      SILE.call("kern", { width = body * 0.6 .. "pt" })
+      in_ink(s.color, function ()
+         ornament_rule(length, thick, lift)
+      end)
+   end)
+   SILE.call("par")
+end
+
+--- Whether nothing has been set on this page yet: the main typesetter is at
+--- the head of the first column, with nothing waiting to go there.
+local function at_head_of_page ()
+   local t = SILE.typesetter
+   -- A book that starts a page asked for the break before it, and the
+   -- break is taken when the page is next built; build it now, so the
+   -- question is asked of the page the book is on.
+   t:leaveHmode()
+   while t:buildPage() do
+   end
+   if not t.frame or t.frame.id ~= "contentA" or #t.state.nodes > 0 then
+      return false
+   end
+   -- A line with no height is not content: the book's own destination and
+   -- bookmark arrive as one, ahead of the title.
+   for _, node in ipairs(t.state.outputQueue) do
+      if node.is_insertion then
+         return false
+      end
+      if node.is_vbox and (node.height:tonumber() > 0 or node.depth:tonumber() > 0) then
+         return false
+      end
+   end
+   return math.abs(t.frame.state.cursorY:tonumber() - t.frame:top():tonumber()) < 0.5
+end
+
+--- Set `body` across both columns at the head of the page, and start both
+--- columns below it.
+--
+-- There is no mid-flow way to reach across a gutter, but at the head of a
+-- page there is no flow yet: the title is set into a frame of its own the
+-- width of the text block, and the columns' tops are moved down by what it
+-- took. Page-local — every page is built from fresh copies of the master's
+-- frames — so the next page has its columns where they always are. The
+-- running head hangs off the first column's top, so it is pinned first.
+local function across_the_columns (body, below)
+   local a = SILE.getFrame("contentA")
+   local b = SILE.getFrame("contentB")
+   local head = SILE.getFrame("runningHead")
+   local top = a:top():tonumber()
+   if head then
+      local ht, hb = head:top():tonumber(), head:bottom():tonumber()
+      head:constrain("top", ht .. "pt")
+      head:constrain("bottom", hb .. "pt")
+   end
+   local band = SILE.newFrame({
+      id = "bookTitle",
+      left = a:left():tonumber() .. "pt",
+      right = b:right():tonumber() .. "pt",
+      top = top .. "pt",
+      bottom = a:bottom():tonumber() .. "pt",
+   })
+   -- The book's destination and bookmark go with the title, where a reader
+   -- following them should land. Left at the head of the first column they
+   -- would hold the space above its first heading there, which the page
+   -- otherwise drops, and the first column would start lower than the
+   -- second.
+   local queue = SILE.typesetter.state.outputQueue
+   local carried = {}
+   for k = #queue, 1, -1 do
+      if queue[k].is_vbox then
+         table.insert(carried, 1, table.remove(queue, k))
+      end
+   end
+   SILE.typesetNaturally(band, function ()
+      for _, node in ipairs(carried) do
+         table.insert(SILE.typesetter.state.outputQueue, node)
+      end
+      body()
+   end)
+   local used = band.state.cursorY:tonumber() - top
+   if below then
+      used = used + SILE.types.measurement(below):tonumber()
+   end
+   a:constrain("top", top + used .. "pt")
+   b:constrain("top", top + used .. "pt")
+   SILE.typesetter:initFrame(a)
+end
+
+--- The book's name where it opens, in the `book` style, with the ornament
+--- under it. In two columns on a page of its own, across both columns.
+local function book_title (o, name, entry)
+   local s = style("book")
+   local function body ()
+      SILE.call(alignment(s) or ALIGNMENT.center, {}, function ()
+         entry()
+         styled("book", function ()
+            SILE.typesetter:typeset(name)
+         end)
+      end)
+      SILE.call("par")
+      title_ornament(o, s)
+   end
+   if (tonumber(o.columns) or 1) >= 2 and at_head_of_page() then
+      across_the_columns(body, s.space_below)
+   else
+      body()
+      skip(s.space_below)
+   end
+end
+
+-- ---------------------------------------------------------------------------
 -- Tables (SCR-009).
 --
 -- A table is set in two passes, which is the fewest that can produce a column:
@@ -2609,14 +2803,7 @@ function class:registerXmlCommands ()
          })
       end
       if options.name then
-         SILE.call("center", {}, function ()
-            entry()
-            SILE.call("font", { size = "16pt", weight = 600 }, function ()
-               SILE.typesetter:typeset(options.name)
-            end)
-         end)
-         SILE.call("par")
-         skip("5pt")
+         book_title(self._bcopts, options.name, entry)
       else
          entry()
       end

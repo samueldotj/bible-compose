@@ -141,6 +141,11 @@ export const STYLE_GROUPS: readonly StyleGroup[] = [
     title: "Chapter and verse",
     rows: [
       {
+        selector: "book",
+        label: "Book title",
+        properties: [FACE, SIZE, WEIGHT, ITALIC, SMALLCAPS, ALIGN, BELOW, COLOR],
+      },
+      {
         selector: "chapter",
         label: "Chapter number",
         properties: [

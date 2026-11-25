@@ -540,6 +540,18 @@ spelled! {
 }
 
 spelled! {
+    /// What is drawn under a book's title.
+    TitleOrnament {
+        /// Nothing.
+        None => "none",
+        /// A short rule, centred.
+        Rule => "rule",
+        /// Two short rules with a diamond between them.
+        Diamond => "diamond",
+    }
+}
+
+spelled! {
     /// Where a book begins, relative to the one before it.
     BookStart {
         /// Where the previous book ended, with no break at all.

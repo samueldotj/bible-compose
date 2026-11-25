@@ -16,7 +16,7 @@ use crate::settings::Settings;
 use crate::value::{
     Anchors, BookStart, CallerStyle, ChapterStart, CoverBinding, CoverBorder, CoverPaper, DropCap,
     MissingAsset, NumberPlacement, PageFrame, QuoteHang, QuoteStart, ReferencePlacement,
-    RestartNumbering, VerseStart,
+    RestartNumbering, TitleOrnament, VerseStart,
 };
 
 /// What kind of control a key needs, and how its text is to be read back.
@@ -365,6 +365,16 @@ impl Settings {
             "contents.drop_cap_lines",
             Integer,
             self.contents.drop_cap_lines.to_string(),
+        );
+        push(
+            "contents.title_ornament",
+            Choice(TitleOrnament::SPELLINGS),
+            self.contents.title_ornament.to_string(),
+        );
+        push(
+            "contents.title_ornament_color",
+            Color,
+            self.contents.title_ornament_color.to_string(),
         );
         push(
             "contents.book_starts",

@@ -159,6 +159,11 @@ pub fn class_options_with(
     put("dropcaps", flag(*s.contents.drop_caps));
     put("dropcapof", s.contents.drop_cap_of.to_string());
     put("dropcaplines", s.contents.drop_cap_lines.to_string());
+    put("titleornament", s.contents.title_ornament.to_string());
+    put(
+        "titleornamentcolor",
+        s.contents.title_ornament_color.to_string(),
+    );
     put("bookstarts", s.contents.book_starts.to_string());
     put("chapterstarts", s.contents.chapter_starts.to_string());
     put("versestarts", s.contents.verse_starts.to_string());

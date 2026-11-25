@@ -118,6 +118,9 @@ export const EN_HELP: Readonly<Record<string, string>> = {
   "contents.drop_caps": "Open each chapter with a drop cap: a letter or a number set large, the first lines running round it. The first verse then goes unnumbered.",
   "contents.drop_cap_of": "What drops: the chapter's first letter — its first syllable in a script that writes one as several characters — with the number on a line above it; or the chapter number itself.",
   "contents.drop_cap_lines": "How many lines the drop cap spans. Three is the convention.",
+  "contents.title_ornament":
+    "Drawn under each book's title: nothing, a short rule, or two short rules with a diamond between them.",
+  "contents.title_ornament_color": "The ink of the diamond under a book's title.",
   "contents.book_starts": "Where each book after the first begins: on the run, the next column, the next page, a chosen side, or after a blank page.",
   "contents.chapter_starts": "Where each chapter after a book's first begins: on the run, the next column, the next page, or a chosen side.",
   "contents.verse_starts": "Whether each verse follows on in the paragraph, or begins a line of its own.",

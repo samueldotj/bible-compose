@@ -20,12 +20,13 @@ use camino::Utf8PathBuf;
 /// Checked against the schema below rather than trusted: a class added to
 /// `StyleSelector` and forgotten here would leave a whole kind of element
 /// untested.
-const ONE_PER_CLASS: [&str; 15] = [
+const ONE_PER_CLASS: [&str; 16] = [
     "paragraph.p",
     "poetry.q1",
     "heading.s1",
     "character.bd",
     "list.li1",
+    "book",
     "chapter",
     "initial",
     "verse",
@@ -43,9 +44,10 @@ const ONE_PER_CLASS: [&str; 15] = [
 /// The levelled families are deliberately absent: `poetry.q1` has three
 /// descendants and changing it *should* move them, which is the test below
 /// this one.
-const LEAVES: [&str; 9] = [
+const LEAVES: [&str; 10] = [
     "paragraph.p",
     "character.bd",
+    "book",
     "chapter",
     "initial",
     "verse",

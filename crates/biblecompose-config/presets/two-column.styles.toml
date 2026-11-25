@@ -18,10 +18,16 @@ weight = 500
 color = "#7a1f1f"
 gap_after = "5pt"
 
-# The book's title in the medium, not the bold: large enough to say so.
-[heading.mt1]
-font_size = "26pt"
+# The book's name across both columns, in the medium rather than the bold,
+# with the diamond ornament under it and room before the text.
+[book]
+font_size = "24pt"
 weight = 500
+space_below = "12pt"
+
+# Poetry lines on the text's own leading, with no space between them.
+[poetry.q1]
+space_above = "0pt"
 
 [heading.s1]
 font_size = "9.2pt"

@@ -355,6 +355,24 @@ gap to the text:
 
 The frame and the note lines are drawn in `rule_color`.
 
+### The book's title
+
+Each book opens with its name, in the **`book`** style (**Styles → Chapter
+and verse → Book title**): 16pt semibold and centred unless you change it.
+In two columns, when the book starts a page, the title spans both columns
+and the columns start below it. When a book starts partway down a page, the
+title stays in its column.
+
+`contents.title_ornament` draws a line under the title:
+
+| Value | What it draws |
+|---|---|
+| `none` | Nothing (the default) |
+| `rule` | A short rule, centred |
+| `diamond` | Two short rules with a diamond between them, in `title_ornament_color` |
+
+The rules are drawn in the title's own colour.
+
 ### Paragraphs and the dropped initial
 
 `paragraph.p`'s **first-line indent** (`first_line_indent`) indents the first

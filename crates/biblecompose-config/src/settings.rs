@@ -27,7 +27,7 @@ use crate::provenance::{Provenance, Sourced};
 use crate::value::{
     self, Anchors, BookStart, CallerStyle, ChapterStart, Color, CoverBinding, CoverBorder,
     CoverPaper, DropCap, HeadTemplate, Length, MissingAsset, NumberPlacement, PageFrame, PageSize,
-    QuoteHang, QuoteStart, ReferencePlacement, RestartNumbering, VerseStart,
+    QuoteHang, QuoteStart, ReferencePlacement, RestartNumbering, TitleOrnament, VerseStart,
 };
 
 /// The settings vocabulary this release speaks.
@@ -214,6 +214,9 @@ pub struct Contents {
     /// How many lines the drop cap spans. Three is the convention; two is
     /// modest and five is a display face's job.
     pub drop_cap_lines: Sourced<u8>,
+    /// What is drawn under a book's title, and the ink of its diamond.
+    pub title_ornament: Sourced<TitleOrnament>,
+    pub title_ornament_color: Sourced<Color>,
     /// Where each book, chapter and verse begins: on the run, a column, a
     /// page of a chosen side, a line of its own.
     pub book_starts: Sourced<BookStart>,
@@ -744,6 +747,10 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             show_section_headings: r.value("contents.show_section_headings", |n| n.boolean()),
             drop_caps: r.value("contents.drop_caps", |n| n.boolean()),
             drop_cap_of: r.value("contents.drop_cap_of", |n| value::choice(n, DropCap::NAMES)),
+            title_ornament: r.value("contents.title_ornament", |n| {
+                value::choice(n, TitleOrnament::NAMES)
+            }),
+            title_ornament_color: r.value("contents.title_ornament_color", value::color),
             drop_cap_lines: r.value("contents.drop_cap_lines", |n| {
                 value::integer_in(n, 2, 6).map(|l| l.map(|v| v as u8))
             }),

@@ -494,6 +494,8 @@ export const EN_LABELS: Readonly<Record<string, string>> = {
   "contents.drop_caps": "Drop caps",
   "contents.drop_cap_of": "What drops",
   "contents.drop_cap_lines": "Lines a drop cap spans",
+  "contents.title_ornament": "Under the book title",
+  "contents.title_ornament_color": "Ornament colour",
   "contents.book_starts": "Book",
   "contents.chapter_starts": "Chapter",
   "contents.verse_starts": "Verse",

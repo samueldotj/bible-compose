@@ -33,6 +33,12 @@ justify = false
 # number large and centred, an ornament, and the first letter of the text
 # dropped three lines.
 [contents]
+# The text alone, as the design has it: no section headings or the
+# parallel passages under them, no introductions, no outlines. A psalm's
+# own title stays; it is the text's.
+show_section_headings = false
+show_book_introductions = false
+show_introductory_outlines = false
 drop_caps = true
 drop_cap_of = "first_letter"
 drop_cap_lines = 3
@@ -52,6 +58,9 @@ psalm_caption = "Psalm"
 [notes]
 show_footnotes = false
 show_cross_references = false
+# Nor study notes or word studies, whatever the text carries.
+show_study_notes = false
+show_sidebars = false
 
 # The book, centred, and the page number centred at the foot. No reference
 # range: a reader's page is not looked things up on.

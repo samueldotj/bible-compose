@@ -380,13 +380,15 @@ impl Hidden {
             || (self.chapter_labels && marker == "cl")
     }
 
-    /// And a heading marker. `\s` is the section heading; the parallel
-    /// reference line, a psalm's superscription and a speaker are in the same
-    /// family and are not what that setting is about.
+    /// And a heading marker. `\s` is the section heading, and `\r`, the
+    /// parallel passages under it, goes with it: a passage list with no
+    /// heading over it is a line of references the reader cannot place. A
+    /// psalm's superscription and a speaker are in the same family and are
+    /// not what that setting is about — they are the text's own.
     fn hides_heading(&self, marker: &str) -> bool {
         (self.book_introductions && matches!(marker, "is" | "imt"))
             || (self.introductory_outlines && marker == "iot")
-            || (self.section_headings && marker == "s")
+            || (self.section_headings && matches!(marker, "s" | "r"))
     }
 }
 
@@ -1098,6 +1100,11 @@ mod tests {
                     level: 1,
                     content: vec![words("The Word of Life")],
                 },
+                Block::Heading {
+                    style: HeadingStyle::R,
+                    level: 1,
+                    content: vec![words("(John 1:1-4)")],
+                },
                 Block::Paragraph {
                     style: ParaStyle::P,
                     content: vec![
@@ -1116,14 +1123,20 @@ mod tests {
     #[test]
     fn nothing_is_withheld_by_default() {
         let out = emit(&withholdable(), &[]);
-        for kept in ["Introduction", "Outline", "Chapter One", "The Word of Life"] {
+        for kept in [
+            "Introduction",
+            "Outline",
+            "Chapter One",
+            "The Word of Life",
+            "(John 1:1-4)",
+        ] {
             assert!(out.xml.contains(kept), "{kept} should be printed");
         }
     }
 
     #[test]
     fn each_part_can_be_withheld_on_its_own() {
-        let cases: [(Hidden, &str, &str); 4] = [
+        let cases: [(Hidden, &str, &str); 5] = [
             (
                 Hidden {
                     book_introductions: true,
@@ -1146,6 +1159,15 @@ mod tests {
                     ..Hidden::nothing()
                 },
                 "The Word of Life",
+                "Chapter One",
+            ),
+            // The parallel passages under a section heading go with it.
+            (
+                Hidden {
+                    section_headings: true,
+                    ..Hidden::nothing()
+                },
+                "(John 1:1-4)",
                 "Chapter One",
             ),
             (

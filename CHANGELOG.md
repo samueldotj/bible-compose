@@ -4,6 +4,12 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## Unreleased
 
+* **The Reader's edition is the text alone.** It now hides study notes,
+  word studies and other sidebars, section headings, introductions and
+  outlines, as well as the footnotes and cross-references it already hid,
+  however many the text carries. Hiding section headings now hides the
+  parallel passages (`\r`) under them too; a psalm's own title stays.
+
 * **Optical size.** A variable font with an optical-size axis, such as
   Literata, can be drawn in the cut for its size, set by
   `typography.optical_size`. The Study Bible uses it to match the finer text

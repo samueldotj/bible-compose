@@ -26,8 +26,9 @@ use crate::document::{ConfigDocument, Located, Node};
 use crate::provenance::{Provenance, Sourced};
 use crate::value::{
     self, Anchors, BookStart, CallerStyle, ChapterStart, Color, CoverBinding, CoverBorder,
-    CoverPaper, DropCap, HeadTemplate, Length, MissingAsset, NumberPlacement, PageFrame, PageSize,
-    QuoteHang, QuoteStart, ReferencePlacement, RestartNumbering, TitleOrnament, VerseStart,
+    CoverPaper, DropCap, HeadTemplate, Length, MissingAsset, NumberPlacement, Numerals, PageFrame,
+    PageSize, QuoteHang, QuoteStart, ReferencePlacement, RestartNumbering, TitleOrnament,
+    VerseStart,
 };
 
 /// The settings vocabulary this release speaks.
@@ -182,6 +183,13 @@ pub struct Numbering {
     /// half of that decision. A translation that carries labels and an edition
     /// that wants only figures are both ordinary, and the file says which.
     pub show_chapter_labels: Sourced<bool>,
+    /// A word set with every chapter number — "Chapter" — and the one the
+    /// Psalms take instead, when they take another. Empty is none.
+    pub chapter_caption: Sourced<String>,
+    pub psalm_caption: Sourced<String>,
+    /// How the number is written where it opens its chapter: the running
+    /// head and the references keep their figures either way.
+    pub chapter_numerals: Sourced<Numerals>,
     /// Where the chapter number is set: in the text, or in a margin beside
     /// the line the chapter begins on.
     pub chapter_number_placement: Sourced<NumberPlacement>,
@@ -216,6 +224,9 @@ pub struct Contents {
     pub drop_cap_lines: Sourced<u8>,
     /// What is drawn under a book's title, and the ink of its diamond.
     pub title_ornament: Sourced<TitleOrnament>,
+    /// And under a chapter's opening, when its number is on a line of its
+    /// own; in the same ink.
+    pub chapter_ornament: Sourced<TitleOrnament>,
     pub title_ornament_color: Sourced<Color>,
     /// Where each book, chapter and verse begins: on the run, a column, a
     /// page of a chosen side, a line of its own.
@@ -732,6 +743,11 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             show_verse_numbers: r.value("numbering.show_verse_numbers", |n| n.boolean()),
             hide_first_verse_number: r.value("numbering.hide_first_verse_number", |n| n.boolean()),
             show_chapter_labels: r.value("numbering.show_chapter_labels", |n| n.boolean()),
+            chapter_caption: r.value("numbering.chapter_caption", |n| n.string()),
+            psalm_caption: r.value("numbering.psalm_caption", |n| n.string()),
+            chapter_numerals: r.value("numbering.chapter_numerals", |n| {
+                value::choice(n, Numerals::NAMES)
+            }),
             chapter_number_placement: r.value("numbering.chapter_number_placement", |n| {
                 value::choice(n, NumberPlacement::NAMES)
             }),
@@ -751,6 +767,9 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
                 value::choice(n, TitleOrnament::NAMES)
             }),
             title_ornament_color: r.value("contents.title_ornament_color", value::color),
+            chapter_ornament: r.value("contents.chapter_ornament", |n| {
+                value::choice(n, TitleOrnament::NAMES)
+            }),
             drop_cap_lines: r.value("contents.drop_cap_lines", |n| {
                 value::integer_in(n, 2, 6).map(|l| l.map(|v| v as u8))
             }),

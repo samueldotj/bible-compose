@@ -261,6 +261,8 @@ fn take(into: &mut ResolvedStyle, from: &Style, origin: impl Fn(&'static str) ->
         gap_before = "gap_before",
         gap_after = "gap_after",
         first_line_indent = "first_line_indent",
+        uppercase = "uppercase",
+        letter_spacing = "letter_spacing",
     }
 }
 

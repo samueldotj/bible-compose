@@ -1,51 +1,59 @@
 # A reader's edition (P6.2).
 #
-# The one preset that is a *decision* rather than a set of measurements: it
-# takes the numbers and the apparatus off the page. A reader's Bible is set
-# like a novel, and verse numbers, footnote callers and reference letters are
-# all machinery for finding a passage rather than for reading one.
+# Set like a book of verse: one narrow column, ragged right, with the verse
+# numbers moved out of the text into the margin, where a reader looking for a
+# place finds them and a reader reading does not. The apparatus goes: footnote
+# callers and reference letters are machinery for finding a passage rather
+# than for reading one.
 #
-# **The anchors do not go with them** (SCR-001). Hiding a number does not
-# remove the place it marks, so a reader's edition is still a document that can
-# be linked into and still knows its own verse range — which is what keeps the
-# running head useful once the numbers are gone.
+# **The anchors do not go with it** (SCR-001). Hiding a note does not remove
+# the place it marks, so a reader's edition is still a document that can be
+# linked into and still knows its own verse range.
 #
-# One column, because two columns exist to fit more words onto a page that is
-# going to be looked things up in, and a reading edition is not that. Larger
-# type and more leading for the same reason.
+# Measured off the "Reader's edition poetry" design, whose 21px body is 10.5pt
+# here: a pixel of it is half a point.
 
 [page]
 size = "5.5x8.5in"
 columns = 1
-margin_inner = "0.85in"
-margin_outer = "0.7in"
+# The design's narrow measure, about three and a half inches, centred.
+margin_inner = "1in"
+margin_outer = "1in"
 margin_top = "0.8in"
 margin_bottom = "0.9in"
 
-
 [typography]
+font_family = "Cormorant Garamond"
 font_size = "10.5pt"
-leading = "15pt"
-justify = true
+leading = "15.75pt"
+# Ragged right, as verse is set.
+justify = false
 
-# Each chapter opens like a poem in a collection: its number alone and
-# centred above, the first letter of the text dropped three lines below it.
+# Each chapter opens like a poem in a collection: a small caption, the
+# number large and centred, an ornament, and the first letter of the text
+# dropped three lines.
 [contents]
 drop_caps = true
 drop_cap_of = "first_letter"
 drop_cap_lines = 3
+chapter_ornament = "diamond"
+title_ornament_color = "#3f5b3a"
 
 [numbering]
 show_chapter_numbers = true
-show_verse_numbers = false
+show_verse_numbers = true
 show_chapter_labels = true
+verse_number_placement = "left_margin"
+margin_gap = "8pt"
+chapter_caption = "Chapter"
+psalm_caption = "Psalm"
 
 [notes]
 show_footnotes = false
 show_cross_references = false
 
 # The book, centred, and the page number centred at the foot. No reference
-# range: there are no verse numbers on the page for it to point at.
+# range: a reader's page is not looked things up on.
 [headers.left_page]
 header_left = ""
 header_center = "{Book}"

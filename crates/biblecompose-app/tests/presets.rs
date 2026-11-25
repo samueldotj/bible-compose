@@ -175,10 +175,18 @@ fn every_preset_sets_an_acceptable_page() {
         // **And nothing is set outside the measure**, on either side, with
         // the bounds taken from the preset's own margins and swapped for the
         // verso pages.
+        // A verse number its preset sets in the margin is meant to be there.
+        let numbers_in_margin = chosen.settings().expect("parses").iter().any(|(k, v)| {
+            k == "numbering.verse_number_placement"
+                && *v != biblecompose_config::SettingValue::Str("in_text".to_owned())
+        });
         let mut worst: Option<(f64, usize, f64)> = None;
         for line in &lines {
             let (left, right) = measure.bounds(line.page);
             for mark in &line.marks {
+                if numbers_in_margin && mark.text.chars().all(|c| c.is_ascii_digit()) {
+                    continue;
+                }
                 let over = (left - mark.x).max(mark.x - right);
                 if over > 0.25 && worst.is_none_or(|(w, _, _)| over > w) {
                     worst = Some((over, line.page, mark.x));
@@ -362,10 +370,14 @@ fn each_edition_draws_its_furniture() {
         "journaling has note lines"
     );
 
-    // And the reader's edition carries no furniture at all.
-    let (rules, _measure, _height) = rules_of("reader");
+    // And the reader's edition carries no furniture: its only rules are the
+    // two short ones of the ornament under a chapter's opening.
+    let (rules, measure, _height) = rules_of("reader");
+    let width = measure.page_width - measure.inner - measure.outer;
     assert!(
-        rules.is_empty(),
-        "the reader's edition is unruled: {rules:?}"
+        rules
+            .iter()
+            .all(|r| r.is_horizontal() && r.length() < width / 2.0),
+        "the reader's edition is unruled but for its ornaments: {rules:?}"
     );
 }

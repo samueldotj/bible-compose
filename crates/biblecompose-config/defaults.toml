@@ -119,6 +119,9 @@ drop_cap_lines = 3
 # `title_ornament_color`. The rules are in the title's own ink.
 title_ornament = "none"
 title_ornament_color = "#000000"
+# The same, under a chapter's opening when its number stands on a line of
+# its own, in the same colour.
+chapter_ornament = "none"
 # Where each thing begins. A book on the next page, as bound books do; a
 # chapter and a verse on the run, as prose. A book may start on a chosen
 # side — "left_page", "right_page" — or after a blank page —
@@ -146,6 +149,15 @@ hide_first_verse_number = false
 # `\cl அத்தியாயம் 1` beside `\c 1`. On, because a translation that carries them
 # wrote them deliberately; off for an edition that wants the figure alone.
 show_chapter_labels = true
+
+# A word set with each chapter's number where it opens the chapter, in the
+# `chapter_caption` style: "Chapter" reads "Chapter 12". The Psalms take
+# `psalm_caption` instead when it is set — "Psalm 23". Empty is none.
+chapter_caption = ""
+psalm_caption = ""
+# How that number is written: "arabic" (12) or "roman" (XII). The running
+# head and every reference keep their figures.
+chapter_numerals = "arabic"
 
 # Where the numbers are set: "in_text", as most Bibles do, or in the margin
 # beside the line the chapter or verse begins on — "left_margin" or

@@ -120,7 +120,12 @@ export const EN_HELP: Readonly<Record<string, string>> = {
   "contents.drop_cap_lines": "How many lines the drop cap spans. Three is the convention.",
   "contents.title_ornament":
     "Drawn under each book's title: nothing, a short rule, or two short rules with a diamond between them.",
-  "contents.title_ornament_color": "The ink of the diamond under a book's title.",
+  "contents.title_ornament_color": "The ink of the diamond under a book's title and a chapter's opening.",
+  "contents.chapter_ornament":
+    "Drawn under a chapter's opening when its number stands on a line of its own: nothing, a short rule, or two short rules with a diamond.",
+  "numbering.chapter_caption": "A word set with each chapter's number where it opens the chapter, such as Chapter. Empty for none.",
+  "numbering.psalm_caption": "The word the Psalms take instead, such as Psalm. Empty to use the chapter caption.",
+  "numbering.chapter_numerals": "How the number is written where it opens the chapter: figures, or Roman numerals.",
   "contents.book_starts": "Where each book after the first begins: on the run, the next column, the next page, a chosen side, or after a blank page.",
   "contents.chapter_starts": "Where each chapter after a book's first begins: on the run, the next column, the next page, or a chosen side.",
   "contents.verse_starts": "Whether each verse follows on in the paragraph, or begins a line of its own.",
@@ -189,6 +194,8 @@ export const EN_HELP: Readonly<Record<string, string>> = {
   "property:color": "The ink, as a hex colour such as #c81414.",
   "property:border": "A rule round the element.",
   "property:border_width": "How thick that rule is.",
+  "property:uppercase": "Set in capitals whatever the text's own case.",
+  "property:letter_spacing": "Extra space between letters, as a line of capitals wants.",
   "property:first_line_indent": "The indent of a paragraph's first line. A paragraph that opens a chapter or follows a heading is set flush.",
   "property:own_line": "The element takes a line of its own, with the space above and below around it and the alignment deciding where on the line.",
   "property:gap_before": "Space before the element when it sits in the text.",

@@ -104,6 +104,11 @@ pub struct Style {
     /// whole block, which is `indent`. A paragraph that opens a chapter or
     /// follows a heading is set flush whatever this says, as a book sets it.
     pub first_line_indent: Option<Length>,
+    /// Set in capitals whatever the text's own case: a running head or a
+    /// label that a design sets as a line of capitals.
+    pub uppercase: Option<bool>,
+    /// Extra space between letters, as capitals set as a label want.
+    pub letter_spacing: Option<Length>,
 }
 
 impl Style {
@@ -136,6 +141,8 @@ impl Style {
             gap_before: other.gap_before.or(self.gap_before),
             gap_after: other.gap_after.or(self.gap_after),
             first_line_indent: other.first_line_indent.or(self.first_line_indent),
+            uppercase: other.uppercase.or(self.uppercase),
+            letter_spacing: other.letter_spacing.or(self.letter_spacing),
         }
     }
 }
@@ -148,7 +155,7 @@ pub const INHERITS: &str = "inherits";
 ///
 /// Used to read a style and to detect a misspelled property, so the two
 /// cannot disagree about what is legal.
-pub const PROPERTIES: [&str; 17] = [
+pub const PROPERTIES: [&str; 19] = [
     "font_family",
     "font_size",
     "weight",
@@ -166,6 +173,8 @@ pub const PROPERTIES: [&str; 17] = [
     "gap_before",
     "gap_after",
     "first_line_indent",
+    "uppercase",
+    "letter_spacing",
 ];
 
 /// One selector's entry in a sheet: what it says, what it inherits from, and
@@ -416,6 +425,14 @@ fn read_into(
     });
     read("first_line_indent", &mut |n| {
         style.first_line_indent = Some(value::length_or_zero(n)?.value);
+        Ok(())
+    });
+    read("uppercase", &mut |n| {
+        style.uppercase = Some(n.boolean()?.value);
+        Ok(())
+    });
+    read("letter_spacing", &mut |n| {
+        style.letter_spacing = Some(value::length_or_zero(n)?.value);
         Ok(())
     });
 

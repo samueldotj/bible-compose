@@ -196,6 +196,13 @@ local OPTIONS = {
    -- Under each book's title: none, rule, diamond; and the diamond's ink.
    { key = "titleornament", kind = "string", default = "none" },
    { key = "titleornamentcolor", kind = "string", default = "#000000" },
+   -- And under a chapter's opening, when its number has a line of its own.
+   { key = "chapterornament", kind = "string", default = "none" },
+   -- A word with each chapter's number, the Psalms' own word, and whether
+   -- the number is written in figures or Roman numerals.
+   { key = "chaptercaption", kind = "string", default = "" },
+   { key = "psalmcaption", kind = "string", default = "" },
+   { key = "chapternumerals", kind = "string", default = "arabic" },
    -- How a paragraph and a line of verse are set.
    { key = "justify", kind = "boolean", default = true },
    { key = "poetryindent", kind = "boolean", default = true },
@@ -375,6 +382,7 @@ end
 -- the closure is written, so a later `local` would leave that a nil global.
 local quote_hang_lines
 local page_rules, page_frame
+local roman, chapter_caption, title_ornament, chapter_on_own_line
 
 function class:_init (options)
    -- Parse options and install the frameset BEFORE plain._init, because that
@@ -445,6 +453,19 @@ function class:_init (options)
          local s = SILE.scratch.biblecompose
          -- A footnote called from the opening paragraph is boxed up first,
          -- mid-paragraph, and is not the paragraph.
+         -- A line of poetry carrying an initial's hang counts its lines off.
+         if s and s.hang_carry and s.in_poetry and not s.in_note then
+            local got = 0
+            for _, v in ipairs(vboxes) do
+               if v.is_vbox then
+                  got = got + 1
+               end
+            end
+            s.hang_carry.lines = s.hang_carry.lines - got
+            if s.hang_carry.lines <= 0 then
+               s.hang_carry = nil
+            end
+         end
          if s and s.initial_lines and not s.in_note then
             local want = s.initial_lines
             s.initial_lines = nil
@@ -453,6 +474,12 @@ function class:_init (options)
                if v.is_vbox then
                   got = got + 1
                end
+            end
+            -- In poetry a short line is not padded out: the lines after it
+            -- make room for the rest of the initial instead.
+            if s.in_poetry and got > 0 and got < want and s.initial_hang then
+               s.hang_carry = { indent = s.initial_hang, lines = want - got }
+               got = want
             end
             if got > 0 and got < want then
                local bs = SILE.settings:get("document.baselineskip").height:tonumber()
@@ -1332,6 +1359,44 @@ function slot_content (template)
    end
 end
 
+--- `body` with every run of text it sets in capitals, as the language
+--- writes them — ICU's casing, not ASCII's, so a dotted i stays one.
+local function in_capitals (body)
+   local icu = require("justenoughicu")
+   local t = SILE.typesetter
+   local own = rawget(t, "typeset")
+   t.typeset = function (self, text)
+      local lang = SILE.settings:get("document.language") or "en"
+      return getmetatable(self).__index.typeset(self, icu.case(text, lang, "upper"))
+   end
+   local ok, err = pcall(body)
+   t.typeset = own
+   if not ok then
+      error(err, 0)
+   end
+end
+
+--- `body` in the capitals and letter spacing a style asks for, if any.
+local function lettered (s, body)
+   local inner = body
+   if SU.boolean(s.uppercase, false) then
+      local cased = inner
+      inner = function ()
+         in_capitals(cased)
+      end
+   end
+   if s.letter_spacing then
+      local spaced = inner
+      inner = function ()
+         SILE.settings:temporarily(function ()
+            SILE.settings:set("document.letterspaceglue", SILE.types.node.glue(s.letter_spacing))
+            spaced()
+         end)
+      end
+   end
+   return inner
+end
+
 --- Set one line of three slots into a frame.
 --
 -- `\hfill` between the parts is what makes three slots out of one line: the
@@ -1369,6 +1434,7 @@ function set_line (frame, slots, selector)
             slot_content(slot)
          end
       end
+      line = lettered(s, line)
       SILE.call("font", face(s) or {}, function ()
          if s.color then
             SILE.call("color", { color = s.color }, line)
@@ -1410,7 +1476,10 @@ end
 --- fixed, so a page with notes and one without put the foot rule in one place.
 local function text_block ()
    local a = SILE.getFrame("contentA")
-   local ok, b = pcall(SILE.getFrame, "contentB")
+   -- Looked up in the table rather than through `getFrame`, which warns
+   -- about a frame a one-column page never had.
+   local b = SILE.frames.contentB
+   local ok = b ~= nil
    local right = (ok and b) and b:right():tonumber() or a:right():tonumber()
    local notes = SILE.getFrame("footnotes")
    local bottom = notes and notes:bottom():tonumber() or a:bottom():tonumber()
@@ -1456,7 +1525,8 @@ function page_rules (o, recto)
    end
 
    local gutter_rule = thickness(o.columnrule)
-   local ok, gutter = pcall(SILE.getFrame, "gutter")
+   local gutter = SILE.frames.gutter
+   local ok = gutter ~= nil
    if gutter_rule > 0 and ok and gutter and (o.columns or 1) >= 2 then
       local a = SILE.getFrame("contentA")
       local x = (gutter:left():tonumber() + gutter:right():tonumber()) / 2 - gutter_rule / 2
@@ -1531,6 +1601,7 @@ local function styled (selector, body)
          SILE.call("color", { color = s.color }, body)
       end
    end
+   inner = lettered(s, inner)
 
    if f then
       SILE.call("font", f, inner)
@@ -2057,7 +2128,7 @@ end
 -- back in after, a few points to the right of where they were. The first two
 -- nodes are `newPar`'s own, the zero box and the indent glue, and are not
 -- kept.
-local function dropped (body)
+local function take_anchors ()
    local nodes = SILE.typesetter.state.nodes
    local anchors = {}
    for i = #nodes, 3, -1 do
@@ -2066,10 +2137,20 @@ local function dropped (body)
    for i = #nodes, 1, -1 do
       nodes[i] = nil
    end
-   body()
+   return anchors
+end
+
+--- Put back what `take_anchors` took, where the typesetter now is.
+local function put_anchors (anchors)
    for i = #anchors, 1, -1 do
       SILE.typesetter:pushHorizontal(anchors[i])
    end
+end
+
+local function dropped (body)
+   local anchors = take_anchors()
+   body()
+   put_anchors(anchors)
 end
 
 --- `content` with the chapter figure a heading held back put in front of it,
@@ -2155,8 +2236,8 @@ end
 
 --- What `contents.title_ornament` draws under the title, centred: a short
 --- rule, or two with a diamond between them in its own ink.
-local function title_ornament (o, s)
-   local kind = o.titleornament
+function title_ornament (o, s, kind)
+   kind = kind or o.titleornament
    if kind ~= "rule" and kind ~= "diamond" then
       return
    end
@@ -2201,6 +2282,45 @@ local function title_ornament (o, s)
       end)
    end)
    SILE.call("par")
+end
+
+--- Whether the chapter number is set on a line of its own: its style says
+--- so, or a dropped first letter has taken its corner.
+function chapter_on_own_line (o)
+   if not o.chapternumbers then
+      return false
+   end
+   if o.chapterplacement == "left_margin" or o.chapterplacement == "right_margin" then
+      return false
+   end
+   if SU.boolean(style("chapter").own_line, false) then
+      return true
+   end
+   return o.dropcaps and o.dropcapof ~= "chapter_number"
+end
+
+--- `n` in Roman numerals, capitals: 12 is XII.
+function roman (n)
+   local out = ""
+   for _, step in ipairs({
+      { 1000, "M" }, { 900, "CM" }, { 500, "D" }, { 400, "CD" }, { 100, "C" }, { 90, "XC" },
+      { 50, "L" }, { 40, "XL" }, { 10, "X" }, { 9, "IX" }, { 5, "V" }, { 4, "IV" }, { 1, "I" },
+   }) do
+      while n >= step[1] do
+         out = out .. step[2]
+         n = n - step[1]
+      end
+   end
+   return out
+end
+
+--- The word set with this chapter's number: the Psalms' own when there is
+--- one, the chapter caption otherwise; empty for none.
+function chapter_caption (o)
+   if scratch().code == "PSA" and (o.psalmcaption or "") ~= "" then
+      return o.psalmcaption
+   end
+   return o.chaptercaption or ""
 end
 
 --- Whether nothing has been set on this page yet: the main typesetter is at
@@ -2963,6 +3083,31 @@ function class:registerXmlCommands ()
    self:registerCommand("heading", function (options, content)
       local selector = "heading." .. (options.style or "s") .. (options.level or "1")
       local s = style(selector)
+      -- **A chapter that opens on a heading arrives inside it**, as the
+      -- heading's first child. Where its number is set on a line of its own
+      -- — the caption, the number and the ornament — that opening belongs
+      -- before the heading, not inside its centring and its face: the
+      -- chapter, then its first heading. A number that drops, or runs into
+      -- the text, stays where it is and is handled where it is set.
+      if type(content) == "table" and chapter_on_own_line(self._bcopts) then
+         for i, child in ipairs(content) do
+            if type(child) == "table" then
+               if child.command == "chapter" then
+                  SILE.process({ child })
+                  local rest = {}
+                  for j, other in ipairs(content) do
+                     if j ~= i then
+                        rest[#rest + 1] = other
+                     end
+                  end
+                  content = rest
+               end
+               break
+            elseif type(child) == "string" and child:match("%S") then
+               break
+            end
+         end
+      end
       SILE.call("goodbreak")
       skip(s.space_above)
       -- A heading is never indented: a centred one would sit off centre by
@@ -2971,15 +3116,21 @@ function class:registerXmlCommands ()
       scratch().flush_next = true
       local align = alignment(s)
       scratch().in_heading = true
-      styled(selector, function ()
-         if align then
-            SILE.call(align, {}, function ()
+      -- The alignment outside the face and the ink, not inside them: a
+      -- colour opens the paragraph with a node of its own, and a centring
+      -- begun after it breaks the paragraph first — an empty line above
+      -- every heading that is both centred and coloured.
+      if align then
+         SILE.call(align, {}, function ()
+            styled(selector, function ()
                SILE.process(content)
             end)
-         else
+         end)
+      else
+         styled(selector, function ()
             SILE.process(content)
-         end
-      end)
+         end)
+      end
       scratch().in_heading = false
       -- A heading is not left standing at the foot of a column (SCR-011), and
       -- the order of these five calls is the whole of how that is arranged.
@@ -3066,18 +3217,32 @@ function class:registerXmlCommands ()
       -- An indent on a poetry line is a first-line indent of the whole line,
       -- so it is glue at the start rather than a left skip: a line that wraps
       -- should hang, which is what a reader expects of verse.
-      if s.indent and not align and self._bcopts.poetryindent then
-         SILE.call("glue", { width = s.indent })
-      end
-      styled(selector, function ()
-         if align then
-            SILE.call(align, {}, function ()
-               SILE.process(content)
-            end)
-         else
-            SILE.process(content)
-            SILE.call("par")
+      -- The lines after a line that opened with a dropped initial make room
+      -- for the rest of it: each is its own paragraph, and the hang the
+      -- initial set ends with the first.
+      local sc = scratch()
+      -- Inside `temporarily`, so the hang ends with this line: a setting
+      -- left behind would hang every paragraph after it.
+      SILE.settings:temporarily(function ()
+         if sc.hang_carry then
+            SILE.settings:set("current.hangIndent", sc.hang_carry.indent)
+            SILE.settings:set("current.hangAfter", -sc.hang_carry.lines)
          end
+         if s.indent and not align and self._bcopts.poetryindent then
+            SILE.call("glue", { width = s.indent })
+         end
+         sc.in_poetry = true
+         styled(selector, function ()
+            if align then
+               SILE.call(align, {}, function ()
+                  SILE.process(content)
+               end)
+            else
+               SILE.process(content)
+               SILE.call("par")
+            end
+         end)
+         sc.in_poetry = false
       end)
       skip(s.space_below)
    end)
@@ -3189,6 +3354,12 @@ function class:registerXmlCommands ()
          return
       end
       local boxed = SU.boolean(s.border, false)
+      if self._bcopts.chapternumerals == "roman" then
+         local n = tonumber(SU.ast.contentToString(content))
+         if n then
+            content = { roman(n) }
+         end
+      end
       local function number ()
          if boxed then
             bordered(s.border_width or "0.5pt", function ()
@@ -3212,18 +3383,47 @@ function class:registerXmlCommands ()
          -- things at one corner would fight. Through `dropped`, because the
          -- chapter's anchor has already opened the paragraph — with the
          -- paragraph indent — and the number's line must not carry that.
-         dropped(function ()
+         -- The anchors go into the first line set here, not back after it:
+         -- left in the paragraph after the number they would open it, and a
+         -- heading that follows would start its centring after them.
+         local anchors = take_anchors()
+         do
             skip(s.space_above)
             SILE.call("noindent")
+            -- The caption on a line above the number when its style gives
+            -- it one; otherwise before the number on the number's line.
+            local caption = chapter_caption(self._bcopts)
+            local c = style("chapter_caption")
+            local above = caption ~= "" and SU.boolean(c.own_line, false)
+            if above then
+               SILE.call(alignment(c) or alignment(s) or ALIGNMENT.start, {}, function ()
+                  put_anchors(anchors)
+                  anchors = {}
+                  styled("chapter_caption", function ()
+                     SILE.typesetter:typeset(caption)
+                  end)
+                  SILE.call("par")
+               end)
+               skip(c.space_below)
+               SILE.call("noindent")
+            end
             SILE.call(alignment(s) or ALIGNMENT.start, {}, function ()
+               put_anchors(anchors)
+               if caption ~= "" and not above then
+                  styled("chapter_caption", function ()
+                     SILE.typesetter:typeset(caption)
+                  end)
+                  SILE.call("kern", { width = c.gap_after or "0.3em" })
+               end
                number()
                SILE.call("par")
             end)
+            title_ornament(self._bcopts, s, self._bcopts.chapterornament)
             skip(s.space_below)
             -- The text that follows opens a chapter, not a paragraph in the
             -- middle of one: flush, as the first paragraph under a heading.
             SILE.call("noindent")
-         end)
+         end
          return
       end
 
@@ -3334,6 +3534,8 @@ function class:registerXmlCommands ()
       end)
       -- For the padding above: this paragraph has to run to that many lines.
       scratch().initial_lines = lines
+      -- Or, in poetry, the lines after it have to make room for the rest.
+      scratch().initial_hang = SILE.settings:get("current.hangIndent")
    end)
 
    self:registerCommand("verse", function (options, _)
@@ -3348,6 +3550,20 @@ function class:registerXmlCommands ()
          -- runs clear of it — the number is not raised there, since it is
          -- not sitting among words.
          margin_number(placement, "verse", content)
+         -- The space the text puts after a verse number belongs to the
+         -- number; with the number in the margin, a line the verse opens
+         -- would start a space in from the lines under it. The next run of
+         -- text is set without it.
+         local t = SILE.typesetter
+         local own = rawget(t, "typeset")
+         t.typeset = function (self_, text)
+            t.typeset = own
+            text = text:gsub("^%s+", "")
+            if text == "" then
+               return
+            end
+            return t:typeset(text)
+         end
          return
       end
       SILE.call("raise", { height = s.raise or "0pt" }, function ()

@@ -164,6 +164,10 @@ pub fn class_options_with(
         "titleornamentcolor",
         s.contents.title_ornament_color.to_string(),
     );
+    put("chapterornament", s.contents.chapter_ornament.to_string());
+    put("chaptercaption", quoted(&s.numbering.chapter_caption));
+    put("psalmcaption", quoted(&s.numbering.psalm_caption));
+    put("chapternumerals", s.numbering.chapter_numerals.to_string());
     put("bookstarts", s.contents.book_starts.to_string());
     put("chapterstarts", s.contents.chapter_starts.to_string());
     put("versestarts", s.contents.verse_starts.to_string());
@@ -340,6 +344,8 @@ fn properties_of(
         "first_line_indent",
         s.first_line_indent.map(|l| l.to_sile()),
     );
+    put("uppercase", s.uppercase.map(flag));
+    put("letter_spacing", s.letter_spacing.map(|l| l.to_sile()));
 
     debug_assert!(
         out.len() <= PROPERTIES.len(),

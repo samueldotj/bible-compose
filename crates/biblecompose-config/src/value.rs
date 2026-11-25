@@ -540,6 +540,16 @@ spelled! {
 }
 
 spelled! {
+    /// How a chapter's number is written where it opens the chapter.
+    Numerals {
+        /// 1, 2, 3.
+        Arabic => "arabic",
+        /// I, II, III.
+        Roman => "roman",
+    }
+}
+
+spelled! {
     /// What is drawn under a book's title.
     TitleOrnament {
         /// Nothing.

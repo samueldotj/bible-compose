@@ -149,6 +149,7 @@ export const EDITED_ELSEWHERE: ReadonlySet<string> = new Set([
   "contents.drop_cap_lines",
   "contents.title_ornament",
   "contents.title_ornament_color",
+  "contents.chapter_ornament",
   "contents.book_starts",
   "contents.chapter_starts",
   "contents.verse_starts",

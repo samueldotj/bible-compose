@@ -1905,6 +1905,8 @@ fn wire_style_properties(resolved: &biblecompose_config::ResolvedStyle) -> Vec<W
             "first_line_indent",
             s.first_line_indent.map(|l| l.to_string()),
         ),
+        ("uppercase", s.uppercase.map(|b| b.to_string())),
+        ("letter_spacing", s.letter_spacing.map(|l| l.to_string())),
     ];
 
     values

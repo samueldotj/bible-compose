@@ -39,6 +39,32 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   gutter rule and foot rule under a dark head rule, the design's leading,
   sizes and spacing, and a foot line.
 
+* **The Reader's edition matches its design.** It is set in Cormorant
+  Garamond, ragged right on a narrow measure. Verse numbers sit in the
+  margin. Each chapter opens with a spaced "PSALM" or "CHAPTER" caption over
+  a large italic number, then an ornament, then a dropped first letter. The
+  running head is in spaced capitals.
+
+* **Every template's typefaces now ship with BibleCompose**, under the SIL
+  Open Font License, so a template looks the same on any machine.
+
+* **New style properties: `uppercase` and `letter_spacing`**, for a line of
+  spaced capitals.
+
+* **Chapter captions, Roman numerals and a chapter ornament.**
+  `numbering.chapter_caption` and `numbering.psalm_caption` set a word with
+  each chapter number, in a new `chapter_caption` style.
+  `numbering.chapter_numerals` can set the number as `roman`, and
+  `contents.chapter_ornament` draws a line under it.
+
+* **A dropped first letter can now open poetry.** The lines after it make
+  room for it. Before, a chapter that opened with poetry, such as most
+  psalms, had no dropped letter.
+
+* Fixed an empty line above every heading that was both centred and
+  coloured. Also fixed a verse number in the margin, which left the line
+  it opened one space in from the lines under it.
+
 * **The book title can span both columns, with an ornament under it.** In
   two columns, a book that starts a page now has its title set across both
   columns, with the columns starting below it. A new `book` style sets the

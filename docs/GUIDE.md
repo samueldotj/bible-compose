@@ -72,12 +72,28 @@ The **Template** section offers ten to start from:
 Choosing one **writes its settings into your project**, and — for the
 templates that have a look of their own — **its styles into `styles.toml`**,
 where you can then change them one at a time. A style you had already set
-that the template does not mention is kept. Standard two-column sets its
-body in **EB Garamond**, which BibleCompose ships, with regular, medium,
-semibold and italic faces, small capitals and old-style figures. It covers
-Latin, Greek and Cyrillic: for any other script, choose your own font after
-applying the template. The other templates leave the font alone. A template
-is a starting point, not a mode: after you apply
+that the template does not mention is kept.
+
+Each template sets its text in the typeface its design was drawn in, and
+BibleCompose ships every one of them, so a template looks the same on any
+machine:
+
+| Template | Typefaces |
+|---|---|
+| Standard two-column | EB Garamond |
+| Reader's edition | Cormorant Garamond |
+| Modern | Source Serif 4, with Inter for headings and numbers |
+| Journaling Bible | Crimson Pro, with Josefin Sans |
+| Illuminated | EB Garamond, with Cinzel |
+| Study Bible | Literata, with IBM Plex Sans |
+| Reference | Libre Caslon Text, with Libre Franklin |
+
+They cover Latin, and most cover Greek and Cyrillic too. For any other
+script, choose your own font after applying the template. Text in a script
+the font cannot draw blocks the build (FONT-002): Psalm 119's Hebrew letter
+headings in an English Bible are an example.
+
+A template is a starting point, not a mode: after you apply
 one there is no preset any more, only settings — which is why nothing in the
 window claims you are "in" large print.
 
@@ -354,6 +370,33 @@ gap to the text:
 | `note_lines` | Ruled lines across the outer margin, `note_line_spacing` apart, for a journaling edition |
 
 The frame and the note lines are drawn in `rule_color`.
+
+### Capitals and letter spacing
+
+Any style can set its text in capitals with **`uppercase`**, whatever case
+the text is written in, and space its letters with **`letter_spacing`** (a
+length, such as `1.5pt`). Together they set a running head or a label as a
+line of spaced capitals.
+
+### The chapter's opening
+
+When the chapter number stands on a line of its own (the `chapter` style's
+`own_line`, or a dropped first letter), three settings add to it:
+
+| Setting | What it does |
+|---|---|
+| `numbering.chapter_caption` | A word set with the number, such as `Chapter`. Empty is none |
+| `numbering.psalm_caption` | The word the Psalms take instead, such as `Psalm` |
+| `numbering.chapter_numerals` | `arabic` (12) or `roman` (XII) |
+| `contents.chapter_ornament` | `none`, `rule` or `diamond`, drawn under the number |
+
+The caption is set in the **`chapter_caption`** style: on a line above the
+number when that style has `own_line`, and before the number on its line
+otherwise. A chapter that opens with a heading sets its number first and
+the heading after it.
+
+A dropped first letter can open a psalm: the lines of poetry after the first
+make room for it, as many as it spans.
 
 ### The book's title
 

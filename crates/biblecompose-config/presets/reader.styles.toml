@@ -1,27 +1,47 @@
 # The reader's edition's look: the "Reader's edition poetry" design.
 #
-# Set like a book of verse. Each chapter opens with its number alone on a
-# line, large, centred and in italic, the way a collection of poems numbers
-# them, with the first letter of the text dropped beneath it. Green is the one
-# colour, and only the number carries it.
+# Set like a book of verse, in Cormorant Garamond. Each chapter opens with a
+# small spaced caption in green — "PSALM" — over its number, large, centred
+# and in italic, the way a collection of poems numbers them, then a short
+# ornament and the first letter of the text dropped beneath it. Green is the
+# one colour, and only the caption, the ornament and the initial carry it.
+
+[chapter_caption]
+font_size = "7pt"
+uppercase = true
+letter_spacing = "2.1pt"
+color = "#3f5b3a"
+own_line = true
+align = "center"
+space_below = "2pt"
 
 [chapter]
-font_size = "30pt"
+font_size = "44pt"
 weight = 400
 italic = true
 align = "center"
-color = "#3f5b3a"
+own_line = true
 space_above = "14pt"
+space_below = "6pt"
+
+[book]
+font_size = "20pt"
+weight = 400
+italic = true
 space_below = "10pt"
 
 # A psalm's title — "A Psalm of David." — is part of the text, centred under
 # the number as an epigraph rather than set as a heading.
 [heading.d1]
+font_size = "8.5pt"
 align = "center"
 italic = true
+color = "#4a463f"
 space_above = "2pt"
 space_below = "8pt"
 
+# Headings, where a book has them, in small capitals: quieter than the
+# chapter's opening and not to be confused with it.
 [heading.s1]
 font_size = "9.6pt"
 weight = 400
@@ -30,8 +50,8 @@ align = "center"
 space_above = "10pt"
 space_below = "4pt"
 
-# Poetry hangs: the first line of a verse at the margin, its continuation a
-# step in, so a long line that wraps still reads as one line.
+# Verse indents held to a step of a quarter inch, each line of a verse
+# hanging under the one before.
 [poetry.q1]
 indent = "0pt"
 
@@ -41,19 +61,30 @@ indent = "16pt"
 [poetry.q3]
 indent = "32pt"
 
+# The numbers in the margin, small, semibold and grey, level with the line.
+[verse]
+font_size = "6.5pt"
+weight = 600
+raise = "0pt"
+color = "#6f6a62"
+
+# The running head in spaced capitals; the foot in italic.
 [head]
+font_size = "6.5pt"
 italic = false
-smallcaps = true
-align = "center"
+smallcaps = false
+uppercase = true
+letter_spacing = "2.6pt"
+color = "#4a463f"
 
 [folio]
+font_size = "7pt"
 italic = true
+color = "#4a463f"
 
 [paragraph.p]
 first_line_indent = "12pt"
 
-# The dropped initial in the chapter number's green, so the two read as one
-# opening.
 [initial]
 weight = 500
 color = "#3f5b3a"

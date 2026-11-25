@@ -56,6 +56,8 @@ const RAISE: PropertyRow = { name: "raise", label: "Raise", kind: "length" };
 const ALIGN: PropertyRow = { name: "align", label: "Alignment", kind: "align" };
 const COLOR: PropertyRow = { name: "color", label: "Colour", kind: "color" };
 const FIRST_LINE: PropertyRow = { name: "first_line_indent", label: "First-line indent", kind: "length" };
+const UPPERCASE: PropertyRow = { name: "uppercase", label: "Capitals", kind: "boolean" };
+const LETTER_SPACING: PropertyRow = { name: "letter_spacing", label: "Letter spacing", kind: "length" };
 
 // The chapter number's own decisions: where it sits, whether it takes a
 // line, what surrounds it. Where a chapter *opens* is a Contents setting.
@@ -68,7 +70,7 @@ const GAP_AFTER: PropertyRow = { name: "gap_after", label: "Gap after", kind: "l
 // Alignment was missing here while the schema, the cascade and the class all
 // supported it, so a centred section heading — one of the most ordinary
 // decisions in Bible design — could only be made by editing TOML.
-const HEADING = [FACE, SIZE, WEIGHT, ITALIC, ALIGN, ABOVE, BELOW, COLOR];
+const HEADING = [FACE, SIZE, WEIGHT, ITALIC, SMALLCAPS, UPPERCASE, LETTER_SPACING, ALIGN, ABOVE, BELOW, COLOR];
 const CHARACTER = [WEIGHT, ITALIC, SMALLCAPS, COLOR];
 
 export const ALIGNMENTS = ["start", "center", "end", "justify"] as const;
@@ -143,7 +145,7 @@ export const STYLE_GROUPS: readonly StyleGroup[] = [
       {
         selector: "book",
         label: "Book title",
-        properties: [FACE, SIZE, WEIGHT, ITALIC, SMALLCAPS, ALIGN, BELOW, COLOR],
+        properties: [FACE, SIZE, WEIGHT, ITALIC, SMALLCAPS, UPPERCASE, LETTER_SPACING, ALIGN, BELOW, COLOR],
       },
       {
         selector: "chapter",
@@ -197,8 +199,16 @@ export const STYLE_GROUPS: readonly StyleGroup[] = [
     id: "furniture",
     title: "Page furniture",
     rows: [
-      { selector: "head", label: "Running head", properties: [SIZE, WEIGHT, ITALIC, SMALLCAPS, COLOR] },
-      { selector: "folio", label: "Foot line", properties: [SIZE, WEIGHT, ITALIC, SMALLCAPS, COLOR] },
+      {
+        selector: "head",
+        label: "Running head",
+        properties: [FACE, SIZE, WEIGHT, ITALIC, SMALLCAPS, UPPERCASE, LETTER_SPACING, COLOR],
+      },
+      {
+        selector: "folio",
+        label: "Foot line",
+        properties: [FACE, SIZE, WEIGHT, ITALIC, SMALLCAPS, UPPERCASE, LETTER_SPACING, COLOR],
+      },
       { selector: "caption", label: "Figure caption", properties: [SIZE, ITALIC] },
     ],
   },

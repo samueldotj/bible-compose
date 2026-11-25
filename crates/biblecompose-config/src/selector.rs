@@ -57,6 +57,8 @@ pub enum StyleSelector {
     BookTitle,
     /// The chapter number where it is set, not the chapter as a division.
     Chapter,
+    /// The word set with the chapter number — "Chapter", "Psalm".
+    ChapterCaption,
     /// The chapter's dropped initial letter, when `contents.drop_caps` drops
     /// the letter rather than the number.
     Initial,
@@ -85,6 +87,7 @@ impl StyleSelector {
             StyleSelector::ListItem(..) => "list",
             StyleSelector::BookTitle => "book",
             StyleSelector::Chapter => "chapter",
+            StyleSelector::ChapterCaption => "chapter_caption",
             StyleSelector::Initial => "initial",
             StyleSelector::Verse => "verse",
             StyleSelector::Note(_) => "note",
@@ -109,6 +112,7 @@ impl StyleSelector {
             StyleSelector::Note(NoteKind::Endnote) => Some("fe".to_owned()),
             StyleSelector::BookTitle
             | StyleSelector::Chapter
+            | StyleSelector::ChapterCaption
             | StyleSelector::Initial
             | StyleSelector::Verse
             | StyleSelector::Reference
@@ -157,6 +161,7 @@ impl StyleSelector {
             ("note", Some("fe")) => Some(StyleSelector::Note(NoteKind::Endnote)),
             ("book", None) => Some(StyleSelector::BookTitle),
             ("chapter", None) => Some(StyleSelector::Chapter),
+            ("chapter_caption", None) => Some(StyleSelector::ChapterCaption),
             ("initial", None) => Some(StyleSelector::Initial),
             ("verse", None) => Some(StyleSelector::Verse),
             ("reference", None) => Some(StyleSelector::Reference),
@@ -209,6 +214,7 @@ impl StyleSelector {
         out.extend([
             StyleSelector::BookTitle,
             StyleSelector::Chapter,
+            StyleSelector::ChapterCaption,
             StyleSelector::Initial,
             StyleSelector::Verse,
             StyleSelector::Note(NoteKind::Footnote),

@@ -20,7 +20,7 @@ use camino::Utf8PathBuf;
 /// Checked against the schema below rather than trusted: a class added to
 /// `StyleSelector` and forgotten here would leave a whole kind of element
 /// untested.
-const ONE_PER_CLASS: [&str; 16] = [
+const ONE_PER_CLASS: [&str; 17] = [
     "paragraph.p",
     "poetry.q1",
     "heading.s1",
@@ -28,6 +28,7 @@ const ONE_PER_CLASS: [&str; 16] = [
     "list.li1",
     "book",
     "chapter",
+    "chapter_caption",
     "initial",
     "verse",
     "note.f",
@@ -88,7 +89,9 @@ fn every_property() -> String {
      own_line = true\n\
      gap_before = \"2pt\"\n\
      gap_after = \"6pt\"\n\
-     first_line_indent = \"11pt\"\n"
+     first_line_indent = \"11pt\"\n\
+     uppercase = true\n\
+     letter_spacing = \"0.5pt\"\n"
         .to_owned()
 }
 

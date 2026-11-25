@@ -74,7 +74,7 @@ fn a_near_miss_property_is_suggested() {
 
 #[test]
 fn a_property_nothing_resembles_lists_the_ones_that_exist() {
-    let d = resolve("[chapter]\nletterspacing = \"2pt\"\n");
+    let d = resolve("[chapter]\nflourish = \"2pt\"\n");
     let help = only(&d).help.as_deref().unwrap();
     assert!(help.contains("the properties are:"), "{help}");
     assert!(help.contains("font_size"), "{help}");

@@ -196,12 +196,12 @@ struct EmitState {
     hidden: Hidden,
     /// A chapter has begun and its opening initial has not yet been marked.
     ///
-    /// Set by the chapter anchor and consumed by the first paragraph after
-    /// it. Not by a heading — a psalm's superscription carries the anchor and
-    /// is not where the psalm starts — and not by poetry, where each line is
-    /// its own paragraph and an initial spanning three of them would hang
-    /// over the next two with nothing making room for it. Those clear it, so
-    /// a paragraph halfway through the chapter does not get one.
+    /// Set by the chapter anchor and consumed by the first paragraph or line
+    /// of poetry after it. Not by a heading — a psalm's superscription
+    /// carries the anchor and is not where the psalm starts. A line of poetry
+    /// is its own paragraph, so an initial spanning three lines would hang
+    /// over the next two with nothing making room; the class carries the
+    /// hang into the lines that follow (see `poetry` there).
     awaiting_initial: bool,
     /// Whether the text being emitted is a paragraph's own — the only place an
     /// initial may be marked. A heading's text follows the chapter anchor too,
@@ -424,11 +424,13 @@ fn emit_block(w: &mut Writer<Cursor<Vec<u8>>>, block: &Block, state: &mut EmitSt
             let mut el = BytesStart::new("poetry");
             el.push_attribute(("style", style.marker()));
             el.push_attribute(("level", level.to_string().as_str()));
-            // Poetry does not take the initial, and does not leave it for the
-            // prose after the stanza either — see `awaiting_initial`.
-            state.awaiting_initial = false;
+            // The chapter's first line of poetry takes the initial, as its
+            // first paragraph would; the next does not.
             write(w, Event::Start(el), state);
+            let was = std::mem::replace(&mut state.in_paragraph, true);
             emit_inlines(w, content, state);
+            state.in_paragraph = was;
+            state.awaiting_initial = false;
             write(w, Event::End(BytesEnd::new("poetry")), state);
         }
         Block::Heading {

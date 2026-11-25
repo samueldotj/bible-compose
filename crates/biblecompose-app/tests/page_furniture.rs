@@ -55,11 +55,16 @@ struct Built {
 fn built(usfm: &str, settings: &str, styles: &str) -> Built {
     let guard = tempfile::tempdir().expect("temp dir");
     let root = Utf8PathBuf::from_path_buf(guard.path().to_path_buf()).expect("UTF-8 temp path");
-    std::fs::write(root.join("GEN.usfm").as_std_path(), usfm).expect("the book");
+    // The book the fixture says it is, alone, so page 1 is the body page
+    // being measured.
+    let code = usfm
+        .strip_prefix("\\id ")
+        .and_then(|rest| rest.get(..3))
+        .expect("a fixture opens with its \\id");
+    std::fs::write(root.join(format!("{code}.usfm")).as_std_path(), usfm).expect("the book");
     std::fs::write(
         root.join("biblecompose.toml").as_std_path(),
-        // Genesis alone, so page 1 is the body page being measured.
-        format!("schema_version = 1\n[books]\ninclude = [\"GEN\"]\n{settings}\n"),
+        format!("schema_version = 1\n[books]\ninclude = [\"{code}\"]\n{settings}\n"),
     )
     .expect("the settings");
     std::fs::write(root.join("styles.toml").as_std_path(), styles).expect("the styles");
@@ -459,6 +464,102 @@ fn the_book_title_spans_both_columns_with_its_ornament() {
     let plain = built(HEADED, "[page]\ncolumns = 2\n", "");
     assert!(rules_on(&plain, 1).is_empty(), "{:?}", rules_on(&plain, 1));
     assert!(!plain.lines.iter().any(|l| l.text().contains('◆')));
+}
+
+/// A psalm as BSB sets one: the chapter opens on a heading, the
+/// superscription carries verse 1, and the psalm is poetry.
+const PSALM: &str = concat!(
+    "\\id PSA\n\\h Psalms\n\\c 3\n\\s1 Deliver Me\n\\d \\v 1 A Psalm of David.\n",
+    "\\q1 O LORD, how my foes have increased!\n",
+    "\\q2 How many rise up against me!\n",
+    "\\q1 \\v 2 Many say of me,\n",
+    "\\q2 God will not deliver him.\n",
+    "\\q1 \\v 3 But You, O LORD, are a shield around me,\n",
+);
+
+/// **A chapter's opening, set as a collection of poems sets one**: a
+/// caption in capitals over the number in Roman numerals, both before the
+/// chapter's first heading rather than inside it, an ornament under them,
+/// and the first letter dropped across three lines of poetry — the lines
+/// after the first making room for it, and the fourth not.
+#[test]
+fn a_psalm_opens_with_its_caption_number_ornament_and_initial() {
+    if !have_backend() {
+        return;
+    }
+    const OPENING: &str = "[page]\ncolumns = 1\n[contents]\ndrop_caps = true\n\
+        drop_cap_of = \"first_letter\"\ndrop_cap_lines = 3\nchapter_ornament = \"rule\"\n\
+        [numbering]\nchapter_caption = \"Chapter\"\npsalm_caption = \"Psalm\"\n\
+        chapter_numerals = \"roman\"\n";
+    const LOOK: &str = "[chapter_caption]\nown_line = true\nuppercase = true\n";
+    let b = built(PSALM, OPENING, LOOK);
+    let find = |text: &str| {
+        b.lines
+            .iter()
+            .find(|l| l.page == 1 && l.text().replace(' ', "") == text)
+            .unwrap_or_else(|| {
+                panic!(
+                    "no line {text:?} in {:?}",
+                    b.lines.iter().map(|l| l.text()).collect::<Vec<_>>()
+                )
+            })
+    };
+    let caption = find("PSALM");
+    let number = find("III");
+    let heading = find("DeliverMe");
+    assert!(caption.y > number.y, "the caption is above the number");
+    assert!(number.y > heading.y, "and the number before the heading");
+    let ornament: Vec<&Rule> = rules_on(&b, 1);
+    assert_eq!(ornament.len(), 1, "one short rule: {ornament:?}");
+    assert!(ornament[0].y1 < number.y && ornament[0].y1 > heading.y);
+
+    // The poetry lines beside the initial stand right of it; the fourth
+    // line does not. Measured at each line's body-size text.
+    let left_of = |l: &Line| {
+        l.marks
+            .iter()
+            .filter(|m| (m.size - BODY).abs() < 0.05)
+            .map(|m| m.x)
+            .fold(f64::INFINITY, f64::min)
+    };
+    let second = left_of(find("Howmanyriseupagainstme!"));
+    let fourth = left_of(find("Godwillnotdeliverhim."));
+    assert!(
+        second > fourth + 10.0,
+        "the second line makes room for the initial: {second} vs {fourth}"
+    );
+}
+
+/// **A verse number in the margin takes its space with it**: the line a
+/// verse opens starts where the lines under it do.
+#[test]
+fn a_verse_numbered_in_the_margin_starts_flush() {
+    if !have_backend() {
+        return;
+    }
+    let b = built(
+        PSALM,
+        "[page]\ncolumns = 1\n[numbering]\nverse_number_placement = \"left_margin\"\n",
+        "[poetry.q1]\nindent = \"0pt\"\n[poetry.q2]\nindent = \"0pt\"\n",
+    );
+    let left_of = |text: &str| {
+        let line = b
+            .lines
+            .iter()
+            .find(|l| l.text().replace(' ', "").ends_with(text))
+            .unwrap_or_else(|| panic!("no line ending {text:?}"));
+        line.marks
+            .iter()
+            .filter(|m| (m.size - BODY).abs() < 0.05)
+            .map(|m| m.x)
+            .fold(f64::INFINITY, f64::min)
+    };
+    let opens = left_of("Manysayofme,");
+    let under = left_of("Godwillnotdeliverhim.");
+    assert!(
+        (opens - under).abs() < 0.5,
+        "the verse's line starts at {opens}, the line under it at {under}"
+    );
 }
 
 /// **A double frame is two boxes inside the trim**, on every page.

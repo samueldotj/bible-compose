@@ -15,7 +15,7 @@ use crate::provenance::Origin;
 use crate::settings::Settings;
 use crate::value::{
     Anchors, BookStart, CallerStyle, ChapterStart, CoverBinding, CoverBorder, CoverPaper, DropCap,
-    MissingAsset, NumberPlacement, PageFrame, QuoteHang, QuoteStart, ReferencePlacement,
+    MissingAsset, NumberPlacement, Numerals, PageFrame, QuoteHang, QuoteStart, ReferencePlacement,
     RestartNumbering, TitleOrnament, VerseStart,
 };
 
@@ -321,6 +321,21 @@ impl Settings {
             self.numbering.show_chapter_labels.to_string(),
         );
         push(
+            "numbering.chapter_caption",
+            Text,
+            self.numbering.chapter_caption.to_string(),
+        );
+        push(
+            "numbering.psalm_caption",
+            Text,
+            self.numbering.psalm_caption.to_string(),
+        );
+        push(
+            "numbering.chapter_numerals",
+            Choice(Numerals::SPELLINGS),
+            self.numbering.chapter_numerals.to_string(),
+        );
+        push(
             "numbering.chapter_number_placement",
             Choice(NumberPlacement::SPELLINGS),
             self.numbering.chapter_number_placement.to_string(),
@@ -375,6 +390,11 @@ impl Settings {
             "contents.title_ornament_color",
             Color,
             self.contents.title_ornament_color.to_string(),
+        );
+        push(
+            "contents.chapter_ornament",
+            Choice(TitleOrnament::SPELLINGS),
+            self.contents.chapter_ornament.to_string(),
         );
         push(
             "contents.book_starts",

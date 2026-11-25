@@ -232,6 +232,9 @@ pub struct Contents {
     /// And under a chapter's opening, when its number is on a line of its
     /// own; in the same ink.
     pub chapter_ornament: Sourced<TitleOrnament>,
+    /// The ink of the short rules in both ornaments; the diamond's is
+    /// `title_ornament_color`.
+    pub ornament_rule_color: Sourced<Color>,
     pub title_ornament_color: Sourced<Color>,
     /// Where each book, chapter and verse begins: on the run, a column, a
     /// page of a chosen side, a line of its own.
@@ -777,6 +780,7 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             chapter_ornament: r.value("contents.chapter_ornament", |n| {
                 value::choice(n, TitleOrnament::NAMES)
             }),
+            ornament_rule_color: r.value("contents.ornament_rule_color", value::color),
             drop_cap_lines: r.value("contents.drop_cap_lines", |n| {
                 value::integer_in(n, 2, 6).map(|l| l.map(|v| v as u8))
             }),

@@ -1,30 +1,35 @@
 # An illuminated edition: the "Illuminated" design.
 #
 # A gift Bible, set to be handsome before it is set to be dense. One
-# generous column of 11pt on the 6x9in trim, justified, with each chapter
-# opening on a framed number centred above a dropped initial — the
-# rubricated page of a lectern Bible, in a form a typesetter can make.
+# generous column of 11pt on the 6x9in trim, justified, inside a double
+# rule in the rubric's red, with each chapter opening on its number in
+# Roman capitals — "CHAPTER II" — over a gold-and-red ornament, and its
+# first letter dropped in a block of red.
 #
 # No cross-references: a reference letter is machinery, and this page is
 # made to be read aloud from. The footnotes stay, because they are the
 # translation's own words about its text.
+#
+# Measured off the design, whose 16.5px body is 11pt here: a pixel of it is
+# two-thirds of a point.
 
 [page]
 size = "6x9in"
 columns = 1
-margin_inner = "0.9in"
+margin_inner = "0.85in"
 margin_outer = "0.8in"
-margin_top = "0.85in"
+margin_top = "0.9in"
 margin_bottom = "0.9in"
 # The lectern Bible's double rule round every page, in the rubric's red.
 frame = "double"
-frame_width = "0.7pt"
-frame_inset = "0.3in"
+frame_width = "0.8pt"
+frame_inset = "0.28in"
 rule_color = "#9e2a1f"
 
 [typography]
+font_family = "EB Garamond"
 font_size = "11pt"
-leading = "15.5pt"
+leading = "16.7pt"
 justify = true
 
 [contents]
@@ -32,26 +37,33 @@ show_section_headings = true
 drop_caps = true
 drop_cap_of = "first_letter"
 drop_cap_lines = 3
+# Gold rules either side of a red diamond under each chapter's number.
+chapter_ornament = "diamond"
+title_ornament = "diamond"
+title_ornament_color = "#9e2a1f"
+ornament_rule_color = "#a9853c"
 
 [numbering]
 show_chapter_numbers = true
 show_verse_numbers = true
 hide_first_verse_number = true
 show_chapter_labels = true
+chapter_caption = "Chapter"
+psalm_caption = "Psalm"
+chapter_numerals = "roman"
 
 [notes]
 show_footnotes = true
 show_cross_references = false
 
-# The book centred over every page and the page number centred under it, as
-# the rubricated head and foot of a lectern Bible are.
+# The book's full title, spaced, at the head; the page number at the foot.
 [headers.left_page]
 header_left = ""
-header_center = "{Book}"
+header_center = "{AltBook}"
 header_right = ""
 footer_center = "{Page}"
 [headers.right_page]
 header_left = ""
-header_center = "{Book}"
+header_center = "{AltBook}"
 header_right = ""
 footer_center = "{Page}"

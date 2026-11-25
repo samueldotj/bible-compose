@@ -499,6 +499,7 @@ export const EN_LABELS: Readonly<Record<string, string>> = {
   "contents.title_ornament": "Under the book title",
   "contents.title_ornament_color": "Ornament colour",
   "contents.chapter_ornament": "Under a chapter's opening",
+  "contents.ornament_rule_color": "Ornament rule colour",
   "numbering.chapter_caption": "Chapter caption",
   "numbering.psalm_caption": "Psalm caption",
   "numbering.chapter_numerals": "Chapter numerals",

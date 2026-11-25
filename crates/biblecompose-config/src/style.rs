@@ -109,6 +109,8 @@ pub struct Style {
     pub uppercase: Option<bool>,
     /// Extra space between letters, as capitals set as a label want.
     pub letter_spacing: Option<Length>,
+    /// A block of colour behind the element: the illuminated initial's.
+    pub background: Option<Color>,
 }
 
 impl Style {
@@ -143,6 +145,7 @@ impl Style {
             first_line_indent: other.first_line_indent.or(self.first_line_indent),
             uppercase: other.uppercase.or(self.uppercase),
             letter_spacing: other.letter_spacing.or(self.letter_spacing),
+            background: other.background.or(self.background),
         }
     }
 }
@@ -155,7 +158,7 @@ pub const INHERITS: &str = "inherits";
 ///
 /// Used to read a style and to detect a misspelled property, so the two
 /// cannot disagree about what is legal.
-pub const PROPERTIES: [&str; 19] = [
+pub const PROPERTIES: [&str; 20] = [
     "font_family",
     "font_size",
     "weight",
@@ -175,6 +178,7 @@ pub const PROPERTIES: [&str; 19] = [
     "first_line_indent",
     "uppercase",
     "letter_spacing",
+    "background",
 ];
 
 /// One selector's entry in a sheet: what it says, what it inherits from, and
@@ -433,6 +437,10 @@ fn read_into(
     });
     read("letter_spacing", &mut |n| {
         style.letter_spacing = Some(value::signed_length(n)?.value);
+        Ok(())
+    });
+    read("background", &mut |n| {
+        style.background = Some(value::color(n)?.value);
         Ok(())
     });
 

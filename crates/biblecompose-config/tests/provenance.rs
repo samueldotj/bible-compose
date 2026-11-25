@@ -74,6 +74,7 @@ drop_cap_lines = 4
 title_ornament = \"diamond\"
 title_ornament_color = \"#8b0000\"
 chapter_ornament = \"rule\"
+ornament_rule_color = \"#a9853c\"
 book_starts = \"blank_right_page\"
 chapter_starts = \"next_column\"
 verse_starts = \"next_line\"

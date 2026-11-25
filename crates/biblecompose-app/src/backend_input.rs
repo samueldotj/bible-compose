@@ -167,6 +167,10 @@ pub fn class_options_with(
         s.contents.title_ornament_color.to_string(),
     );
     put("chapterornament", s.contents.chapter_ornament.to_string());
+    put(
+        "ornamentrulecolor",
+        s.contents.ornament_rule_color.to_string(),
+    );
     put("chaptercaption", quoted(&s.numbering.chapter_caption));
     put("psalmcaption", quoted(&s.numbering.psalm_caption));
     put("chapternumerals", s.numbering.chapter_numerals.to_string());
@@ -348,6 +352,7 @@ fn properties_of(
     );
     put("uppercase", s.uppercase.map(flag));
     put("letter_spacing", s.letter_spacing.map(|l| l.to_sile()));
+    put("background", s.background.map(|c| c.to_string()));
 
     debug_assert!(
         out.len() <= PROPERTIES.len(),

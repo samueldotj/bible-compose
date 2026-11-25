@@ -553,7 +553,11 @@ impl Pdf {
             let mut stack: Vec<&str> = Vec::new();
             let mut thickness = 1.0f64;
             let mut color = (0.0f64, 0.0f64, 0.0f64);
-            let mut saved: Vec<(f64, (f64, f64, f64))> = Vec::new();
+            // The fill colour, for a filled rectangle: a block of colour is
+            // read back as a rule as thick as the block is tall.
+            let mut fill = (0.0f64, 0.0f64, 0.0f64);
+            let mut rect: Option<(f64, f64, f64, f64)> = None;
+            let mut saved: Vec<(f64, Rgb, Rgb)> = Vec::new();
             let mut from: Option<(f64, f64)> = None;
             let mut to: Option<(f64, f64)> = None;
             for token in (Tokens { rest: &text }) {
@@ -563,11 +567,51 @@ impl Pdf {
                             thickness = width.parse().unwrap_or(thickness);
                         }
                     }
-                    "q" => saved.push((thickness, color)),
+                    "q" => saved.push((thickness, color, fill)),
                     "Q" => {
-                        if let Some((t, c)) = saved.pop() {
+                        if let Some((t, c, f)) = saved.pop() {
                             thickness = t;
                             color = c;
+                            fill = f;
+                        }
+                    }
+                    "rg" => {
+                        if let [r, g, b] = tail(&stack, 3) {
+                            if let (Ok(r), Ok(g), Ok(b)) = (r.parse(), g.parse(), b.parse()) {
+                                fill = (r, g, b);
+                            }
+                        }
+                    }
+                    "g" => {
+                        if let [g] = tail(&stack, 1) {
+                            if let Ok(g) = g.parse::<f64>() {
+                                fill = (g, g, g);
+                            }
+                        }
+                    }
+                    "re" => {
+                        if let [x, y, w, h] = tail(&stack, 4) {
+                            if let (Ok(x), Ok(y), Ok(w), Ok(h)) = (
+                                x.parse::<f64>(),
+                                y.parse::<f64>(),
+                                w.parse::<f64>(),
+                                h.parse::<f64>(),
+                            ) {
+                                rect = Some((x, y, w, h));
+                            }
+                        }
+                    }
+                    "f" | "f*" => {
+                        if let Some((x, y, w, h)) = rect.take() {
+                            out.push(Rule {
+                                page: index + 1,
+                                x1: x,
+                                y1: y + h / 2.0,
+                                x2: x + w,
+                                y2: y + h / 2.0,
+                                thickness: h.abs(),
+                                color: fill,
+                            });
                         }
                     }
                     "RG" => {
@@ -670,6 +714,9 @@ impl Pdf {
 
 /// One drawn rule: a stroked line from one end to the other, in the marks'
 /// frame.
+/// A colour as red, green and blue from 0 to 1.
+type Rgb = (f64, f64, f64);
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Rule {
     pub page: usize,

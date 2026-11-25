@@ -202,6 +202,7 @@ local OPTIONS = {
    { key = "titleornamentcolor", kind = "string", default = "#000000" },
    -- And under a chapter's opening, when its number has a line of its own.
    { key = "chapterornament", kind = "string", default = "none" },
+   { key = "ornamentrulecolor", kind = "string", default = "#000000" },
    -- A word with each chapter's number, the Psalms' own word, and whether
    -- the number is written in figures or Roman numerals.
    { key = "chaptercaption", kind = "string", default = "" },
@@ -2179,10 +2180,15 @@ end
 -- Drawn the way the `rules` package draws a rule — four of them, on the box's
 -- own `outputYourself` — because the framebox package is not in this
 -- runtime and a rule is all a border is.
-local function bordered (thickness, body)
+local function bordered (thickness, body, fill)
    local hbox = SILE.typesetter:makeHbox(body)
    local bw = SILE.types.measurement(thickness):tonumber()
    local pad = bw + 1.5
+   -- A filled box stands further off its letter, as a block of colour
+   -- round an initial does.
+   if fill then
+      pad = pad + (hbox.height:tonumber() + hbox.depth:tonumber()) * 0.14
+   end
    local width = hbox.width:tonumber() + 2 * pad
    local height = hbox.height:tonumber() + pad
    local depth = hbox.depth:tonumber() + pad
@@ -2195,10 +2201,20 @@ local function bordered (thickness, body)
          local x = typesetter.frame.state.cursorX
          local y = typesetter.frame.state.cursorY
          local top = y - height
-         SILE.outputter:drawRule(x, top, width, bw)
+         if fill then
+            local ok, ink = pcall(SILE.types.color, fill)
+            if ok and ink then
+               SILE.outputter:pushColor(ink)
+               SILE.outputter:drawRule(x, top, width, height + depth)
+               SILE.outputter:popColor()
+            end
+         end
+         if bw > 0 then
+            SILE.outputter:drawRule(x, top, width, bw)
          SILE.outputter:drawRule(x, y + depth - bw, width, bw)
          SILE.outputter:drawRule(x, top, bw, height + depth)
          SILE.outputter:drawRule(x + width - bw, top, bw, height + depth)
+         end
          typesetter.frame:advanceWritingDirection(pad)
          node.value:outputYourself(typesetter, line)
          typesetter.frame:advanceWritingDirection(pad)
@@ -2267,12 +2283,12 @@ function title_ornament (o, s, kind)
       end)
       local lift = (diamond.height:tonumber() - diamond.depth:tonumber()) / 2
       if kind == "rule" then
-         in_ink(s.color, function ()
+         in_ink(o.ornamentrulecolor, function ()
             ornament_rule(length * 2, thick, lift)
          end)
          return
       end
-      in_ink(s.color, function ()
+      in_ink(o.ornamentrulecolor, function ()
          ornament_rule(length, thick, lift)
       end)
       SILE.call("kern", { width = body * 0.6 .. "pt" })
@@ -2282,7 +2298,7 @@ function title_ornament (o, s, kind)
          end)
       end)
       SILE.call("kern", { width = body * 0.6 .. "pt" })
-      in_ink(s.color, function ()
+      in_ink(o.ornamentrulecolor, function ()
          ornament_rule(length, thick, lift)
       end)
    end)
@@ -3665,11 +3681,12 @@ function class:registerXmlCommands ()
          opts.color = s.color
       end
       local letter = content
-      if SU.boolean(s.border, false) then
+      local border = SU.boolean(s.border, false)
+      if border or s.background then
          letter = function ()
-            bordered(s.border_width or "0.5pt", function ()
+            bordered(border and (s.border_width or "0.5pt") or "0pt", function ()
                SILE.process(content)
-            end)
+            end, s.background)
          end
       end
       dropped(function ()

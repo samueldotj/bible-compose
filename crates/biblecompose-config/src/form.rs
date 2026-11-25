@@ -403,6 +403,11 @@ impl Settings {
             self.contents.chapter_ornament.to_string(),
         );
         push(
+            "contents.ornament_rule_color",
+            Color,
+            self.contents.ornament_rule_color.to_string(),
+        );
+        push(
             "contents.book_starts",
             Choice(BookStart::SPELLINGS),
             self.contents.book_starts.to_string(),

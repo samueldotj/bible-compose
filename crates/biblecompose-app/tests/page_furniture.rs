@@ -617,6 +617,33 @@ fn a_side_head_is_set_beside_its_paragraph() {
     );
 }
 
+/// **An initial on a block of colour**: the `initial` style's `background`
+/// is drawn behind the dropped letter, in its own ink, about the letter's
+/// size; without it there is no block.
+#[test]
+fn the_dropped_initial_can_sit_on_a_block_of_colour() {
+    if !have_backend() {
+        return;
+    }
+    const DROP: &str = "[page]\ncolumns = 1\n[contents]\ndrop_caps = true\n\
+                        drop_cap_of = \"first_letter\"\ndrop_cap_lines = 3\n";
+    let b = built(PARAGRAPHS, DROP, "[initial]\nbackground = \"#ff0000\"\n");
+    let blocks: Vec<&Rule> = rules_on(&b, 1)
+        .into_iter()
+        .filter(|r| r.color == (1.0, 0.0, 0.0))
+        .collect();
+    assert_eq!(blocks.len(), 1, "{:?}", rules_on(&b, 1));
+    // Three lines of 11.2pt, near enough, and wider than the letter, an I.
+    assert!(
+        blocks[0].thickness > 25.0 && blocks[0].length() > 10.0,
+        "{:?}",
+        blocks[0]
+    );
+
+    let plain = built(PARAGRAPHS, DROP, "");
+    assert!(rules_on(&plain, 1).is_empty(), "{:?}", rules_on(&plain, 1));
+}
+
 /// **A double frame is two boxes inside the trim**, on every page.
 #[test]
 fn a_double_frame_is_drawn_inside_the_trim() {

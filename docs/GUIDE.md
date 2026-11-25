@@ -423,7 +423,7 @@ title stays in its column.
 | `rule` | A short rule, centred |
 | `diamond` | Two short rules with a diamond between them, in `title_ornament_color` |
 
-The rules are drawn in the title's own colour.
+The rules are drawn in `contents.ornament_rule_color`, for both the title's ornament and the chapter's.
 
 ### Paragraphs and the dropped initial
 
@@ -431,6 +431,9 @@ The rules are drawn in the title's own colour.
 line of each paragraph, not the whole block, which is what `indent` does. A
 paragraph that opens a chapter or follows a heading is set flush however it
 is styled, as a book sets it, and a heading itself is never indented.
+
+The `initial` style's **`background`** sets the letter on a block of that
+colour, as an illuminated Bible's is.
 
 When `contents.drop_caps` drops the first letter, the **`initial`** style
 decides how it looks: its face, weight, colour, and a box round it with

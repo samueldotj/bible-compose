@@ -58,6 +58,7 @@ const COLOR: PropertyRow = { name: "color", label: "Colour", kind: "color" };
 const FIRST_LINE: PropertyRow = { name: "first_line_indent", label: "First-line indent", kind: "length" };
 const UPPERCASE: PropertyRow = { name: "uppercase", label: "Capitals", kind: "boolean" };
 const LETTER_SPACING: PropertyRow = { name: "letter_spacing", label: "Letter spacing", kind: "length" };
+const BACKGROUND: PropertyRow = { name: "background", label: "Background", kind: "color" };
 
 // The chapter number's own decisions: where it sits, whether it takes a
 // line, what surrounds it. Where a chapter *opens* is a Contents setting.
@@ -169,7 +170,7 @@ export const STYLE_GROUPS: readonly StyleGroup[] = [
       {
         selector: "initial",
         label: "Dropped initial",
-        properties: [FACE, WEIGHT, ITALIC, COLOR, BORDER, BORDER_WIDTH],
+        properties: [FACE, WEIGHT, ITALIC, COLOR, BACKGROUND, BORDER, BORDER_WIDTH],
       },
       { selector: "verse", label: "Verse number", properties: [SIZE, WEIGHT, RAISE, COLOR] },
     ],

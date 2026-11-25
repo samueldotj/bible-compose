@@ -39,6 +39,13 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   gutter rule and foot rule under a dark head rule, the design's leading,
   sizes and spacing, and a foot line.
 
+* **Illuminated matches its design.** It is set in EB Garamond with Cinzel
+  capitals. Each chapter opens as "CHAPTER II" in spaced Roman capitals,
+  over gold rules and a red diamond. The first letter is dropped in cream on
+  a block of red, inside the double red frame. A new `background` style
+  property draws the block. A new `contents.ornament_rule_color` setting
+  gives the ornaments' rules a colour of their own.
+
 * **Modern matches its design, with side-heads.** Its section headings sit
   in a column at the left of the text, beside the paragraph each opens, set
   by the new `page.side_column` and `page.side_gap` settings. Text is in

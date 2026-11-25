@@ -124,6 +124,7 @@ export const EN_HELP: Readonly<Record<string, string>> = {
   "contents.title_ornament":
     "Drawn under each book's title: nothing, a short rule, or two short rules with a diamond between them.",
   "contents.title_ornament_color": "The ink of the diamond under a book's title and a chapter's opening.",
+  "contents.ornament_rule_color": "The ink of the short rules in the title's and the chapter's ornaments.",
   "contents.chapter_ornament":
     "Drawn under a chapter's opening when its number stands on a line of its own: nothing, a short rule, or two short rules with a diamond.",
   "numbering.chapter_caption": "A word set with each chapter's number where it opens the chapter, such as Chapter. Empty for none.",
@@ -197,6 +198,7 @@ export const EN_HELP: Readonly<Record<string, string>> = {
   "property:color": "The ink, as a hex colour such as #c81414.",
   "property:border": "A rule round the element.",
   "property:border_width": "How thick that rule is.",
+  "property:background": "A block of colour behind the element, as an illuminated initial has.",
   "property:uppercase": "Set in capitals whatever the text's own case.",
   "property:letter_spacing": "Extra space between letters, as a line of capitals wants.",
   "property:first_line_indent": "The indent of a paragraph's first line. A paragraph that opens a chapter or follows a heading is set flush.",

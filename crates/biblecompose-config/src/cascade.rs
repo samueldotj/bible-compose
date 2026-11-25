@@ -263,6 +263,7 @@ fn take(into: &mut ResolvedStyle, from: &Style, origin: impl Fn(&'static str) ->
         first_line_indent = "first_line_indent",
         uppercase = "uppercase",
         letter_spacing = "letter_spacing",
+        background = "background",
     }
 }
 

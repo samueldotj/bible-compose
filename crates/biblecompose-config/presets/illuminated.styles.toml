@@ -1,66 +1,95 @@
-# The illuminated edition's look.
+# The illuminated edition's look: the "Illuminated" design.
 #
-# Rubrication: red for everything that orders the text — the chapter number,
-# the headings, the verse numbers, the head and the folio — and black for the
-# text itself. The chapter number stands on its own line, centred and framed
-# in a red rule, above the dropped initial the settings ask for.
-#
-# The page itself is framed in a double red rule; that is a page setting, in
-# `illuminated.toml`.
+# Rubrication, in EB Garamond with Cinzel's inscriptional capitals for
+# everything that orders the text: red for the head, the headings, the verse
+# numbers and the page number; the chapter's number in Roman capitals in the
+# text's own ink, with gold and red under it; and the first letter of each
+# chapter in cream on a block of red.
 
-[chapter]
-font_size = "18pt"
-weight = 600
+[book]
+font_family = "Cinzel"
+font_size = "20pt"
+weight = 400
+letter_spacing = "3.6pt"
 color = "#9e2a1f"
-own_line = true
-align = "center"
-border = true
-border_width = "0.8pt"
-space_above = "12pt"
 space_below = "10pt"
 
-[heading.s1]
-font_size = "9.4pt"
-weight = 600
-smallcaps = true
-align = "center"
-color = "#9e2a1f"
-space_above = "12pt"
-space_below = "4pt"
+# "CHAPTER II": caption and number on one line, in Cinzel, spaced.
+[chapter_caption]
+font_family = "Cinzel"
+font_size = "26.7pt"
+weight = 400
+uppercase = true
+letter_spacing = "4.8pt"
+gap_after = "8pt"
 
-[heading.s2]
-font_size = "9pt"
+[chapter]
+font_family = "Cinzel"
+font_size = "26.7pt"
+weight = 400
+letter_spacing = "4.8pt"
+own_line = true
+align = "center"
+space_above = "14pt"
+space_below = "12pt"
+
+[heading.s1]
+font_family = "Cinzel"
+font_size = "8.7pt"
 weight = 600
-smallcaps = true
+uppercase = true
+letter_spacing = "1.9pt"
 align = "center"
 color = "#9e2a1f"
 space_above = "8pt"
-space_below = "3pt"
+space_below = "6pt"
+
+[heading.s2]
+font_family = "Cinzel"
+font_size = "8.2pt"
+weight = 600
+uppercase = true
+letter_spacing = "1.6pt"
+align = "center"
+color = "#9e2a1f"
+space_above = "6pt"
+space_below = "4pt"
 
 [heading.d1]
 align = "center"
 italic = true
 
 [verse]
+font_family = "Cinzel"
+font_size = "6.6pt"
 weight = 700
 color = "#9e2a1f"
 
+# The head in spaced red capitals, the page number in red.
 [head]
-italic = false
-smallcaps = true
+font_family = "Cinzel"
+font_size = "8pt"
 weight = 600
+italic = false
+smallcaps = false
+uppercase = true
+letter_spacing = "2.6pt"
 color = "#9e2a1f"
 
 [folio]
+font_family = "Cinzel"
+font_size = "8.7pt"
+letter_spacing = "1pt"
 color = "#9e2a1f"
 
+# Paragraphs open flush and stand a little apart, as the design sets them.
 [paragraph.p]
-first_line_indent = "14pt"
+first_line_indent = "0pt"
+space_above = "6pt"
 
-# The dropped initial boxed in a red rule and set in red, as the rubricated
-# initial of a manuscript.
+# The initial in cream on a block of red.
 [initial]
+font_family = "Cinzel"
 weight = 700
-color = "#9e2a1f"
-border = true
-border_width = "0.8pt"
+color = "#f6efdf"
+background = "#9e2a1f"

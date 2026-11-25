@@ -252,7 +252,7 @@ fn every_property_the_schema_lists_can_actually_be_set() {
                 format!("{p} = true\n")
             }
             "align" => "align = \"end\"\n".to_owned(),
-            "color" => "color = \"#c81414\"\n".to_owned(),
+            "color" | "background" => format!("{p} = \"#c81414\"\n"),
             "font_family" => "font_family = \"Some Serif\"\n".to_owned(),
             _ => format!("{p} = \"3pt\"\n"),
         })

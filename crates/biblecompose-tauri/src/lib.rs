@@ -1907,6 +1907,7 @@ fn wire_style_properties(resolved: &biblecompose_config::ResolvedStyle) -> Vec<W
         ),
         ("uppercase", s.uppercase.map(|b| b.to_string())),
         ("letter_spacing", s.letter_spacing.map(|l| l.to_string())),
+        ("background", s.background.map(|c| c.to_string())),
     ];
 
     values

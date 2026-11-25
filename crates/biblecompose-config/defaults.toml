@@ -129,6 +129,8 @@ title_ornament_color = "#000000"
 # The same, under a chapter's opening when its number stands on a line of
 # its own, in the same colour.
 chapter_ornament = "none"
+# The ink of the short rules in both ornaments.
+ornament_rule_color = "#000000"
 # Where each thing begins. A book on the next page, as bound books do; a
 # chapter and a verse on the run, as prose. A book may start on a chosen
 # side — "left_page", "right_page" — or after a blank page —

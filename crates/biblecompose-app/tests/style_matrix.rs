@@ -91,7 +91,8 @@ fn every_property() -> String {
      gap_after = \"6pt\"\n\
      first_line_indent = \"11pt\"\n\
      uppercase = true\n\
-     letter_spacing = \"0.5pt\"\n"
+     letter_spacing = \"0.5pt\"\n\
+     background = \"#eeeeee\"\n"
         .to_owned()
 }
 

@@ -1,41 +1,90 @@
 # The journaling edition's look: the "Journaling margin" design.
 #
 # Warm and spare, so the reader's own hand is the loudest thing on the page.
-# One accent, an ochre, on the chapter figure, the verse numbers and the
-# section headings; the headings are small capitals in that colour rather
-# than bold black, so they mark the way without shouting over a margin note.
+# The text in Crimson Pro; everything that labels it — the head, the
+# chapter, the headings, the verse numbers, the foot — in Josefin Sans,
+# small, spaced and in capitals. One accent, an amber brown, on the labels
+# and the dropped letter.
+
+[book]
+font_size = "24pt"
+weight = 600
+align = "start"
+space_below = "8pt"
+
+# "CHAPTER 12" as a label, flush left, small and spaced.
+[chapter_caption]
+font_family = "Josefin Sans"
+font_size = "7.8pt"
+weight = 600
+uppercase = true
+letter_spacing = "1.25pt"
+color = "#8a5212"
+gap_after = "4pt"
 
 [chapter]
-font_size = "26pt"
-weight = 700
+font_family = "Josefin Sans"
+font_size = "7.8pt"
+weight = 600
+letter_spacing = "1.25pt"
 color = "#8a5212"
+own_line = true
+align = "start"
+space_above = "14pt"
+space_below = "8pt"
 
 [heading.s1]
-font_size = "8.4pt"
+font_family = "Josefin Sans"
+font_size = "7.2pt"
 weight = 600
-smallcaps = true
+uppercase = true
+letter_spacing = "1.15pt"
 color = "#8a5212"
-space_above = "9pt"
-space_below = "2pt"
+space_above = "9.6pt"
+space_below = "2.4pt"
 
 [heading.s2]
-font_size = "8.2pt"
+font_family = "Josefin Sans"
+font_size = "7pt"
 weight = 600
-smallcaps = true
+uppercase = true
+letter_spacing = "1pt"
 color = "#8a5212"
 space_above = "6pt"
 space_below = "2pt"
 
+[heading.r1]
+font_family = "Josefin Sans"
+font_size = "6.6pt"
+italic = false
+color = "#5f574b"
+
 [verse]
+font_family = "Josefin Sans"
+font_size = "6pt"
 weight = 600
 color = "#8a5212"
 
 [head]
+font_family = "Josefin Sans"
+font_size = "6.6pt"
+weight = 600
 italic = false
-smallcaps = true
+smallcaps = false
+uppercase = true
+letter_spacing = "1.2pt"
 
+[folio]
+font_family = "Josefin Sans"
+font_size = "6.6pt"
+uppercase = true
+letter_spacing = "0.8pt"
+color = "#5f574b"
+
+# Paragraphs flush, with a little air between them.
 [paragraph.p]
-first_line_indent = "11pt"
+first_line_indent = "0pt"
+space_above = "4pt"
 
 [initial]
 weight = 700

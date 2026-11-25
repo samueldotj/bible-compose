@@ -1,7 +1,7 @@
-# A journaling Bible.
+# A journaling Bible: the "Journaling margin" design.
 #
-# One column of text and a two-inch outer margin left empty for the reader's
-# own hand. The margin is the feature: it is on the outer edge of every page,
+# One column of text and a two-inch outer margin ruled for the reader's own
+# hand. The margin is the feature: it is on the outer edge of every page,
 # where a pen can reach it with the book open flat, and the text block moves
 # in to make room rather than the type getting smaller to keep its measure.
 #
@@ -9,26 +9,31 @@
 # the reader writes, and an apparatus competing with it is the wrong thing
 # on this page. Verse numbers stay, so a note in the margin has something to
 # be beside.
+#
+# Measured off the design, whose 16px body is 9.6pt here: a pixel of it is
+# 0.6pt.
 
 [page]
 size = "6.5x9in"
 columns = 1
-margin_inner = "0.7in"
+margin_inner = "0.6in"
 margin_outer = "2in"
 margin_top = "0.8in"
-margin_bottom = "0.9in"
-# The margin ruled for writing in, in a warm grey that a pen writes over.
+margin_bottom = "0.85in"
+# The margin ruled for writing in, 28px apart, in a warm grey a pen writes
+# over.
 note_lines = true
-note_line_spacing = "20pt"
-rule_color = "#c9bea9"
+note_line_spacing = "16.8pt"
+rule_color = "#d8cfbf"
 
 [typography]
-font_size = "9pt"
-leading = "12pt"
-justify = true
+font_family = "Crimson Pro"
+font_size = "9.6pt"
+leading = "14.9pt"
+justify = false
 
-# A dropped first letter opens each chapter; its number stands on the line
-# above it, in the accent `journaling.styles.toml` gives it.
+# A dropped first letter opens each chapter, under a small spaced label —
+# "CHAPTER 12" — in the accent `journaling.styles.toml` gives it.
 [contents]
 drop_caps = true
 drop_cap_of = "first_letter"
@@ -38,21 +43,26 @@ drop_cap_lines = 3
 show_chapter_numbers = true
 show_verse_numbers = true
 hide_first_verse_number = true
+chapter_caption = "Chapter"
+psalm_caption = "Psalm"
 
 [notes]
 show_footnotes = false
 show_cross_references = false
 
-# Page and range together at the outer corner, where the wide margin is, so
-# the head sits over the space the reader writes in and the inner side of the
-# page stays quiet.
+# The passage and the page together at the outer corner, over the margin the
+# reader writes in; the edition's name at the foot.
 [headers.left_page]
-header_left = "{Page}  ·  {Range}"
+header_left = "{Page}   |   {Book} {Range}"
 header_center = ""
 header_right = ""
+footer_left = ""
 footer_center = ""
+footer_right = "Journaling Edition"
 [headers.right_page]
 header_left = ""
 header_center = ""
-header_right = "{Range}  ·  {Page}"
+header_right = "{Book} {Range}   |   {Page}"
+footer_left = ""
 footer_center = ""
+footer_right = "Journaling Edition"

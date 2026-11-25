@@ -39,6 +39,12 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   gutter rule and foot rule under a dark head rule, the design's leading,
   sizes and spacing, and a foot line.
 
+* **Journaling Bible matches its design.** Text is in Crimson Pro, ragged
+  right. Its labels are small spaced capitals in Josefin Sans: the head, a
+  "CHAPTER 12" label over a dropped amber letter, the headings, the verse
+  numbers and an edition line at the foot. The note lines in the outer margin
+  are now closer together and in a warmer grey.
+
 * **Illuminated matches its design.** It is set in EB Garamond with Cinzel
   capitals. Each chapter opens as "CHAPTER II" in spaced Roman capitals,
   over gold rules and a red diamond. The first letter is dropped in cream on

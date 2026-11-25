@@ -134,6 +134,9 @@ local OPTIONS = {
    -- gap between it and the text. "0pt" is none.
    { key = "sidecolumn", kind = "string", default = "0pt" },
    { key = "sidegap", kind = "string", default = "14pt" },
+   -- A centre column this wide, between the two text columns, that the
+   -- notes are set in instead of the foot. "0pt" is none.
+   { key = "notecolumn", kind = "string", default = "0pt" },
    -- A frame round every page, `frameinset` in from the trim: none, single,
    -- double.
    { key = "frame", kind = "string", default = "none" },
@@ -304,6 +307,19 @@ end
 -- column A whose callers had moved to column B.
 local NOTES = "footnotes"
 
+--- The centre note column's width in points, when the page has one: a
+--- width set and two columns for it to stand between. Zero otherwise.
+local function note_column_width (o, columns)
+   if (columns or o.columns) < 2 then
+      return 0
+   end
+   local ok, m = pcall(SILE.types.measurement, o.notecolumn or "0pt")
+   return ok and m:tonumber() or 0
+end
+
+--- How far a note in the centre column stands in from its rules.
+local NOTE_COLUMN_INSET = 2
+
 --- The most of a page the note area may take, in points.
 --
 -- **Absolute, not `75%ph`.** A relative length survives the fitting test, which
@@ -371,11 +387,25 @@ function class:_frameset (inner, outer, columns)
          bottom = "top(footnotes)",
          next = "contentB",
       }
+      -- With a centre column the gutter holds it, the column gap standing
+      -- either side: the notes' frame is the gutter less those gaps, and
+      -- less a little more, so its text stands clear of the rules.
+      local column = note_column_width(o, columns)
       frames.gutter = {
          left = "right(contentA)",
          right = "left(contentB)",
-         width = o.gutter,
+         width = column > 0 and ("(" .. o.gutter .. ") + (" .. o.gutter .. ") + " .. column .. "pt")
+            or o.gutter,
       }
+      if column > 0 then
+         local inset = "(" .. o.gutter .. ") + " .. NOTE_COLUMN_INSET .. "pt"
+         frames.notecolumn = {
+            left = "left(gutter) + " .. inset,
+            right = "right(gutter) - (" .. inset .. ")",
+            top = o.margintop,
+            bottom = "top(footnotes)",
+         }
+      end
       frames.contentB = {
          left = "right(gutter)",
          width = "width(contentA)",
@@ -865,6 +895,8 @@ local slot_content, set_line, restart_notes, carry_reference
 local scratch, anchor, destination, o_anchors, start_at, margin_number
 -- The three an "auto" start measures with, for the same reason.
 local opening_text, lines_left, lines_needed
+-- And the style lookup, which the verse command reads its indent from.
+local style
 
 --- End the document — and, when it ends in front matter, square the front
 -- matter off first.
@@ -945,6 +977,7 @@ function class:endPage ()
          o[side .. "footerleft"], o[side .. "footercenter"], o[side .. "footerright"],
       }, "folio")
       page_rules(o, side == "recto")
+      self:_set_column_notes()
    end
    -- The frame goes round every page that is not left blank, front matter
    -- included: a title page inside the book's frame is the same book.
@@ -987,6 +1020,12 @@ function class:registerCommands ()
       if self._bcopts.versestarts == "next_line" and (s.verses_in_paragraph or 0) > 0 then
          SILE.call("hfill")
          SILE.call("penalty", { penalty = -10000 })
+         -- Indented, when the verse style says so: a verse set as a
+         -- paragraph of its own, as the old reference Bibles set every one.
+         local indent = style("verse").first_line_indent
+         if indent then
+            SILE.call("kern", { width = indent })
+         end
       end
       s.verses_in_paragraph = (s.verses_in_paragraph or 0) + 1
       destination(anchor(s.code, s.chapter, options.start or options.n), "verse")
@@ -1006,6 +1045,7 @@ function class:registerCommands ()
       -- book's own opening decides that one (see `book`).
       local s0 = scratch()
       s0.chapters_in_book = (s0.chapters_in_book or 0) + 1
+      s0.after_verse_number = nil
       if s0.chapters_in_book > 1 then
          start_at(self._bcopts.chapterstarts)
       end
@@ -1178,7 +1218,7 @@ end
 --
 -- Empty is a real answer and not a missing one: the built-in sheet leaves most
 -- paragraph markers unstyled, meaning "renders as body text".
-local function style (selector)
+function style (selector)
    return sheet()[selector] or {}
 end
 
@@ -1617,10 +1657,21 @@ function page_rules (o, recto)
    local ok = gutter ~= nil
    if gutter_rule > 0 and ok and gutter and (o.columns or 1) >= 2 then
       local a = SILE.getFrame("contentA")
-      local x = (gutter:left():tonumber() + gutter:right():tonumber()) / 2 - gutter_rule / 2
       local y1, y2 = a:top():tonumber(), a:bottom():tonumber()
+      -- Down the middle of the gutter; or, with a centre column there, one
+      -- down each side of it.
+      local xs = { (gutter:left():tonumber() + gutter:right():tonumber()) / 2 }
+      local notes = SILE.frames.notecolumn
+      if notes and note_column_width(o) > 0 then
+         xs = {
+            notes:left():tonumber() - NOTE_COLUMN_INSET,
+            notes:right():tonumber() + NOTE_COLUMN_INSET,
+         }
+      end
       in_rule_ink(o, function ()
-         SILE.outputter:drawRule(x, y1, gutter_rule, y2 - y1)
+         for _, x in ipairs(xs) do
+            SILE.outputter:drawRule(x - gutter_rule / 2, y1, gutter_rule, y2 - y1)
+         end
       end, o.columnrulecolor)
    end
 
@@ -2585,6 +2636,12 @@ local function across_the_columns (body, below)
    end
    a:constrain("top", top + used .. "pt")
    b:constrain("top", top + used .. "pt")
+   -- And the centre note column with them, so the page's notes start under
+   -- the title rather than behind it.
+   local notes = SILE.frames.notecolumn
+   if notes then
+      notes:constrain("top", top + used .. "pt")
+   end
    SILE.typesetter:initFrame(a)
 end
 
@@ -2876,7 +2933,9 @@ local function insert_note (selector, mark, origin, body)
       return
    end
 
-   local frame = SILE.getFrame(options.insertInto.frame)
+   local class_ = SILE.documentState.documentClass
+   local in_column = note_column_width(class_._bcopts) > 0 and SILE.frames.notecolumn ~= nil
+   local frame = in_column and SILE.getFrame("notecolumn") or SILE.getFrame(options.insertInto.frame)
    local old_target = SILE.typesetter.getTargetLength
    local old_frame = SILE.typesetter.frame
    -- The note is measured, not fitted: how much of it lands on this page is the
@@ -2906,36 +2965,91 @@ local function insert_note (selector, mark, origin, body)
    local s = scratch()
    local outer_note = s.in_note
    s.in_note = true
+   -- The note's paragraph is not the text's: the count of verses in the
+   -- paragraph that called it, which a verse on a line of its own reads,
+   -- goes on after the note as it was before it.
+   local verses_before = s.verses_in_paragraph
 
    local material
    -- The font is applied outside the vbox, because a baselineskip expressed as
    -- a ratio has to be resolved against the size the note is actually set in.
+   local function the_mark ()
+      if mark ~= "" then
+         SILE.typesetter:typeset(mark)
+         SILE.call("kern", { width = "0.4em" })
+      end
+   end
+   -- `\fr` and `\xo`: the reference the note is about. USFM separates it
+   -- from the note's text precisely so that it can be set apart, and an
+   -- edition that prints notes keyed by symbol relies on it to say which
+   -- verse a note belongs to.
+   local function the_origin ()
+      if origin and origin ~= "" then
+         styled("character." .. (selector == "reference" and "xo" or "fr"), function ()
+            SILE.typesetter:typeset(origin)
+         end)
+         SILE.call("kern", { width = "0.4em" })
+      end
+   end
    styled(selector, function ()
+      if in_column then
+         -- On a leading of their own, close, as a centre column's notes
+         -- are set: the text's would space a 6pt note on 11pt lines.
+         local size = SILE.settings:get("font.size")
+         SILE.settings:set("document.baselineskip", SILE.types.node.vglue((size * 1.35) .. "pt"))
+      end
       material = SILE.call("vbox", {}, function ()
          SILE.call("noindent")
-         if mark ~= "" then
-            SILE.typesetter:typeset(mark)
-            SILE.call("kern", { width = "0.4em" })
+         local function content ()
+            -- In the centre column the verse leads, as a centre column keys
+            -- its notes: the reference, then the mark, then the note.
+            if in_column then
+               the_origin()
+               the_mark()
+            else
+               the_mark()
+               the_origin()
+            end
+            body()
          end
-         -- `\fr` and `\xo`: the reference the note is about. USFM separates it
-         -- from the note's text precisely so that it can be set apart, and an
-         -- edition that prints notes keyed by symbol relies on it to say which
-         -- verse a note belongs to.
-         if origin and origin ~= "" then
-            styled("character." .. (selector == "reference" and "xo" or "fr"), function ()
-               SILE.typesetter:typeset(origin)
-            end)
-            SILE.call("kern", { width = "0.4em" })
+         local align = in_column and alignment(style(selector))
+         if align then
+            SILE.call(align, {}, content)
+         else
+            content()
          end
-         body()
       end)
    end)
 
    s.in_note = outer_note
+   s.verses_in_paragraph = verses_before
    SILE.settings:popState()
    SILE.typesetter.getTargetLength = old_target
    SILE.typesetter.frame = old_frame
-   SILE.documentState.documentClass:insert(NOTES, material)
+   if not in_column then
+      class_:insert(NOTES, material)
+      return
+   end
+   -- In the centre column a note goes to whichever page its caller is set
+   -- on, which is not known until that page is output: a mark of no width
+   -- beside the caller hands it to the page as the line goes out, and the
+   -- page sets what it was handed when it ends.
+   local note = {
+      lines = material and material.nodes or {},
+      gap = style(selector).space_above,
+   }
+   SILE.typesetter:pushHbox({
+      width = SILE.types.length(0),
+      height = SILE.types.length(0),
+      depth = SILE.types.length(0),
+      outputYourself = function ()
+         if not note.placed then
+            note.placed = true
+            class_._column_notes = class_._column_notes or {}
+            table.insert(class_._column_notes, note)
+         end
+      end,
+   })
 end
 
 --- Set the references a paragraph gathered, under that paragraph.
@@ -3076,6 +3190,64 @@ local function output_stack (typesetter, nodes, x, top)
       elseif node.is_vglue and started then
          f:advancePageDirection(num(node.height))
       end
+   end
+end
+
+--- Set this page's notes down the centre column, from its head.
+--
+-- The notes are the ones whose callers went out on this page, in the
+-- order they went out: the first column's, then the second's. What does
+-- not fit — a page of short verses thick with notes — goes on to the head
+-- of the next page's column, a line at a time, ahead of that page's own.
+function class:_set_column_notes ()
+   local frame = SILE.frames.notecolumn
+   local waiting = self._column_carry or {}
+   for _, note in ipairs(self._column_notes or {}) do
+      waiting[#waiting + 1] = note
+   end
+   self._column_notes, self._column_carry = nil, nil
+   if not frame or #waiting == 0 then
+      return
+   end
+   local t = SILE.typesetter
+   local saved = t.frame
+   t.frame = frame
+   local x, top, bottom = frame:left():tonumber(), frame:top():tonumber(), frame:bottom():tonumber()
+   local y = top
+   local carry = {}
+   for _, note in ipairs(waiting) do
+      if #carry > 0 then
+         carry[#carry + 1] = note
+      else
+         if y > top then
+            y = y + (note.gap and SILE.types.measurement(note.gap):tonumber() or 3)
+         end
+         local started = false
+         for j, node in ipairs(note.lines) do
+            if a_line(node) then
+               local h = num(node.height) + num(node.depth)
+               if y + h > bottom + 0.5 then
+                  local rest = {}
+                  for k = j, #note.lines do
+                     rest[#rest + 1] = note.lines[k]
+                  end
+                  carry[1] = { lines = rest, gap = note.gap }
+                  break
+               end
+               frame.state.cursorX = SILE.types.measurement(x)
+               frame.state.cursorY = SILE.types.measurement(y)
+               node:outputYourself(t, node)
+               y = y + h
+               started = true
+            elseif node.is_vglue and started then
+               y = y + num(node.height)
+            end
+         end
+      end
+   end
+   t.frame = saved
+   if #carry > 0 then
+      self._column_carry = carry
    end
 end
 
@@ -4070,8 +4242,35 @@ function class:registerXmlCommands ()
          -- left in the paragraph after the number they would open it, and a
          -- heading that follows would start its centring after them.
          local anchors = take_anchors()
+         -- A band: the opening between two rules the column wide, as a
+         -- reference Bible sets it. The upper one is left out at the head of
+         -- a column, where the rule under the running head already stands.
+         local band = self._bcopts.chapterornament == "band"
+         local function band_rule ()
+            local thick = thickness(s.border_width or "0.5pt")
+            local o = self._bcopts
+            SILE.call("par")
+            push_block({
+               height = SILE.types.length(thick),
+               depth = SILE.types.length(0),
+               outputYourself = function (_, typesetter, _)
+                  local f = typesetter.frame
+                  local y = f.state.cursorY:tonumber()
+                  if y > f:top():tonumber() + 1 then
+                     in_rule_ink(o, function ()
+                        SILE.outputter:drawRule(f:left():tonumber(), y, f:width():tonumber(), thick)
+                     end, o.ornamentrulecolor)
+                  end
+                  f:advancePageDirection(thick)
+               end,
+            })
+         end
          do
             skip(s.space_above)
+            if band then
+               band_rule()
+               skip("4pt")
+            end
             SILE.call("noindent")
             -- The caption on a line above the number when its style gives
             -- it one; otherwise before the number on the number's line.
@@ -4101,6 +4300,10 @@ function class:registerXmlCommands ()
                number()
                SILE.call("par")
             end)
+            if band then
+               skip("3pt")
+               band_rule()
+            end
             title_ornament(self._bcopts, s, self._bcopts.chapterornament)
             skip(s.space_below)
             -- The text that follows opens a chapter, not a paragraph in the
@@ -4174,6 +4377,26 @@ function class:registerXmlCommands ()
       -- is, the letter stays: two initials at one corner would be the fight
       -- the number moved off the line to avoid.
       if not self._bcopts.dropcaps or self._bcopts.dropcapof == "chapter_number" then
+         -- The space before the letter was left out for the drop, and with
+         -- no drop it is wanted when a verse number stands before it: set
+         -- without it, verse 1 reads "1Now".
+         -- Adjacent when nothing with width has come between: a colour
+         -- switch for red letters is a node, and has none.
+         local after = scratch().after_verse_number
+         local nodes = SILE.typesetter.state.nodes
+         local adjacent = after ~= nil and after <= #nodes
+         for k = (after or 0) + 1, #nodes do
+            local w = nodes[k].width
+            if w and (type(w) == "number" and w or w:tonumber()) ~= 0 then
+               adjacent = false
+            end
+         end
+         if adjacent then
+            -- Not a place to break: the number would be left at the end of
+            -- a line, apart from the verse it numbers.
+            SILE.call("penalty", { penalty = 10000 })
+            SILE.typesetter:typeset(" ")
+         end
          SILE.process(content)
          return
       end
@@ -4261,6 +4484,9 @@ function class:registerXmlCommands ()
          end)
       end)
       SILE.call("kern", { width = "0.13em" })
+      -- Where the number ends, so a chapter's first letter after it knows
+      -- to put back the space before it (see `initial`).
+      scratch().after_verse_number = #SILE.typesetter.state.nodes
    end)
 
    self:registerCommand("char", function (options, content)

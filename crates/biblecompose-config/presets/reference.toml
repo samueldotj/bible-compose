@@ -1,13 +1,15 @@
-# A reference edition.
+# A reference edition, notes at the foot.
 #
 # Made for finding a passage rather than for reading one through: two columns
-# of small type on a hand-sized page, every verse numbered, and the running
-# head giving the first and last reference on the page — the two things a
-# reader flipping to Isaiah 53 is looking for. The cross-references stay, at
-# the foot, because they are what a reference edition is for.
+# of small type on a hand-sized page, every verse numbered and on a line of
+# its own, and the running head giving the first and last reference on the
+# page — the two things a reader flipping to Isaiah 53 is looking for. The
+# cross-references and footnotes stay, at the foot, because they are what a
+# reference edition is for. Its sibling, "Reference, centre column", sets
+# them down the middle of the page instead.
 #
-# Smaller than the standard page and denser on it: 8.5pt Libre Caslon, the low
-# end of what a printed Bible is set in, on the design's open leading.
+# Measured off the "Reference Bible" design, whose 14px body is 8.5pt here: a
+# pixel of it is about 0.6pt.
 
 [page]
 size = "5.5x8.5in"
@@ -32,18 +34,20 @@ font_size = "8.5pt"
 leading = "12.4pt"
 justify = true
 
-# The chapter's figure dropped two lines, large and light, as the design's
-# opening sets it.
+# Each chapter opens in a band: its figure, large, between two rules, the
+# section heading under it in the italic of the design's chapter summary.
+# Every verse starts a line, indented, as the old reference Bibles set them.
 [contents]
 show_section_headings = true
-drop_caps = true
-drop_cap_of = "chapter_number"
-drop_cap_lines = 2
+drop_caps = false
+chapter_ornament = "band"
+ornament_rule_color = "#1b1a17"
+verse_starts = "next_line"
 
 [numbering]
 show_chapter_numbers = true
 show_verse_numbers = true
-hide_first_verse_number = true
+hide_first_verse_number = false
 
 [notes]
 show_footnotes = true

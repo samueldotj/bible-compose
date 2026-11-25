@@ -4,21 +4,30 @@
 # in red. A red-letter edition is a reference convention as much as a
 # devotional one — it lets a reader find a saying at a glance. Everything
 # else is told apart by weight: bold verse numbers set on the line, a large
-# light chapter figure, and the head in Libre Franklin's spaced capitals.
+# light chapter figure in its band, and the head in Libre Franklin's spaced
+# capitals. A pixel of the design is about 0.6pt.
 
 [character.wj]
 color = "#a12a22"
 
+# The figure on a line of its own at the band's left, as large as the
+# design's mid-column opening (56px), between rules of its 1px.
 [chapter]
-font_size = "24pt"
+font_size = "32pt"
 weight = 400
-gap_after = "6pt"
+own_line = true
+align = "start"
+border_width = "0.6pt"
+space_above = "6pt"
+space_below = "4pt"
 
-# Verse numbers bold, at the text's height, a little smaller than it.
+# Verse numbers bold, at the text's height, a little smaller than it; each
+# verse's line indented as the design's paragraphs are (12px).
 [verse]
 font_size = "7pt"
 weight = 700
 raise = "0pt"
+first_line_indent = "7.3pt"
 
 # The cross-reference letters small, italic and grey.
 [reference]
@@ -26,13 +35,25 @@ font_size = "6.5pt"
 italic = true
 color = "#55504a"
 
+# The note's verse, bold, as the design keys its notes.
+[character.fr]
+weight = 700
+[character.xo]
+weight = 700
+italic = false
+color = "#1b1a17"
+
+# The section heading in the place and the italic of the design's chapter
+# summary: left, in the text's weight, a shade lighter than the text.
 [heading.s1]
-font_size = "8.6pt"
-weight = 600
-smallcaps = true
-align = "center"
+font_size = "7.9pt"
+weight = 400
+italic = true
+smallcaps = false
+align = "start"
+color = "#3b3833"
 space_above = "6pt"
-space_below = "2pt"
+space_below = "3pt"
 
 [head]
 font_family = "Libre Franklin"

@@ -468,6 +468,7 @@ export const EN_LABELS: Readonly<Record<string, string>> = {
   "page.rule_color": "Frame colour",
   "page.side_column": "Side-head column",
   "page.side_gap": "Side-head gap",
+  "page.note_column": "Centre note column",
   "page.frame": "Page frame",
   "page.frame_width": "Frame thickness",
   "page.frame_inset": "Frame inset",

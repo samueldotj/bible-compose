@@ -84,11 +84,25 @@ impl Built {
             .expect("a mark is on a line")
     }
 
-    /// Where body text starts on the line a chapter's number is on, or the
-    /// line after when the number has one to itself.
+    /// Where the text starts after a chapter's number, on its line or the
+    /// line after when the number has one to itself. On the number's line
+    /// that is the first mark after it — verse 1's number when it is
+    /// numbered, which is raised and so read as a line of its own — since
+    /// the space after that number stretches with the line and the
+    /// chapter number's own gap does not.
     fn text_after(&self, n: &str) -> f64 {
         let number = self.number(n);
-        let same = self.line_of(number);
+        let on_line = self
+            .lines
+            .iter()
+            .filter(|l| l.page == number.page && (l.y - number.y).abs() < 8.0)
+            .flat_map(|l| &l.marks)
+            .filter(|m| !std::ptr::eq(*m, number) && m.x > number.x)
+            .map(|m| m.x)
+            .fold(f64::INFINITY, f64::min);
+        if on_line.is_finite() {
+            return on_line;
+        }
         let body = |l: &Line| {
             l.marks
                 .iter()
@@ -96,10 +110,6 @@ impl Built {
                 .map(|m| m.x)
                 .fold(f64::INFINITY, f64::min)
         };
-        let on_line = body(same);
-        if on_line.is_finite() {
-            return on_line;
-        }
         self.lines
             .iter()
             .filter(|l| l.page == number.page && l.y < number.y)

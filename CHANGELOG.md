@@ -4,6 +4,28 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## Unreleased
 
+* **Two Reference templates.** "Reference" keeps its notes at the foot of
+  the page. The new "Reference, centre column" sets them in a narrow column
+  between the two text columns, beside the verses that call them, as the
+  Reference Bible design draws it. Both now match the design more closely:
+  each verse starts its own line, indented; each chapter opens in a band
+  between two rules; the section heading is set in the italic of the
+  design's chapter summary; and a note's verse is in bold.
+
+* **A centre note column.** `page.note_column` sets the notes of a
+  two-column page in a column of that width between the text columns,
+  instead of at the foot.
+
+* **A chapter band.** `contents.chapter_ornament = "band"` sets a chapter's
+  opening between two rules the column wide.
+
+* **An indented verse line.** With verses starting on a line of their own,
+  the `verse` style's `first_line_indent` indents each verse's first line.
+
+* **Verse 1's number no longer touches the text.** When a chapter opened
+  with its verse 1 numbered and no drop cap, the space after the number was
+  lost, and the line read "1Now".
+
 * **The Reader's edition is the text alone.** It now hides study notes,
   word studies and other sidebars, section headings, introductions and
   outlines, as well as the footnotes and cross-references it already hid,

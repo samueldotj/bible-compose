@@ -259,6 +259,11 @@ impl Settings {
         );
         push("page.side_gap", Length, self.page.side_gap.to_string());
         push(
+            "page.note_column",
+            Length,
+            self.page.note_column.to_string(),
+        );
+        push(
             "page.frame",
             Choice(PageFrame::SPELLINGS),
             self.page.frame.to_string(),

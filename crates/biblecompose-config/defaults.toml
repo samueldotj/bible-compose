@@ -78,6 +78,13 @@ rule_color = "#000000"
 side_column = "0pt"
 side_gap = "14pt"
 
+# A centre column: this wide, down the middle of a two-column page between
+# the text columns, with the notes set in it — footnotes, and the
+# cross-references that would go to the note area — rather than at the foot.
+# Each page's notes are the ones called on it, from the column's head. The
+# column gap stands either side of it. Zero is none.
+note_column = "0pt"
+
 # A rule round every page, `frame_inset` in from the trim: "none", "single",
 # or "double" — two rules of `frame_width` each, a little apart.
 frame = "none"
@@ -136,7 +143,9 @@ drop_cap_lines = 3
 title_ornament = "none"
 title_ornament_color = "#000000"
 # The same, under a chapter's opening when its number stands on a line of
-# its own, in the same colour.
+# its own, in the same colour. A chapter also takes "band": its opening
+# between two rules the column wide, as a reference Bible sets it, each as
+# thick as the `chapter` style's `border_width`.
 chapter_ornament = "none"
 # The ink of the short rules in both ornaments.
 ornament_rule_color = "#000000"

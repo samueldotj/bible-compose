@@ -573,6 +573,9 @@ spelled! {
         Rule => "rule",
         /// Two short rules with a diamond between them.
         Diamond => "diamond",
+        /// A chapter's opening between two rules the column wide, as a
+        /// reference Bible sets it. Under a book's title it draws nothing.
+        Band => "band",
     }
 }
 

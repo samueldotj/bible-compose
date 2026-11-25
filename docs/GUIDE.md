@@ -380,6 +380,35 @@ line of the paragraph they open. The text moves right by the column plus
 `page.side_gap`; the footnotes still run the full width. The Modern template
 uses this.
 
+### A centre note column
+
+With **`page.note_column`** set wider than zero on a two-column page, the
+notes leave the foot. They are set in a column of that width down the middle
+of the page, between the two text columns, with `page.column_gap` either
+side of it. Footnotes go there, and so do cross-references whose placement
+is `note_area`. Each page's column holds the notes called on that page, in
+order, from the column's head; notes that do not fit go on at the head of
+the next page's column. With a `page.column_rule`, the column is ruled off
+down both sides. A note in the column leads with its verse, then its mark,
+and is aligned as its style's `align` says. The "Reference, centre column"
+template uses this.
+
+### A chapter band
+
+**`contents.chapter_ornament = "band"`** sets a chapter's opening between
+two rules the column wide, as a reference Bible does, when the chapter
+number has a line of its own. Each rule is as thick as the `chapter` style's
+`border_width`, in `ornament_rule_color`. The upper rule is left out at the
+head of a column, where the running head's rule already stands. Both
+Reference templates use this.
+
+### A verse on a line of its own
+
+With **`contents.verse_starts = "next_line"`**, each verse starts a new
+line. The `verse` style's **`first_line_indent`** indents that line, so
+each verse is set as a paragraph of its own, as older reference Bibles set
+them.
+
 ### Capitals and letter spacing
 
 Any style can set its text in capitals with **`uppercase`**, whatever case

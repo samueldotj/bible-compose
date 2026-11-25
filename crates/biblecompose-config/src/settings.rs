@@ -145,6 +145,10 @@ pub struct Page {
     /// headings are set in the text.
     pub side_column: Sourced<Length>,
     pub side_gap: Sourced<Length>,
+    /// A column this wide down the middle of a two-column page, between the
+    /// text columns, that the notes are set in rather than at the foot: a
+    /// centre-column reference Bible. Zero is none.
+    pub note_column: Sourced<Length>,
     /// A rule round the whole page, inside the trim.
     pub frame: Sourced<PageFrame>,
     /// How thick each of the frame's rules is.
@@ -748,6 +752,7 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             rule_color: r.value("page.rule_color", value::color),
             side_column: r.value("page.side_column", value::length_or_zero),
             side_gap: r.value("page.side_gap", value::length_or_zero),
+            note_column: r.value("page.note_column", value::length_or_zero),
             frame: r.value("page.frame", |n| value::choice(n, PageFrame::NAMES)),
             frame_width: r.value("page.frame_width", value::rule_weight),
             frame_inset: r.value("page.frame_inset", value::length_or_zero),

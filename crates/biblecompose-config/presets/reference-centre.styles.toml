@@ -1,0 +1,83 @@
+# The centre-column reference edition's look: the "Reference Bible" design.
+#
+# The sibling edition's look at this page's scale — a pixel of the design is
+# about 0.54pt — with the notes set as the design's centre column sets them:
+# small, centred, each keyed by its verse in bold.
+
+[character.wj]
+color = "#a12a22"
+
+# The figure on a line of its own at the band's left, the design's
+# mid-column 56px, between rules of its 1px.
+[chapter]
+font_size = "30pt"
+weight = 400
+own_line = true
+align = "start"
+border_width = "0.55pt"
+space_above = "6pt"
+space_below = "4pt"
+
+# Verse numbers bold, at the text's height, a little smaller than it; each
+# verse's line indented as the design's paragraphs are (12px).
+[verse]
+font_size = "6.2pt"
+weight = 700
+raise = "0pt"
+first_line_indent = "6.5pt"
+
+# The notes in the centre column: the design's 10.5px, centred, on a close
+# leading, 6px apart.
+[note.f]
+font_size = "5.7pt"
+align = "center"
+space_above = "3.2pt"
+color = "#1b1a17"
+
+[reference]
+font_size = "5.7pt"
+italic = false
+align = "center"
+space_above = "3.2pt"
+color = "#55504a"
+
+# The verse a note belongs to, bold, ahead of it.
+[character.fr]
+weight = 700
+color = "#1b1a17"
+[character.xo]
+weight = 700
+italic = false
+color = "#1b1a17"
+
+# The section heading in the place and the italic of the design's chapter
+# summary: left, in the text's weight, a shade lighter than the text.
+[heading.s1]
+font_size = "7.1pt"
+weight = 400
+italic = true
+smallcaps = false
+align = "start"
+color = "#3b3833"
+space_above = "6pt"
+space_below = "3pt"
+
+[head]
+font_family = "Libre Franklin"
+font_size = "6pt"
+weight = 600
+italic = false
+smallcaps = false
+uppercase = true
+letter_spacing = "0.72pt"
+
+[folio]
+font_family = "Libre Franklin"
+font_size = "5.7pt"
+weight = 500
+uppercase = true
+letter_spacing = "0.57pt"
+color = "#55504a"
+
+[paragraph.p]
+first_line_indent = "6.5pt"

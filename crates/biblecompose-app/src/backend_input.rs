@@ -90,6 +90,7 @@ pub fn class_options_with(
     put("rulecolor", s.page.rule_color.to_string());
     put("sidecolumn", s.page.side_column.to_sile());
     put("sidegap", s.page.side_gap.to_sile());
+    put("notecolumn", s.page.note_column.to_sile());
     put("frame", s.page.frame.to_string());
     put("framewidth", s.page.frame_width.to_sile());
     put("frameinset", s.page.frame_inset.to_sile());

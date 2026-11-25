@@ -896,3 +896,57 @@ fn the_dropped_initial_can_be_boxed() {
     );
     let _ = &b.raw;
 }
+
+/// **A centre column**: with `page.note_column` the notes leave the foot and
+/// are set between the two text columns, in a column of that width with the
+/// column gap either side, ruled off down both sides; the text columns
+/// narrow to make room.
+#[test]
+fn the_notes_are_set_in_a_centre_column_between_the_text_columns() {
+    if !have_backend() {
+        return;
+    }
+    let usfm = PARAGRAPHS.replace(
+        "were the first day.",
+        "were the first day.\\f + \\fr 1:3 \\ft Zebulun is not here.\\f*",
+    );
+    let b = built(
+        &usfm,
+        "[page]\ncolumns = 2\ncolumn_gap = \"10pt\"\nnote_column = \"60pt\"\n\
+         column_rule = \"0.5pt\"\n",
+        "",
+    );
+    let column = (b.right - b.left - 60.0 - 20.0) / 2.0;
+    let (from, to) = (b.left + column + 10.0, b.right - column - 10.0);
+    let centre: String = b
+        .lines
+        .iter()
+        .filter(|l| l.page == 1)
+        .flat_map(|l| &l.marks)
+        .filter(|m| m.x > from - 0.5 && m.x < to)
+        .map(|m| m.text.as_str())
+        .collect();
+    assert!(
+        centre.replace(' ', "").contains("Zebulunisnot"),
+        "the note is in the centre column, between {from} and {to}: {centre:?}"
+    );
+    // Not at the foot as well: nothing of it outside the centre.
+    let outside: String = b
+        .lines
+        .iter()
+        .filter(|l| l.page == 1)
+        .flat_map(|l| &l.marks)
+        .filter(|m| m.x < from - 0.5 || m.x >= to)
+        .map(|m| m.text.as_str())
+        .collect();
+    assert!(!outside.contains("Zebulun"), "{outside:?}");
+    // Ruled off down both sides, at the column's edges.
+    let downs: Vec<f64> = rules_on(&b, 1)
+        .into_iter()
+        .filter(|r| (r.x1 - r.x2).abs() < 0.1 && r.length() > 100.0)
+        .map(|r| r.x1)
+        .collect();
+    assert_eq!(downs.len(), 2, "{downs:?}");
+    assert!(downs.iter().any(|x| (x - from).abs() < 1.0), "{downs:?}");
+    assert!(downs.iter().any(|x| (x - to).abs() < 1.0), "{downs:?}");
+}

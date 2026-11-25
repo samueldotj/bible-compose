@@ -95,6 +95,8 @@ export const EN_HELP: Readonly<Record<string, string>> = {
   "page.side_column":
     "A column at the left of the text for the section headings, set beside the paragraph they open. 0pt sets them in the text.",
   "page.side_gap": "The space between the side-head column and the text.",
+  "page.note_column":
+    "A column down the middle of a two-column page, between the text columns, where the notes are set instead of at the foot. 0pt keeps them at the foot.",
   "page.frame": "A rule round every page, inside the trim: none, single, or double.",
   "page.frame_width": "How thick each of the frame's rules is.",
   "page.frame_inset": "How far in from the trim the frame is drawn.",
@@ -126,7 +128,7 @@ export const EN_HELP: Readonly<Record<string, string>> = {
   "contents.title_ornament_color": "The ink of the diamond under a book's title and a chapter's opening.",
   "contents.ornament_rule_color": "The ink of the short rules in the title's and the chapter's ornaments.",
   "contents.chapter_ornament":
-    "Drawn under a chapter's opening when its number stands on a line of its own: nothing, a short rule, or two short rules with a diamond.",
+    "Drawn under a chapter's opening when its number stands on a line of its own: nothing, a short rule, two short rules with a diamond, or a band: the opening between two rules the column wide.",
   "numbering.chapter_caption": "A word set with each chapter's number where it opens the chapter, such as Chapter. Empty for none.",
   "numbering.psalm_caption": "The word the Psalms take instead, such as Psalm. Empty to use the chapter caption.",
   "numbering.chapter_numerals": "How the number is written where it opens the chapter: figures, or Roman numerals.",

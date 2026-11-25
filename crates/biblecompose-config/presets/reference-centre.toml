@@ -1,0 +1,79 @@
+# A reference edition, notes in a centre column.
+#
+# The reference edition as the "Reference Bible" design draws it: two
+# columns of text with a narrow third between them, ruled off on both sides,
+# where the notes and cross-references called on the page are set, each keyed
+# by its verse. A reader's eye goes across from a verse to its references
+# without leaving the line it was on. Its sibling, "Reference", keeps them at
+# the foot on a smaller page.
+#
+# A larger page than the sibling's, since three columns share its width. The
+# design's 14px body is 7.6pt here: a pixel of it is about 0.54pt.
+
+[page]
+size = "6x9in"
+columns = 2
+margin_inner = "0.55in"
+margin_outer = "0.45in"
+margin_top = "0.7in"
+margin_bottom = "0.7in"
+# The design's 16px either side of a 96px centre column.
+column_gap = "8.7pt"
+note_column = "52pt"
+# A heavy rule under the head, a light one over the foot, and the centre
+# column ruled off down both sides.
+header_rule = "thick"
+header_rule_color = "#1b1a17"
+footer_rule = "thin"
+footer_rule_color = "#1b1a17"
+column_rule = "thin"
+column_rule_color = "#b9b2a6"
+
+[typography]
+font_family = "Libre Caslon Text"
+font_size = "7.6pt"
+leading = "11.1pt"
+justify = true
+
+# Each chapter opens in a band: its figure, large, between two rules, the
+# section heading under it in the italic of the design's chapter summary.
+# Every verse starts a line, indented, as the old reference Bibles set them.
+[contents]
+show_section_headings = true
+drop_caps = false
+chapter_ornament = "band"
+ornament_rule_color = "#1b1a17"
+verse_starts = "next_line"
+
+[numbering]
+show_chapter_numbers = true
+show_verse_numbers = true
+hide_first_verse_number = false
+
+[notes]
+show_footnotes = true
+show_cross_references = true
+cross_reference_placement = "note_area"
+cross_reference_callers = "letters"
+restart_numbering = "per_chapter"
+
+# First reference at the left, last at the right, the page number over the
+# centre column.
+[headers.left_page]
+header_left = "{Book} {FirstReference}"
+header_center = "{Page}"
+header_right = "{Book} {LastReference}"
+footer_left = "Centre-column reference"
+footer_center = ""
+footer_right = "Words of Christ in red"
+[headers.right_page]
+header_left = "{Book} {FirstReference}"
+header_center = "{Page}"
+header_right = "{Book} {LastReference}"
+footer_left = "Centre-column reference"
+footer_center = ""
+footer_right = "Words of Christ in red"
+
+# Every verse can be linked into, which is the reference edition's other use.
+[output]
+anchors = "verse"

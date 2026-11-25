@@ -77,7 +77,9 @@ pub const ALL: &[Preset] = &[
     Preset {
         id: "single-column",
         title: "Single column",
-        description: "The conventional page in one column: slightly larger                       type on a longer line, with the numbers and apparatus                       kept.",
+        description: "The conventional page in one column: slightly larger \
+                      type on a longer line, with the numbers and apparatus \
+                      kept.",
         toml: include_str!("../presets/single-column.toml"),
         styles: None,
     },
@@ -100,42 +102,59 @@ pub const ALL: &[Preset] = &[
     Preset {
         id: "reference",
         title: "Reference",
-        description: "Two dense columns on a hand-sized page, every verse                       numbered and linkable, the head giving the page's first                       and last reference.",
+        description: "Two dense columns on a hand-sized page, every verse \
+                      numbered and linkable, the head giving the page's first \
+                      and last reference.",
         toml: include_str!("../presets/reference.toml"),
         styles: Some(include_str!("../presets/reference.styles.toml")),
     },
     Preset {
+        id: "reference-centre",
+        title: "Reference, centre column",
+        description: "Two columns of text with a narrow third between them, \
+                      where each page's notes and cross-references are set \
+                      beside the verses that call them.",
+        toml: include_str!("../presets/reference-centre.toml"),
+        styles: Some(include_str!("../presets/reference-centre.styles.toml")),
+    },
+    Preset {
         id: "study",
         title: "Study Bible",
-        description: "A larger page with everything on: introductions,                       outlines, headings, footnotes and cross-references.",
+        description: "A larger page with everything on: introductions, \
+                      outlines, headings, footnotes and cross-references.",
         toml: include_str!("../presets/study.toml"),
         styles: Some(include_str!("../presets/study.styles.toml")),
     },
     Preset {
         id: "pocket",
         title: "Pocket Bible",
-        description: "A page that fits a coat pocket: small type in one                       column, tight margins, footnotes kept and                       cross-references left out.",
+        description: "A page that fits a coat pocket: small type in one \
+                      column, tight margins, footnotes kept and \
+                      cross-references left out.",
         toml: include_str!("../presets/pocket.toml"),
         styles: None,
     },
     Preset {
         id: "journaling",
         title: "Journaling Bible",
-        description: "One column beside a two-inch outer margin left empty                       for the reader's own notes; no apparatus at the foot.",
+        description: "One column beside a two-inch outer margin left empty \
+                      for the reader's own notes; no apparatus at the foot.",
         toml: include_str!("../presets/journaling.toml"),
         styles: Some(include_str!("../presets/journaling.styles.toml")),
     },
     Preset {
         id: "modern",
         title: "Modern",
-        description: "One column set ragged right, with strong headings and                       the chapter and verse numbers in a single accent colour.",
+        description: "One column set ragged right, with strong headings and \
+                      the chapter and verse numbers in a single accent colour.",
         toml: include_str!("../presets/modern.toml"),
         styles: Some(include_str!("../presets/modern.styles.toml")),
     },
     Preset {
         id: "illuminated",
         title: "Illuminated",
-        description: "A gift edition in one column: a boxed chapter number,                       a dropped initial, and headings and numbers in red.",
+        description: "A gift edition in one column: a boxed chapter number, \
+                      a dropped initial, and headings and numbers in red.",
         toml: include_str!("../presets/illuminated.toml"),
         styles: Some(include_str!("../presets/illuminated.styles.toml")),
     },

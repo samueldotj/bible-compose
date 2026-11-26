@@ -148,6 +148,10 @@ local OPTIONS = {
    { key = "foliorules", kind = "boolean", default = false },
    -- A rule above and below each run of poetry.
    { key = "poetryrules", kind = "boolean", default = false },
+   -- The verses a section heading covers, under it; and the line a book's
+   -- title opens with, over it or beside it.
+   { key = "sectionranges", kind = "boolean", default = false },
+   { key = "showtitlelead", kind = "boolean", default = false },
    { key = "notelinespacing", kind = "string", default = "18pt" },
    { key = "footsep", kind = "string", default = "3%ph" },
    -- Typography.
@@ -933,7 +937,7 @@ end
 -- close over these names, so the names have to exist before they do — a Lua
 -- upvalue is bound where the closure is written, not where it runs, so a
 -- `local function` further down would be a nil global here.
-local slot_content, set_line, restart_notes, carry_reference, close_stanza
+local slot_content, set_line, restart_notes, carry_reference, close_stanza, title_lead_beside
 -- `scratch` and the two anchor helpers, for the same reason: the chapter
 -- and verse commands name a place in Scripture, and both are registered
 -- above the state they read it from.
@@ -1021,7 +1025,9 @@ function class:endPage ()
       set_line(SILE.getFrame("folio"), {
          o[side .. "footerleft"], o[side .. "footercenter"], o[side .. "footerright"],
       }, "folio")
-      page_rules(o, side == "recto")
+      -- A book's opening page has its title's rule; the head's would be a
+      -- second one over it.
+      page_rules(o, side == "recto", began and #began > 0 and o.titleornament == "underline")
       self:_set_column_notes()
    end
    -- The frame goes round every page that is not left blank, front matter
@@ -1411,6 +1417,9 @@ local function field_value (name)
       return counters:formatCounter(SILE.scratch.counters.folio)
    elseif key == "book" then
       return page_book()
+   elseif key == "title" then
+      local o = SILE.documentState.documentClass._bcopts
+      return (o.title and o.title ~= "") and o.title or nil
    elseif key == "altbook" then
       local book = page_book()
       local alt = book and s.altbooks[book]
@@ -1536,12 +1545,18 @@ function slot_content (template)
             SILE.call("hbox", {}, { piece.text })
          end)
       elseif piece.text ~= "" then
-         -- A ◆ in a template is the ornament, not a letter: few faces a head
-         -- is set in have one, and the design draws it in the ornament's
-         -- ink rather than the head's.
+         -- A ◆ or a ▬ in a template is an ornament, not a letter: few faces
+         -- a head is set in have either, and a design draws them in the
+         -- ornament's ink rather than the head's — a small diamond, or a
+         -- short thick bar before the passage.
          local rest = piece.text
          while rest ~= "" do
             local at, stop = rest:find("◆", 1, true)
+            local bar_at, bar_stop = rest:find("▬", 1, true)
+            local is_bar = bar_at and (not at or bar_at < at)
+            if is_bar then
+               at, stop = bar_at, bar_stop
+            end
             if not at then
                SILE.typesetter:typeset(rest)
                break
@@ -1550,9 +1565,26 @@ function slot_content (template)
                SILE.typesetter:typeset(rest:sub(1, at - 1))
             end
             local o = SILE.documentState.documentClass._bcopts
-            local size = SILE.settings:get("font.size") * 0.7
+            local size = SILE.settings:get("font.size")
             SILE.call("color", { color = o.ornamentrulecolor or "#000000" }, function ()
-               SILE.call("font", { family = "DejaVu Serif", size = size .. "pt", weight = 400, style = "normal" }, function ()
+               if is_bar then
+                  local length, thick, lift = size * 2, size * 0.28, size * 0.36
+                  SILE.typesetter:pushHbox({
+                     width = SILE.types.length(length),
+                     height = SILE.types.length(lift + thick / 2),
+                     depth = SILE.types.length(0),
+                     outputYourself = function (node, typesetter, _)
+                        local x = typesetter.frame.state.cursorX
+                        local y = typesetter.frame.state.cursorY
+                        SILE.outputter:drawRule(x, y - lift - thick / 2, length, thick)
+                        typesetter.frame:advanceWritingDirection(node.width)
+                     end,
+                  })
+                  -- As much room after it as the design leaves.
+                  SILE.call("kern", { width = size * 0.9 .. "pt" })
+                  return
+               end
+               SILE.call("font", { family = "DejaVu Serif", size = size * 0.7 .. "pt", weight = 400, style = "normal" }, function ()
                   SILE.settings:temporarily(function ()
                      SILE.settings:set("document.letterspaceglue", nil)
                      SILE.typesetter:typeset("◆")
@@ -1885,7 +1917,7 @@ end
 -- to the outputter. They are furniture: nothing typeset moves to make room
 -- for them, and the gaps the settings already give the head and the foot are
 -- where they go.
-function page_rules (o, recto)
+function page_rules (o, recto, opening)
    local left, right, top, bottom = text_block()
    local width = right - left
 
@@ -1894,7 +1926,7 @@ function page_rules (o, recto)
    -- foot line's top.
    local head = thickness(o.headerrule)
    local frame = SILE.getFrame("runningHead")
-   if head > 0 and frame then
+   if head > 0 and frame and not opening then
       local htop = frame:top():tonumber()
       -- The head's own foot, which is where the text block begins on every
       -- page but one opening a book in two columns, where the title spans
@@ -2694,6 +2726,33 @@ end
 --- rule, or two with a diamond between them in its own ink.
 function title_ornament (o, s, kind)
    kind = kind or o.titleornament
+   if kind == "underline" then
+      -- A hairline across the whole frame, side column and all, in the
+      -- page's rule ink, a little under the title.
+      skip("14pt")
+      SILE.typesetter:leaveHmode()
+      local thick = 0.6
+      local rule = SILE.types.node.vbox({})
+      rule.height = SILE.types.length(thick)
+      rule.depth = SILE.types.length(0)
+      rule.outputYourself = function (node, typesetter, _)
+         local frame = typesetter.frame
+         frame:advancePageDirection(node.height)
+         local left, right = frame:left():tonumber(), frame:right():tonumber()
+         local ok, ink = pcall(SILE.types.color, o.rulecolor or "#000000")
+         if ok and ink then
+            SILE.outputter:pushColor(ink)
+         end
+         SILE.outputter:drawRule(left, frame.state.cursorY - thick, right - left, thick)
+         if ok and ink then
+            SILE.outputter:popColor()
+         end
+         frame:advancePageDirection(node.depth)
+         frame:newLine()
+      end
+      SILE.typesetter:pushVbox(rule)
+      return
+   end
    if kind ~= "rule" and kind ~= "diamond" then
       return
    end
@@ -3009,11 +3068,86 @@ local function across_the_columns (body, below)
    SILE.typesetter:initFrame(a)
 end
 
+--- The lead-in to a title, "The Gospel According to", in the side column
+--- beside it: a box of no width at the head of the title's line that, when
+--- the line is output, sets the words right-aligned in the side column, in
+--- as many lines as they need, the last of them on the title's baseline.
+function title_lead_beside (lead)
+   local width = side_width()
+   local gap = side_lead() - width
+   local lines = {}
+   styled("book_lead", function ()
+      local words = {}
+      for word in lead:gmatch("%S+") do
+         words[#words + 1] = word
+      end
+      local current = nil
+      for _, word in ipairs(words) do
+         local try = current and (current .. " " .. word) or word
+         local box = SILE.typesetter:makeHbox(function ()
+            SILE.typesetter:typeset(try)
+         end)
+         if current and box.width:tonumber() > width then
+            lines[#lines + 1] = current
+            current = word
+         else
+            current = try
+         end
+      end
+      if current then
+         lines[#lines + 1] = current
+      end
+      for i, line in ipairs(lines) do
+         lines[i] = SILE.typesetter:makeHbox(function ()
+            SILE.typesetter:typeset(line)
+         end)
+      end
+   end)
+   local ls = style("book_lead")
+   local size = ls.font_size and SILE.types.measurement(ls.font_size):tonumber() or SILE.settings:get("font.size")
+   local step = size * 1.4
+   SILE.typesetter:pushHbox({
+      width = SILE.types.length(0),
+      height = SILE.types.length(0),
+      depth = SILE.types.length(0),
+      outputYourself = function (_, typesetter, line)
+         local state = typesetter.frame.state
+         local x0, y0 = state.cursorX, state.cursorY
+         local right = x0 - gap
+         for i, box in ipairs(lines) do
+            state.cursorX = right - box.width:tonumber()
+            state.cursorY = y0 - (#lines - i) * step
+            box:outputYourself(typesetter, line)
+         end
+         state.cursorX, state.cursorY = x0, y0
+      end,
+   })
+end
+
 --- The book's name where it opens, in the `book` style, with the ornament
 --- under it. In two columns on a page of its own, across both columns.
-local function book_title (o, name, entry)
+local function book_title (o, name, entry, lead)
    local s = style("book")
+   if not (o.showtitlelead and lead and lead ~= "") then
+      lead = nil
+   end
+   -- With side-heads and a title set flush left, the lead-in goes in the
+   -- side column beside it, right-aligned, its last line on the title's
+   -- baseline; otherwise it is a line of its own over the title.
+   local beside = lead and side_lead() > 0 and s.align == "start"
    local function body ()
+      if lead and not beside then
+         local ls = style("book_lead")
+         SILE.call("noindent")
+         SILE.call(alignment(ls) or ALIGNMENT.center, {}, function ()
+            styled("book_lead", function ()
+               SILE.typesetter:typeset(lead)
+            end)
+         end)
+         SILE.call("par")
+         skip(ls.space_below)
+         SILE.call("noindent")
+      end
       SILE.settings:temporarily(function ()
          -- With side-heads, a title set flush left starts where the text
          -- does.
@@ -3022,6 +3156,9 @@ local function book_title (o, name, entry)
          end
          SILE.call(alignment(s) or ALIGNMENT.center, {}, function ()
             entry()
+            if beside then
+               title_lead_beside(lead)
+            end
             styled("book", function ()
                SILE.typesetter:typeset(name)
             end)
@@ -4056,7 +4193,7 @@ function class:registerXmlCommands ()
          })
       end
       if options.name then
-         book_title(self._bcopts, options.name, entry)
+         book_title(self._bcopts, options.name, entry, options.lead)
       else
          entry()
       end
@@ -4219,6 +4356,19 @@ function class:registerXmlCommands ()
    self:registerCommand("heading", function (options, content)
       local selector = "heading." .. (options.style or "s") .. (options.level or "1")
       local s = style(selector)
+      -- The verses the section covers, under its heading, as a line of
+      -- passage references: the heading, then "1:1–5" in `heading.r1`.
+      if options.span and self._bcopts.sectionranges and (options.style or "s") == "s" then
+         local plain = {}
+         for key, value in pairs(options) do
+            if key ~= "span" then
+               plain[key] = value
+            end
+         end
+         SILE.call("heading", plain, content)
+         SILE.call("heading", { style = "r", level = "1" }, { options.span })
+         return
+      end
       -- Already set, at the end of the section heading's line.
       if scratch().set_beside == content then
          scratch().set_beside = nil
@@ -4818,8 +4968,11 @@ function class:registerXmlCommands ()
          -- heading; dropped there it would hang beside the heading, in the
          -- heading's face. It waits for the first paragraph instead, as the
          -- printed page has it: the heading, then the figure in the text.
-         if scratch().in_heading then
-            scratch().pending_drop = drop
+         -- So does one set between blocks, in no paragraph at all: what a
+         -- hidden chapter label (`\cl`) leaves behind is its anchor.
+         local sc = scratch()
+         if sc.in_heading or not (sc.in_para or sc.in_poetry) then
+            sc.pending_drop = drop
             return
          end
          dropped(drop)

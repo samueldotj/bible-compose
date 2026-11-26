@@ -1029,6 +1029,37 @@ fn applying_an_edition_writes_its_look() {
     );
 }
 
+/// **An edition keeps the project's body font when its own cannot set the
+/// text.** Georgian, which DejaVu Serif draws and the Modern edition's
+/// Source Serif 4 does not, keeps DejaVu Serif; an English project takes
+/// Source Serif 4.
+#[test]
+fn an_edition_keeps_a_body_font_that_draws_the_text_its_own_cannot() {
+    if biblecompose_app::backend_font_dirs().is_empty() {
+        return;
+    }
+    let (_dir, root) = project(Some(
+        "schema_version = 1\n[typography]\nfont_family = \"DejaVu Serif\"\n",
+    ));
+    std::fs::write(
+        root.join("JHN.usfm").as_std_path(),
+        "\\id JHN\n\\h იოანე\n\\c 1\n\\p\n\\v 1 დასაბამიდან იყო სიტყვა.\n",
+    )
+    .expect("write the book");
+    write_preset(&root, "modern").expect("modern applies");
+    let settings =
+        std::fs::read_to_string(root.join("biblecompose.toml").as_std_path()).expect("settings");
+    assert!(settings.contains("font_family = \"DejaVu Serif\""), "{settings}");
+
+    let (_dir, root) = project(Some(
+        "schema_version = 1\n[typography]\nfont_family = \"DejaVu Serif\"\n",
+    ));
+    write_preset(&root, "modern").expect("modern applies");
+    let settings =
+        std::fs::read_to_string(root.join("biblecompose.toml").as_std_path()).expect("settings");
+    assert!(settings.contains("font_family = \"Source Serif 4\""), "{settings}");
+}
+
 /// An edition that is only a page writes no style sheet at all.
 #[test]
 fn an_edition_without_a_look_leaves_the_sheet_alone() {

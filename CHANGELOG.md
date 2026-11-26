@@ -4,6 +4,33 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## Unreleased
 
+* **Switching templates clears what an older version of one set.** Applying
+  a template resets what another template set, but only values a template
+  still sets: a project made from an earlier Illuminated kept its double
+  frame under the Modern page, because Illuminated's frame has since
+  changed. Every value a template has ever set is now recognised.
+  `scripts/retired-presets.py` collects them from the history.
+
+* **Applying a template keeps a body font that draws your text.** A
+  template names a Latin face; a Tamil project that applied one lost Mukta
+  Malar for a face with no Tamil in it. The project's own body font is now
+  kept when the template's cannot set the text and it can.
+
+* **A dropped chapter number under a hidden chapter label** drops into the
+  first paragraph again, rather than standing on a line of its own. The
+  Modern template hides chapter labels, as its design marks a chapter with
+  the figure alone.
+
+* **The Modern edition matches its design more closely.** "The Gospel
+  According to" stands in the side column beside the book's name, with a
+  light rule across the page under them; each side-head has the verses its
+  section covers under it; the head opens with a short blue bar and has a
+  light rule under it; and the foot names the publication. New settings
+  make each of these available to any template:
+  `contents.show_title_lead` (with a `book_lead` style),
+  `contents.section_ranges`, `title_ornament = "underline"`, a `▬` in a
+  head template, and the head field `{Title}`.
+
 * **The Illuminated edition matches its design more closely.** Its frame is
   a heavy rule outside a light one (`frame = "thick_thin"`); the head reads
   the book and the passage with a gold diamond between, over a gold rule;

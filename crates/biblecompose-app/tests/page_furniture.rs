@@ -952,6 +952,51 @@ fn the_notes_are_set_in_a_centre_column_between_the_text_columns() {
 }
 
 /// **A chapter caption in the translation's own word**: with a caption set
+/// **A dropped chapter number under a hidden label** drops into the first
+/// paragraph, as it does under a heading, and is not set on a line of its
+/// own where the label was.
+#[test]
+fn a_dropped_number_under_a_hidden_label_drops_into_the_paragraph() {
+    if !have_backend() {
+        return;
+    }
+    let usfm = concat!(
+        "\\id GEN\n\\h Genesis\n\\c 1\n\\cl Kapitola 1\n\\p\n",
+        "\\v 1 In the beginning God created the heaven and the earth. And the ",
+        "earth was without form, and void; and darkness was upon the face of ",
+        "the deep. And the Spirit of God moved upon the face of the waters.\n",
+    );
+    let b = built(
+        usfm,
+        "[page]\ncolumns = 1\n[contents]\ndrop_caps = true\ndrop_cap_of = \"chapter_number\"\n\
+         drop_cap_lines = 3\n[numbering]\nshow_chapter_labels = false\n",
+        "",
+    );
+    let page: Vec<_> = b.lines.iter().filter(|l| l.page == 1).collect();
+    let number = page
+        .iter()
+        .flat_map(|l| &l.marks)
+        .filter(|m| m.text == "1")
+        .max_by(|a, c| a.size.partial_cmp(&c.size).expect("sizes"))
+        .expect("the dropped number");
+    // Beside the paragraph: its baseline is level with one of the
+    // paragraph's lines, and the text starts to its right.
+    let beside = page
+        .iter()
+        .flat_map(|l| &l.marks)
+        .filter(|m| m.size < number.size && m.x > number.x)
+        .any(|m| (m.y - number.y).abs() < 1.5);
+    assert!(
+        beside,
+        "{number:?} {:?}",
+        page.iter().map(|l| (l.y, l.text())).collect::<Vec<_>>()
+    );
+    assert!(
+        !page.iter().any(|l| l.text().contains("Kapitola")),
+        "the label is hidden"
+    );
+}
+
 /// and the text labelling its chapters `\cl Kapitola 1`, the caption takes
 /// the label's word and the label is not set again as a line of its own; a
 /// chapter with no label is captioned in the project language's word.
@@ -1118,4 +1163,67 @@ fn a_run_of_poetry_is_ruled_above_and_below() {
     }
     let plain = built(SONG, ONE, "");
     assert!(rules_on(&plain, 1).is_empty(), "{:?}", plain.rules);
+}
+
+/// A book that opens on a lead-in title line and two sections, for the
+/// modern opening.
+const LEAD_IN: &str = concat!(
+    "\\id JHN\n\\h John\n\\mt2 The Gospel According to\n\\mt1 John\n\\c 1\n",
+    "\\s1 The Word\n\\p\n",
+    "\\v 1 In the beginning was the Word, and the Word was with God. ",
+    "\\v 2 He was with God in the beginning.\n",
+    "\\s1 The Witness\n\\p\n",
+    "\\v 6 There came a man who was sent from God.\n",
+);
+
+/// **The modern opening**: the title's lead-in beside it in the side column,
+/// a rule across the page under them in place of the head's, each section's
+/// verses under its side-head, and the publication's name in the foot.
+#[test]
+fn a_modern_opening_sets_the_lead_in_the_ranges_and_the_title() {
+    if !have_backend() {
+        return;
+    }
+    let b = built(
+        LEAD_IN,
+        "[project]\nname = \"Test Version\"\n\
+         [page]\ncolumns = 1\nside_column = \"90pt\"\n\
+         header_rule = \"0.6pt\"\nheader_rule_color = \"#00ff00\"\nrule_color = \"#0000ff\"\n\
+         [contents]\nsection_ranges = true\nshow_title_lead = true\ntitle_ornament = \"underline\"\n\
+         [headers.right_page]\nfooter_left = \"{Title}\"\n",
+        "[book]\nalign = \"start\"\n",
+    );
+    let page: Vec<_> = b.lines.iter().filter(|l| l.page == 1).collect();
+    // The lead-in, in capitals, to the left of the title, on its baseline.
+    // Letter-spaced, so a letter to a mark: its line's first mark is it.
+    let lead = page
+        .iter()
+        .find(|l| l.text().contains("ACCORDING"))
+        .and_then(|l| l.marks.first())
+        .expect("the lead-in");
+    // The title, not the head's "John".
+    let title = page
+        .iter()
+        .flat_map(|l| &l.marks)
+        .filter(|m| m.text.contains("John"))
+        .max_by(|a, c| a.size.partial_cmp(&c.size).expect("sizes"))
+        .expect("the title");
+    assert!(lead.x < title.x, "{lead:?} {title:?}");
+    assert!((lead.y - title.y).abs() < 1.0, "{lead:?} {title:?}");
+    // Each section's span, on a line of its own, and the publication's name.
+    for text in ["1:1–2", "1:6", "TestVersion"] {
+        assert!(
+            page.iter().any(|l| l.text() == text || l.text().starts_with(text)),
+            "`{text}`: {:?}",
+            page.iter().map(|l| l.text()).collect::<Vec<_>>()
+        );
+    }
+    // The title's rule, across the side column too, and no head rule.
+    let rules = rules_on(&b, 1);
+    assert!(rules.iter().all(|r| r.color != (0.0, 1.0, 0.0)), "{rules:?}");
+    let under = rules
+        .iter()
+        .find(|r| r.color == (0.0, 0.0, 1.0) && r.is_horizontal())
+        .expect("the title's rule");
+    assert!(under.x1.min(under.x2) < b.left + 1.0, "{under:?}");
 }

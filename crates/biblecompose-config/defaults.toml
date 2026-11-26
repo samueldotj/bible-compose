@@ -126,6 +126,8 @@ hyphenation = true
 show_book_introductions = true
 show_introductory_outlines = true
 show_section_headings = true
+section_ranges = false
+show_title_lead = false
 # Off, because the built-in page opens each chapter with a large number the
 # text runs into, and a dropped initial beside it would be two large things at
 # one corner. Turning this on drops one of two things into the opening lines,

@@ -226,6 +226,11 @@ pub struct Contents {
     pub show_book_introductions: Sourced<bool>,
     pub show_introductory_outlines: Sourced<bool>,
     pub show_section_headings: Sourced<bool>,
+    /// The verses each section heading covers, "1:1–5", under it.
+    pub section_ranges: Sourced<bool>,
+    /// The lines a book's title opens with (`\mt2` before `\mt1`, "The
+    /// Gospel According to"), over the title or beside it in the side column.
+    pub show_title_lead: Sourced<bool>,
     /// Whether each chapter opens with a drop cap. Either way the first
     /// verse of the chapter goes unnumbered, because the dropped thing is
     /// its marker.
@@ -801,6 +806,8 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             show_introductory_outlines: r
                 .value("contents.show_introductory_outlines", |n| n.boolean()),
             show_section_headings: r.value("contents.show_section_headings", |n| n.boolean()),
+            section_ranges: r.value("contents.section_ranges", |n| n.boolean()),
+            show_title_lead: r.value("contents.show_title_lead", |n| n.boolean()),
             drop_caps: r.value("contents.drop_caps", |n| n.boolean()),
             poetry_rules: r.value("contents.poetry_rules", |n| n.boolean()),
             drop_cap_of: r.value("contents.drop_cap_of", |n| value::choice(n, DropCap::NAMES)),

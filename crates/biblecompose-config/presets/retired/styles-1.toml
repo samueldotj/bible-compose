@@ -1,0 +1,60 @@
+# Values an edition used to set and no edition sets now, written by
+# scripts/retired-presets.py. Applying an edition clears these too.
+
+[book]
+font_size = "48pt"
+letter_spacing = "-1.6pt"
+
+[chapter]
+border = true
+border_width = "0.8pt"
+color = "#9e2a1f"
+font_size = "18pt"
+space_above = "12pt"
+space_below = "10pt"
+
+[folio]
+weight = 600
+
+[head]
+align = "center"
+
+[heading.mt1]
+font_size = "26pt"
+weight = 500
+
+[heading.r1]
+font_size = "7.8pt"
+space_below = "4pt"
+
+[heading.s1]
+font_size = "9.4pt"
+space_above = "12pt"
+space_below = "1pt"
+
+[heading.s2]
+font_size = "9pt"
+smallcaps = true
+space_above = "8pt"
+
+[heading.sr1]
+font_size = "8pt"
+space_above = "0pt"
+space_below = "4pt"
+
+[initial]
+border_width = "0.8pt"
+color = "#9e2a1f"
+
+[note.f]
+font_size = "7.8pt"
+
+[paragraph.p]
+first_line_indent = "14pt"
+space_above = "5pt"
+
+[reference]
+font_size = "7.6pt"
+
+[verse]
+font_size = "6.4pt"

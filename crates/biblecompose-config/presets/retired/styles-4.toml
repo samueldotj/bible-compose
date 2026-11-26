@@ -1,0 +1,8 @@
+# Values an edition used to set and no edition sets now, written by
+# scripts/retired-presets.py. Applying an edition clears these too.
+
+[heading.s1]
+font_size = "8.6pt"
+
+[paragraph.p]
+first_line_indent = "10pt"

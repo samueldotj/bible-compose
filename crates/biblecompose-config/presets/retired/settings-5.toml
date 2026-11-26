@@ -1,0 +1,14 @@
+# Values an edition used to set and no edition sets now, written by
+# scripts/retired-presets.py. Applying an edition clears these too.
+
+[headers.left_page]
+header_left = "first_reference"
+
+[headers.right_page]
+header_right = "last_reference"
+
+[page]
+rule_color = "#3a3530"
+
+[typography]
+leading = "10.5pt"

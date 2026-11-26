@@ -1,0 +1,16 @@
+# Values an edition used to set and no edition sets now, written by
+# scripts/retired-presets.py. Applying an edition clears these too.
+
+[chapter]
+color = "#3f5b3a"
+font_size = "26pt"
+
+[heading.s1]
+font_size = "8.4pt"
+space_above = "9pt"
+
+[heading.s2]
+font_size = "10pt"
+
+[paragraph.p]
+first_line_indent = "11pt"

@@ -121,6 +121,7 @@ pub fn kitchen_sink() -> ScriptureDocument {
             short: Some("Psalms".into()),
             abbrev: Some("Ps".into()),
             title: vec!["The Psalms".into()],
+            lead: Vec::new(),
         },
         vec![
             Block::Heading {

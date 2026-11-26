@@ -1442,10 +1442,18 @@ pub fn write_preset(root: &Utf8Path, id: &str) -> Result<WireProject, Vec<WireDi
             format!("{id} is not an edition this release ships"),
         ))]);
     };
+    // The body font the project sets its text in now, before the edition
+    // names its own.
+    let opened = project::open(root);
+    let current_body = opened.settings.typography.font_family.to_string();
+
     let mut file = open_settings_file(root).map_err(|d| vec![WireDiagnostic::from(&d)])?;
     let complaints = biblecompose_config::preset::apply(&mut file, preset);
     if complaints.has_blocking() {
         return Err(wire_all(&complaints));
+    }
+    if let Some(keep) = body_font_to_keep(&opened, preset, &current_body) {
+        file.set("typography.font_family", keep.as_str());
     }
 
     // The edition's look, when it has one, goes into the style sheet. Both
@@ -1470,6 +1478,48 @@ pub fn write_preset(root: &Utf8Path, id: &str) -> Result<WireProject, Vec<WireDi
         sheet.save().map_err(|d| vec![WireDiagnostic::from(&d)])?;
     }
     Ok(project_at(root))
+}
+
+/// The project's own body font, when the edition's cannot draw the text and
+/// it can.
+///
+/// An edition names a Latin face — Source Serif 4, EB Garamond — and a Tamil
+/// project that applies it would otherwise lose the one face that sets its
+/// script: every page a build of missing glyphs. The edition's display faces
+/// for headings and the like stay, since the body face is every style's
+/// fallback and draws what they cannot.
+fn body_font_to_keep(
+    opened: &project::Opened,
+    preset: &biblecompose_config::preset::Preset,
+    current: &str,
+) -> Option<String> {
+    let wanted = preset
+        .settings()
+        .ok()?
+        .into_iter()
+        .find(|(key, _)| key == "typography.font_family")
+        .and_then(|(_, value)| match value {
+            biblecompose_config::edit::SettingValue::Str(s) => Some(s),
+            _ => None,
+        })?;
+    if wanted.trim().eq_ignore_ascii_case(current.trim()) {
+        return None;
+    }
+    let dirs = biblecompose_app::backend_font_dirs();
+    let missing = |family: &str| {
+        biblecompose_app::font::resolve(family, &opened.root, &dirs)
+            .and_then(|font| biblecompose_app::font::gaps(&font, &opened.document).ok())
+            .map(|gaps| gaps.len())
+    };
+    let (Some(now), new) = (missing(current), missing(&wanted)) else {
+        return None;
+    };
+    // The edition's face is kept unless it draws less of the text than the
+    // project's own does — a face that is not installed draws none of it.
+    match new {
+        Some(new) if new <= now => None,
+        _ => Some(current.to_owned()),
+    }
 }
 
 /// The source tree's own class directory, in a debug build that has one.

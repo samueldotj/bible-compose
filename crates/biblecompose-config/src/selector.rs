@@ -55,6 +55,9 @@ pub enum StyleSelector {
     ListItem(ListStyle, u8),
     /// The book's name at its opening, as the page sets it.
     BookTitle,
+    /// The title's lead-in line, "The Gospel According to", where
+    /// `contents.show_title_lead` sets it.
+    BookLead,
     /// The chapter number where it is set, not the chapter as a division.
     Chapter,
     /// The word set with the chapter number — "Chapter", "Psalm".
@@ -96,6 +99,7 @@ impl StyleSelector {
             StyleSelector::Character(_) => "character",
             StyleSelector::ListItem(..) => "list",
             StyleSelector::BookTitle => "book",
+            StyleSelector::BookLead => "book_lead",
             StyleSelector::Chapter => "chapter",
             StyleSelector::ChapterCaption => "chapter_caption",
             StyleSelector::Initial => "initial",
@@ -127,6 +131,7 @@ impl StyleSelector {
             StyleSelector::Note(NoteKind::Endnote) => Some("fe".to_owned()),
             StyleSelector::Note(NoteKind::StudyNote) => Some("ef".to_owned()),
             StyleSelector::BookTitle
+            | StyleSelector::BookLead
             | StyleSelector::Chapter
             | StyleSelector::ChapterCaption
             | StyleSelector::Initial
@@ -182,6 +187,7 @@ impl StyleSelector {
             ("note", Some("fe")) => Some(StyleSelector::Note(NoteKind::Endnote)),
             ("note", Some("ef")) => Some(StyleSelector::Note(NoteKind::StudyNote)),
             ("book", None) => Some(StyleSelector::BookTitle),
+            ("book_lead", None) => Some(StyleSelector::BookLead),
             ("chapter", None) => Some(StyleSelector::Chapter),
             ("chapter_caption", None) => Some(StyleSelector::ChapterCaption),
             ("initial", None) => Some(StyleSelector::Initial),
@@ -240,6 +246,7 @@ impl StyleSelector {
         }
         out.extend([
             StyleSelector::BookTitle,
+            StyleSelector::BookLead,
             StyleSelector::Chapter,
             StyleSelector::ChapterCaption,
             StyleSelector::Initial,

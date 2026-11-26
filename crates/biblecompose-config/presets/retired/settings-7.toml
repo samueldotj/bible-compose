@@ -1,0 +1,5 @@
+# Values an edition used to set and no edition sets now, written by
+# scripts/retired-presets.py. Applying an edition clears these too.
+
+[typography]
+leading = "11.2pt"

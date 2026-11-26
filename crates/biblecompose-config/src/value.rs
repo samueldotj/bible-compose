@@ -575,6 +575,8 @@ spelled! {
         Rule => "rule",
         /// Two short rules with a diamond between them.
         Diamond => "diamond",
+        /// A rule across the whole text block, side column included.
+        Underline => "underline",
         /// A chapter's opening between two rules the column wide, as a
         /// reference Bible sets it. Under a book's title it draws nothing.
         Band => "band",
@@ -1020,6 +1022,12 @@ pub const HEAD_FIELDS: &[HeadField] = &[
         label: "Alternate book name",
         description: "The fuller form of the name: USFM's \\toc1, or the title.",
         example: "The First Epistle of John",
+    },
+    HeadField {
+        name: "Title",
+        label: "Publication title",
+        description: "The publication's name, from the project: a translation's name, such as King James Version.",
+        example: "King James Version",
     },
     HeadField {
         name: "Page",

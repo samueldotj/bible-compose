@@ -121,6 +121,8 @@ export const EN_HELP: Readonly<Record<string, string>> = {
   "contents.show_book_introductions": "Print each book's introduction, where the translation has one.",
   "contents.show_introductory_outlines": "Print each book's outline, where the translation has one.",
   "contents.show_section_headings": "Print the section headings the translation carries.",
+  "contents.section_ranges": "Under each section heading, the verses its section covers, such as 1:1–5.",
+  "contents.show_title_lead": "Print the line a book's title opens with, such as The Gospel According to, over the title or beside it in the side column.",
   "contents.poetry_rules": "A rule above and below each run of poetry, so a song or a canticle stands apart from the prose round it.",
   "contents.drop_caps": "Open each chapter with a drop cap: a letter or a number set large, the first lines running round it. The first verse then goes unnumbered.",
   "contents.drop_cap_of": "What drops: the chapter's first letter — its first syllable in a script that writes one as several characters — with the number on a line above it; or the chapter number itself.",

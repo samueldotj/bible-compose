@@ -150,6 +150,7 @@ fields.
 | `{Book}` | The book's running-head name, from USFM's `\h` | 1 John |
 | `{AltBook}` | The fuller form of the name: `\toc1`, or the title | The First Epistle of John |
 | `{Page}` | The page number | 413 |
+| `{Title}` | The publication's name, from `project.name` | King James Version |
 | `{Range}` | The span of Scripture on the page, first to last; a page inside one verse gives that verse alone | 1:1–2:6 |
 | `{FirstReference}` | Chapter and verse where the page starts | 1:1 |
 | `{LastReference}` | Chapter and verse where the page ends | 2:6 |
@@ -161,7 +162,7 @@ fields.
 Names read without regard to case or underscores, so `{first_chapter}` is
 `{FirstChapter}`. Write `{{` or `}}` for a brace of your own. A `◆` in a slot
 is drawn as a small diamond in `ornament_rule_color`, whatever face the head
-is set in. A slot whose
+is set in, and a `▬` as a short thick bar in the same ink. A slot whose
 fields all have nothing on a page — the reference range on a page with no
 verse — prints nothing there rather than a stray dash; a field with nothing
 among fields with something is simply left out. In the file these are
@@ -383,6 +384,9 @@ line of the paragraph they open. The text moves right by the column plus
 `page.side_gap`; the footnotes still run the full width. The Modern template
 uses this.
 
+**`contents.section_ranges`** sets the verses each section heading covers,
+"1:1–5", under it in the `heading.r1` style, as a side-head's passage.
+
 ### A centre note column
 
 With **`page.note_column`** set wider than zero on a two-column page, the
@@ -470,8 +474,15 @@ title stays in its column.
 | `none` | Nothing (the default) |
 | `rule` | A short rule, centred |
 | `diamond` | Two short rules with a diamond between them, in `title_ornament_color` |
+| `underline` | A rule across the whole text block, side column included, in `page.rule_color`. The book's opening page then has no rule under its head: the title's stands in for it |
 
 The rules are drawn in `contents.ornament_rule_color`, for both the title's ornament and the chapter's.
+
+**`contents.show_title_lead`** prints the line a book's title opens with —
+`\mt2` before `\mt1`, "The Gospel According to" over "John" — in the
+`book_lead` style. Over the title as a line of its own; or, with side-heads
+and the title set flush left, in the side column beside it, right-aligned,
+its last line on the title's baseline.
 
 ### Paragraphs and the dropped initial
 

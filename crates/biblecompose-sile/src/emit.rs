@@ -207,6 +207,8 @@ struct EmitState {
     /// initial may be marked. A heading's text follows the chapter anchor too,
     /// and is not the chapter's opening.
     in_paragraph: bool,
+    /// The verses the section heading about to be emitted covers, "1:1–5".
+    section_span: Option<String>,
 }
 
 impl EmitState {
@@ -270,6 +272,11 @@ fn emit_book(w: &mut Writer<Cursor<Vec<u8>>>, book: &Book, state: &mut EmitState
     if let Some(name) = book.names.for_alternate_head() {
         el.push_attribute(("altname", name));
     }
+    // The lines its title opens with, which a design may set over or beside
+    // it: "The Gospel According to".
+    if !book.names.lead.is_empty() {
+        el.push_attribute(("lead", book.names.lead.join(" ").as_str()));
+    }
     // What the table of contents calls it: `\toc1` is the long name USFM
     // keeps for exactly this.
     if let Some(name) = book.names.for_contents() {
@@ -277,9 +284,11 @@ fn emit_book(w: &mut Writer<Cursor<Vec<u8>>>, book: &Book, state: &mut EmitState
     }
     write(w, Event::Start(el), state);
 
-    for block in &book.blocks {
+    for (i, block) in book.blocks.iter().enumerate() {
+        state.section_span = section_span(&book.blocks, i, state.chapter);
         emit_block(w, block, state);
     }
+    state.section_span = None;
 
     newline(w, state);
     write(w, Event::End(BytesEnd::new("book")), state);
@@ -392,6 +401,47 @@ impl Hidden {
     }
 }
 
+/// The verses a section heading at `at` covers — from the first verse after
+/// it to the last before the next heading of its rank or higher — written
+/// "1:1–5", "1:43–2:11", or "1:5" for one. `None` for anything but a section
+/// heading, and for a section with no verse in it.
+fn section_span(blocks: &[Block], at: usize, chapter: u16) -> Option<String> {
+    let Block::Heading { style, level, .. } = &blocks[at] else {
+        return None;
+    };
+    if style.marker() != "s" {
+        return None;
+    }
+    let mut chapter = chapter;
+    let mut first: Option<(u16, u16)> = None;
+    let mut last: Option<(u16, u16)> = None;
+    for (i, block) in blocks.iter().enumerate().skip(at) {
+        if i > at {
+            if let Block::Heading { style: s, level: l, .. } = block {
+                if s.marker() == "s" && l <= level {
+                    break;
+                }
+            }
+        }
+        block.each_inline(&mut |inline| match inline {
+            Inline::Chapter { number, .. } => chapter = *number,
+            Inline::Verse { id, .. } => {
+                first.get_or_insert((chapter, id.start));
+                last = Some((chapter, id.end));
+            }
+            _ => {}
+        });
+    }
+    let (first, last) = (first?, last?);
+    Some(if first == last {
+        format!("{}:{}", first.0, first.1)
+    } else if first.0 == last.0 {
+        format!("{}:{}–{}", first.0, first.1, last.1)
+    } else {
+        format!("{}:{}–{}:{}", first.0, first.1, last.0, last.1)
+    })
+}
+
 fn emit_block(w: &mut Writer<Cursor<Vec<u8>>>, block: &Block, state: &mut EmitState) {
     newline(w, state);
     match block {
@@ -447,6 +497,9 @@ fn emit_block(w: &mut Writer<Cursor<Vec<u8>>>, block: &Block, state: &mut EmitSt
             let mut el = BytesStart::new("heading");
             el.push_attribute(("style", style.marker()));
             el.push_attribute(("level", level.to_string().as_str()));
+            if let Some(span) = state.section_span.take() {
+                el.push_attribute(("span", span.as_str()));
+            }
             write(w, Event::Start(el), state);
             emit_inlines(w, content, state);
             write(w, Event::End(BytesEnd::new("heading")), state);

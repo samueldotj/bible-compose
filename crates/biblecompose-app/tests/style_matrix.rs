@@ -20,13 +20,14 @@ use camino::Utf8PathBuf;
 /// Checked against the schema below rather than trusted: a class added to
 /// `StyleSelector` and forgotten here would leave a whole kind of element
 /// untested.
-const ONE_PER_CLASS: [&str; 22] = [
+const ONE_PER_CLASS: [&str; 23] = [
     "paragraph.p",
     "poetry.q1",
     "heading.s1",
     "character.bd",
     "list.li1",
     "book",
+    "book_lead",
     "chapter",
     "chapter_caption",
     "initial",

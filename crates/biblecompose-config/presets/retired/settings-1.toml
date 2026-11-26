@@ -1,0 +1,45 @@
+# Values an edition used to set and no edition sets now, written by
+# scripts/retired-presets.py. Applying an edition clears these too.
+
+[headers]
+footer_center = "page_number"
+header_center = "empty"
+header_left = "book_name"
+header_right = "reference_range"
+
+[headers.left_page]
+footer_center = "page_number"
+header_center = "{AltBook}"
+header_left = "{Page}  ·  {Range}"
+header_right = "reference_range"
+
+[headers.right_page]
+footer_center = "page_number"
+header_center = "{AltBook}"
+header_left = "book_name"
+header_right = "{Range}  ·  {Page}"
+
+[numbering]
+show_verse_numbers = false
+
+[page]
+column_gap = "0.25in"
+column_rule = "0.5pt"
+column_rule_color = "#1b1a17"
+footer_rule = "0.5pt"
+footer_rule_color = "#b9c0c8"
+frame = "double"
+frame_inset = "0.3in"
+frame_width = "0.8pt"
+header_rule = "0.5pt"
+header_rule_color = "#b9c0c8"
+margin_bottom = "1.1in"
+margin_inner = "0.9in"
+margin_outer = "0.7in"
+margin_top = "0.75in"
+note_line_spacing = "20pt"
+rule_color = "#c9bea9"
+
+[typography]
+font_size = "9pt"
+leading = "15.5pt"

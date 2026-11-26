@@ -784,9 +784,9 @@ pub fn preflight_head(
         .iter()
         .flat_map(|n| n.chars())
         .chain(literal.chars())
-        // A ◆ in a template is the ornament, which the class draws in a face
-        // of its own and not the head's.
-        .filter(|c| !c.is_whitespace() && !c.is_control() && *c != '◆')
+        // A ◆ or a ▬ in a template is an ornament, which the class draws
+        // itself and not in the head's face.
+        .filter(|c| !c.is_whitespace() && !c.is_control() && !matches!(c, '◆' | '▬'))
         .collect();
     if characters.is_empty() {
         return;

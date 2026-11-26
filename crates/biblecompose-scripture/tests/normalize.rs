@@ -545,3 +545,16 @@ fn milestones_survive_with_their_attributes() {
         start.attributes
     );
 }
+
+/// A lesser title before the main one leads into it — "The Gospel According
+/// to" over "Matthew" — and one after it is a subtitle, not a lead.
+#[test]
+fn a_lesser_title_before_the_main_one_is_its_lead() {
+    let b = book(
+        "\\id MAT\n\\mt2 The Gospel According to\n\\mt1 Matthew\n\\mt3 A subtitle\n\\c 1\n\\p \\v 1 Text.\n",
+    );
+    assert_eq!(b.names.lead, vec!["The Gospel According to".to_owned()]);
+    assert_eq!(b.names.title.len(), 3);
+    let plain = book("\\id MAT\n\\mt1 Matthew\n\\mt2 The Gospel\n\\c 1\n\\p \\v 1 Text.\n");
+    assert!(plain.names.lead.is_empty(), "{:?}", plain.names.lead);
+}

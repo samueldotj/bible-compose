@@ -187,6 +187,38 @@ impl Preset {
     }
 }
 
+/// The values the editions' settings used to set and no edition sets now,
+/// in layers of one value per key, as `scripts/retired-presets.py` writes
+/// them from the history. Regenerate with that script after changing a
+/// value in an edition; a test checks the list here names every file.
+const RETIRED_SETTINGS: &[(&str, &str)] = &[
+    ("settings-1.toml", include_str!("../presets/retired/settings-1.toml")),
+    ("settings-2.toml", include_str!("../presets/retired/settings-2.toml")),
+    ("settings-3.toml", include_str!("../presets/retired/settings-3.toml")),
+    ("settings-4.toml", include_str!("../presets/retired/settings-4.toml")),
+    ("settings-5.toml", include_str!("../presets/retired/settings-5.toml")),
+    ("settings-6.toml", include_str!("../presets/retired/settings-6.toml")),
+    ("settings-7.toml", include_str!("../presets/retired/settings-7.toml")),
+];
+
+/// The same for the editions' looks.
+const RETIRED_STYLES: &[(&str, &str)] = &[
+    ("styles-1.toml", include_str!("../presets/retired/styles-1.toml")),
+    ("styles-2.toml", include_str!("../presets/retired/styles-2.toml")),
+    ("styles-3.toml", include_str!("../presets/retired/styles-3.toml")),
+    ("styles-4.toml", include_str!("../presets/retired/styles-4.toml")),
+];
+
+/// Every leaf of the retired layers. A layer that does not parse is a
+/// build-time mistake the tests catch; here it contributes nothing.
+fn retired(layers: &[(&str, &str)]) -> Vec<(String, SettingValue)> {
+    layers
+        .iter()
+        .filter_map(|(name, text)| leaves(name, text).ok())
+        .flatten()
+        .collect()
+}
+
 /// Every leaf of a fragment, with its dotted key, in file order.
 fn leaves(name: &str, toml: &str) -> Result<Vec<(String, SettingValue)>, Diagnostic> {
     let doc = ConfigDocument::parse(name.to_owned(), toml.to_owned())?;
@@ -265,7 +297,8 @@ pub fn apply(file: &mut TomlFile, preset: &Preset) -> Diagnostics {
     let mut diagnostics = Diagnostics::new();
     match preset.settings() {
         Ok(settings) => {
-            clear_others(file, &settings, |p| p.settings().ok());
+            let former = retired(RETIRED_SETTINGS);
+            clear_others(file, &settings, |p| p.settings().ok(), &former);
             for (key, value) in settings {
                 file.set(&key, value);
             }
@@ -288,7 +321,8 @@ pub fn apply_styles(file: &mut TomlFile, preset: &Preset) -> Diagnostics {
     let mut diagnostics = Diagnostics::new();
     match preset.style_settings() {
         Ok(styles) => {
-            clear_others(file, &styles, |p| p.style_settings().ok());
+            let former = retired(RETIRED_STYLES);
+            clear_others(file, &styles, |p| p.style_settings().ok(), &former);
             for (key, value) in styles {
                 file.set(&key, value);
             }
@@ -303,16 +337,23 @@ pub fn apply_styles(file: &mut TomlFile, preset: &Preset) -> Diagnostics {
 /// Only where the file still holds that edition's value: a key that holds
 /// something else was the publisher's choice, whichever edition also uses
 /// it, and is theirs to keep.
+///
+/// And every key that still holds a value an edition *used* to set
+/// (`former`): a project made from an older version of an edition holds
+/// that version's values, which no edition sets now and which would
+/// otherwise read as the publisher's own and outlive every switch.
 fn clear_others(
     file: &mut TomlFile,
     keeping: &[(String, SettingValue)],
     keys_of: impl Fn(&Preset) -> Option<Vec<(String, SettingValue)>>,
+    former: &[(String, SettingValue)],
 ) {
     let kept: std::collections::BTreeSet<&str> = keeping.iter().map(|(k, _)| k.as_str()).collect();
     let set_by_an_edition: Vec<String> = ALL
         .iter()
         .filter_map(&keys_of)
         .flatten()
+        .chain(former.iter().cloned())
         .filter(|(k, v)| !kept.contains(k.as_str()) && file.holds(k, v))
         .map(|(k, _)| k)
         .collect();
@@ -541,6 +582,53 @@ indent = \"20pt\"
         for (key, _) in study.style_settings().expect("study's look") {
             let leaf = key.rsplit('.').next().expect("a leaf");
             assert!(styles.contains(leaf), "{key} did not arrive");
+        }
+    }
+
+    /// **A project made from an older version of an edition is cleared too**:
+    /// the Illuminated edition's old double frame, which no edition sets any
+    /// more, goes when the Modern edition is applied over it, and a frame the
+    /// publisher chose themselves stays.
+    #[test]
+    fn switching_clears_what_an_older_edition_set() {
+        let old = "schema_version = 1\n[page]\nframe = \"double\"\nframe_width = \"0.8pt\"\n";
+        let mut file = TomlFile::new(
+            ConfigDocument::parse("biblecompose.toml", old.to_owned()).expect("valid"),
+        );
+        assert!(apply(&mut file, by_id("modern").expect("modern")).is_empty());
+        let settings = file.to_toml();
+        assert!(!settings.contains("frame"), "{settings}");
+
+        let own = "schema_version = 1\n[page]\nframe = \"single\"\nframe_width = \"2pt\"\n";
+        let mut file = TomlFile::new(
+            ConfigDocument::parse("biblecompose.toml", own.to_owned()).expect("valid"),
+        );
+        assert!(apply(&mut file, by_id("modern").expect("modern")).is_empty());
+        let settings = file.to_toml();
+        assert!(settings.contains("frame_width = \"2pt\""), "{settings}");
+    }
+
+    /// **The retired layers are all listed and all read**, so a layer the
+    /// script added is not silently left out of the build.
+    #[test]
+    fn every_retired_layer_is_listed_and_parses() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("presets/retired");
+        let mut on_disk: Vec<String> = std::fs::read_dir(&dir)
+            .expect("the retired folder")
+            .filter_map(|e| e.ok())
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .filter(|n| n.ends_with(".toml"))
+            .collect();
+        on_disk.sort();
+        let mut listed: Vec<String> = RETIRED_SETTINGS
+            .iter()
+            .chain(RETIRED_STYLES)
+            .map(|(n, _)| (*n).to_owned())
+            .collect();
+        listed.sort();
+        assert_eq!(on_disk, listed, "run scripts/retired-presets.py and list its files");
+        for (name, text) in RETIRED_SETTINGS.iter().chain(RETIRED_STYLES) {
+            leaves(name, text).unwrap_or_else(|d| panic!("{name}: {d}"));
         }
     }
 

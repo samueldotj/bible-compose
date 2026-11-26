@@ -384,6 +384,16 @@ impl Settings {
             self.contents.show_section_headings.to_string(),
         );
         push(
+            "contents.section_ranges",
+            Boolean,
+            self.contents.section_ranges.to_string(),
+        );
+        push(
+            "contents.show_title_lead",
+            Boolean,
+            self.contents.show_title_lead.to_string(),
+        );
+        push(
             "contents.drop_caps",
             Boolean,
             self.contents.drop_caps.to_string(),

@@ -495,6 +495,8 @@ export const EN_LABELS: Readonly<Record<string, string>> = {
   "contents.show_book_introductions": "Book introductions",
   "contents.show_introductory_outlines": "Introductory outlines",
   "contents.show_section_headings": "Section headings",
+  "contents.section_ranges": "Verse range under each heading",
+  "contents.show_title_lead": "Title lead-in line",
   "contents.drop_caps": "Drop caps",
   "contents.poetry_rules": "Rules round poetry",
   "contents.drop_cap_of": "What drops",

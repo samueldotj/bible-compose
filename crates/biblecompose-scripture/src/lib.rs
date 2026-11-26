@@ -130,6 +130,10 @@ pub struct BookNames {
     pub abbrev: Option<String>,
     /// `\mt1`–`\mt4`, in order.
     pub title: Vec<String>,
+    /// The title lines set over the main one, smaller — `\mt2` before
+    /// `\mt1`, "The Gospel According to" over "John" — in order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub lead: Vec<String>,
 }
 
 impl BookNames {
@@ -140,6 +144,7 @@ impl BookNames {
             short: Some(running.to_owned()),
             abbrev: None,
             title: vec![running.to_owned()],
+            lead: Vec::new(),
         }
     }
 

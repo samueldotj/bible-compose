@@ -153,6 +153,11 @@ export const STYLE_GROUPS: readonly StyleGroup[] = [
         properties: [FACE, SIZE, WEIGHT, ITALIC, SMALLCAPS, UPPERCASE, LETTER_SPACING, ALIGN, BELOW, COLOR],
       },
       {
+        selector: "book_lead",
+        label: "Title lead-in",
+        properties: [FACE, SIZE, WEIGHT, ITALIC, SMALLCAPS, UPPERCASE, LETTER_SPACING, ALIGN, BELOW, COLOR],
+      },
+      {
         selector: "chapter",
         label: "Chapter number",
         properties: [

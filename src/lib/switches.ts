@@ -63,6 +63,8 @@ export const SWITCH_GROUPS: readonly SwitchGroup[] = [
       { key: "contents.show_book_introductions", label: "Book introductions" },
       { key: "contents.show_introductory_outlines", label: "Introductory outlines" },
       { key: "contents.show_section_headings", label: "Section headings" },
+      { key: "contents.section_ranges", label: "Verse range under each heading" },
+      { key: "contents.show_title_lead", label: "Title lead-in line" },
     ],
   },
   {

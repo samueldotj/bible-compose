@@ -19,10 +19,15 @@ margin_bottom = "0.8in"
 # The 148px side column and its 28px gap.
 side_column = "95pt"
 side_gap = "18pt"
-# A light rule over the foot line, and none under the head.
+# Light rules under the head and over the foot line; on a book's opening
+# page the title's own rule stands in for the head's.
+header_rule = "0.6pt"
+header_rule_color = "#d9dde2"
+header_rule_gap = "18pt"
 footer_rule = "0.6pt"
 footer_rule_color = "#d9dde2"
 footer_rule_gap = "10pt"
+rule_color = "#d9dde2"
 
 [typography]
 font_family = "Source Serif 4"
@@ -33,6 +38,14 @@ justify = false
 # The chapter's figure dropped three lines, large, in the sans and the blue.
 [contents]
 show_section_headings = true
+# Each side-head with the verses it covers under it, in grey.
+section_ranges = true
+# "The Gospel According to" in the side column, beside the book's name,
+# and a light rule across the page under them.
+show_title_lead = true
+title_ornament = "underline"
+# The short blue bar before the passage in the head.
+ornament_rule_color = "#1e4d7a"
 drop_caps = true
 drop_cap_of = "chapter_number"
 drop_cap_lines = 3
@@ -41,24 +54,28 @@ drop_cap_lines = 3
 show_chapter_numbers = true
 show_verse_numbers = true
 hide_first_verse_number = true
+# The dropped figure is the chapter's mark; a text's own label for it
+# ("Chapter 1") would be a second one squeezed in beside it.
+show_chapter_labels = false
 
 [notes]
 show_footnotes = true
 show_cross_references = false
 
-# The book and the passage at the left of the head, the page number at its
-# right; the book and chapter at the foot's right.
+# A blue bar, then the book and the passage at the left of the head, the
+# page number at its right; the translation's name at the foot's left and
+# the book and chapter at its right.
 [headers.left_page]
-header_left = "{Book} {Range}"
+header_left = "▬{Book} {Range}"
 header_center = ""
 header_right = "{Page}"
-footer_left = ""
+footer_left = "{Title}"
 footer_center = ""
 footer_right = "{Book} {FirstChapter}"
 [headers.right_page]
-header_left = "{Book} {Range}"
+header_left = "▬{Book} {Range}"
 header_center = ""
 header_right = "{Page}"
-footer_left = ""
+footer_left = "{Title}"
 footer_center = ""
 footer_right = "{Book} {FirstChapter}"

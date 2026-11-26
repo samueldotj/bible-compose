@@ -238,6 +238,14 @@ weight = 600
 align = "center"
 space_below = "5pt"
 
+# The line a title opens with, over it: "The Gospel According to".
+[book_lead]
+font_size = "8pt"
+uppercase = true
+letter_spacing = "1pt"
+align = "center"
+space_below = "3pt"
+
 [chapter]
 font_size = "21pt"
 weight = 700

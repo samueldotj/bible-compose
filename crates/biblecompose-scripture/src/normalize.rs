@@ -359,7 +359,14 @@ impl Cx<'_> {
             "toc1" => names.long = Some(text),
             "toc2" => names.short = Some(text),
             "toc3" => names.abbrev = Some(text),
-            "mt" | "mt1" | "mt2" | "mt3" | "mt4" => names.title.push(text),
+            "mt" | "mt1" | "mt2" | "mt3" | "mt4" => {
+                // A lesser title before any main one leads into it.
+                let lesser = !matches!(marker, "mt" | "mt1");
+                if lesser && names.title.len() == names.lead.len() {
+                    names.lead.push(text.clone());
+                }
+                names.title.push(text);
+            }
             // Identification lines that are metadata rather than content.
             // Carried nowhere on purpose: they describe the file, and the
             // publication is not the file.

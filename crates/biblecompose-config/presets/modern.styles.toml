@@ -8,11 +8,21 @@
 # The book's name large and heavy in the sans, set tight, flush left.
 [book]
 font_family = "Inter"
-font_size = "48pt"
+font_size = "55pt"
 weight = 800
-letter_spacing = "-1.6pt"
+letter_spacing = "-1.9pt"
 align = "start"
 space_below = "18pt"
+
+# "The Gospel According to" beside it, in the side column: small spaced
+# capitals in the sans, in grey.
+[book_lead]
+font_family = "Inter"
+font_size = "7.1pt"
+weight = 600
+uppercase = true
+letter_spacing = "0.7pt"
+color = "#5e6670"
 
 # The figure dropped three lines in the sans, heavy, in the blue.
 [chapter]

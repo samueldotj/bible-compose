@@ -2,7 +2,7 @@
 
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org/).
 
-## Unreleased
+## 0.6.0
 
 * **Switching templates clears what an older version of one set.** Applying
   a template resets what another template set, but only values a template

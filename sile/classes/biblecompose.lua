@@ -236,6 +236,9 @@ local OPTIONS = {
    -- and which families have the axis, `Family=min:max|…`.
    { key = "opticalsize", kind = "string", default = "0" },
    { key = "opszaxes", kind = "string", default = "" },
+   -- The families with no italic face, `A|B`: an italic asked of one of
+   -- them is its regular face slanted.
+   { key = "noitalic", kind = "string", default = "" },
    -- Six slots, three at the top of the page and three at the foot. Each
    -- holds one of: empty, page_number, reference_range, first_reference,
    -- last_reference, book_name, alt_book_name. Positions rather than
@@ -319,6 +322,38 @@ end
 
 --- How far a note in the centre column stands in from its rules.
 local NOTE_COLUMN_INSET = 2
+
+--- The lean of a slanted regular standing in for an italic: the tangent of
+--- about 11 degrees, near what a word processor gives and what most italics
+--- lean.
+local SLANT = 0.2
+
+--- The families with no italic face, from the application (`noitalic`):
+--- an italic asked of one of them is its regular, slanted by `SLANT`.
+local NO_ITALIC = {}
+
+--- Draw `body` leaning by `slant` from the point (`x`, `y`) on its
+--- baseline: glyphs above the baseline move right in proportion to their
+--- height. The PDF outputter's own transforms (`scaleFn`, `rotateFn`) do
+--- not shear, so this does what they do with a shear's matrix.
+local function sheared (x, y, slant, body)
+   local outputter = SILE.outputter
+   if outputter._name ~= "libtexpdf" then
+      return body()
+   end
+   outputter:_ensureInit()
+   local pdf = require("justenoughlibtexpdf")
+   local paper = SILE.documentState.paperSize
+   local sheet = SILE.documentState.sheetSize or paper
+   local x0 = x + (sheet[1] - paper[1]) / 2
+   local y0 = -(y + (sheet[2] - paper[2]) / 2)
+   pdf:gsave()
+   pdf.setmatrix(1, 0, 0, 1, x0, y0)
+   pdf.setmatrix(1, 0, slant, 1, 0, 0)
+   pdf.setmatrix(1, 0, 0, 1, -x0, -y0)
+   body()
+   pdf:grestore()
+end
 
 --- The most of a page the note area may take, in points.
 --
@@ -429,7 +464,7 @@ end
 -- the closure is written, so a later `local` would leave that a nil global.
 local quote_hang_lines
 local page_rules, page_frame
-local roman, chapter_caption, title_ornament, chapter_on_own_line
+local roman, chapter_caption, title_ornament, chapter_on_own_line, label_word
 local side_width, side_lead, side_heads_into
 local parallel_beside
 
@@ -450,6 +485,9 @@ function class:_init (options)
    for _, spec in ipairs(OPTIONS) do
       self._bcopts[spec.key] = coerce(spec, options[spec.key])
    end
+   for family in (self._bcopts.noitalic or ""):gmatch("[^|]+") do
+      NO_ITALIC[family] = true
+   end
    self.defaultFrameset = self:_frameset(self._bcopts.margininner, self._bcopts.marginouter)
    self.firstContentFrame = "contentA"
 
@@ -467,6 +505,9 @@ function class:_init (options)
    self:loadPackage("pdf")
    -- The dots between a book's name and its page in the table of contents.
    self:loadPackage("leaders")
+   -- A second face behind a style's own, for the characters it lacks (see
+   -- the document's start).
+   self:loadPackage("font-fallback")
    -- The dropped initial, when `dropcaps` asks for one.
    self:loadPackage("dropcaps")
    -- **A paragraph shorter than its initial is padded to clear it.** The
@@ -1501,6 +1542,154 @@ local function in_capitals (body)
    t.typeset = own
    if not ok then
       error(err, 0)
+   end
+end
+
+--- Whether `text` is in a script whose letters join when shaped: from
+--- Hebrew (U+0590) on, outside the punctuation, letterlike and symbol
+--- blocks (U+2000–U+2BFF) and the presentation forms Latin uses.
+local function joining_script (text)
+   for ch in text:gmatch("[%z\1-\127\194-\244][\128-\191]*") do
+      local cp = SU.codepoint(ch)
+      if cp >= 0x0590 and not (cp >= 0x2000 and cp <= 0x2BFF) and not (cp >= 0xFB00 and cp <= 0xFB06) then
+         return true
+      end
+   end
+   return false
+end
+
+--- SILE's fallback shaper, made to keep words whole.
+--
+-- Upstream's shaper switches face glyph by glyph and stitches the runs back
+-- together by offset, and with more than one run in a token the offsets go
+-- wrong: a Tamil heading in Cinzel, "சிருஷ்டிப்பின் வரலாறு", came out with its
+-- second word set inside its first. A glyph at a time is also wrong for a
+-- script whose letters combine — a vowel sign shaped apart from its
+-- consonant is not the syllable they make together.
+--
+-- So a token is shaped in the style's own face, and when that face cannot
+-- draw all of a word, the whole word is shaped again in the first fallback
+-- that can. Spaces stay in the style's face. Each run of one face then
+-- becomes nodes with its indexes counted from the run's own start, which is
+-- what the node maker measures them against.
+--
+-- And a run in a script whose letters join is not letter-spaced: SILE spaces
+-- letters by setting each glyph as a word of its own, which takes a vowel
+-- sign off its consonant. The spacing a template gives its display capitals
+-- is for those capitals.
+local function word_by_word_fallback (shaper)
+   local base = shaper._base
+   local function missing (items)
+      for _, item in ipairs(items) do
+         if item.gid == 0 or item.name == ".notdef" or item.name == ".null" then
+            return true
+         end
+      end
+      return false
+   end
+   shaper.shapeToken = function (self, text, options)
+      local whole = base.shapeToken(self, text, options)
+      local fallbacks = self:dumpFallbacks()
+      local out = {}
+      if #fallbacks == 0 or not missing(whole) then
+         for _, item in ipairs(whole) do
+            local c = pl.tablex.copy(item)
+            c.fontOptions = options
+            out[#out + 1] = c
+         end
+         return out
+      end
+      local pos = 1
+      while pos <= #text do
+         local s, e = text:find("^%s+", pos)
+         local space = s ~= nil
+         if not space then
+            s, e = text:find("^[^%s]+", pos)
+         end
+         local piece = text:sub(s, e)
+         local items, used = base.shapeToken(self, piece, options), options
+         if not space and missing(items) then
+            for _, font in ipairs(fallbacks) do
+               local tried = pl.tablex.merge(options, font, true)
+               tried.size = SILE.types.measurement(tried.size):tonumber()
+               local shaped = base.shapeToken(self, piece, tried)
+               if not missing(shaped) then
+                  items, used = shaped, tried
+                  break
+               end
+            end
+         end
+         for _, item in ipairs(items) do
+            local c = pl.tablex.copy(item)
+            c.index = c.index + (s - 1)
+            c.fontOptions = used
+            out[#out + 1] = c
+         end
+         pos = e + 1
+      end
+      return out
+   end
+   shaper.createNnodes = function (self, token, options)
+      options.tracking = SILE.settings:get("shaper.tracking")
+      local items = self:shapeToken(token, options)
+      if #items < 1 then
+         return {}
+      end
+      SILE.languageSupport.loadLanguage(options.language)
+      local nodeMaker = SILE.nodeMakers[options.language] or SILE.nodeMakers.unicode
+      local runs = {}
+      for _, item in ipairs(items) do
+         local run = runs[#runs]
+         if not run or run.options ~= item.fontOptions then
+            run = { options = item.fontOptions, items = {}, from = item.index, text = "" }
+            runs[#runs + 1] = run
+         end
+         item.index = item.index - run.from
+         run.items[#run.items + 1] = item
+         run.text = run.text .. item.text
+      end
+      local nodes = {}
+      for _, run in ipairs(runs) do
+         -- An italic asked of a family that has none — the regular is
+         -- what fontconfig gives for it — leans. Decided here, from the
+         -- run's own font, because a paragraph is shaped when it ends,
+         -- long after the font command that set the italic has closed.
+         local o = run.options
+         local slant = 0
+         if (o.style or ""):lower() == "italic" and o.family and NO_ITALIC[o.family] then
+            slant = SLANT
+         end
+         local function make ()
+            for node in nodeMaker(run.options):iterator(run.items, run.text) do
+               if slant ~= 0 and node.is_nnode then
+                  -- Leaning from where it starts on the baseline, as it is
+                  -- drawn: a missing italic, slanted from the regular.
+                  local draw = node.outputYourself
+                  node.outputYourself = function (self_, typesetter, line)
+                     -- A measurement, or a plain number where a margin
+                     -- number has set the cursor itself.
+                     local function at (v)
+                        return type(v) == "number" and v or v:tonumber()
+                     end
+                     local state = typesetter.frame.state
+                     sheared(at(state.cursorX), at(state.cursorY), slant, function ()
+                        draw(self_, typesetter, line)
+                     end)
+                  end
+               end
+               nodes[#nodes + 1] = node
+            end
+         end
+         if SILE.settings:get("document.letterspaceglue") and joining_script(run.text) then
+            SILE.settings:temporarily(function ()
+               SILE.settings:set("document.letterspaceglue", nil)
+               make()
+            end)
+         else
+            make()
+         end
+      end
+      return nodes
    end
 end
 
@@ -2553,11 +2742,73 @@ end
 
 --- The word set with this chapter's number: the Psalms' own when there is
 --- one, the chapter caption otherwise; empty for none.
+-- The English captions a template writes, in the languages a Bible is most
+-- often set in. Used only when the text does not label its chapters itself
+-- (`\cl`), which is the better source: it is the translation's own word.
+local CAPTIONS = {
+   Chapter = {
+      ta = "அதிகாரம்", hi = "अध्याय", es = "Capítulo", fr = "Chapitre",
+      de = "Kapitel", pt = "Capítulo", it = "Capitolo", nl = "Hoofdstuk",
+   },
+   Psalm = {
+      ta = "சங்கீதம்", hi = "भजन", es = "Salmo", fr = "Psaume",
+      de = "Psalm", pt = "Salmo", it = "Salmo", nl = "Psalm",
+   },
+}
+
 function chapter_caption (o)
+   local caption = o.chaptercaption or ""
    if scratch().code == "PSA" and (o.psalmcaption or "") ~= "" then
-      return o.psalmcaption
+      caption = o.psalmcaption
    end
-   return o.chaptercaption or ""
+   if caption == "" then
+      return ""
+   end
+   -- The translation's own word for it, from the chapter's label.
+   local labelled = scratch().label_caption
+   if labelled then
+      return labelled
+   end
+   local words = CAPTIONS[caption]
+   local lang = (o.language or "en"):match("^(%a+)")
+   return words and lang and words[lang:lower()] or caption
+end
+
+--- Whether a codepoint is a decimal digit: ASCII's, or one of the Indic
+--- scripts' own (each block's digits run from its 0x66 to its 0x6F).
+local function digit (cp)
+   if cp >= 0x30 and cp <= 0x39 then
+      return true
+   end
+   local low = cp % 0x80
+   return cp >= 0x0900 and cp <= 0x0DFF and low >= 0x66 and low <= 0x6F
+end
+
+--- The word of a chapter label such as "அத்தியாயம் 1" — the label without
+--- its number — or nil when the label is not a word and a number.
+function label_word (text)
+   local chars = utf8_chars(text)
+   local function is_digit (ch)
+      return digit(SU.codepoint(ch))
+   end
+   local first, last = 1, #chars
+   while first <= last and (chars[first]:match("^%s$") or is_digit(chars[first])) do
+      first = first + 1
+   end
+   while last >= first and (chars[last]:match("^%s$") or is_digit(chars[last])) do
+      last = last - 1
+   end
+   -- A number at one end, or there is nothing to take off.
+   if first == 1 and last == #chars then
+      return nil
+   end
+   for i = first, last do
+      if is_digit(chars[i]) then
+         return nil
+      end
+   end
+   local word = table.concat(chars, "", first, last)
+   return word ~= "" and word or nil
 end
 
 --- Whether nothing has been set on this page yet: the main typesetter is at
@@ -3557,6 +3808,18 @@ function class:registerXmlCommands ()
          SILE.call("font", { family = o.fontfamily, size = o.fontsize })
       end
       SILE.settings:set("document.baselineskip", SILE.types.node.vglue(o.leading))
+      -- The body's family behind every other: what a style's own face cannot
+      -- draw is drawn in the body's, at the style's size, weight and posture.
+      -- A template's display face is chosen for a script — Cinzel draws
+      -- Latin capitals — and a Tamil book set in that template has Tamil in
+      -- its headings and its running head, which Cinzel would set as empty
+      -- boxes. The figures and Latin it can draw stay in it.
+      if o.fontfile ~= "" then
+         SILE.call("font:add-fallback", { family = "", filename = o.fontfile, variations = "" })
+      else
+         SILE.call("font:add-fallback", { family = o.fontfamily, variations = "" })
+      end
+      word_by_word_fallback(SILE.shaper)
 
       -- What the file says about itself (PDF-005).
       --
@@ -3972,6 +4235,37 @@ function class:registerXmlCommands ()
    end)
 
    self:registerCommand("para", function (options, content)
+      -- A chapter label that is a word and a number — "அத்தியாயம் 1" — when
+      -- the chapter's number is set with a caption: the word becomes the
+      -- caption, in the translation's own language, and the number is the
+      -- one the caption is set with. Printed again as a line of its own it
+      -- would say the same thing twice.
+      scratch().label_caption = nil
+      if options.style == "cl" and type(content) == "table" and self._bcopts.chapternumbers then
+         local text = ""
+         for _, child in ipairs(content) do
+            if type(child) == "string" then
+               text = text .. child
+            end
+         end
+         local word = label_word(text)
+         local o = self._bcopts
+         -- Only where a caption is set at all: with the number on a line of
+         -- its own. Run into the text, the number has no caption, and the
+         -- label is the only place the word is.
+         local captioned = chapter_on_own_line(o)
+            and ((o.chaptercaption or "") ~= "" or (scratch().code == "PSA" and (o.psalmcaption or "") ~= ""))
+         if word and captioned then
+            scratch().label_caption = word
+            local kept = {}
+            for _, child in ipairs(content) do
+               if type(child) == "table" then
+                  kept[#kept + 1] = child
+               end
+            end
+            content = kept
+         end
+      end
       local selector = "paragraph." .. (options.style or "p")
       local s = style(selector)
       scratch().verses_in_paragraph = 0
@@ -4439,6 +4733,46 @@ function class:registerXmlCommands ()
             bordered(border and (s.border_width or "0.5pt") or "0pt", function ()
                SILE.process(content)
             end, s.background)
+         end
+      end
+      if border or s.background then
+         -- A block's top meets the top of the first line's tallest
+         -- letters, whatever the script. The package sizes the initial by
+         -- the letter's own height, which in Latin is a capital's and
+         -- meets the line; a Tamil initial such as ஆ stands lower than the
+         -- vowel signs over the letters beside it, and the block stopped
+         -- short of them. So the size is worked out here: the block runs
+         -- from the last line's baseline up through every line above it
+         -- and the first line's height.
+         local o = self._bcopts
+         local item = scratch().book_items and scratch().book_items[scratch().book_index]
+         local sample = type(item) == "table" and SU.ast.contentToString(item) or ""
+         local chars = utf8_chars((sample:gsub("%s+", " ")))
+         sample = table.concat(chars, "", 1, math.min(#chars, 60))
+         local first = SILE.typesetter:makeHbox(function ()
+            SILE.typesetter:typeset(sample)
+         end).height:tonumber()
+         local body = SILE.settings:get("font.size")
+         local function total (size)
+            -- In the initial's own face, as the package will set it.
+            local font = { size = size .. "pt" }
+            for key, value in pairs(face(s) or {}) do
+               if key ~= "size" then
+                  font[key] = value
+               end
+            end
+            local box = SILE.typesetter:makeHbox(function ()
+               SILE.call("font", font, function ()
+                  letter()
+               end)
+            end)
+            return box.height:tonumber() + box.depth:tonumber()
+         end
+         local fixed = 2 * (SILE.types.measurement(border and (s.border_width or "0.5pt") or "0pt"):tonumber() + 1.5)
+         local per_point = (total(body) - fixed) / body
+         local want = (tonumber(o.dropcaplines) - 1) * SILE.types.measurement("1bs"):tonumber() + first
+         if per_point > 0 and first > 0 then
+            opts.size = ((want - fixed) / per_point) .. "pt"
          end
       end
       dropped(function ()

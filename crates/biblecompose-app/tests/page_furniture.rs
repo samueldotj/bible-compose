@@ -950,3 +950,57 @@ fn the_notes_are_set_in_a_centre_column_between_the_text_columns() {
     assert!(downs.iter().any(|x| (x - from).abs() < 1.0), "{downs:?}");
     assert!(downs.iter().any(|x| (x - to).abs() < 1.0), "{downs:?}");
 }
+
+/// **A chapter caption in the translation's own word**: with a caption set
+/// and the text labelling its chapters `\cl Kapitola 1`, the caption takes
+/// the label's word and the label is not set again as a line of its own; a
+/// chapter with no label is captioned in the project language's word.
+#[test]
+fn the_chapter_caption_is_the_translation_s_own_word() {
+    if !have_backend() {
+        return;
+    }
+    let usfm = concat!(
+        "\\id GEN\n\\h Genesis\n\\c 1\n\\cl Kapitola 1\n\\p\n",
+        "\\v 1 In the beginning God created the heaven and the earth.\n",
+    );
+    let b = built(
+        usfm,
+        "[page]\ncolumns = 1\n[numbering]\nchapter_caption = \"Chapter\"\n",
+        "[chapter]\nown_line = true\n",
+    );
+    let text: Vec<String> = b
+        .lines
+        .iter()
+        .filter(|l| l.page == 1)
+        .map(|l| l.text())
+        .collect();
+    let captions = text.iter().filter(|t| t.contains("Kapitola")).count();
+    assert_eq!(captions, 1, "the label's word, once: {text:?}");
+    assert!(
+        !text.iter().any(|t| t.contains("Chapter")),
+        "not the template's English: {text:?}"
+    );
+
+    // No label, and the project in Spanish: the caption is Spanish's word.
+    let usfm = concat!(
+        "\\id GEN\n\\h Genesis\n\\c 1\n\\p\n",
+        "\\v 1 En el principio creó Dios los cielos y la tierra.\n",
+    );
+    let b = built(
+        usfm,
+        "[project]\nlanguage = \"es\"\n[page]\ncolumns = 1\n\
+         [numbering]\nchapter_caption = \"Chapter\"\n",
+        "[chapter]\nown_line = true\n",
+    );
+    let text: Vec<String> = b
+        .lines
+        .iter()
+        .filter(|l| l.page == 1)
+        .map(|l| l.text())
+        .collect();
+    assert!(
+        text.iter().any(|t| t.contains("Capítulo")),
+        "Spanish's word: {text:?}"
+    );
+}

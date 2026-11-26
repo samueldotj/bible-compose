@@ -363,9 +363,19 @@ pub fn build_with(
             // Which of the fonts this build uses can take an optical size,
             // for `typography.optical_size`.
             let axes = font::optical_axes(body_font.iter().chain(style_fonts.values()));
+            // And which have no italic, for the class to slant instead.
+            let plain = font::without_italic(
+                std::iter::once(request.settings.typography.font_family.as_str())
+                    .chain(style_fonts.keys().map(String::as_str)),
+                &request.project_root,
+                &backend.font_dirs(),
+            );
             for (key, value) in options.iter_mut() {
                 if key == "opszaxes" {
                     *value = format!("\"{axes}\"");
+                }
+                if key == "noitalic" {
+                    *value = format!("\"{plain}\"");
                 }
             }
             options

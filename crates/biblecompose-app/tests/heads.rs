@@ -374,19 +374,23 @@ fn described(report: &biblecompose_app::BuildReport) -> Vec<String> {
     report.diagnostics.iter().map(|d| d.to_string()).collect()
 }
 
-/// **A head set in a face that cannot draw the book's name stops the build.**
+/// **A head set in a face that cannot draw the book's name prints it in the
+/// body's face.**
 ///
 /// Found on Romans in Arabic in Times New Roman: the body's face covers
 /// Arabic, the head's is the italic, the italic is a different file, and that
 /// file has no Arabic. Every page went out headed with a row of empty boxes and
-/// the build reported success, because FONT-002 read the body's face and
-/// nothing read the head's.
+/// the build reported success. FONT-002 then stopped such a build; now the
+/// class puts the body's family behind every style, so what the head's face
+/// lacks is drawn in the body's, and the build goes ahead. A template whose
+/// display face draws only Latin — the Illuminated edition's Cinzel — can set
+/// a Tamil Bible.
 ///
 /// Reproduced with the two vendored families so it does not depend on what
 /// the machine has installed: Tamil Scripture in Noto Serif Tamil, and the
 /// head given DejaVu Serif, which has no Tamil.
 #[test]
-fn a_head_whose_face_cannot_draw_the_book_name_is_reported() {
+fn a_head_whose_face_cannot_draw_the_book_name_sets_it_in_the_body_face() {
     if !have_backend() {
         return;
     }
@@ -406,21 +410,14 @@ fn a_head_whose_face_cannot_draw_the_book_name_is_reported() {
         "[head]\nfont_family = \"DejaVu Serif\"\n",
         &fonts,
     );
-    let found = report
-        .diagnostics
-        .iter()
-        .find(|d| d.code.as_str() == "FONT-002" && d.message.contains("running head"))
-        .unwrap_or_else(|| panic!("no FONT-002 for the head: {:?}", described(&report)));
     assert!(
-        found.message.contains("DejaVu Serif italic"),
-        "the face is named as the head asks for it: {}",
-        found.message
+        !report
+            .diagnostics
+            .iter()
+            .any(|d| d.code.as_str() == "FONT-002"),
+        "the body's face draws what the head's cannot: {:?}",
+        described(&report)
     );
-    assert!(!report.succeeded(), "a tofu head is not a finished book");
-
-    // The same book with the head in the body's family sets: Noto Serif Tamil
-    // has no italic, so the head is its regular, which draws Tamil.
-    let (_g, report) = attempt_styled(&doc, settings, "", &fonts);
     assert!(report.succeeded(), "{:?}", described(&report));
 }
 

@@ -596,9 +596,11 @@ fn a_style_asking_for_a_face_the_font_has_not_got_is_reported() {
         complaints.iter().map(|d| d.to_string()).collect::<Vec<_>>()
     );
     let d = complaints[0];
-    // A warning, not an error. The page still sets — in the wrong face, which
-    // is exactly why nothing else would ever notice.
-    assert_eq!(d.severity, Severity::Warning);
+    // A note, not a warning: the class slants the regular for the italic it
+    // has not got, so the emphasis is on the page; the note says it is a
+    // slanted regular rather than a drawn italic.
+    assert_eq!(d.severity, Severity::Info);
+    assert!(d.message.contains("slanted"), "{}", d.message);
     assert!(d.message.contains("no italic face"), "{}", d.message);
     // **And nothing is said about the bold**, which this font has. That is the
     // half that makes the check worth having rather than a blanket complaint.

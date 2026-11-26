@@ -48,6 +48,29 @@ pub struct ResolvedFont {
     pub from_project: bool,
 }
 
+/// The families among `families` that have no italic face, as the class
+/// reads them: joined by `|`.
+///
+/// The class slants the regular face for an italic these cannot give, as a
+/// word processor does — Mukta Malar, like many fonts for Indic scripts, is
+/// published with no italic at all. A family nobody has is left out: FONT-001
+/// has said so, and there is no face to slant.
+pub fn without_italic<'a>(
+    families: impl IntoIterator<Item = &'a str>,
+    project_root: &Utf8Path,
+    backend_dirs: &[Utf8PathBuf],
+) -> String {
+    let mut out: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+    for family in families {
+        if resolve(family, project_root, backend_dirs).is_some()
+            && !faces_of(family, project_root, backend_dirs).italic
+        {
+            out.insert(family);
+        }
+    }
+    out.into_iter().collect::<Vec<_>>().join("|")
+}
+
 /// The optical-size axis of each font that has one, as the class reads it:
 /// `Family=min:max`, joined by `|`.
 ///
@@ -569,14 +592,42 @@ pub fn preflight_faces(
         // as separate problems. Measured on a clean machine, where the default
         // font is not installed: one blocking error and two warnings, of which
         // only the error was worth printing.
-        if resolve(&family, project_root, backend_dirs).is_none() {
+        let Some(resolved) = resolve(&family, project_root, backend_dirs) else {
             continue;
-        }
+        };
         let have = faces_of(&family, project_root, backend_dirs);
         for (missing, selectors, word) in
             [(!have.italic, italic, "italic"), (!have.bold, bold, "bold")]
         {
             if !missing || selectors.is_empty() {
+                continue;
+            }
+            // **A missing italic is slanted, and only said.** The class leans
+            // the regular for it, as a word processor does, so the emphasis
+            // is on the page; a note says it is a slanted regular and not a
+            // drawn italic. A project font is a file the backend is pinned
+            // to, by path, and is not slanted.
+            if word == "italic" && !resolved.from_project {
+                diagnostics.push(
+                    Diagnostic::info(
+                        code::MISSING_FACE,
+                        format!(
+                            "{family} has no italic face, so {} {} slanted from its regular: {}",
+                            if selectors.len() == 1 {
+                                "the 1 style that asks for one is"
+                            } else {
+                                "the styles that ask for one are"
+                            },
+                            if selectors.len() == 1 { "" } else { "each" },
+                            list(&selectors),
+                        )
+                        .replace("  ", " "),
+                    )
+                    .help(format!(
+                        "install the italic of {family} or put it in {PROJECT_FONTS}/ \
+                         for a drawn italic in place of the slanted regular"
+                    )),
+                );
                 continue;
             }
             diagnostics.push(
@@ -745,10 +796,30 @@ pub fn preflight_head(
     let Ok(parsed) = ttf_parser::Face::parse(&data, face.index) else {
         return;
     };
+    // What the head's face cannot draw, the backend draws in the body's
+    // family, at the head's size and weight (the class makes the body family
+    // every style's fallback). So a character is missing only when neither
+    // has it: a Tamil book name in a head set in Cinzel prints in the body's
+    // Tamil face, and the head's own face sets the figures.
+    let body_data = body
+        .filter(|b| b.path != face.path || b.index != face.index)
+        .and_then(|b| {
+            std::fs::read(b.path.as_std_path())
+                .ok()
+                .map(|d| (d, b.index))
+        });
+    let body_face = body_data
+        .as_ref()
+        .and_then(|(d, index)| ttf_parser::Face::parse(d, *index).ok());
     let missing: Vec<char> = characters
         .iter()
         .copied()
         .filter(|c| parsed.glyph_index(*c).is_none())
+        .filter(|c| {
+            body_face
+                .as_ref()
+                .is_none_or(|b| b.glyph_index(*c).is_none())
+        })
         .collect();
     if missing.is_empty() {
         return;

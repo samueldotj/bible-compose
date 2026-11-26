@@ -118,6 +118,9 @@ pub fn class_options_with(
     // Which fonts can take an optical size: the body font's here, and the
     // build adds the styles' fonts, which this does not see.
     put("opszaxes", quoted(&crate::font::optical_axes(body_font)));
+    // The families with no italic, which the class slants instead: the build
+    // fills it in, from every family it sets.
+    put("noitalic", quoted(""));
     put("leading", s.typography.leading.to_sile());
     put("language", s.project.language.to_string());
     // What pre-flight decided, not what the file asked for. The setting is

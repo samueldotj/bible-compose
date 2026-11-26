@@ -4,6 +4,35 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## Unreleased
 
+* **A missing italic is slanted.** A family with no italic face, such as
+  Mukta Malar, now has its regular slanted where a style asks for italic, as
+  a word processor does. FONT-005 for a missing italic is now a note.
+
+* **The chapter caption is in the book's language.** When the text labels
+  its chapters (`\cl அத்தியாயம் 1`), the caption takes the label's word, with
+  the number in the template's numerals ("அத்தியாயம் I"), and the label is
+  not printed a second time. A chapter with no label is captioned in the
+  project language's word for "Chapter" or "Psalm" where one is known.
+
+* **A heading in another script keeps its words in order.** SILE's fallback
+  shaping set a two-word Tamil heading with the second word inside the
+  first; a word the style's face cannot draw is now shaped whole in the
+  body's face. Letter spacing no longer pulls apart the letters of a script
+  that joins them.
+
+* **A dropped initial's block reaches the top of the first line** in any
+  script. It was sized by the letter's own height, which in Tamil is lower
+  than the vowel signs on the line beside it.
+
+* **A template's display face no longer stops a Bible in another script.**
+  What a style's own face cannot draw is now drawn in the body's family, at
+  the style's size, weight and colour. The Illuminated edition sets its
+  headings and running head in Cinzel, which has only Latin; a Tamil Bible
+  in it stopped with FONT-002 for the running head, and its section
+  headings would have printed as empty boxes. Now the Tamil in them is set
+  in the body's Tamil face, and FONT-002 for the head is raised only when
+  neither face can draw it.
+
 * **Two Reference templates.** "Reference" keeps its notes at the foot of
   the page. The new "Reference, centre column" sets them in a narrow column
   between the two text columns, beside the verses that call them, as the

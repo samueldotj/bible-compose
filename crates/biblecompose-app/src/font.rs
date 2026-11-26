@@ -784,7 +784,9 @@ pub fn preflight_head(
         .iter()
         .flat_map(|n| n.chars())
         .chain(literal.chars())
-        .filter(|c| !c.is_whitespace() && !c.is_control())
+        // A ◆ in a template is the ornament, which the class draws in a face
+        // of its own and not the head's.
+        .filter(|c| !c.is_whitespace() && !c.is_control() && *c != '◆')
         .collect();
     if characters.is_empty() {
         return;

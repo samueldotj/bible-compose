@@ -55,6 +55,7 @@ frame = \"double\"
 frame_width = \"0.8pt\"
 frame_inset = \"0.25in\"
 note_lines = true
+folio_rules = true
 note_line_spacing = \"20pt\"
 
 [typography]
@@ -71,6 +72,7 @@ show_book_introductions = false
 show_introductory_outlines = false
 show_section_headings = false
 drop_caps = true
+poetry_rules = true
 drop_cap_of = \"chapter_number\"
 drop_cap_lines = 4
 title_ornament = \"diamond\"

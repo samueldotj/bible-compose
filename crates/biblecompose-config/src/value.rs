@@ -551,6 +551,8 @@ spelled! {
         Single => "single",
         /// Two rules of one weight, a little apart, as a lectern Bible's.
         Double => "double",
+        /// A rule of `frame_width` outside and one of half that inside it.
+        ThickThin => "thick_thin",
     }
 }
 

@@ -91,6 +91,8 @@ fn every_property() -> String {
      color = \"#c81414\"\n\
      border = true\n\
      border_width = \"0.75pt\"\n\
+     border_color = \"#a9853c\"\n\
+     border_gap = \"1.5pt\"\n\
      own_line = true\n\
      gap_before = \"2pt\"\n\
      gap_after = \"6pt\"\n\

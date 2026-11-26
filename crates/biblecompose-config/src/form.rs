@@ -279,6 +279,7 @@ impl Settings {
             self.page.frame_inset.to_string(),
         );
         push("page.note_lines", Boolean, self.page.note_lines.to_string());
+        push("page.folio_rules", Boolean, self.page.folio_rules.to_string());
         push(
             "page.note_line_spacing",
             Length,
@@ -386,6 +387,11 @@ impl Settings {
             "contents.drop_caps",
             Boolean,
             self.contents.drop_caps.to_string(),
+        );
+        push(
+            "contents.poetry_rules",
+            Boolean,
+            self.contents.poetry_rules.to_string(),
         );
         push(
             "contents.drop_cap_of",

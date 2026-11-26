@@ -4,6 +4,20 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## Unreleased
 
+* **The Illuminated edition matches its design more closely.** Its frame is
+  a heavy rule outside a light one (`frame = "thick_thin"`); the head reads
+  the book and the passage with a gold diamond between, over a gold rule;
+  the page number has a short gold rule either side (`page.folio_rules`);
+  the red initial has a fine gold line standing off it (the new `initial`
+  properties `border_color` and `border_gap`); and poetry is centred in
+  italic between gold rules (`contents.poetry_rules`). A project made from
+  the template takes these by applying it again.
+
+* **A head is upright on a page that ends in italic.** The running head was
+  set in the font of the line the page broke in, so a page ending inside a
+  line of italic poetry had an italic head. A style with `italic = false`
+  is now upright wherever it is set.
+
 * **A missing italic is slanted.** A family with no italic face, such as
   Mukta Malar, now has its regular slanted where a style asks for italic, as
   a word processor does. FONT-005 for a missing italic is now a note.

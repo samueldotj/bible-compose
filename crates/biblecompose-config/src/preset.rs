@@ -479,7 +479,7 @@ mod tests {
 [heading.s1]
 color = \"#123456\"
 
-[poetry.q1]
+[poetry.q3]
 indent = \"20pt\"
 ";
         let doc = ConfigDocument::parse("styles.toml", existing.to_owned()).expect("valid");

@@ -159,7 +159,9 @@ fields.
 | `{LastVerse}` | The verse the page ends in | 6 |
 
 Names read without regard to case or underscores, so `{first_chapter}` is
-`{FirstChapter}`. Write `{{` or `}}` for a brace of your own. A slot whose
+`{FirstChapter}`. Write `{{` or `}}` for a brace of your own. A `◆` in a slot
+is drawn as a small diamond in `ornament_rule_color`, whatever face the head
+is set in. A slot whose
 fields all have nothing on a page — the reference range on a page with no
 verse — prints nothing there rather than a stray dash; a field with nothing
 among fields with something is simply left out. In the file these are
@@ -366,7 +368,8 @@ gap to the text:
 | `footer_rule`, `footer_rule_color` | A rule over the foot line; on a page with notes it sets them off from the text |
 | `footer_rule_gap` | From the foot of the text down to that rule (6pt unless set) |
 | `column_rule`, `column_rule_color` | A rule down the middle of the gutter, in two columns |
-| `frame` | `none`, `single` or `double`: a rule round every page, `frame_inset` in from the trim, each line `frame_width` thick. Front-matter pages are framed too; a page left blank is not |
+| `frame` | `none`, `single`, `double` or `thick_thin`: a rule round every page, `frame_inset` in from the trim, each line `frame_width` thick — except in `thick_thin`, whose inner line is half that. Front-matter pages are framed too; a page left blank is not |
+| `folio_rules` | A short rule either side of the foot's middle slot, the page number, in `footer_rule_color` |
 | `note_lines` | Ruled lines across the outer margin, `note_line_spacing` apart, for a journaling edition |
 
 The frame and the note lines are drawn in `rule_color`.
@@ -482,8 +485,15 @@ colour, as an illuminated Bible's is.
 
 When `contents.drop_caps` drops the first letter, the **`initial`** style
 decides how it looks: its face, weight, colour, and a box round it with
-`border` and `border_width`. Its size comes from the number of lines it
-spans.
+`border` and `border_width`. `border_color` draws that box in its own ink,
+and `border_gap` stands it off the letter's block, as the fine gold line
+round the Illuminated edition's red initial. Its size comes from the number
+of lines it spans.
+
+**`contents.poetry_rules`** draws a rule above and below each run of poetry,
+a tenth of the column in from each side, in `ornament_rule_color`, so a song
+stands apart from the prose round it. A blank line between stanzas does not
+break the run.
 
 The **running head** and the **foot line** are each set in their own style,
 `head` and `folio`, colour included.

@@ -157,6 +157,9 @@ pub struct Page {
     pub frame_inset: Sourced<Length>,
     /// Ruled lines in the outer margin, for the reader's own notes.
     pub note_lines: Sourced<bool>,
+    /// A short rule either side of the foot's middle slot — the page
+    /// number, in most editions — in `footer_rule_color`.
+    pub folio_rules: Sourced<bool>,
     /// The distance between those lines.
     pub note_line_spacing: Sourced<Length>,
 }
@@ -227,6 +230,9 @@ pub struct Contents {
     /// verse of the chapter goes unnumbered, because the dropped thing is
     /// its marker.
     pub drop_caps: Sourced<bool>,
+    /// A rule above and below each run of poetry, inset from the column,
+    /// in `ornament_rule_color`: a canticle set apart from the prose.
+    pub poetry_rules: Sourced<bool>,
     /// What drops: the chapter's first letter — the number then moves to a
     /// line of its own, since two large things at the same corner would
     /// fight — or the chapter number itself.
@@ -757,6 +763,7 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
             frame_width: r.value("page.frame_width", value::rule_weight),
             frame_inset: r.value("page.frame_inset", value::length_or_zero),
             note_lines: r.value("page.note_lines", |n| n.boolean()),
+            folio_rules: r.value("page.folio_rules", |n| n.boolean()),
             note_line_spacing: r.value("page.note_line_spacing", value::length),
         },
         typography: Typography {
@@ -795,6 +802,7 @@ fn resolve_fields(r: &mut Resolver<'_>) -> Settings {
                 .value("contents.show_introductory_outlines", |n| n.boolean()),
             show_section_headings: r.value("contents.show_section_headings", |n| n.boolean()),
             drop_caps: r.value("contents.drop_caps", |n| n.boolean()),
+            poetry_rules: r.value("contents.poetry_rules", |n| n.boolean()),
             drop_cap_of: r.value("contents.drop_cap_of", |n| value::choice(n, DropCap::NAMES)),
             title_ornament: r.value("contents.title_ornament", |n| {
                 value::choice(n, TitleOrnament::NAMES)

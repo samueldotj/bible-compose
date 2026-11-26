@@ -144,6 +144,10 @@ local OPTIONS = {
    { key = "frameinset", kind = "string", default = "0.3in" },
    -- Ruled lines across the outer margin, for the reader's own notes.
    { key = "notelines", kind = "boolean", default = false },
+   -- A short rule either side of the foot's middle slot.
+   { key = "foliorules", kind = "boolean", default = false },
+   -- A rule above and below each run of poetry.
+   { key = "poetryrules", kind = "boolean", default = false },
    { key = "notelinespacing", kind = "string", default = "18pt" },
    { key = "footsep", kind = "string", default = "3%ph" },
    -- Typography.
@@ -929,7 +933,7 @@ end
 -- close over these names, so the names have to exist before they do — a Lua
 -- upvalue is bound where the closure is written, not where it runs, so a
 -- `local function` further down would be a nil global here.
-local slot_content, set_line, restart_notes, carry_reference
+local slot_content, set_line, restart_notes, carry_reference, close_stanza
 -- `scratch` and the two anchor helpers, for the same reason: the chapter
 -- and verse commands name a place in Scripture, and both are registered
 -- above the state they read it from.
@@ -1285,8 +1289,11 @@ local function face (s)
    end
    want("size", s.font_size)
    want("weight", s.weight and tonumber(s.weight) or nil)
-   if SU.boolean(s.italic, false) then
-      want("style", "italic")
+   -- Upright said as well as italic: a style set inside an italic run — a
+   -- verse number in a line of poetry, a head on a page that breaks in one —
+   -- would otherwise be italic because its surroundings are.
+   if s.italic ~= nil then
+      want("style", SU.boolean(s.italic, false) and "italic" or "normal")
    end
    if SU.boolean(s.smallcaps, false) then
       want("features", "+smcp")
@@ -1521,9 +1528,39 @@ function slot_content (template)
    end
    for _, piece in ipairs(pieces) do
       if piece.boxed then
-         SILE.call("hbox", {}, { piece.text })
+         -- Without the head's letter spacing: the shaper splits a reference
+         -- at its colon and dash, the spacing lands only inside the runs of
+         -- figures between them, and "1:79" read "1:7 9".
+         SILE.settings:temporarily(function ()
+            SILE.settings:set("document.letterspaceglue", nil)
+            SILE.call("hbox", {}, { piece.text })
+         end)
       elseif piece.text ~= "" then
-         SILE.typesetter:typeset(piece.text)
+         -- A ◆ in a template is the ornament, not a letter: few faces a head
+         -- is set in have one, and the design draws it in the ornament's
+         -- ink rather than the head's.
+         local rest = piece.text
+         while rest ~= "" do
+            local at, stop = rest:find("◆", 1, true)
+            if not at then
+               SILE.typesetter:typeset(rest)
+               break
+            end
+            if at > 1 then
+               SILE.typesetter:typeset(rest:sub(1, at - 1))
+            end
+            local o = SILE.documentState.documentClass._bcopts
+            local size = SILE.settings:get("font.size") * 0.7
+            SILE.call("color", { color = o.ornamentrulecolor or "#000000" }, function ()
+               SILE.call("font", { family = "DejaVu Serif", size = size .. "pt", weight = 400, style = "normal" }, function ()
+                  SILE.settings:temporarily(function ()
+                     SILE.settings:set("document.letterspaceglue", nil)
+                     SILE.typesetter:typeset("◆")
+                  end)
+               end)
+            end)
+            rest = rest:sub(stop + 1)
+         end
       end
    end
 end
@@ -1743,16 +1780,54 @@ function set_line (frame, slots, selector)
       -- `folio` — and in its colour as well as its face: a rubricated head
       -- is red.
       local s = style(selector or "head")
+      local o = SILE.documentState.documentClass._bcopts
+      -- A short rule either side of the foot's middle slot, on the middle
+      -- of its figures, when the edition asks for them and the slot has
+      -- something in it.
+      local flanked = selector == "folio" and o.foliorules and slots[2] ~= ""
+      local function flank ()
+         local size = SILE.settings:get("font.size")
+         local length, thick = size * 2.4, 0.5
+         local lift = size * 0.33
+         SILE.call("color", { color = o.footerrulecolor or "#000000" }, function ()
+            SILE.typesetter:pushHbox({
+               width = SILE.types.length(length),
+               height = SILE.types.length(lift + thick),
+               depth = SILE.types.length(0),
+               outputYourself = function (node, typesetter, _)
+                  local x = typesetter.frame.state.cursorX
+                  local y = typesetter.frame.state.cursorY
+                  SILE.outputter:drawRule(x, y - lift - thick / 2, length, thick)
+                  typesetter.frame:advanceWritingDirection(node.width)
+               end,
+            })
+         end)
+      end
       local function line ()
          for i, slot in ipairs(slots) do
             if i > 1 then
                SILE.call("hfill")
             end
-            slot_content(slot)
+            if i == 2 and flanked then
+               local gap = SILE.settings:get("font.size") * 0.9 .. "pt"
+               flank()
+               SILE.call("kern", { width = gap })
+               slot_content(slot)
+               SILE.call("kern", { width = gap })
+               flank()
+            else
+               slot_content(slot)
+            end
          end
       end
       line = lettered(s, line)
-      SILE.call("font", face(s) or {}, function ()
+      -- Upright and regular unless the style says otherwise: the page can
+      -- end inside an italic line of poetry or a bold heading, and the head
+      -- is set while that line's font is still the current one.
+      local f = face(s) or {}
+      f.style = f.style or "normal"
+      f.weight = f.weight or 400
+      SILE.call("font", f, function ()
          if s.color then
             SILE.call("color", { color = s.color }, line)
          else
@@ -1871,7 +1946,7 @@ function page_rules (o, recto)
          local paper = SILE.documentState.paperSize[1]
          local gap = 10
          local start, stop = gap, paper - gap
-         if o.frame == "single" or o.frame == "double" then
+         if o.frame == "single" or o.frame == "double" or o.frame == "thick_thin" then
             local inset = thickness(o.frameinset)
             start, stop = inset + gap, paper - inset - gap
          end
@@ -1895,7 +1970,7 @@ end
 
 --- A frame round the page, inside the trim: one rule, or two a little apart.
 function page_frame (o)
-   if o.frame ~= "single" and o.frame ~= "double" then
+   if o.frame ~= "single" and o.frame ~= "double" and o.frame ~= "thick_thin" then
       return
    end
    local w = thickness(o.framewidth)
@@ -1904,17 +1979,22 @@ function page_frame (o)
    end
    local inset = thickness(o.frameinset)
    local pw, ph = SILE.documentState.paperSize[1], SILE.documentState.paperSize[2]
-   local function box (x, y, width, height)
+   local function box (x, y, width, height, w)
       SILE.outputter:drawRule(x, y, width, w)
       SILE.outputter:drawRule(x, y + height - w, width, w)
       SILE.outputter:drawRule(x, y, w, height)
       SILE.outputter:drawRule(x + width - w, y, w, height)
    end
    in_rule_ink(o, function ()
-      box(inset, inset, pw - 2 * inset, ph - 2 * inset)
+      box(inset, inset, pw - 2 * inset, ph - 2 * inset, w)
       if o.frame == "double" then
          local gap = w * 2 + 2
-         box(inset + gap, inset + gap, pw - 2 * (inset + gap), ph - 2 * (inset + gap))
+         box(inset + gap, inset + gap, pw - 2 * (inset + gap), ph - 2 * (inset + gap), w)
+      elseif o.frame == "thick_thin" then
+         -- The heavy rule outside, one of half its weight inside it, and
+         -- the space between them a little more than twice the heavy one.
+         local gap = w + math.max(2, w * 2.5)
+         box(inset + gap, inset + gap, pw - 2 * (inset + gap), ph - 2 * (inset + gap), w / 2)
       end
    end)
 end
@@ -2502,10 +2582,20 @@ end
 -- Drawn the way the `rules` package draws a rule — four of them, on the box's
 -- own `outputYourself` — because the framebox package is not in this
 -- runtime and a rule is all a border is.
-local function bordered (thickness, body, fill)
+--
+-- With `gap`, the rule stands that far outside the box, in `ink`: a gold
+-- line round a block of red, as an illuminated initial has. It hangs over
+-- the margin and the line above, as a border drawn outside a block does,
+-- and the text beside it stands off by as much again.
+local function bordered (thickness, body, fill, ink, gap)
    local hbox = SILE.typesetter:makeHbox(body)
    local bw = SILE.types.measurement(thickness):tonumber()
    local pad = bw + 1.5
+   local off = 0
+   if gap and gap ~= "" then
+      local ok, m = pcall(SILE.types.measurement, gap)
+      off = ok and m:tonumber() or 0
+   end
    -- A filled box stands further off its letter, as a block of colour
    -- round an initial does.
    if fill then
@@ -2514,8 +2604,9 @@ local function bordered (thickness, body, fill)
    local width = hbox.width:tonumber() + 2 * pad
    local height = hbox.height:tonumber() + pad
    local depth = hbox.depth:tonumber() + pad
+   local beside = (off > 0 and bw > 0) and off + bw or 0
    SILE.typesetter:pushHbox({
-      width = SILE.types.length(width),
+      width = SILE.types.length(width + beside),
       height = SILE.types.length(height),
       depth = SILE.types.length(depth),
       value = hbox,
@@ -2532,14 +2623,36 @@ local function bordered (thickness, body, fill)
             end
          end
          if bw > 0 then
-            SILE.outputter:drawRule(x, top, width, bw)
-         SILE.outputter:drawRule(x, y + depth - bw, width, bw)
-         SILE.outputter:drawRule(x, top, bw, height + depth)
-         SILE.outputter:drawRule(x + width - bw, top, bw, height + depth)
+            local function rules ()
+               if beside > 0 then
+                  -- Outside the block, `off` clear of it all round.
+                  local l, t, w, h = x - beside, top - beside, width + 2 * beside, height + depth + 2 * beside
+                  SILE.outputter:drawRule(l, t, w, bw)
+                  SILE.outputter:drawRule(l, t + h - bw, w, bw)
+                  SILE.outputter:drawRule(l, t, bw, h)
+                  SILE.outputter:drawRule(l + w - bw, t, bw, h)
+               else
+                  SILE.outputter:drawRule(x, top, width, bw)
+                  SILE.outputter:drawRule(x, y + depth - bw, width, bw)
+                  SILE.outputter:drawRule(x, top, bw, height + depth)
+                  SILE.outputter:drawRule(x + width - bw, top, bw, height + depth)
+               end
+            end
+            local ok, color = false, nil
+            if ink then
+               ok, color = pcall(SILE.types.color, ink)
+            end
+            if ok and color then
+               SILE.outputter:pushColor(color)
+               rules()
+               SILE.outputter:popColor()
+            else
+               rules()
+            end
          end
          typesetter.frame:advanceWritingDirection(pad)
          node.value:outputYourself(typesetter, line)
-         typesetter.frame:advanceWritingDirection(pad)
+         typesetter.frame:advanceWritingDirection(pad + beside)
       end,
    })
 end
@@ -3958,6 +4071,7 @@ function class:registerXmlCommands ()
          end
       end
       s.book_items = nil
+      close_stanza()
       -- The last passage's study notes, before the next book's page.
       flush_study_notes()
    end)
@@ -4344,9 +4458,68 @@ function class:registerXmlCommands ()
       end
    end)
 
+   --- A rule across the column, a tenth of its width in from each side, in
+   --- the ornament's ink: above a run of poetry, or below it.
+   --
+   -- The space under it is the rule's own depth, not a skip: an explicit
+   -- skip is a place the page may break, and a rule over a stanza belongs
+   -- with the stanza's first line.
+   local function stanza_rule (below)
+      local o = self._bcopts
+      local thick = 0.5
+      SILE.typesetter:leaveHmode()
+      local rule = SILE.types.node.vbox({})
+      rule.height = SILE.types.length(thick)
+      rule.depth = SILE.types.length(below or 0)
+      rule.outputYourself = function (node, typesetter, _)
+         local frame = typesetter.frame
+         frame:advancePageDirection(node.height)
+         local left, right = frame:left():tonumber(), frame:right():tonumber()
+         local inset = (right - left) * 0.1
+         local y = frame.state.cursorY
+         local ok, ink = pcall(SILE.types.color, o.ornamentrulecolor or "#000000")
+         if ok and ink then
+            SILE.outputter:pushColor(ink)
+         end
+         SILE.outputter:drawRule(left + inset, y - thick, right - left - 2 * inset, thick)
+         if ok and ink then
+            SILE.outputter:popColor()
+         end
+         frame:advancePageDirection(node.depth)
+         frame:newLine()
+      end
+      SILE.typesetter:pushVbox(rule)
+   end
+
+   --- The rule under a run of poetry, if one is open: called as anything
+   --- that is not a line of it begins, and as a book ends.
+   close_stanza = function ()
+      local sc = scratch()
+      if sc.stanza_open and not sc.in_note then
+         sc.stanza_open = false
+         -- With the last line, not at the head of the next page.
+         SILE.typesetter:leaveHmode()
+         SILE.typesetter:pushVpenalty({ penalty = 10000 })
+         skip("7pt")
+         stanza_rule()
+         skip("5pt")
+      end
+   end
+
    self:registerCommand("poetry", function (options, content)
       local selector = "poetry." .. (options.style or "q") .. (options.level or "1")
       local s = style(selector)
+      -- The line's own space above goes into the rule over it when there is
+      -- one, so nothing between the two is a place the page may break.
+      local above = s.space_above or "1pt"
+      if self._bcopts.poetryrules and not scratch().in_note and not scratch().stanza_open then
+         scratch().stanza_open = true
+         skip("5pt")
+         stanza_rule(4 + SILE.types.measurement(above):tonumber())
+         -- With the first line, not alone at the foot of a page.
+         SILE.typesetter:pushVpenalty({ penalty = 10000 })
+         above = nil
+      end
       scratch().verses_in_paragraph = 0
       if scratch().pending_drop then
          content = with_pending_drop(content)
@@ -4354,7 +4527,7 @@ function class:registerXmlCommands ()
       if scratch().side_heads then
          content = side_heads_into(content)
       end
-      skip(s.space_above or "1pt")
+      skip(above)
       local align = alignment(s)
       -- An indent on a poetry line is a first-line indent of the whole line,
       -- so it is glue at the start rather than a left skip: a line that wraps
@@ -4515,7 +4688,7 @@ function class:registerXmlCommands ()
                styled("chapter", function ()
                   SILE.process(content)
                end)
-            end)
+            end, nil, s.border_color, s.border_gap)
          else
             styled("chapter", function ()
                SILE.process(content)
@@ -4732,7 +4905,7 @@ function class:registerXmlCommands ()
          letter = function ()
             bordered(border and (s.border_width or "0.5pt") or "0pt", function ()
                SILE.process(content)
-            end, s.background)
+            end, s.background, s.border_color, s.border_gap)
          end
       end
       if border or s.background then
@@ -4947,6 +5120,16 @@ function class:registerXmlCommands ()
    -- about it (FUN-003); showing nothing here would make the warning look
    -- wrong to anyone comparing the log against the page.
    self:registerCommand("unsupported", function (_, _) end)
+
+   -- Anything set as a block of its own ends a run of poetry, so the rule
+   -- under it goes in first. A blank line (`\b`) between stanzas does not.
+   for _, name in ipairs({ "heading", "para", "item", "table", "sidebar", "figure", "division" }) do
+      local command = SILE.Commands[name]
+      SILE.Commands[name] = function (options, content)
+         close_stanza()
+         return command(options, content)
+      end
+   end
 end
 
 return class

@@ -63,7 +63,25 @@ italic = true
 font_family = "Cinzel"
 font_size = "6.6pt"
 weight = 700
+italic = false
 color = "#9e2a1f"
+
+# Poetry centred, in italic a size up, every level on the centre line.
+[poetry.q1]
+font_size = "12.7pt"
+italic = true
+align = "center"
+indent = "0pt"
+space_above = "0pt"
+space_below = "0pt"
+
+[poetry.q2]
+font_size = "12.7pt"
+italic = true
+align = "center"
+indent = "0pt"
+space_above = "0pt"
+space_below = "0pt"
 
 # The head in spaced red capitals, the page number in red.
 [head]
@@ -87,9 +105,13 @@ color = "#9e2a1f"
 first_line_indent = "0pt"
 space_above = "6pt"
 
-# The initial in cream on a block of red.
+# The initial in cream on a block of red, a fine gold line standing off it.
 [initial]
 font_family = "Cinzel"
 weight = 700
 color = "#f6efdf"
 background = "#9e2a1f"
+border = true
+border_width = "0.6pt"
+border_color = "#a9853c"
+border_gap = "2pt"

@@ -20,11 +20,18 @@ margin_inner = "0.85in"
 margin_outer = "0.8in"
 margin_top = "0.9in"
 margin_bottom = "0.9in"
-# The lectern Bible's double rule round every page, in the rubric's red.
-frame = "double"
-frame_width = "0.8pt"
+# The lectern Bible's double rule round every page, in the rubric's red: a
+# heavy rule outside a light one.
+frame = "thick_thin"
+frame_width = "1.3pt"
 frame_inset = "0.28in"
 rule_color = "#9e2a1f"
+# A gold rule under the head, and short gold rules either side of the folio.
+header_rule = "0.6pt"
+header_rule_color = "#a9853c"
+header_rule_gap = "12pt"
+footer_rule_color = "#a9853c"
+folio_rules = true
 
 [typography]
 font_family = "EB Garamond"
@@ -42,6 +49,8 @@ chapter_ornament = "diamond"
 title_ornament = "diamond"
 title_ornament_color = "#9e2a1f"
 ornament_rule_color = "#a9853c"
+# A song set apart from the prose: centred, between gold rules.
+poetry_rules = true
 
 [numbering]
 show_chapter_numbers = true
@@ -56,14 +65,15 @@ chapter_numerals = "roman"
 show_footnotes = true
 show_cross_references = false
 
-# The book's full title, spaced, at the head; the page number at the foot.
+# The book at the spine and the passage at the fore-edge, a gold diamond
+# between; the page number at the foot.
 [headers.left_page]
-header_left = ""
-header_center = "{AltBook}"
-header_right = ""
+header_left = "{Book}"
+header_center = "◆"
+header_right = "{Range}"
 footer_center = "{Page}"
 [headers.right_page]
-header_left = ""
-header_center = "{AltBook}"
-header_right = ""
+header_left = "{Range}"
+header_center = "◆"
+header_right = "{Book}"
 footer_center = "{Page}"

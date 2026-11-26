@@ -95,6 +95,7 @@ frame_inset = "0.3in"
 # the head of the text block to its foot, `note_line_spacing` apart, between
 # the column and the frame or trim.
 note_lines = false
+folio_rules = false
 note_line_spacing = "18pt"
 
 [typography]
@@ -130,6 +131,7 @@ show_section_headings = true
 # one corner. Turning this on drops one of two things into the opening lines,
 # and the first verse goes unnumbered either way.
 drop_caps = false
+poetry_rules = false
 # What drops: "first_letter" — the chapter's first letter (its first
 # *syllable*, in a script that writes one as several characters), with the
 # number moved to a line of its own above it — or "chapter_number", the number

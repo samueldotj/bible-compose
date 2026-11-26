@@ -1900,6 +1900,8 @@ fn wire_style_properties(resolved: &biblecompose_config::ResolvedStyle) -> Vec<W
         ("color", s.color.map(|c| c.to_string())),
         ("border", s.border.map(|b| b.to_string())),
         ("border_width", s.border_width.map(|l| l.to_string())),
+        ("border_color", s.border_color.map(|c| c.to_string())),
+        ("border_gap", s.border_gap.map(|l| l.to_string())),
         ("own_line", s.own_line.map(|b| b.to_string())),
         ("gap_before", s.gap_before.map(|l| l.to_string())),
         ("gap_after", s.gap_after.map(|l| l.to_string())),

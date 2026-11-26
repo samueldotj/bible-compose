@@ -64,6 +64,8 @@ const BACKGROUND: PropertyRow = { name: "background", label: "Background", kind:
 // line, what surrounds it. Where a chapter *opens* is a Contents setting.
 const BORDER: PropertyRow = { name: "border", label: "Border", kind: "boolean" };
 const BORDER_WIDTH: PropertyRow = { name: "border_width", label: "Border thickness", kind: "length" };
+const BORDER_COLOR: PropertyRow = { name: "border_color", label: "Border colour", kind: "color" };
+const BORDER_GAP: PropertyRow = { name: "border_gap", label: "Border gap", kind: "length" };
 const OWN_LINE: PropertyRow = { name: "own_line", label: "On its own line", kind: "boolean" };
 const GAP_BEFORE: PropertyRow = { name: "gap_before", label: "Gap before", kind: "length" };
 const GAP_AFTER: PropertyRow = { name: "gap_after", label: "Gap after", kind: "length" };
@@ -100,6 +102,8 @@ export const ALL_PROPERTIES: readonly PropertyRow[] = [
   COLOR,
   BORDER,
   BORDER_WIDTH,
+  BORDER_COLOR,
+  BORDER_GAP,
   OWN_LINE,
   GAP_BEFORE,
   GAP_AFTER,
@@ -170,7 +174,7 @@ export const STYLE_GROUPS: readonly StyleGroup[] = [
       {
         selector: "initial",
         label: "Dropped initial",
-        properties: [FACE, WEIGHT, ITALIC, COLOR, BACKGROUND, BORDER, BORDER_WIDTH],
+        properties: [FACE, WEIGHT, ITALIC, COLOR, BACKGROUND, BORDER, BORDER_WIDTH, BORDER_COLOR, BORDER_GAP],
       },
       { selector: "verse", label: "Verse number", properties: [SIZE, WEIGHT, RAISE, COLOR] },
     ],

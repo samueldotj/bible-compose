@@ -1004,3 +1004,118 @@ fn the_chapter_caption_is_the_translation_s_own_word() {
         "Spanish's word: {text:?}"
     );
 }
+
+/// **A thick-and-thin frame** is a box at the frame's weight and one inside
+/// it at half that.
+#[test]
+fn a_thick_and_thin_frame_is_heavy_outside_and_light_inside() {
+    if !have_backend() {
+        return;
+    }
+    let b = built(
+        PARAGRAPHS,
+        "[page]\ncolumns = 1\nframe = \"thick_thin\"\nframe_width = \"1.2pt\"\nframe_inset = \"0.25in\"\n",
+        "",
+    );
+    let mut tall: Vec<_> = rules_on(&b, 1)
+        .into_iter()
+        .filter(|r| r.is_vertical() && r.length() > b.height * 0.8)
+        .collect();
+    assert_eq!(tall.len(), 4, "{:?}", b.rules);
+    tall.sort_by(|a, c| a.x1.partial_cmp(&c.x1).expect("numbers"));
+    assert!((tall[0].thickness - 1.2).abs() < 0.05, "outer: {:?}", tall[0]);
+    assert!((tall[1].thickness - 0.6).abs() < 0.05, "inner: {:?}", tall[1]);
+    assert!(tall[1].x1 - tall[0].x1 > 3.0, "{:?}", &tall[..2]);
+}
+
+/// **The initial's border can stand off its block, in its own ink**: four
+/// sides in the border colour, outside the block of colour.
+#[test]
+fn the_initial_s_border_can_stand_off_its_block_in_its_own_ink() {
+    if !have_backend() {
+        return;
+    }
+    let b = built(
+        PARAGRAPHS,
+        "[page]\ncolumns = 1\n[contents]\ndrop_caps = true\ndrop_cap_of = \"first_letter\"\n",
+        "[initial]\nbackground = \"#ff0000\"\nborder = true\nborder_width = \"0.6pt\"\n\
+         border_color = \"#00ff00\"\nborder_gap = \"2pt\"\n",
+    );
+    let rules = rules_on(&b, 1);
+    let block = rules
+        .iter()
+        .find(|r| r.color == (1.0, 0.0, 0.0))
+        .expect("the block");
+    let line: Vec<_> = rules
+        .iter()
+        .filter(|r| r.color == (0.0, 1.0, 0.0))
+        .collect();
+    assert_eq!(line.len(), 4, "{rules:?}");
+    // The block is drawn as one wide rule; its left edge is its x.
+    let block_left = block.x1.min(block.x2);
+    let line_left = line.iter().map(|r| r.x1.min(r.x2)).fold(f64::MAX, f64::min);
+    assert!(
+        block_left - line_left > 2.0,
+        "the line stands off the block: {block:?} {line:?}"
+    );
+}
+
+/// **Folio rules** are two short rules either side of the page number.
+#[test]
+fn the_page_number_can_have_a_rule_either_side() {
+    if !have_backend() {
+        return;
+    }
+    let b = built(
+        PARAGRAPHS,
+        "[page]\ncolumns = 1\nfolio_rules = true\nfooter_rule_color = \"#00ff00\"\n",
+        "",
+    );
+    let short: Vec<_> = rules_on(&b, 1)
+        .into_iter()
+        .filter(|r| r.color == (0.0, 1.0, 0.0) && r.is_horizontal())
+        .collect();
+    assert_eq!(short.len(), 2, "{:?}", b.rules);
+    let middle = (b.left + b.right) / 2.0;
+    assert!(
+        short.iter().any(|r| r.x2.max(r.x1) < middle) && short.iter().any(|r| r.x1.min(r.x2) > middle),
+        "one each side of the middle: {short:?}"
+    );
+    let plain = built(PARAGRAPHS, ONE, "");
+    assert!(rules_on(&plain, 1).is_empty(), "{:?}", plain.rules);
+}
+
+/// **Poetry rules**: one rule over a run of poetry lines and one under it,
+/// and none between its lines.
+#[test]
+fn a_run_of_poetry_is_ruled_above_and_below() {
+    if !have_backend() {
+        return;
+    }
+    const SONG: &str = concat!(
+        "\\id LUK\n\\h Luke\n\\c 2\n\\p\n",
+        "\\v 28 Simeon took Him in his arms and blessed God, saying:\n",
+        "\\q1 \\v 29 Sovereign Lord, as You have promised,\n",
+        "\\q2 You now dismiss Your servant in peace.\n",
+        "\\q1 \\v 30 For my eyes have seen Your salvation,\n",
+        "\\p\n",
+        "\\v 33 The Child's father and mother were amazed.\n",
+    );
+    let ruled = built(
+        SONG,
+        "[page]\ncolumns = 1\n[contents]\npoetry_rules = true\nornament_rule_color = \"#00ff00\"\n",
+        "",
+    );
+    let rules: Vec<_> = rules_on(&ruled, 1)
+        .into_iter()
+        .filter(|r| r.color == (0.0, 1.0, 0.0))
+        .collect();
+    assert_eq!(rules.len(), 2, "{:?}", ruled.rules);
+    // Inset from the column on both sides.
+    for r in &rules {
+        assert!(r.x1.min(r.x2) > ruled.left + 1.0, "{r:?}");
+        assert!(r.x1.max(r.x2) < ruled.right - 1.0, "{r:?}");
+    }
+    let plain = built(SONG, ONE, "");
+    assert!(rules_on(&plain, 1).is_empty(), "{:?}", plain.rules);
+}

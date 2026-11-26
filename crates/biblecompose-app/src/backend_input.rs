@@ -95,6 +95,7 @@ pub fn class_options_with(
     put("framewidth", s.page.frame_width.to_sile());
     put("frameinset", s.page.frame_inset.to_sile());
     put("notelines", flag(*s.page.note_lines));
+    put("foliorules", flag(*s.page.folio_rules));
     put("notelinespacing", s.page.note_line_spacing.to_sile());
 
     // Typography.
@@ -167,6 +168,7 @@ pub fn class_options_with(
     // a chapter's first syllable *is* takes Unicode segmentation the class
     // has not got; whether it drops, and how far, is the class's to decide.
     put("dropcaps", flag(*s.contents.drop_caps));
+    put("poetryrules", flag(*s.contents.poetry_rules));
     put("dropcapof", s.contents.drop_cap_of.to_string());
     put("dropcaplines", s.contents.drop_cap_lines.to_string());
     put("titleornament", s.contents.title_ornament.to_string());
@@ -356,6 +358,8 @@ fn properties_of(
     put("color", s.color.map(|c| c.to_string()));
     put("border", s.border.map(flag));
     put("border_width", s.border_width.map(|l| l.to_sile()));
+    put("border_color", s.border_color.map(|c| c.to_string()));
+    put("border_gap", s.border_gap.map(|l| l.to_sile()));
     put("own_line", s.own_line.map(flag));
     put("gap_before", s.gap_before.map(|l| l.to_sile()));
     put("gap_after", s.gap_after.map(|l| l.to_sile()));

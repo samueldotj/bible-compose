@@ -257,6 +257,8 @@ fn take(into: &mut ResolvedStyle, from: &Style, origin: impl Fn(&'static str) ->
         color = "color",
         border = "border",
         border_width = "border_width",
+        border_color = "border_color",
+        border_gap = "border_gap",
         own_line = "own_line",
         gap_before = "gap_before",
         gap_after = "gap_after",

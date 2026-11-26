@@ -93,6 +93,11 @@ pub struct Style {
     pub border: Option<bool>,
     /// How thick that rule is.
     pub border_width: Option<Length>,
+    /// The rule's ink, when it is not the element's own.
+    pub border_color: Option<Color>,
+    /// Space between the element and its rule: the rule standing off a
+    /// block of colour, as a gold line round a red initial.
+    pub border_gap: Option<Length>,
     /// The element takes a line of its own, with `space_above` and
     /// `space_below` around it and `align` deciding where on the line.
     pub own_line: Option<bool>,
@@ -139,6 +144,8 @@ impl Style {
             color: other.color.or(self.color),
             border: other.border.or(self.border),
             border_width: other.border_width.or(self.border_width),
+            border_color: other.border_color.or(self.border_color),
+            border_gap: other.border_gap.or(self.border_gap),
             own_line: other.own_line.or(self.own_line),
             gap_before: other.gap_before.or(self.gap_before),
             gap_after: other.gap_after.or(self.gap_after),
@@ -158,7 +165,7 @@ pub const INHERITS: &str = "inherits";
 ///
 /// Used to read a style and to detect a misspelled property, so the two
 /// cannot disagree about what is legal.
-pub const PROPERTIES: [&str; 20] = [
+pub const PROPERTIES: [&str; 22] = [
     "font_family",
     "font_size",
     "weight",
@@ -172,6 +179,8 @@ pub const PROPERTIES: [&str; 20] = [
     "color",
     "border",
     "border_width",
+    "border_color",
+    "border_gap",
     "own_line",
     "gap_before",
     "gap_after",
@@ -413,6 +422,14 @@ fn read_into(
     });
     read("border_width", &mut |n| {
         style.border_width = Some(value::length_or_zero(n)?.value);
+        Ok(())
+    });
+    read("border_color", &mut |n| {
+        style.border_color = Some(value::color(n)?.value);
+        Ok(())
+    });
+    read("border_gap", &mut |n| {
+        style.border_gap = Some(value::length_or_zero(n)?.value);
         Ok(())
     });
     read("own_line", &mut |n| {

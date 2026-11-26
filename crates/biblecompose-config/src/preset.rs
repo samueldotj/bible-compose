@@ -192,21 +192,54 @@ impl Preset {
 /// them from the history. Regenerate with that script after changing a
 /// value in an edition; a test checks the list here names every file.
 const RETIRED_SETTINGS: &[(&str, &str)] = &[
-    ("settings-1.toml", include_str!("../presets/retired/settings-1.toml")),
-    ("settings-2.toml", include_str!("../presets/retired/settings-2.toml")),
-    ("settings-3.toml", include_str!("../presets/retired/settings-3.toml")),
-    ("settings-4.toml", include_str!("../presets/retired/settings-4.toml")),
-    ("settings-5.toml", include_str!("../presets/retired/settings-5.toml")),
-    ("settings-6.toml", include_str!("../presets/retired/settings-6.toml")),
-    ("settings-7.toml", include_str!("../presets/retired/settings-7.toml")),
+    (
+        "settings-1.toml",
+        include_str!("../presets/retired/settings-1.toml"),
+    ),
+    (
+        "settings-2.toml",
+        include_str!("../presets/retired/settings-2.toml"),
+    ),
+    (
+        "settings-3.toml",
+        include_str!("../presets/retired/settings-3.toml"),
+    ),
+    (
+        "settings-4.toml",
+        include_str!("../presets/retired/settings-4.toml"),
+    ),
+    (
+        "settings-5.toml",
+        include_str!("../presets/retired/settings-5.toml"),
+    ),
+    (
+        "settings-6.toml",
+        include_str!("../presets/retired/settings-6.toml"),
+    ),
+    (
+        "settings-7.toml",
+        include_str!("../presets/retired/settings-7.toml"),
+    ),
 ];
 
 /// The same for the editions' looks.
 const RETIRED_STYLES: &[(&str, &str)] = &[
-    ("styles-1.toml", include_str!("../presets/retired/styles-1.toml")),
-    ("styles-2.toml", include_str!("../presets/retired/styles-2.toml")),
-    ("styles-3.toml", include_str!("../presets/retired/styles-3.toml")),
-    ("styles-4.toml", include_str!("../presets/retired/styles-4.toml")),
+    (
+        "styles-1.toml",
+        include_str!("../presets/retired/styles-1.toml"),
+    ),
+    (
+        "styles-2.toml",
+        include_str!("../presets/retired/styles-2.toml"),
+    ),
+    (
+        "styles-3.toml",
+        include_str!("../presets/retired/styles-3.toml"),
+    ),
+    (
+        "styles-4.toml",
+        include_str!("../presets/retired/styles-4.toml"),
+    ),
 ];
 
 /// Every leaf of the retired layers. A layer that does not parse is a
@@ -626,7 +659,10 @@ indent = \"20pt\"
             .map(|(n, _)| (*n).to_owned())
             .collect();
         listed.sort();
-        assert_eq!(on_disk, listed, "run scripts/retired-presets.py and list its files");
+        assert_eq!(
+            on_disk, listed,
+            "run scripts/retired-presets.py and list its files"
+        );
         for (name, text) in RETIRED_SETTINGS.iter().chain(RETIRED_STYLES) {
             leaves(name, text).unwrap_or_else(|d| panic!("{name}: {d}"));
         }

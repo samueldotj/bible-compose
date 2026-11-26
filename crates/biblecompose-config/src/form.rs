@@ -279,7 +279,11 @@ impl Settings {
             self.page.frame_inset.to_string(),
         );
         push("page.note_lines", Boolean, self.page.note_lines.to_string());
-        push("page.folio_rules", Boolean, self.page.folio_rules.to_string());
+        push(
+            "page.folio_rules",
+            Boolean,
+            self.page.folio_rules.to_string(),
+        );
         push(
             "page.note_line_spacing",
             Length,

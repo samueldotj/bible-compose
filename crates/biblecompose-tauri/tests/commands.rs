@@ -1049,7 +1049,10 @@ fn an_edition_keeps_a_body_font_that_draws_the_text_its_own_cannot() {
     write_preset(&root, "modern").expect("modern applies");
     let settings =
         std::fs::read_to_string(root.join("biblecompose.toml").as_std_path()).expect("settings");
-    assert!(settings.contains("font_family = \"DejaVu Serif\""), "{settings}");
+    assert!(
+        settings.contains("font_family = \"DejaVu Serif\""),
+        "{settings}"
+    );
 
     let (_dir, root) = project(Some(
         "schema_version = 1\n[typography]\nfont_family = \"DejaVu Serif\"\n",
@@ -1057,7 +1060,10 @@ fn an_edition_keeps_a_body_font_that_draws_the_text_its_own_cannot() {
     write_preset(&root, "modern").expect("modern applies");
     let settings =
         std::fs::read_to_string(root.join("biblecompose.toml").as_std_path()).expect("settings");
-    assert!(settings.contains("font_family = \"Source Serif 4\""), "{settings}");
+    assert!(
+        settings.contains("font_family = \"Source Serif 4\""),
+        "{settings}"
+    );
 }
 
 /// An edition that is only a page writes no style sheet at all.

@@ -1068,8 +1068,16 @@ fn a_thick_and_thin_frame_is_heavy_outside_and_light_inside() {
         .collect();
     assert_eq!(tall.len(), 4, "{:?}", b.rules);
     tall.sort_by(|a, c| a.x1.partial_cmp(&c.x1).expect("numbers"));
-    assert!((tall[0].thickness - 1.2).abs() < 0.05, "outer: {:?}", tall[0]);
-    assert!((tall[1].thickness - 0.6).abs() < 0.05, "inner: {:?}", tall[1]);
+    assert!(
+        (tall[0].thickness - 1.2).abs() < 0.05,
+        "outer: {:?}",
+        tall[0]
+    );
+    assert!(
+        (tall[1].thickness - 0.6).abs() < 0.05,
+        "inner: {:?}",
+        tall[1]
+    );
     assert!(tall[1].x1 - tall[0].x1 > 3.0, "{:?}", &tall[..2]);
 }
 
@@ -1123,7 +1131,8 @@ fn the_page_number_can_have_a_rule_either_side() {
     assert_eq!(short.len(), 2, "{:?}", b.rules);
     let middle = (b.left + b.right) / 2.0;
     assert!(
-        short.iter().any(|r| r.x2.max(r.x1) < middle) && short.iter().any(|r| r.x1.min(r.x2) > middle),
+        short.iter().any(|r| r.x2.max(r.x1) < middle)
+            && short.iter().any(|r| r.x1.min(r.x2) > middle),
         "one each side of the middle: {short:?}"
     );
     let plain = built(PARAGRAPHS, ONE, "");
@@ -1213,14 +1222,18 @@ fn a_modern_opening_sets_the_lead_in_the_ranges_and_the_title() {
     // Each section's span, on a line of its own, and the publication's name.
     for text in ["1:1–2", "1:6", "TestVersion"] {
         assert!(
-            page.iter().any(|l| l.text() == text || l.text().starts_with(text)),
+            page.iter()
+                .any(|l| l.text() == text || l.text().starts_with(text)),
             "`{text}`: {:?}",
             page.iter().map(|l| l.text()).collect::<Vec<_>>()
         );
     }
     // The title's rule, across the side column too, and no head rule.
     let rules = rules_on(&b, 1);
-    assert!(rules.iter().all(|r| r.color != (0.0, 1.0, 0.0)), "{rules:?}");
+    assert!(
+        rules.iter().all(|r| r.color != (0.0, 1.0, 0.0)),
+        "{rules:?}"
+    );
     let under = rules
         .iter()
         .find(|r| r.color == (0.0, 0.0, 1.0) && r.is_horizontal())

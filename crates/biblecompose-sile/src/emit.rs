@@ -417,7 +417,10 @@ fn section_span(blocks: &[Block], at: usize, chapter: u16) -> Option<String> {
     let mut last: Option<(u16, u16)> = None;
     for (i, block) in blocks.iter().enumerate().skip(at) {
         if i > at {
-            if let Block::Heading { style: s, level: l, .. } = block {
+            if let Block::Heading {
+                style: s, level: l, ..
+            } = block
+            {
                 if s.marker() == "s" && l <= level {
                     break;
                 }
